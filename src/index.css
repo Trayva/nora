@@ -1,0 +1,538 @@
+:root {
+  /* Backgrounds */
+  --bg-main: #ffffff;
+  --bg-sidebar: #f0f0f0;
+  --bg-card: #f5f5f5;
+  --bg-hover: #e8e8e8;
+
+  /* Text */
+  --text-heading: #0a0a0a;
+  --text-subheading: #444444;
+  --text-body: #222222;
+  --text-muted: #777777;
+
+  /* Borders & Dividers */
+  --border: #e0e0e0;
+  --divider: #ececec;
+
+  /* Accent */
+  --accent: #cb6cdc;
+  --bg-active: rgba(203, 108, 220, 0.08);
+
+  /* Bootstrap overrides */
+  --bs-body-bg: #ffffff;
+  --bs-body-color: #222222;
+
+  --modal-bg: rgba(255, 255, 255, 0.75);
+  --modal-border: rgba(0, 0, 0, 0.08);
+  --modal-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-main: #111111;
+  --bg-sidebar: #1a1a1a;
+  --bg-card: #1e1e1e;
+  --bg-hover: #2a2a2a;
+
+  /* Text */
+  --text-heading: #ffffff;
+  --text-subheading: #aaaaaa;
+  --text-body: #dddddd;
+  --text-muted: #666666;
+
+  /* Borders & Dividers */
+  --border: #2e2e2e;
+  --divider: #252525;
+
+  /* Accent */
+  --accent: #cb6cdc;
+  --bg-active: rgba(203, 108, 220, 0.15);
+
+  /* Bootstrap overrides */
+  --bs-body-bg: #111111;
+  --bs-body-color: #dddddd;
+
+  --modal-bg: rgba(30, 30, 30, 0.75);
+  --modal-border: rgba(255, 255, 255, 0.08);
+  --modal-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+body {
+  background-color: var(--bg-main);
+  color: var(--text-body);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--text-heading);
+}
+
+h4,
+h5,
+h6 {
+  color: var(--text-subheading);
+}
+
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+p,
+span {
+  color: var(--text-body);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+/* ── Login Page ───────────────────────── */
+
+.login_page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-main);
+  padding: 1rem;
+}
+
+.login_card {
+  width: 100%;
+  max-width: 380px;
+}
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+/* Password input + eye button row */
+.login_password_wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login_password_wrapper .modal-input {
+  padding-right: 2.5rem; /* make room for the eye */
+}
+
+.login_eye_btn {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.login_eye_btn:hover {
+  color: var(--text-body);
+}
+
+/* Error state */
+.modal-input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.login_field_error {
+  font-size: 0.78rem;
+  color: #ef4444;
+  font-weight: 500;
+}
+
+/* Links */
+.login_forgot_link {
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.login_forgot_link:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.login_signup_link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login_signup_link:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+/* ── Phone Input ───────────────────────── */
+
+.register_phone_wrapper .react-tel-input .form-control {
+  width: 100%;
+  padding: 0.6rem 0.85rem 0.6rem 3rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-body);
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  height: auto;
+}
+
+.register_phone_wrapper .react-tel-input .form-control:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--bg-active);
+}
+
+.register_phone_wrapper .react-tel-input .flag-dropdown {
+  border: 1px solid var(--border);
+  border-right: none;
+  background: var(--bg-card);
+  border-radius: 10px 0 0 10px;
+}
+
+.register_phone_wrapper .react-tel-input .flag-dropdown:hover,
+.register_phone_wrapper .react-tel-input .flag-dropdown.open {
+  background: var(--bg-hover);
+}
+
+.register_phone_wrapper .react-tel-input .selected-flag {
+  border-radius: 10px 0 0 10px;
+  background: transparent;
+}
+
+.register_phone_wrapper .react-tel-input .country-list {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--modal-shadow);
+}
+
+.register_phone_wrapper .react-tel-input .country-list .country:hover,
+.register_phone_wrapper .react-tel-input .country-list .country.highlight {
+  background: var(--bg-hover);
+}
+
+.register_phone_wrapper .react-tel-input .country-list .country-name,
+.register_phone_wrapper .react-tel-input .country-list .dial-code {
+  color: var(--text-body);
+}
+
+.register_phone_wrapper .react-tel-input .search-box {
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  color: var(--text-body);
+  border-radius: 8px;
+  width: calc(100% - 16px);
+}
+
+/* Error state */
+.register_phone_error .react-tel-input .form-control {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.register_phone_error .react-tel-input .flag-dropdown {
+  border-color: #ef4444 !important;
+}
+
+.register_row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* Stack on small screens */
+@media (max-width: 480px) {
+  .register_row {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+/* ── Page Loader ───────────────────────── */
+
+.page_loader {
+  width: 100%;
+  min-height: 200px; /* or whatever fits your layout */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.page_loader_card {
+  background: var(--bg-card);
+  border: 1px solid var(--modal-border);
+  box-shadow: var(--modal-shadow);
+  padding: 32px;
+  border-radius: 150%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+/* Spinner */
+.page_loader_spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spinLoader 0.7s linear infinite;
+}
+s
+
+/* Text */
+.page_loader_text {
+  font-size: 0.9rem;
+  color: var(--text-subheading);
+  font-weight: 500;
+}
+
+/* Animation */
+@keyframes spinLoader {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.page_wrapper {
+  padding: 20px;
+}
+
+/* Profile */
+.profile_pic {
+  border-radius: 500px;
+  width: 200px;
+}
+.profile_header {
+  font-weight: bold;
+  /* font-size: 2rem; */
+  margin-top: 0;
+}
+
+.profile_email {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.profile_div {
+  display: flex;
+  gap: 20px;
+}
+.phone_email {
+  display: flex;
+  gap: 20px;
+}
+
+/* ── Verified badge ── */
+.email_badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+}
+
+.email_badge_verified {
+  background-color: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.email_badge_unverified {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.status_badge_div {
+  display: flex;
+  gap: 10px;
+}
+.profile_phone_date_icon_div {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 5px;
+  font-size: 0.8rem;
+}
+
+.profile_phone_date_icon {
+  background-color: var(--bg-card);
+  color: var(--text-body);
+  border: 1px solid var(--border);
+  padding: 5px;
+  border-radius: 50px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit_profile_button {
+  cursor: pointer;
+}
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.page_title_big {
+  font-weight: bold;
+  color: var(--text-body);
+}
+.welcome_message {
+  color: var(--text-subheading);
+  font-size: 0.8rem;
+}
+
+/* ── App Buttons ───────────────────────── */
+
+.app_btn {
+  padding: 0.55rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition:
+    opacity 0.15s,
+    transform 0.1s;
+  font-family: inherit;
+}
+
+.app_btn:active {
+  transform: scale(0.97);
+}
+
+.app_btn_cancel {
+  background: var(--bg-hover);
+  color: var(--text-body);
+}
+
+.app_btn_cancel:hover {
+  opacity: 0.8;
+}
+
+.app_btn_confirm {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.app_btn_confirm:hover {
+  opacity: 0.88;
+}
+
+.sidebar_logo {
+  width: 100px;
+}
+
+/* ── Acccount info ───────────────────────── */
+
+.account_info_div {
+  /* margin-bottom: ; */
+}
+.account_info_div p {
+  margin: 0;
+}
+.account_info_label {
+  color: var(--text-body);
+  font-weight: 500;
+}
+.account_info_item {
+  color: var(--text-subheading);
+  font-size: 0.9rem;
+}
+
+.account_info_icon {
+  background-color: var(--bg-card);
+  color: var(--text-body);
+  border: 1px solid var(--border);
+  padding: 5px;
+  border-radius: 50px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Logout Buttons ───────────────────────── */
+
+.app_btn_logout {
+  background: transparent;
+  color: var(--text-body);
+  border: 1px solid var(--accent);
+}
+
+.app_btn_logout:hover {
+  background: #cb6cdc47;
+}
+
+.app_btn_logout_all {
+  background: var(--accent);
+  color: white !important;
+  /* border: 1px solid #820099; */
+}
+
+.app_btn_logout_all:hover {
+  opacity: 0.9;
+}
+
+/* Disabled state */
+.app_btn_logout:disabled,
+.app_btn_logout_all:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Button Loader ───────────────────────── */
+
+.btn_loading {
+  position: relative;
+
+  pointer-events: none;
+}
+
+.btn_loading .btn_text {
+  visibility: hidden; /* keeps width but hides text */
+}
+
+.btn_loader {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  animation: spinBtn 0.6s linear infinite;
+}
+
+/* For outline / light buttons */
+.app_btn_logout.btn_loading .btn_loader {
+  border: 2px solid var(--accent);
+  border-top-color: transparent;
+}
+
+@keyframes spinBtn {
+  to {
+    transform: rotate(360deg);
+  }
+}
