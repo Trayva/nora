@@ -1,3 +1,4 @@
+import { addParamsToUrl } from "../utils";
 import api from "./axios";
 
 /**
@@ -100,5 +101,12 @@ export const withdrawFunds = async (pin, amount, description) => {
     amount,
     description,
   });
+  return response.data;
+};
+/**
+ * Get invoices for the current user.
+ */
+export const getInvoices = async (from, to, search, pending) => {
+  const response = await api.get(addParamsToUrl("/finance/invoice", { from, to, search, pending }));
   return response.data;
 };

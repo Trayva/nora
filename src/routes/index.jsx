@@ -104,10 +104,15 @@ export default function Routes() {
         { path: "dashboard", element: <Dashboard /> },
         { path: "profile", element: <Profile /> },
         { path: "settings", element: <Settings /> },
-        { path: "finance", element: <Wallet /> },
+        {
+          path: "finance",
+          children: [
+            { index: true, element: <Wallet /> },
+            { path: "invoices", element: <Invoices /> },
+          ],
+        },
         { path: "icart-home", element: <IcartHome /> },
         { path: "purchase-icart", element: <PurchaseIcart /> },
-        { path: "invoices", element: <Invoices /> },
       ],
     },
 

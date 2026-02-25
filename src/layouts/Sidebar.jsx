@@ -50,10 +50,10 @@ const navItems = [
     path: "/app/icart-home",
   },
   {
-    id: "invoices",
-    label: "Invoices",
-    icon: LiaFileInvoiceSolid,
-    path: "/app/invoices",
+    id: "icart",
+    label: "iCarts",
+    icon: MdOutlineKitchen,
+    path: "/app/icart-home",
   },
   {
     id: "library",
