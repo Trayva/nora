@@ -19,6 +19,9 @@ import Settings from "../pages/app/Settings";
 // Other Pages
 import Landing from "../pages/website/Landing";
 import NotFound from "../pages/NotFound";
+import IcartHome from "../pages/icart/IcartHome";
+import PurchaseIcart from "../pages/icart/PurchaseIcart";
+import Invoices from "../pages/incoices/Invoices";
 
 // Protected Route - must be logged in
 function ProtectedRoute({ children }) {
@@ -33,7 +36,6 @@ function ProtectedRoute({ children }) {
       </div>
     );
   }
-
 
   if (!user) return <Navigate to="/auth/login" replace />;
   return children;
@@ -52,7 +54,6 @@ function GuestRoute({ children }) {
       </div>
     );
   }
-
 
   if (user) return <Navigate to="/app" replace />;
   return children;
@@ -102,6 +103,9 @@ export default function Routes() {
         { path: "dashboard", element: <Dashboard /> },
         { path: "profile", element: <Profile /> },
         { path: "settings", element: <Settings /> },
+        { path: "icart-home", element: <IcartHome /> },
+        { path: "purchase-icart", element: <PurchaseIcart /> },
+        { path: "invoices", element: <Invoices /> },
       ],
     },
 

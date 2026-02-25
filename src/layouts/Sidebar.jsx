@@ -17,11 +17,14 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import { BsShop } from "react-icons/bs";
 
+import { LiaFileInvoiceSolid } from "react-icons/lia";
+import { LuLibrary } from "react-icons/lu";
+
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: RxDashboard, path: "/app" },
   {
-    id: "Finance",
-    label: "finance",
+    id: "finance",
+    label: "Finance",
     icon: RxBarChart,
     path: "/app/finance",
   },
@@ -39,14 +42,20 @@ const navItems = [
   },
   {
     id: "icart",
-    label: "iCart Operating",
+    label: "iCarts",
     icon: MdOutlineKitchen,
-    path: "/app/icart",
+    path: "/app/icart-home",
   },
+  {
+   id: "invoices",
+   label: "Invoices",
+   icon: LiaFileInvoiceSolid,
+   path: "/app/invoices",
+ },
   {
     id: "library",
     label: "Library",
-    icon: MdOutlineKitchen,
+    icon: LuLibrary,
     path: "/app/library",
   },
 ];
