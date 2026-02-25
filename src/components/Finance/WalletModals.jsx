@@ -297,6 +297,7 @@ export function SettlementModal({ isOpen, onClose, onSuccess }) {
             const res = await verifyBankAccount(accountNumber, bankCode);
             setAccountName(res.data?.account_name || "");
         } catch (err) {
+            console.log(err)
             toast.error("Could not verify account");
             setAccountName("");
         } finally {
