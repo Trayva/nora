@@ -15,6 +15,7 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import Dashboard from "../pages/app/Dashboard";
 import Profile from "../pages/app/Profile";
 import Settings from "../pages/app/Settings";
+import Wallet from "../pages/app/Finance/Wallet";
 
 // Other Pages
 import Landing from "../pages/website/Landing";
@@ -103,6 +104,7 @@ export default function Routes() {
         { path: "dashboard", element: <Dashboard /> },
         { path: "profile", element: <Profile /> },
         { path: "settings", element: <Settings /> },
+        { path: "finance", element: <Wallet /> },
         { path: "icart-home", element: <IcartHome /> },
         { path: "purchase-icart", element: <PurchaseIcart /> },
         { path: "invoices", element: <Invoices /> },

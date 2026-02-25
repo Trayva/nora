@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import Button from "./Button";
 import icons from "../assets/icons.jsx";
+import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 
 function Input({
   label,
@@ -15,6 +16,8 @@ function Input({
   disabled,
   textarea,
   type,
+  className = '',
+  labelClassName = '',
   ...props
 }) {
   const [hide, setHide] = useState(true);
@@ -24,16 +27,15 @@ function Input({
   return (
     <>
       {label ? (
-        <label className="fs-12 text-dark-grey" htmlFor={id}>
+        <label className={`fs-12 text-dark-grey ${labelClassName}`} htmlFor={id}>
           {label}
         </label>
       ) : null}
 
       <div
         style={{ maxWidth: width, ...containerStyle }}
-        className={`input-container d-flex align-center ${containerClassName} ${
-          textarea ? "input-textarea" : ""
-        }`}
+        className={`input-container d-flex align-center ${containerClassName} ${textarea ? "input-textarea" : ""
+          }`}
       >
         {left}
 
@@ -73,9 +75,22 @@ function Input({
                 if (typeof onChange === "function") onChange(e.target.value);
               }}
               id={id}
-              className="password-input"
+              className={`flex-1 app_input ${className}`}
             />
             <button
+              type="button"
+              className="login_eye_btn"
+              onClick={() => setShowPassword((p) => !p)}
+              tabIndex={-1}
+            >
+              {!hide ? (
+                <IoMdEyeOff size={16} />
+              ) : (
+                <IoMdEye size={16} />
+              )}
+            </button>
+            {/* <button
+              style={{ width: 40, height: 40 }}
               type="button"
               className="eye-toggle"
               onClick={() => setHide(!hide)}
@@ -83,7 +98,7 @@ function Input({
               aria-label={hide ? "Show password" : "Hide password"}
             >
               {icons.eye}
-            </button>
+            </button> */}
           </div>
         ) : (
           <input
@@ -95,7 +110,7 @@ function Input({
               if (typeof onChange === "function") onChange(e.target.value);
             }}
             id={id}
-            className="flex-1 app_input"
+            className={`flex-1 app_input ${className}`}
           />
         )}
       </div>
