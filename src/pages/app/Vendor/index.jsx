@@ -22,7 +22,7 @@ const VendorProfile = ({ vendor, onUpdate }) => {
                 )}
                 <div>
                     <h2 className="mb-1">{vendor.businessName}</h2>
-                    <p className=" mb-3">{vendor.brandTagline || "No tagline set"}</p>
+                    <p className=" mb-3">{vendor.branding.tagline || "No tagline set"}</p>
                     <div className="d-flex gap-3 align-items-center">
                         <span className="badge email_badge_verified">{vendor.membershipStatus}</span>
                         <div className="d-flex align-items-center gap-2">
@@ -31,7 +31,7 @@ const VendorProfile = ({ vendor, onUpdate }) => {
                                 width: 24,
                                 height: 24,
                                 borderRadius: '6px',
-                                background: vendor.brandColor || '#6366f1',
+                                background: vendor.branding.color || '#6366f1',
                                 border: '2px solid var(--border)',
                                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                             }} title="Brand Color"></span>
