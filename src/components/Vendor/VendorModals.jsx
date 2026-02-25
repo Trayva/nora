@@ -339,18 +339,17 @@ export function UpdateVendorModal({ isOpen, onClose, vendor, onSuccess }) {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         businessName: vendor?.businessName || "",
-        brandTagline: vendor?.brandTagline || "",
-        brandColor: vendor?.brandColor || "#6366f1",
+        brandTagline: vendor?.brandTagline || vendor?.branding?.tagline || "",
+        brandColor: vendor?.brandColor || vendor?.branding?.color || "#6366f1",
         businessRegDoc: null,
         brandLogo: null
     });
-
     useEffect(() => {
         if (vendor) {
             setFormData({
                 businessName: vendor.businessName || "",
-                brandTagline: vendor.brandTagline || "",
-                brandColor: vendor.brandColor || "#6366f1",
+                brandTagline: vendor.brandTagline || vendor?.branding?.tagline || "",
+                brandColor: vendor.brandColor || vendor?.branding?.color || "#6366f1",
                 businessRegDoc: null,
                 brandLogo: null
             });

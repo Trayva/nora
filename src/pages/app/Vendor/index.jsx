@@ -13,8 +13,8 @@ const VendorProfile = ({ vendor, onUpdate }) => {
     return (
         <div className="section_card">
             <div className="vendor_profile_header">
-                {vendor.brandLogo ? (
-                    <img src={vendor.brandLogo} alt="Logo" className="vendor_logo_large" />
+                {vendor.branding.logo ? (
+                    <img src={vendor.branding.logo} alt="Logo" className="vendor_logo_large" />
                 ) : (
                     <div className="vendor_logo_placeholder">
                         {vendor.businessName.charAt(0).toUpperCase()}

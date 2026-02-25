@@ -3,7 +3,7 @@ import { MdAdd, MdFileUpload } from "react-icons/md";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 
 export default function WalletCard({ balance, currency, onTopup, onWithdraw }) {
-    const [showBalance, setShowBalance] = useState(true);
+    const [showBalance, setShowBalance] = useState(false);
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat("en-NG", {
