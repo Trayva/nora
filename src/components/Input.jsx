@@ -63,7 +63,7 @@ function Input({
               if (typeof onChange === "function") onChange(e.target.value);
             }}
             id={id}
-            className="flex-1"
+            className={`flex-1 ${className}`}
           />
         ) : isPassword ? (
           <div style={{ position: "relative" }} className="password-field-wrapper flex-1">

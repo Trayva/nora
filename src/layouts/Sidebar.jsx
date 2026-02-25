@@ -50,12 +50,6 @@ const navItems = [
     path: "/app/icart-home",
   },
   {
-    id: "icart",
-    label: "iCarts",
-    icon: MdOutlineKitchen,
-    path: "/app/icart-home",
-  },
-  {
     id: "library",
     label: "Library",
     icon: LuLibrary,
@@ -105,12 +99,12 @@ export default function Sidebar({ isCollapsed, toggleCollapsed, onCloseMobile })
               className="sidebar_logo"
             />
           ) : (
-            <div className="sidebar-logo-small">N</div>
+            <div onClick={toggleCollapsed} className="sidebar-logo-small">N</div>
           )}
         </div>
-        <button className="sidebar-toggle-btn" onClick={toggleCollapsed}>
+        {!isCollapsed ? <button className="sidebar-toggle-btn" onClick={toggleCollapsed}>
           {isCollapsed ? <MdMenu size={20} /> : <MdChevronLeft size={20} />}
-        </button>
+        </button> : null}
       </div>
 
       {/* Main nav */}

@@ -14,15 +14,17 @@ function Button({
 }) {
   return (
     <button
-      style={{ height, borderWidth, ...style }}
-      className={`btn  ${className} ${
-        loading ? "d-flex justify-center align-center" : ""
-      }`}
+      style={{ height, borderWidth, position: "relative", ...style }}
+      className={`btn  ${className} ${loading ? "d-flex justify-center align-center" : ""
+        }`}
       title={title}
       {...props}
     >
       {icon}
-      {loading ? <Loader loading /> : title}
+      {loading ? <span
+        className="btn_loader"
+        style={{ width: 18, height: 18 }}
+      /> : title}
       {children}
     </button>
   );
