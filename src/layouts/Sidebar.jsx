@@ -7,14 +7,17 @@ import {
   MdOutlineLightMode,
   MdOutlineDarkMode,
   MdOutlineKitchen,
+  MdChevronLeft,
+  MdMenu,
 } from "react-icons/md";
 import nora_logo_white from "../assets/nora_white.png";
 import nora_logo_dark from "../assets/nora_dark.png";
+// import nora_logo_small from "../assets/favicon.png"; // Assuming favicon can be used as small logo
 import { RxDashboard, RxBarChart } from "react-icons/rx";
 import { PiTruck } from "react-icons/pi";
 import "./Sidebar.css";
 import { useTheme } from "../contexts/ThemeContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { BsShop } from "react-icons/bs";
 
 import { LiaFileInvoiceSolid } from "react-icons/lia";
@@ -47,11 +50,11 @@ const navItems = [
     path: "/app/icart-home",
   },
   {
-   id: "invoices",
-   label: "Invoices",
-   icon: LiaFileInvoiceSolid,
-   path: "/app/invoices",
- },
+    id: "invoices",
+    label: "Invoices",
+    icon: LiaFileInvoiceSolid,
+    path: "/app/invoices",
+  },
   {
     id: "library",
     label: "Library",
@@ -75,20 +78,39 @@ const bottomItems = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isCollapsed, toggleCollapsed, onCloseMobile }) {
   const { theme, toggle } = useTheme();
-  const [active, setActive] = useState("dashboard");
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleNav = (path) => {
+    navigate(path);
+    if (onCloseMobile) onCloseMobile();
+  };
+
+  const isActive = (path) => {
+    if (path === "/app") return location.pathname === "/app";
+    return location.pathname.startsWith(path);
+  };
 
   return (
-    <aside className="sidebar">
-      {/* Logo */}
-      <div className="sidebar-logo">
-        <img
-          src={theme === "dark" ? nora_logo_white : nora_logo_dark}
-          alt="nora_logo"
-          className="sidebar_logo"
-        />
+    <aside className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
+      {/* Logo & Toggle */}
+      <div className="sidebar-header">
+        <div className="sidebar-logo">
+          {!isCollapsed ? (
+            <img
+              src={theme === "dark" ? nora_logo_white : nora_logo_dark}
+              alt="nora_logo"
+              className="sidebar_logo"
+            />
+          ) : (
+            <div className="sidebar-logo-small">N</div>
+          )}
+        </div>
+        <button className="sidebar-toggle-btn" onClick={toggleCollapsed}>
+          {isCollapsed ? <MdMenu size={20} /> : <MdChevronLeft size={20} />}
+        </button>
       </div>
 
       {/* Main nav */}
@@ -97,15 +119,13 @@ export default function Sidebar() {
           {navItems.map(({ id, label, icon: Icon, path }) => (
             <li key={id}>
               <button
-                className={`sidebar-item ${active === id ? "active" : ""}`}
-                onClick={() => {
-                  setActive(id);
-                  navigate(path);
-                }}
+                className={`sidebar-item ${isActive(path) ? "active" : ""}`}
+                onClick={() => handleNav(path)}
+                title={isCollapsed ? label : ""}
               >
                 <Icon className="sidebar-icon" />
-                <span className="sidebar-label">{label}</span>
-                {active === id && <span className="sidebar-active-bar" />}
+                {!isCollapsed && <span className="sidebar-label">{label}</span>}
+                {isActive(path) && <span className="sidebar-active-bar" />}
               </button>
             </li>
           ))}
@@ -118,30 +138,30 @@ export default function Sidebar() {
           {bottomItems.map(({ id, label, icon: Icon, path }) => (
             <li key={id}>
               <button
-                className={`sidebar-item ${active === id ? "active" : ""}`}
-                onClick={() => {
-                  setActive(id);
-                  navigate(path);
-                }}
+                className={`sidebar-item ${isActive(path) ? "active" : ""}`}
+                onClick={() => handleNav(path)}
+                title={isCollapsed ? label : ""}
               >
                 <Icon className="sidebar-icon" />
-                <span className="sidebar-label">{label}</span>
-                {active === id && <span className="sidebar-active-bar" />}
+                {!isCollapsed && <span className="sidebar-label">{label}</span>}
+                {isActive(path) && <span className="sidebar-active-bar" />}
               </button>
             </li>
           ))}
 
-          {/* Theme toggle — separate from nav items so it never gets "active" */}
+          {/* Theme toggle */}
           <li>
-            <button className="sidebar-item" onClick={toggle}>
+            <button className="sidebar-item" onClick={toggle} title={isCollapsed ? (theme === "dark" ? "Light Mode" : "Dark Mode") : ""}>
               {theme === "dark" ? (
                 <MdOutlineLightMode className="sidebar-icon" />
               ) : (
                 <MdOutlineDarkMode className="sidebar-icon" />
               )}
-              <span className="sidebar-label">
-                {theme === "dark" ? "Light Mode" : "Dark Mode"}
-              </span>
+              {!isCollapsed && (
+                <span className="sidebar-label">
+                  {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                </span>
+              )}
             </button>
           </li>
         </ul>

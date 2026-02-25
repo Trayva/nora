@@ -1,39 +1,79 @@
 /* Sidebar.css */
 
+.sidebar-wrapper {
+  height: 100vh;
+  width: 240px;
+  transition: width 0.3s ease;
+  z-index: 1000;
+  display: flex;
+}
+
+.sidebar-wrapper.collapsed {
+  width: 70px;
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
   width: 100%;
-  min-width: 220px;
-  height: 100vh;
+  height: 100%;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border);
   padding: 1.5rem 0.75rem;
   box-sizing: border-box;
-  position: sticky;
-  top: 0;
+  overflow-x: hidden;
 }
 
-/* ── Logo ── */
-.sidebar-logo {
+/* ── Header (Logo & Toggle) ── */
+.sidebar-header {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  justify-content: space-between;
   padding: 0 0.5rem 1.75rem 0.5rem;
   border-bottom: 1px solid var(--divider);
   margin-bottom: 1rem;
 }
 
-.sidebar-logo-icon {
-  font-size: 1.2rem;
-  color: var(--accent, #6366f1);
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  overflow: hidden;
 }
 
-.sidebar-logo-text {
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--text-heading);
+.sidebar_logo {
+  height: 24px;
+  object-fit: contain;
+}
+
+.sidebar-logo-small {
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.sidebar-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-body);
 }
 
 /* ── Nav ── */
@@ -57,7 +97,7 @@
   align-items: center;
   gap: 0.55rem;
   width: 100%;
-  padding: 0.65rem 0.45rem;
+  padding: 0.65rem 0.65rem;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -66,28 +106,24 @@
   font-weight: 500;
   cursor: pointer;
   text-align: left;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
 }
 
-/* Hover */
 .sidebar-item:hover {
   background-color: var(--bg-hover);
   color: var(--text-body);
 }
 
-/* Active */
 .sidebar-item.active {
   background-color: var(--bg-active, rgba(99, 102, 241, 0.12));
   color: var(--accent);
   font-weight: 600;
 }
 
-/* Active left bar indicator */
 .sidebar-active-bar {
   position: absolute;
-  left: -0.75rem;
+  left: 0;
   top: 20%;
   height: 60%;
   width: 3px;
@@ -95,10 +131,12 @@
   background-color: var(--accent);
 }
 
-/* ── Icon ── */
 .sidebar-icon {
-  font-size: 1.2rem;
-  flex-shrink: 0;
+  font-size: 1.25rem;
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ── Bottom section ── */
@@ -106,4 +144,77 @@
   border-top: 1px solid var(--divider);
   padding-top: 0.75rem;
   margin-top: 0.75rem;
+}
+
+/* ── Mobile Layout ── */
+.mobile-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1001;
+}
+
+.mobile-logo-text {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--text-heading);
+}
+
+.mobile-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-body);
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-wrapper.mobile {
+  position: fixed;
+  left: -240px;
+  top: 0;
+  height: 100vh;
+  transition: left 0.3s ease;
+}
+
+.sidebar-wrapper.mobile.open {
+  left: 0;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+.sidebar-wrapper.mobile .sidebar-toggle-btn {
+  display: none;
+  /* Hide toggle button in mobile modal */
+}
+
+/* Layout helpers */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-body);
+}
+
+.main-content {
+  height: calc(100vh - 60px);
+  /* Adjusted for mobile header if present */
+}
+
+@media (min-width: 769px) {
+  .main-content {
+    height: 100vh;
+  }
 }
