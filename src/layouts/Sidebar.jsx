@@ -9,6 +9,7 @@ import {
   MdOutlineKitchen,
   MdChevronLeft,
   MdMenu,
+  MdClose
 } from "react-icons/md";
 import nora_logo_white from "../assets/nora_white.png";
 import nora_logo_dark from "../assets/nora_dark.png";
@@ -39,7 +40,7 @@ const navItems = [
   },
   {
     id: "vendors",
-    label: "Vendors",
+    label: "Vendor",
     icon: BsShop,
     path: "/app/vendors",
   },
@@ -103,7 +104,7 @@ export default function Sidebar({ isCollapsed, toggleCollapsed, onCloseMobile })
           )}
         </div>
         {!isCollapsed ? <button className="sidebar-toggle-btn" onClick={toggleCollapsed}>
-          {isCollapsed ? <MdMenu size={20} /> : <MdChevronLeft size={20} />}
+          {isCollapsed ? <MdMenu size={20} /> : <MdMenu size={20} />}
         </button> : null}
       </div>
 

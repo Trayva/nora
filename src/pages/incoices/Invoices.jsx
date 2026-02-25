@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "react-toastify";
-import api from "../../api/axios";
+import { useSearchParams } from "react-router-dom";
 import Modal from "../../components/Modal";
 import { Col, Row } from "reactstrap";
+import { getInvoices } from "../../api/finance";
+import Input from "../../components/Input";
+import { MdSearch, MdFilterList, MdCalendarToday, MdCheckCircle, MdReceipt } from "react-icons/md";
+import "./Invoices.css";
 
 const statusColors = {
   PENDING: {
@@ -44,6 +48,7 @@ function StatusBadge({ status }) {
 }
 
 function formatDate(iso) {
+  if (!iso) return "N/A";
   return new Date(iso).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
@@ -56,31 +61,87 @@ function formatAmount(amount, currency) {
 }
 
 export default function Invoices() {
+  const [searchParams] = useSearchParams();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null); // invoice object
   const [paying, setPaying] = useState(null); // method string
   const [showMethods, setShowMethods] = useState(false);
 
-  const fetchInvoices = async () => {
+  // Filter States
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [pending, setPending] = useState(false);
+
+  const hasAutoOpened = useRef(false);
+
+  const fetchInvoices = useCallback(async (isInitial = false) => {
+    if (!isInitial) setLoading(true);
     try {
-      const res = await api.get("/finance/invoice");
-      setInvoices(res.data.data);
+      const res = await getInvoices(
+        from || null,
+        to || null,
+        search || null,
+        pending || null
+      );
+      const data = res.data || [];
+      setInvoices(data);
+      return data;
     } catch {
       toast.error("Failed to load invoices");
     } finally {
       setLoading(false);
     }
-  };
+  }, [from, to, search, pending]);
 
+  // Debounce search
   useEffect(() => {
-    fetchInvoices();
-  }, []);
+    const timer = setTimeout(() => {
+      setSearch(debouncedSearch);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [debouncedSearch]);
+
+  // Initial load and query param handling
+  useEffect(() => {
+    const init = async () => {
+      const data = await fetchInvoices(true);
+      if (!data || hasAutoOpened.current) return;
+
+      const openId = searchParams.get("open_id");
+      const openRecent = searchParams.get("open_recent");
+
+      if (openId) {
+        const target = data.find((i) => i.id === openId);
+        if (target) {
+          setSelected(target);
+          hasAutoOpened.current = true;
+        }
+      } else if (openRecent === "true" && data.length > 0) {
+        const sorted = [...data].sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+        setSelected(sorted[0]);
+        hasAutoOpened.current = true;
+      }
+    };
+    init();
+  }, [fetchInvoices, searchParams]);
+  // Run when fetchInvoices changes (due to filters) or params change
+
+  // Only run the param logic once on mount, but fetchInvoices is needed for updates
+  // Wait, if I include fetchInvoices in deps, it runs every time filters change.
+  // That's what we want for filtering, but query param logic should probably only run ONCE.
+  // Let's refine this.
 
   const handlePay = async (method) => {
     setPaying(method);
     setShowMethods(false);
     try {
+      // Use direct api call for payment as it's not in finance.jsx yet or needs specific params
+      const { default: api } = await import("../../api/axios");
       const res = await api.get(`/finance/invoice/${selected.id}/pay`, {
         params: { method, shouldRedirect: false },
       });
@@ -91,8 +152,8 @@ export default function Invoices() {
         toast.success("Payment successful!");
         await fetchInvoices();
         // update selected with fresh data
-        const updated = await api.get("/finance/invoice");
-        const fresh = updated.data.data.find((i) => i.id === selected.id);
+        const freshRes = await getInvoices();
+        const fresh = (freshRes.data || []).find((i) => i.id === selected.id);
         if (fresh) setSelected(fresh);
       }
     } catch (err) {
@@ -113,22 +174,61 @@ export default function Invoices() {
     setShowMethods(false);
   };
 
-  if (loading) {
-    return (
-      <div className="page_wrapper">
+  return (
+    <div className="page_wrapper">
+      <div className="d-flex justify-content-between align-items-end mb-4">
+        <div>
+          <h2 className="page_title_big m-0">Invoices</h2>
+          <p className="welcome_message">View and pay your outstanding invoices</p>
+        </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="invoice_filters">
+        <div className="filter_item">
+          <span className="filter_label">Search</span>
+          <Input
+            className="modal-input"
+            placeholder="Search invoice ID or items..."
+            value={debouncedSearch}
+            onChange={setDebouncedSearch}
+          // left={<MdSearch size={22} className="ms-2 opacity-50" />}
+          />
+        </div>
+        <div className="filter_item">
+          <span className="filter_label">From Date</span>
+          <Input
+            className="modal-input"
+            type="date"
+            value={from}
+            onChange={setFrom}
+          // left={<MdCalendarToday size={18} className="ms-2 opacity-50" />}
+          />
+        </div>
+        <div className="filter_item">
+          <span className="filter_label">To Date</span>
+          <Input
+            className="modal-input"
+            type="date"
+            value={to}
+            onChange={setTo}
+          // left={<MdCalendarToday size={18} className="ms-2 opacity-50" />}
+          />
+        </div>
+        <div
+          className={`pending_toggle ${pending ? 'active' : ''}`}
+          onClick={() => setPending(!pending)}
+        >
+          {pending ? <MdCheckCircle size={20} /> : <MdFilterList size={20} />}
+          Pending Only
+        </div>
+      </div>
+
+      {loading && invoices.length === 0 ? (
         <div className="page_loader">
           <div className="page_loader_spinner" />
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="page_wrapper">
-      <h2 className="page_title_big m-0">Invoices</h2>
-      <p className="welcome_message">View and pay your outstanding invoices</p>
-
-      {invoices.length === 0 ? (
+      ) : invoices.length === 0 ? (
         <div className="invoices_empty">
           <p>No invoices found.</p>
         </div>
@@ -298,7 +398,7 @@ export default function Invoices() {
                 ) : (
                   <button
                     className="app_btn app_btn_confirm"
-                    style={{ width: "100%", height: 42 }}
+                    style={{ width: "100%", height: 42, position: "relative" }}
                     onClick={() => setShowMethods(true)}
                   >
                     Pay Now

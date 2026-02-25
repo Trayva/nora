@@ -1,0 +1,140 @@
+    .invoice_filters {
+        display: flex;
+        gap: 1rem;
+        margin: 1.5rem 0 2rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .filter_item {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .filter_label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .pending_toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0 1.25rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s;
+        height: 44px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-body);
+    }
+
+    .pending_toggle:hover {
+        background: var(--bg-hover);
+    }
+
+    .pending_toggle.active {
+        background: var(--bg-active);
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+
+    .invoices_empty {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--bg-card);
+        border: 1px dashed var(--border);
+        border-radius: 20px;
+        color: var(--text-muted);
+    }
+
+    .invoice_modal_status_row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        /* margin-bottom: 2rem; */
+    }
+
+    .invoice_modal_currency {
+        font-weight: 700;
+        color: var(--accent);
+    }
+
+    .invoice_section_label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+    }
+
+    .invoice_item_row {
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--divider);
+    }
+
+    .invoice_item_info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .invoice_item_title {
+        font-weight: 600;
+        color: var(--text-body);
+    }
+
+    .invoice_item_desc {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .invoice_item_right {
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .invoice_item_qty {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    .invoice_item_amount {
+        font-weight: 700;
+        color: var(--text-heading);
+    }
+
+    .invoice_meta_grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        /* margin: 2rem 0; */
+        /* padding: 1.5rem; */
+        /* background: var(--bg-hover); */
+        border-radius: 12px;
+    }
+
+    .invoice_method_btns {
+        display: flex;
+        gap: 1rem;
+        width: 100%;
+    }
+
+    @media (max-width: 576px) {
+        .invoice_method_btns {
+            flex-direction: column;
+        }
+    }

@@ -1,15 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, React } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
+import Modal from "../../components/Modal";
+import { Formik, Form } from "formik";
+import * as Yup from "yup";
+import ButtonLoader from "../../components/ButtonLoader";
+
+const purchaseSchema = Yup.object().shape({
+  noOfCarts: Yup.number()
+    .typeError("Please enter a valid number")
+    .min(1, "Minimum 1 iCart required")
+    .integer("Must be a whole number")
+    .required("Number of iCarts is required"),
+});
+
 
 function PurchaseIcart() {
   const navigate = useNavigate();
-  const numberOfCarts = parseInt(localStorage.getItem("icart_purchase_count") || "1");
+  const numberOfCarts = parseInt("1");
 
   const [settings, setSettings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [purchasing, setPurchasing] = useState(null); // holds settingsId being purchased
+  const [selectedSettings, setSelectedSettings] = useState(null);
+  const [loading, setLoading] = useState(true); // holds settingsId being purchased
+  const [loading2, setLoading2] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -25,20 +39,20 @@ function PurchaseIcart() {
     fetchSettings();
   }, []);
 
-  const handlePurchase = async (settingsId) => {
-    setPurchasing(settingsId);
+  const handlePurchase = async (numberOfCarts) => {
     try {
+      setLoading2(true);
       await api.post("/contract/application/purchase-icart", {
-        settingsId,
+        settingsId: selectedSettings,
         numberOfCarts,
       });
-      localStorage.removeItem("icart_purchase_count");
       toast.success("iCart purchased successfully!");
-      navigate("/app/invoices");
+      navigate("/app/finance/invoices?open_recent=true");
     } catch (err) {
       toast.error(err.response?.data?.message || "Purchase failed");
     } finally {
-      setPurchasing(null);
+      setLoading2(false);
+      setSelectedSettings(null);
     }
   };
 
@@ -48,7 +62,7 @@ function PurchaseIcart() {
       <p className="welcome_message">
         Select a contract plan to purchase{" "}
         <strong style={{ color: "var(--text-heading)" }}>
-          {numberOfCarts} iCart{numberOfCarts > 1 ? "s" : ""}
+          iCart
         </strong>
       </p>
 
@@ -63,7 +77,7 @@ function PurchaseIcart() {
       ) : (
         <div className="icart_settings_grid">
           {settings.map((setting) => {
-            const isLoading = purchasing === setting.id;
+            const isLoading = selectedSettings === setting.id;
             const totalAmount = setting.payments.reduce(
               (sum, p) => sum + p.amount * numberOfCarts,
               0
@@ -85,10 +99,16 @@ function PurchaseIcart() {
                 </div>
 
                 {/* Duration */}
-                <div className="icart_card_meta">
+                {setting.type !== 'PURCHASE' ? <div className="icart_card_meta">
                   <span className="icart_meta_label">Contract Duration</span>
                   <span className="icart_meta_value">
                     {setting.durationDays} days
+                  </span>
+                </div> : null}
+                <div className="icart_card_meta">
+                  <span className="icart_meta_label">Kiosk Size</span>
+                  <span className="icart_meta_value">
+                    {setting.kioskSize.length}{setting.kioskSize.unit} x {setting.kioskSize.breadth}{setting.kioskSize.unit}
                   </span>
                 </div>
 
@@ -140,8 +160,8 @@ function PurchaseIcart() {
                 <button
                   className={`app_btn app_btn_confirm ${isLoading ? "btn_loading" : ""}`}
                   style={{ width: "100%", height: 42, position: "relative", marginTop: 4 }}
-                  onClick={() => handlePurchase(setting.id)}
-                  disabled={!!purchasing}
+                  onClick={() => setSelectedSettings(setting.id)}
+                  disabled={!!selectedSettings}
                 >
                   <span className="btn_text text-white">
                     Select this Plan
@@ -155,6 +175,64 @@ function PurchaseIcart() {
           })}
         </div>
       )}
+
+
+      <Modal
+        isOpen={selectedSettings}
+        onClose={() => setSelectedSettings(null)}
+        title="Purchase iCart"
+        description="Select how many iCarts you would like to purchase"
+      >
+        <Formik
+          initialValues={{ noOfCarts: 1 }}
+          validationSchema={purchaseSchema}
+          onSubmit={({ noOfCarts }) => handlePurchase(noOfCarts)}
+        >
+          {({ errors, touched, values, handleChange, handleBlur }) => (
+            <Form>
+              <div className="modal-body">
+                <div className="form-field">
+                  <label className="modal-label">Number of iCarts</label>
+                  <input
+                    className={`modal-input ${touched.noOfCarts && errors.noOfCarts ? "modal-input-error" : ""}`}
+                    type="number"
+                    name="noOfCarts"
+                    placeholder="e.g. 2"
+                    min="1"
+                    value={values.noOfCarts}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    disabled={loading2}
+                  />
+                  {touched.noOfCarts && errors.noOfCarts && (
+                    <span className="login_field_error">{errors.noOfCarts}</span>
+                  )}
+                </div>
+
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="app_btn app_btn_cancel"
+                    onClick={() => setSelectedSettings(null)}
+                    disabled={loading2}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    style={{ position: "relative" }}
+                    type="submit"
+                    className={`app_btn app_btn_confirm ${loading2 ? "btn_loading2" : ""}`}
+                    disabled={loading2}
+                  >
+                    <span className="btn_text text-white">Purchase</span>
+                    {loading2 && <ButtonLoader />}
+                  </button>
+                </div>
+              </div>
+            </Form>
+          )}
+        </Formik>
+      </Modal>
     </div>
   );
 }
