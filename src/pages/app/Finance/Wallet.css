@@ -21,11 +21,36 @@
   pointer-events: none;
 }
 
+.wallet_balance_header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
 .wallet_balance_label {
   font-size: 0.9rem;
   opacity: 0.9;
   font-weight: 500;
-  margin-bottom: 5px;
+}
+
+.balance_toggle_btn {
+  background: transparent;
+  border: none;
+  color: white;
+  opacity: 0.8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.balance_toggle_btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .wallet_balance_amount {

@@ -1,11 +1,11 @@
 import moment from "moment";
 import { MdArrowDownward, MdArrowUpward } from "react-icons/md";
 
-export default function TransactionList({ transactions }) {
+export default function TransactionList({ transactions, currency }) {
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat("en-NG", {
             style: "currency",
-            currency: "NGN",
+            currency: currency || "NGN",
         }).format(Math.abs(amount || 0));
     };
 

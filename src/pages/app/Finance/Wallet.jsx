@@ -61,6 +61,7 @@ export default function Wallet() {
                 <div className="main_section">
                     <WalletCard
                         balance={wallet?.balance}
+                        currency={wallet?.currency}
                         onTopup={() => setShowTopup(true)}
                         onWithdraw={() => setShowWithdraw(true)}
                     />
@@ -70,7 +71,10 @@ export default function Wallet() {
                             <MdHistory size={24} color="var(--accent)" />
                             Transaction History
                         </h2>
-                        <TransactionList transactions={transactions} />
+                        <TransactionList
+                            transactions={transactions}
+                            currency={wallet?.currency}
+                        />
                     </div>
                 </div>
 
