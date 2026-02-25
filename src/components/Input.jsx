@@ -41,6 +41,7 @@ function Input({
 
         {select ? (
           <select
+            className={className}
             disabled={disabled}
             value={props.value}
             onChange={(e) => {
