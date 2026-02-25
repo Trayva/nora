@@ -66,7 +66,7 @@ function Input({
             className="flex-1"
           />
         ) : isPassword ? (
-          <div className="password-field-wrapper flex-1">
+          <div style={{ position: "relative" }} className="password-field-wrapper flex-1">
             <input
               {...props}
               autoComplete="off"
@@ -79,9 +79,10 @@ function Input({
               className={`flex-1 app_input ${className}`}
             />
             <button
+              style={{ top: '30%' }}
+              onClick={() => setHide(!hide)}
               type="button"
               className="login_eye_btn"
-              onClick={() => setShowPassword((p) => !p)}
               tabIndex={-1}
             >
               {!hide ? (
