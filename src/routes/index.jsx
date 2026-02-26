@@ -24,6 +24,7 @@ import IcartHome from "../pages/icart/IcartHome";
 import PurchaseIcart from "../pages/icart/PurchaseIcart";
 import Invoices from "../pages/incoices/Invoices";
 import VendorIndex from "../pages/app/Vendor";
+import LibraryIndex from "../pages/app/Library";
 
 // Protected Route - must be logged in
 function ProtectedRoute({ children }) {
@@ -115,6 +116,7 @@ export default function Routes() {
         },
         { path: "icart-home", element: <IcartHome /> },
         { path: "purchase-icart", element: <PurchaseIcart /> },
+        { path: "library", element: <LibraryIndex /> },
       ],
     },
 
