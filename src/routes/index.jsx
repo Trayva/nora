@@ -25,6 +25,8 @@ import PurchaseIcart from "../pages/icart/PurchaseIcart";
 import Invoices from "../pages/incoices/Invoices";
 import VendorIndex from "../pages/app/Vendor";
 import LibraryIndex from "../pages/app/Library";
+import Modal from "../components/Modal";
+import useModal from "../hooks/useModal";
 
 // Protected Route - must be logged in
 function ProtectedRoute({ children }) {
@@ -63,6 +65,8 @@ function GuestRoute({ children }) {
 }
 
 export default function Routes() {
+  const { isOpened, closeModal, openModal } = useModal();
+  const { user } = useAuth();
   const routes = useRoutes([
     // Landing page (public)
     {

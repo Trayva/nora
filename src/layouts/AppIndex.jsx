@@ -7,10 +7,16 @@ import "./Sidebar.css";
 import { useTheme } from "../contexts/ThemeContext";
 import nora_logo_white from "../assets/nora_white.png";
 import nora_logo_dark from "../assets/nora_dark.png";
+import useModal from "../hooks/useModal";
+import { useAuth } from "../contexts/AuthContext";
+import Modal from "../components/Modal";
+import VerifyOtp from "../pages/auth/VerifyOtp";
 
 export default function AppIndex() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { isOpened, closeModal, openModal } = useModal();
+  const { user } = useAuth();
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const { theme } = useTheme();
 
@@ -29,6 +35,10 @@ export default function AppIndex() {
 
   return (
     <div className="app-container">
+      {!user?.emailVerified || !user?.phoneVerified ? <div className="danger verify-alert alert text-black">Your {user.emailVerified ? "phone number" : "email"} is not verified <span onClick={openModal} className="login_forgot_link">verify now</span></div> : null}
+      <Modal onClose={closeModal} isOpen={isOpened}>
+        <VerifyOtp showSignInButton={false} recipient={user.emailVerified ? user.phone : user.email} type={!user.emailVerified ? "email" : "phone"} />
+      </Modal>
       {/* Mobile Header */}
       {isMobile && (
         <header style={{

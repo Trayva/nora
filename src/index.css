@@ -948,3 +948,23 @@ s
   color: var(--text-muted);
   font-size: 0.9rem;
 }
+
+.verify-alert {
+  position: absolute !important;
+  top: 0;
+  left: calc(50% - 120px);
+  right: 0;
+  z-index: 2000;
+  background-color: var(--accent);
+  border-radius: 0px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  color: #fff !important;
+  background-color: rgba(255, 0, 0, 0.5);
+  cursor: pointer;
+  font-size: 0.8rem !important;
+  width: fit-content;
+  gap: 3px;
+}

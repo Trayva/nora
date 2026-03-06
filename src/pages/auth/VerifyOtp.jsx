@@ -15,10 +15,10 @@ const otpSchema = Yup.object().shape({
     .required("OTP is required"),
 });
 
-export default function VerifyOtp() {
+export default function VerifyOtp({ type = 'email', recipient, showSignInButton = true }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { email, verificationType = "email" } = location.state || {};
+  const { email = recipient, verificationType = type } = location.state || {};
 
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -54,7 +54,7 @@ export default function VerifyOtp() {
 
   return (
     <div>
-      <h2 className="profile_header">Verify Your Email</h2>
+      <h2 className="profile_header">Verify Your {type.charAt(0).toUpperCase() + type.slice(1)}</h2>
       <p className="welcome_message">
         We've sent a verification code to <strong>{email}</strong>
       </p>
@@ -113,12 +113,12 @@ export default function VerifyOtp() {
                 /> : "Resend Code"}
                 {/* <RxReload /> */}
               </button>
-              <p style={{ marginTop: 15 }} className="login_forgot_link">
+              {showSignInButton && <p style={{ marginTop: 15 }} className="login_forgot_link">
                 Back to{" "}
                 <Link to="/auth/login" className="login_forgot_link">
                   Sign in
                 </Link>
-              </p>
+              </p>}
             </div>
           </Form>
         )}
