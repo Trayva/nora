@@ -11,8 +11,9 @@ const addParamsToUrl = (url, params) => {
 /**
  * Ingredients
  */
-export const getAllIngredients = async () => {
-    const res = await api.get("/library/ingredient");
+export const getAllIngredients = async (page = 1, limit = 20, search) => {
+    const res = await api.get(addParamsToUrl("/library/ingredient", { page, limit, search }));
+    console.log(res)
     return res.data;
 };
 

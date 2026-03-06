@@ -24,6 +24,7 @@ import IcartHome from "../pages/icart/IcartHome";
 import PurchaseIcart from "../pages/icart/PurchaseIcart";
 import Invoices from "../pages/incoices/Invoices";
 import VendorIndex from "../pages/app/Vendor";
+import SupplierIndex from "../pages/app/Supplier";
 import LibraryIndex from "../pages/app/Library";
 import Modal from "../components/Modal";
 import useModal from "../hooks/useModal";
@@ -111,6 +112,7 @@ export default function Routes() {
         { path: "profile", element: <Profile /> },
         { path: "settings", element: <Settings /> },
         { path: "vendors", element: <VendorIndex /> },
+        { path: "suppliers", element: <SupplierIndex /> },
         {
           path: "finance",
           children: [
