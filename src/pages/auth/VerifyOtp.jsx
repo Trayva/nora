@@ -54,8 +54,8 @@ export default function VerifyOtp() {
 
   return (
     <div>
-      <h2 className="">Verify Your Email</h2>
-      <p className="">
+      <h2 className="profile_header">Verify Your Email</h2>
+      <p className="welcome_message">
         We've sent a verification code to <strong>{email}</strong>
       </p>
       <br />
@@ -67,9 +67,11 @@ export default function VerifyOtp() {
       >
         {({ errors, touched, values, setFieldValue, setFieldTouched }) => (
           <Form>
-            <div>
+            <div className="form-field">
               <Input
+                labelClassName="modal-label"
                 label="Enter 6-digit code"
+                className={`modal-input ${touched.otp && errors.otp ? "modal-input-error" : ""}`}
                 // placeholder="Enter 6-digit code"
                 value={values.otp}
                 onChange={(value) => setFieldValue("otp", value)}
@@ -81,10 +83,13 @@ export default function VerifyOtp() {
             <button
               disabled={loading}
               type="submit"
-              className="app_btn"
+              className={`app_btn app_btn_confirm ${loading ? "btn_loading" : ""}`}
               style={{ width: "100%", marginTop: 20 }}
             >
-              {loading ? <Loader loading={loading} /> : "Verify"}
+              {loading ? <span
+                className="btn_loader"
+                style={{ width: 18, height: 18 }}
+              /> : "Verify"}
             </button>
 
             <div
@@ -100,14 +105,17 @@ export default function VerifyOtp() {
                 type="button"
                 onClick={handleResend}
                 disabled={resending}
-                className="app_btn_small"
+                className={`app_btn app_btn_small app_btn_confirm ${resending ? "btn_loading" : ""}`}
               >
-                {resending ? <Loader loading={resending} /> : "Resend Code"}
+                {resending ? <span
+                  className="btn_loader"
+                  style={{ width: 18, height: 18 }}
+                /> : "Resend Code"}
                 {/* <RxReload /> */}
               </button>
-              <p className="">
+              <p style={{ marginTop: 15 }} className="login_forgot_link">
                 Back to{" "}
-                <Link to="/auth/login" className="">
+                <Link to="/auth/login" className="login_forgot_link">
                   Sign in
                 </Link>
               </p>
