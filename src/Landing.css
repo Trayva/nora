@@ -57,7 +57,7 @@
 .landing-header-nav a {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-muted);
+ color: var(--text-body);
   text-decoration: none;
   padding: 6px 14px;
   border-radius: 8px;
@@ -99,7 +99,7 @@
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  color: var(--text-muted);
+color: var(--text-body);
   transition:
     color 0.15s,
     background 0.15s;
@@ -1220,11 +1220,11 @@
   color: var(--text-heading);
 }
 
-:root:not([data-theme="dark"]) .landing-header-nav a {
-  color: rgba(255, 255, 255, 0.7);
+:root:not([data-theme="dark"]) .landing-icon-btn {
+  color: var(--text-muted); /* was #ffffff */
 }
 
-:root:not([data-theme="dark"]) .landing-header-nav a:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+:root:not([data-theme="dark"]) .landing-icon-btn:hover {
+  color: var(--text-heading); /* was #ffffff */
+  background: var(--bg-hover); /* was rgba(255,255,255,0.15) */
 }

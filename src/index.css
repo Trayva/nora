@@ -297,7 +297,6 @@ span {
   border-top-color: var(--accent);
   animation: spinLoader 0.7s linear infinite;
 }
-s
 
 /* Text */
 .page_loader_text {

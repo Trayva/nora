@@ -1,19 +1,14 @@
 import { Outlet } from "react-router-dom";
-import { useState } from "react";
-import { Col, Row } from "reactstrap";
 import Sidebar from "./Sidebar";
-import Navbar from "./Navbar";
+import "./AppIndex.css";
 
 export default function AppIndex() {
   return (
-    <Row className="m-0">
-      {/* <Navbar/> */}
-      <Col className="p-0" md={2}>
-        <Sidebar />
-      </Col>
-      <Col className="p-0" md={10}>
+    <div className="app-layout">
+      <Sidebar />
+      <main className="app-main">
         <Outlet />
-      </Col>
-    </Row>
+      </main>
+    </div>
   );
 }

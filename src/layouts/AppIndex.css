@@ -1,0 +1,12 @@
+/* AppIndex.css */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0; /* prevents flex blowout */
+}
