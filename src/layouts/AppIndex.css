@@ -10,3 +10,102 @@
   overflow-y: auto;
   min-width: 0; /* prevents flex blowout */
 }
+
+
+
+/* ── Verification Banner ──────────────────────────────────────── */
+
+.verification_banner {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 500;
+  background: var(--bg-card);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 12px;
+  padding: 8px 10px;
+  box-shadow: var(--modal-shadow);
+  max-width: 280px;
+}
+
+.verification_banner_inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.verification_banner_items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.verification_banner_item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.verification_banner_icon {
+  color: #ca8a04;
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+}
+
+.verification_banner_text {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #ca8a04;
+  flex: 1;
+}
+
+.verification_banner_btn {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #ca8a04;
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  padding: 2px 7px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.verification_banner_btn:hover {
+  background: rgba(234, 179, 8, 0.2);
+}
+
+.verification_banner_btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.verification_banner_close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: color 0.15s;
+  margin-top: 1px;
+}
+
+.verification_banner_close:hover {
+  color: var(--text-heading);
+}
+
+.verification_banner_item + .verification_banner_item {
+  padding-top: 6px;
+  border-top: 1px solid rgba(234, 179, 8, 0.15);
+  padding-left: 0;
+  border-left: none;
+}

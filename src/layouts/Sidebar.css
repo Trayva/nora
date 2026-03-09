@@ -216,3 +216,50 @@
   padding-top: 0.75rem;
   margin-top: 0.75rem;
 }
+
+
+
+
+.sidebar_state_section {
+  padding: 10px 12px;
+  margin: 4px 8px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.sidebar_state_label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.sidebar_state_select {
+  width: 100%;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 6px 24px 6px 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-body);
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23777' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: border-color 0.15s;
+}
+
+.sidebar_state_select:focus {
+  outline: none;
+  border-color: var(--accent);
+}

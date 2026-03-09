@@ -23,6 +23,9 @@ import NotFound from "../pages/NotFound";
 import IcartHome from "../pages/icart/IcartHome";
 import PurchaseIcart from "../pages/icart/PurchaseIcart";
 import Invoices from "../pages/incoices/Invoices";
+import Business from "../pages/app/Business";
+import ConceptPage from "../pages/app/Business/ConceptPage";
+
 
 // Protected Route - must be logged in
 function ProtectedRoute({ children }) {
@@ -108,6 +111,8 @@ export default function Routes() {
         { path: "icart-home", element: <IcartHome /> },
         { path: "purchase-icart", element: <PurchaseIcart /> },
         { path: "invoices", element: <Invoices /> },
+        { path: "business", element: <Business /> },
+        { path: "business/concept/:id", element: <ConceptPage /> },
       ],
     },
 

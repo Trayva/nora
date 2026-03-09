@@ -7,6 +7,7 @@ import {
   MdOutlineKitchen,
   MdChevronLeft,
   MdChevronRight,
+  MdLocationOn,
 } from "react-icons/md";
 import nora_logo_white from "../assets/nora_white.png";
 import nora_icon_white from "../assets/nora_white - icon.png";
@@ -20,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { BsShop } from "react-icons/bs";
 import { LiaFileInvoiceSolid } from "react-icons/lia";
 import { LuLibrary } from "react-icons/lu";
+import { useAppState } from "../contexts/StateContext";
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: RxDashboard, path: "/app" },
@@ -30,7 +32,12 @@ const navItems = [
     icon: PiTruck,
     path: "/app/suppliers",
   },
-  { id: "vendors", label: "Vendors", icon: BsShop, path: "/app/vendors" },
+  {
+    id: "mybusiness",
+    label: "My Business",
+    icon: BsShop,
+    path: "/app/business",
+  },
   {
     id: "icart",
     label: "iCarts",
@@ -61,29 +68,32 @@ const bottomItems = [
   },
 ];
 
+
+
+
 export default function Sidebar() {
   const { theme, toggle } = useTheme();
+  const { states, selectedState, changeState } = useAppState();
   const [active, setActive] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
   const navigate = useNavigate();
-
   return (
     <aside className={`sidebar ${collapsed ? "sidebar--collapsed" : ""}`}>
       {/* Logo */}
       <div className="sidebar-logo">
         {collapsed ? (
           /* Collapsed: show logo icon, hover reveals expand chevron */
-      <button
-  className="sidebar-logo-collapsed-btn"
-  onClick={() => {
-    setCollapsed(false);   // ✅ expand sidebar
-    setLogoHovered(false);
-  }}
-  onMouseEnter={() => setLogoHovered(true)}
-  onMouseLeave={() => setLogoHovered(false)}
-  title="Expand sidebar"
->
+          <button
+            className="sidebar-logo-collapsed-btn"
+            onClick={() => {
+              setCollapsed(false); // ✅ expand sidebar
+              setLogoHovered(false);
+            }}
+            onMouseEnter={() => setLogoHovered(true)}
+            onMouseLeave={() => setLogoHovered(false)}
+            title="Expand sidebar"
+          >
             <img
               src={theme === "dark" ? nora_icon_white : nora_icon_dark}
               alt="nora_logo"
@@ -153,6 +163,27 @@ export default function Sidebar() {
               </button>
             </li>
           ))}
+
+          <div className="sidebar_state_section">
+            <div className="sidebar_state_label">
+              <MdLocationOn size={12} />
+              Location
+            </div>
+            <select
+              className="sidebar_state_select"
+              value={selectedState?.id || ""}
+              onChange={(e) => {
+                const found = states.find((s) => s.id === e.target.value);
+                if (found) changeState(found);
+              }}
+            >
+              {states.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Theme toggle */}
           <li>

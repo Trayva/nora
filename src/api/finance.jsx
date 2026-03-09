@@ -1,3 +1,4 @@
+import { addParamsToUrl } from "../utils";
 import api from "./axios";
 
 /**
@@ -5,6 +6,7 @@ import api from "./axios";
  */
 export const getWallet = async () => {
   const response = await api.get("/finance/wallet");
+  console.log(response.data);
   return response.data;
 };
 
@@ -23,7 +25,10 @@ export const setPin = async (pin) => {
  * @param {string} newPin
  */
 export const changePin = async (oldPin, newPin) => {
-  const response = await api.post("/finance/wallet/pin/change", { oldPin, newPin });
+  const response = await api.post("/finance/wallet/pin/change", {
+    oldPin,
+    newPin,
+  });
   return response.data;
 };
 
@@ -33,7 +38,10 @@ export const changePin = async (oldPin, newPin) => {
  * @param {string} newPin
  */
 export const resetPin = async (userId, newPin) => {
-  const response = await api.post("/finance/wallet/pin/reset", { userId, newPin });
+  const response = await api.post("/finance/wallet/pin/reset", {
+    userId,
+    newPin,
+  });
   return response.data;
 };
 
@@ -99,5 +107,14 @@ export const withdrawFunds = async (pin, amount, description) => {
     amount,
     description,
   });
+  return response.data;
+};
+/**
+ * Get invoices for the current user.
+ */
+export const getInvoices = async (from, to, search, pending) => {
+  const response = await api.get(
+    addParamsToUrl("/finance/invoice", { from, to, search, pending }),
+  );
   return response.data;
 };
