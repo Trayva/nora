@@ -128,8 +128,6 @@ export default function MenuItemDrawer({ item, onClose }) {
     }
   };
 
-
-
   // ── Variants ───────────────────────────────────────────────────────────────
   const handleAddVariant = async (e) => {
     e.preventDefault();
@@ -290,7 +288,6 @@ export default function MenuItemDrawer({ item, onClose }) {
               deletingId={deletingStep}
               cost={cost}
             />
-          
           </Section>
 
           {/* ── Variants ── */}
@@ -539,14 +536,30 @@ export default function MenuItemDrawer({ item, onClose }) {
           </Section>
 
           {/* ── Tutorial ── */}
+          {/* ── Tutorial ── */}
           <Section title="Tutorial Video" defaultOpen={false}>
-            {detail.tutorialUrl ? (
+            {detail.tutorialVideo ? (
               <div className="tutorial_preview">
-                <video
-                  src={detail.tutorialUrl}
-                  controls
-                  className="tutorial_video"
-                />
+                {detail.tutorialVideo.includes("vimeo.com") ? (
+                  <iframe
+                    src={`https://player.vimeo.com/video/${detail.tutorialVideo.split("/").pop()}`}
+                    className="tutorial_video"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen
+                    style={{
+                      border: "none",
+                      width: "100%",
+                      aspectRatio: "16/9",
+                      borderRadius: 12,
+                    }}
+                  />
+                ) : (
+                  <video
+                    src={detail.tutorialVideo}
+                    controls
+                    className="tutorial_video"
+                  />
+                )}
                 <p className="tutorial_replace_hint">
                   Upload a new file below to replace.
                 </p>
@@ -560,7 +573,9 @@ export default function MenuItemDrawer({ item, onClose }) {
             <form onSubmit={handleUploadTutorial} className="recipe_add_form">
               <div className="form-field">
                 <label className="modal-label">
-                  {detail.tutorialUrl ? "Replace Tutorial" : "Upload Tutorial"}{" "}
+                  {detail.tutorialVideo
+                    ? "Replace Tutorial"
+                    : "Upload Tutorial"}{" "}
                   *
                 </label>
                 <input

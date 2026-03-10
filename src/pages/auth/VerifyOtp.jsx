@@ -72,7 +72,6 @@ export default function VerifyOtp() {
       >
         {({ errors, touched, values, handleChange, handleBlur }) => (
           <Form style={{ marginTop: 24 }}>
-
             <div className="form-field">
               <label className="modal-label">6-digit verification code</label>
               <input
@@ -96,13 +95,30 @@ export default function VerifyOtp() {
               disabled={loading}
               type="submit"
               className={`app_btn app_btn_confirm ${loading ? "btn_loading" : ""}`}
-              style={{ width: "100%", marginTop: 20, position: "relative", height: 42 }}
+              style={{
+                width: "100%",
+                marginTop: 20,
+                position: "relative",
+                height: 42,
+              }}
             >
               <span className="btn_text">Verify Email</span>
-              {loading && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
+              {loading && (
+                <span
+                  className="btn_loader"
+                  style={{ width: 18, height: 18 }}
+                />
+              )}
             </button>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginTop: 20,
+              }}
+            >
               <button
                 type="button"
                 onClick={handleResend}
@@ -111,7 +127,17 @@ export default function VerifyOtp() {
                 style={{ position: "relative", height: 38, padding: "0 16px" }}
               >
                 <span className="btn_text">Resend Code</span>
-                {resending && <span className="btn_loader" style={{ width: 16, height: 16, borderColor: "var(--accent)", borderTopColor: "transparent" }} />}
+                {resending && (
+                  <span
+                    className="btn_loader"
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderColor: "var(--accent)",
+                      borderTopColor: "transparent",
+                    }}
+                  />
+                )}
               </button>
 
               <p className="muted" style={{ margin: 0, fontSize: "0.875rem" }}>

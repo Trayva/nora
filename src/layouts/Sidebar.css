@@ -32,6 +32,7 @@
   padding: 0 0.5rem 1.75rem 0.5rem;
   border-bottom: 1px solid var(--divider);
   margin-bottom: 1rem;
+  flex-shrink: 0;
 }
 
 .sidebar--collapsed .sidebar-logo {
@@ -58,7 +59,7 @@
   flex-shrink: 0;
 }
 
-/* ── Collapsed logo button (shows logo, hover reveals expand chevron) ── */
+/* ── Collapsed logo button ── */
 .sidebar-logo-collapsed-btn {
   position: relative;
   display: flex;
@@ -128,9 +129,17 @@
   color: var(--accent);
 }
 
-/* ── Nav ── */
+/* ── Nav — scrollable ── */
 .sidebar-nav {
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 .sidebar-list {
@@ -158,9 +167,7 @@
   font-weight: 500;
   cursor: pointer;
   text-align: left;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 }
 
@@ -170,20 +177,17 @@
   padding: 0.65rem;
 }
 
-/* Hover */
 .sidebar-item:hover {
   background-color: var(--bg-hover);
   color: var(--text-body);
 }
 
-/* Active */
 .sidebar-item.active {
   background-color: var(--bg-active, rgba(99, 102, 241, 0.12));
   color: var(--accent);
   font-weight: 600;
 }
 
-/* Active left bar indicator */
 .sidebar-active-bar {
   position: absolute;
   left: -0.75rem;
@@ -215,51 +219,62 @@
   border-top: 1px solid var(--divider);
   padding-top: 0.75rem;
   margin-top: 0.75rem;
+  flex-shrink: 0;
 }
 
-
-
-
+/* ── Location item — styled like a sidebar-item ── */
 .sidebar_state_section {
-  padding: 10px 12px;
-  margin: 4px 8px;
-  background: var(--bg-hover);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.sidebar_state_label {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-
-.sidebar_state_select {
+  gap: 0.55rem;
   width: 100%;
-  background: var(--bg-main);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 6px 24px 6px 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-body);
-  font-family: inherit;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23777' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  transition: border-color 0.15s;
+  padding: 0.65rem 0.45rem;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.sidebar_state_select:focus {
-  outline: none;
-  border-color: var(--accent);
+.sidebar_state_section:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-body);
+}
+
+.sidebar--collapsed .sidebar_state_section {
+  justify-content: center;
+  padding: 0.65rem;
+}
+
+/* The icon sits naturally like other sidebar icons */
+.sidebar_state_icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+/* The select overlays the entire row, invisible itself */
+.sidebar_state_select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  z-index: 1;
+}
+
+/* The visible label text */
+.sidebar_state_label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
 }

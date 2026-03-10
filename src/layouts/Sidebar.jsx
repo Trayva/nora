@@ -68,9 +68,6 @@ const bottomItems = [
   },
 ];
 
-
-
-
 export default function Sidebar() {
   const { theme, toggle } = useTheme();
   const { states, selectedState, changeState } = useAppState();
@@ -164,11 +161,16 @@ export default function Sidebar() {
             </li>
           ))}
 
-          <div className="sidebar_state_section">
-            <div className="sidebar_state_label">
-              <MdLocationOn size={12} />
-              Location
-            </div>
+          <div
+            className="sidebar_state_section"
+            title={collapsed ? selectedState?.name || "Location" : undefined}
+          >
+            <MdLocationOn className="sidebar_state_icon" />
+            {!collapsed && (
+              <span className="sidebar_state_label">
+                {selectedState?.name || "Select location"}
+              </span>
+            )}
             <select
               className="sidebar_state_select"
               value={selectedState?.id || ""}

@@ -37,6 +37,52 @@ function CollapsibleSection({ title, count, children, defaultOpen = true }) {
   );
 }
 
+function RecipeCollapsible({ recipe }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="overview_recipe_block">
+      <div
+        className="overview_recipe_toggle"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="overview_recipe_label">Recipe</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span className="drawer_section_count">{recipe.length}</span>
+          {open ? (
+            <LuChevronDown size={13} style={{ color: "var(--text-muted)" }} />
+          ) : (
+            <LuChevronRight size={13} style={{ color: "var(--text-muted)" }} />
+          )}
+        </div>
+      </div>
+      {open && (
+        <div className="overview_recipe_steps_grid">
+          {recipe.map((step, i) => (
+            <div key={step.id} className="overview_recipe_chip">
+              <span className="overview_recipe_chip_num">{i + 1}</span>
+              <div className="overview_recipe_chip_body">
+                <span className="overview_recipe_chip_name">
+                  {step.ingredient?.name || step.prepItem?.name || step.type}
+                </span>
+                <span className="overview_recipe_chip_qty">
+                  {step.quantity}{" "}
+                  {step.ingredient?.unit || step.prepItem?.unit || ""}
+                  {step.instruction ? ` · ${step.instruction}` : ""}
+                </span>
+              </div>
+              <span
+                className={`overview_recipe_chip_type overview_recipe_type_${step.type}`}
+              >
+                {step.type}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ConceptOverviewDrawer({ concept, onClose }) {
   const { selectedState } = useAppState();
   const currency = selectedState?.currency || "NGN";
@@ -46,8 +92,22 @@ export default function ConceptOverviewDrawer({ concept, onClose }) {
           amount,
         )
       : null;
+
+  const calcSellingPrice = (cost) =>
+    cost != null ? cost + (markup / 100) * cost : null;
+
+  const calcProfit = (cost) =>
+    cost != null ? calcSellingPrice(cost) - cost : null;
+
+  const calcCostPct = (cost) =>
+    cost != null && calcSellingPrice(cost) > 0
+      ? ((cost / calcSellingPrice(cost)) * 100).toFixed(1)
+      : null;
+
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [markup, setMarkup] = useState(30);
+  const [useCache, setUseCache] = useState(true);
 
   useEffect(() => {
     if (!concept) {
@@ -60,6 +120,7 @@ export default function ConceptOverviewDrawer({ concept, onClose }) {
       try {
         const res = await getConceptSummary(concept.id, {
           ...(selectedState?.id && { stateId: selectedState.id }),
+          returnCacheData: useCache,
         });
         console.log("Summary response:", res.data);
         setSummary(res.data.data);
@@ -74,8 +135,8 @@ export default function ConceptOverviewDrawer({ concept, onClose }) {
         setLoading(false);
       }
     };
-    loadSummary(); // ← was fetch()
-  }, [concept?.id]);
+    loadSummary();
+  }, [concept?.id, useCache]);
 
   return (
     <Drawer
@@ -85,6 +146,22 @@ export default function ConceptOverviewDrawer({ concept, onClose }) {
       description="Concept overview"
       width={560}
     >
+      {/* Cache toggle */}
+      <div className="overview_cache_row">
+        <span className="overview_markup_label">Live Prices</span>
+        <button
+          type="button"
+          className={`overview_cache_toggle ${!useCache ? "overview_cache_toggle_active" : ""}`}
+          onClick={() => setUseCache((v) => !v)}
+          title={
+            useCache
+              ? "Using cached prices — click for live"
+              : "Using live prices"
+          }
+        >
+          <span className="overview_cache_knob" />
+        </button>
+      </div>
       {loading ? (
         <div className="page_loader">
           <div className="page_loader_spinner" />
@@ -112,6 +189,26 @@ export default function ConceptOverviewDrawer({ concept, onClose }) {
             ))}
           </div>
 
+          {/* Markup slider */}
+          <div className="overview_markup_row">
+            <div className="overview_markup_header">
+              <span className="overview_markup_label">Markup</span>
+              <span className="overview_markup_value">{markup}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={1000}
+              value={markup}
+              onChange={(e) => setMarkup(Number(e.target.value))}
+              className="overview_markup_slider"
+            />
+            <div className="overview_markup_hints">
+              <span>0%</span>
+              <span>500%</span>
+              <span>1000%</span>
+            </div>
+          </div>
           {/* Menu Items */}
           <CollapsibleSection
             title="Menu Items"
@@ -158,9 +255,29 @@ export default function ConceptOverviewDrawer({ concept, onClose }) {
 
                         <div className="overview_menu_cost_row">
                           {item.recipeCost != null ? (
-                            <span className="overview_cost_chip overview_cost_chip_green">
-                              {formatCost(item.recipeCost)}
-                            </span>
+                            <>
+                              <span
+                                className="overview_cost_chip overview_cost_chip_green"
+                                title="Estimated selling price"
+                              >
+                                Selling Price:{" "}
+                                {formatCost(calcSellingPrice(item.recipeCost))}
+                              </span>
+                              <span
+                                className="overview_cost_chip overview_cost_chip_blue"
+                                title="Estimated profit"
+                              >
+                                Profit:{" "}
+                                {formatCost(calcProfit(item.recipeCost))}
+                              </span>
+                              <span
+                                className="overview_cost_chip overview_cost_chip_purple"
+                                title="Recipe cost · Cost percentage"
+                              >
+                                {formatCost(item.recipeCost)} ·{" "}
+                                {calcCostPct(item.recipeCost)}%
+                              </span>
+                            </>
                           ) : item.costError ? (
                             <span
                               className="overview_cost_chip overview_cost_chip_warn"
@@ -175,39 +292,7 @@ export default function ConceptOverviewDrawer({ concept, onClose }) {
 
                     {/* Recipe steps */}
                     {item.recipe?.length > 0 && (
-                      <div className="overview_recipe_block">
-                        <span className="overview_recipe_label">Recipe</span>
-                        <div className="overview_recipe_steps_grid">
-                          {item.recipe.map((step, i) => (
-                            <div key={step.id} className="overview_recipe_chip">
-                              <span className="overview_recipe_chip_num">
-                                {i + 1}
-                              </span>
-                              <div className="overview_recipe_chip_body">
-                                <span className="overview_recipe_chip_name">
-                                  {step.ingredient?.name ||
-                                    step.prepItem?.name ||
-                                    step.type}
-                                </span>
-                                <span className="overview_recipe_chip_qty">
-                                  {step.quantity}{" "}
-                                  {step.ingredient?.unit ||
-                                    step.prepItem?.unit ||
-                                    ""}
-                                  {step.instruction
-                                    ? ` · ${step.instruction}`
-                                    : ""}
-                                </span>
-                              </div>
-                              <span
-                                className={`overview_recipe_chip_type overview_recipe_type_${step.type}`}
-                              >
-                                {step.type}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      <RecipeCollapsible recipe={item.recipe} />
                     )}
                   </div>
                 ))}
@@ -343,7 +428,6 @@ export default function ConceptOverviewDrawer({ concept, onClose }) {
                     ) : (
                       <span className="recipe_step_qty">{prep.unit}</span>
                     )}
-                    <span className="recipe_step_qty">{prep.unit}</span>
                   </div>
                 ))}
               </div>
