@@ -6,6 +6,7 @@ import { getVendorExtras, deleteExtra } from "../../../api/library";
 import { getVendorProfile } from "../../../api/vendor";
 import ExtraDrawer from "./ExtraDrawer";
 import CreateExtraModal from "./CreateExtraModal";
+import Modal from "../../../components/Modal";
 
 export default function ExtrasTab() {
   const [extras, setExtras] = useState([]);
@@ -14,6 +15,7 @@ export default function ExtrasTab() {
   const [openExtra, setOpenExtra] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [deleting, setDeleting] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const fetchExtras = async (vid) => {
     const id = vid || vendorId;
@@ -43,12 +45,12 @@ export default function ExtrasTab() {
     init();
   }, []);
 
-  const handleDelete = async (id, e) => {
-    e.stopPropagation();
+  const handleDelete = async (id) => {
     setDeleting(id);
     try {
       await deleteExtra(id);
       toast.success("Extra deleted");
+      setConfirmDelete(null);
       fetchExtras();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to delete");
@@ -131,23 +133,13 @@ export default function ExtrasTab() {
                   </button>
                   <button
                     className="biz_icon_btn biz_icon_btn_danger"
-                    onClick={(e) => handleDelete(extra.id, e)}
-                    disabled={deleting === extra.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDelete(extra);
+                    }}
                     style={{ position: "relative", height: 40, width: 40 }}
                   >
-                    {deleting === extra.id ? (
-                      <span
-                        className="btn_loader"
-                        style={{
-                          width: 14,
-                          height: 14,
-                          borderColor: "#ef4444",
-                          borderTopColor: "transparent",
-                        }}
-                      />
-                    ) : (
-                      <LuTrash2 size={15} />
-                    )}
+                    <LuTrash2 size={15} />
                   </button>
                 </div>
               </div>
@@ -182,6 +174,42 @@ export default function ExtrasTab() {
           );
         }}
       />
+
+      <Modal
+        isOpen={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        title="Delete Prep Item"
+        description={`Are you sure you want to delete "${confirmDelete?.name}"? This cannot be undone.`}
+      >
+        <div className="modal-body">
+          <div className="modal-footer">
+            <button
+              className="app_btn app_btn_cancel"
+              onClick={() => setConfirmDelete(null)}
+            >
+              Cancel
+            </button>
+            <button
+              className={`app_btn app_btn_confirm ${deleting ? "btn_loading" : ""}`}
+              style={{
+                background: "#ef4444",
+                position: "relative",
+                minWidth: 110,
+              }}
+              onClick={() => handleDelete(confirmDelete.id)}
+              disabled={!!deleting}
+            >
+              <span className="btn_text">Delete</span>
+              {deleting && (
+                <span
+                  className="btn_loader"
+                  style={{ width: 14, height: 14 }}
+                />
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

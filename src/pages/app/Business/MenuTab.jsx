@@ -5,13 +5,19 @@ import { MdOutlineFastfood } from "react-icons/md";
 import { getMenuByConcept, deleteMenuItem } from "../../../api/vendor";
 import CreateMenuItemModal from "./CreateMenuItemModal";
 import MenuItemDrawer from "./MenuItemDrawer";
+import Modal from "../../../components/Modal";
 
-export default function MenuTab({ concepts, selectedConcept, onSelectConcept }) {
+export default function MenuTab({
+  concepts,
+  selectedConcept,
+  onSelectConcept,
+}) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const fetchMenu = async (conceptId) => {
     if (!conceptId) return;
@@ -30,12 +36,12 @@ export default function MenuTab({ concepts, selectedConcept, onSelectConcept }) 
     if (selectedConcept) fetchMenu(selectedConcept.id);
   }, [selectedConcept]);
 
-  const handleDelete = async (id, e) => {
-    e.stopPropagation();
+  const handleDelete = async (id) => {
     setDeleting(id);
     try {
       await deleteMenuItem(id);
       toast.success("Item deleted");
+      setConfirmDelete(null);
       fetchMenu(selectedConcept.id);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to delete");
@@ -46,7 +52,6 @@ export default function MenuTab({ concepts, selectedConcept, onSelectConcept }) 
 
   return (
     <div className="biz_tab_panel">
-
       {/* Concept selector pills */}
       {concepts.length > 0 && (
         <div className="menu_concept_pills">
@@ -69,7 +74,10 @@ export default function MenuTab({ concepts, selectedConcept, onSelectConcept }) 
             : "Select a concept"}
         </span>
         {selectedConcept && (
-          <button className="app_btn app_btn_confirm biz_add_btn" onClick={() => setShowCreate(true)}>
+          <button
+            className="app_btn app_btn_confirm biz_add_btn"
+            onClick={() => setShowCreate(true)}
+          >
             <LuPlus size={15} />
             Add Item
           </button>
@@ -77,7 +85,9 @@ export default function MenuTab({ concepts, selectedConcept, onSelectConcept }) 
       </div>
 
       {loading ? (
-        <div className="page_loader"><div className="page_loader_spinner" /></div>
+        <div className="page_loader">
+          <div className="page_loader_spinner" />
+        </div>
       ) : !selectedConcept ? (
         <div className="biz_empty">
           <MdOutlineFastfood size={28} />
@@ -97,7 +107,11 @@ export default function MenuTab({ concepts, selectedConcept, onSelectConcept }) 
               onClick={() => setSelectedItem(item)}
             >
               {item.image ? (
-                <img src={item.image} alt={item.name} className="drawer_item_img" />
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  className="drawer_item_img"
+                />
               ) : (
                 <div className="drawer_item_img drawer_item_img_placeholder">
                   <MdOutlineFastfood size={16} />
@@ -127,21 +141,22 @@ export default function MenuTab({ concepts, selectedConcept, onSelectConcept }) 
                 <button
                   className="biz_icon_btn"
                   title="View recipes"
-                  onClick={(e) => { e.stopPropagation(); setSelectedItem(item); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedItem(item);
+                  }}
                 >
                   <LuChefHat size={14} />
                 </button>
                 <button
                   className="biz_icon_btn biz_icon_btn_danger"
                   title="Delete"
-                  onClick={(e) => handleDelete(item.id, e)}
-                  disabled={deleting === item.id}
-                  style={{ position: "relative" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDelete(item);
+                  }}
                 >
-                  {deleting === item.id
-                    ? <span className="btn_loader" style={{ width: 14, height: 14, borderColor: "#ef4444", borderTopColor: "transparent" }} />
-                    : <LuTrash2 size={14} />
-                  }
+                  <LuTrash2 size={14} />
                 </button>
               </div>
             </div>
@@ -153,15 +168,57 @@ export default function MenuTab({ concepts, selectedConcept, onSelectConcept }) 
         <CreateMenuItemModal
           isOpen={showCreate}
           onClose={() => setShowCreate(false)}
-          onSuccess={() => { setShowCreate(false); fetchMenu(selectedConcept.id); }}
+          onSuccess={() => {
+            setShowCreate(false);
+            fetchMenu(selectedConcept.id);
+          }}
           conceptId={selectedConcept.id}
         />
       )}
 
       <MenuItemDrawer
         item={selectedItem}
-        onClose={() => { setSelectedItem(null); fetchMenu(selectedConcept?.id); }}
+        onClose={() => {
+          setSelectedItem(null);
+          fetchMenu(selectedConcept?.id);
+        }}
       />
+
+      <Modal
+        isOpen={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        title="Delete Menu Item"
+        description={`Are you sure you want to delete "${confirmDelete?.name}"? This cannot be undone.`}
+      >
+        <div className="modal-body">
+          <div className="modal-footer">
+            <button
+              className="app_btn app_btn_cancel"
+              onClick={() => setConfirmDelete(null)}
+            >
+              Cancel
+            </button>
+            <button
+              className={`app_btn app_btn_confirm ${deleting ? "btn_loading" : ""}`}
+              style={{
+                background: "#ef4444",
+                position: "relative",
+                minWidth: 110,
+              }}
+              onClick={() => handleDelete(confirmDelete.id)}
+              disabled={!!deleting}
+            >
+              <span className="btn_text">Delete</span>
+              {deleting && (
+                <span
+                  className="btn_loader"
+                  style={{ width: 14, height: 14 }}
+                />
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
