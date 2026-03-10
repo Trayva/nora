@@ -51,6 +51,9 @@ export const removeMenuExtra = (extraId) =>
 
 export const uploadMenuTutorial = (menuItemId, file) => {
   const fd = new FormData();
-  fd.append("file", file);
+  fd.append("video", file);
   return api.post(`/vendor/menu/${menuItemId}/tutorial`, fd);
 };
+
+export const getConceptSummary = (conceptId, params) =>
+  api.get(`/vendor/menu/concept/${conceptId}/summary`, { params });

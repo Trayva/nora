@@ -6,6 +6,7 @@ import {
   MdAdd,
   MdClose,
 } from "react-icons/md";
+import UnitSelect from "./UnitSelect";
 
 export default function IngredientSearchInput({
   onSelect,
@@ -194,9 +195,7 @@ export default function IngredientSearchInput({
                   }
                   style={{ marginBottom: 6 }}
                 />
-                <input
-                  className="modal-input"
-                  placeholder="Unit (e.g. g, ml, kg) *"
+                <UnitSelect
                   value={newForm.unit}
                   onChange={(e) =>
                     setNewForm((p) => ({ ...p, unit: e.target.value }))

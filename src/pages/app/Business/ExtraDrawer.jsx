@@ -8,7 +8,6 @@ import {
   getExtra,
   addExtraStep,
   deleteExtraStep,
-  calcExtra,
 } from "../../../api/library";
 import { useAppState } from "../../../contexts/StateContext";
 
@@ -19,7 +18,6 @@ export default function ExtraDrawer({ extra, onClose }) {
   const [savingStep, setSavingStep] = useState(false);
   const [deletingStep, setDeletingStep] = useState(null);
   const [cost, setCost] = useState(null);
-  const [calculating, setCalculating] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   const { selectedState } = useAppState();
@@ -71,19 +69,6 @@ export default function ExtraDrawer({ extra, onClose }) {
       toast.error(err.response?.data?.message || "Failed to remove step");
     } finally {
       setDeletingStep(null);
-    }
-  };
-
-  const handleCalc = async () => {
-    setCalculating(true);
-    try {
-      const res = await calcExtra(extra.id, selectedState?.id);
-      setCost(res.data.data || res.data);
-      toast.success("Cost calculated!");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Calculation failed");
-    } finally {
-      setCalculating(false);
     }
   };
 
@@ -143,29 +128,6 @@ export default function ExtraDrawer({ extra, onClose }) {
                 <span className="wallet_section_title">Recipe Steps</span>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  className={`app_btn app_btn_cancel biz_add_btn ${calculating ? "btn_loading" : ""}`}
-                  onClick={handleCalc}
-                  disabled={calculating || steps.length === 0}
-                  style={{ position: "relative" }}
-                  title="Calculate total cost"
-                >
-                  <span className="btn_text">
-                    <LuCalculator size={13} />
-                    Calc Cost
-                  </span>
-                  {calculating && (
-                    <span
-                      className="btn_loader"
-                      style={{
-                        width: 13,
-                        height: 13,
-                        borderColor: "var(--accent)",
-                        borderTopColor: "transparent",
-                      }}
-                    />
-                  )}
-                </button>
                 <button
                   className="app_btn app_btn_confirm biz_add_btn"
                   onClick={() => setShowForm((v) => !v)}

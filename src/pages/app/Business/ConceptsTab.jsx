@@ -7,6 +7,7 @@ import ConceptCard from "./ConceptCard";
 import MenuTab from "./MenuTab";
 import CreateConceptModal from "./CreateConceptModal";
 import ConceptDrawer from "./ConceptDrawer";
+import ConceptOverviewDrawer from "./ConceptOverviewDrawer";
 
 export default function ConceptsTab({ activeTab }) {
   const [concepts, setConcepts] = useState([]);
@@ -14,6 +15,7 @@ export default function ConceptsTab({ activeTab }) {
   const [selectedConcept, setSelectedConcept] = useState(null);
   const [openConcept, setOpenConcept] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [overviewConcept, setOverviewConcept] = useState(null);
 
   const fetchConcepts = async () => {
     try {
@@ -28,7 +30,9 @@ export default function ConceptsTab({ activeTab }) {
     }
   };
 
-  useEffect(() => { fetchConcepts(); }, []);
+  useEffect(() => {
+    fetchConcepts();
+  }, []);
 
   if (activeTab === "menu") {
     return (
@@ -46,14 +50,19 @@ export default function ConceptsTab({ activeTab }) {
         <span className="biz_panel_count">
           {concepts.length} concept{concepts.length !== 1 ? "s" : ""}
         </span>
-        <button className="app_btn app_btn_confirm biz_add_btn" onClick={() => setShowCreate(true)}>
+        <button
+          className="app_btn app_btn_confirm biz_add_btn"
+          onClick={() => setShowCreate(true)}
+        >
           <LuPlus size={15} />
           New Concept
         </button>
       </div>
 
       {loading ? (
-        <div className="page_loader"><div className="page_loader_spinner" /></div>
+        <div className="page_loader">
+          <div className="page_loader_spinner" />
+        </div>
       ) : concepts.length === 0 ? (
         <div className="biz_empty">
           <MdOutlineRestaurantMenu size={28} />
@@ -67,6 +76,7 @@ export default function ConceptsTab({ activeTab }) {
               concept={c}
               onUpdate={fetchConcepts}
               onOpen={() => setOpenConcept(c)}
+              onOverview={() => setOverviewConcept(c)}
             />
           ))}
         </div>
@@ -75,13 +85,21 @@ export default function ConceptsTab({ activeTab }) {
       <CreateConceptModal
         isOpen={showCreate}
         onClose={() => setShowCreate(false)}
-        onSuccess={() => { setShowCreate(false); fetchConcepts(); }}
+        onSuccess={() => {
+          setShowCreate(false);
+          fetchConcepts();
+        }}
       />
 
       <ConceptDrawer
         concept={openConcept}
         onClose={() => setOpenConcept(null)}
         onUpdate={fetchConcepts}
+      />
+
+      <ConceptOverviewDrawer
+        concept={overviewConcept}
+        onClose={() => setOverviewConcept(null)}
       />
     </div>
   );

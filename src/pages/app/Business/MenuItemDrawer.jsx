@@ -21,7 +21,6 @@ import {
   removeMenuExtra,
   uploadMenuTutorial,
 } from "../../../api/vendor";
-import { calcMenu } from "../../../api/library";
 import { useAppState } from "../../../contexts/StateContext";
 
 // ── Collapsible section wrapper ──────────────────────────────────────────────
@@ -58,7 +57,6 @@ export default function MenuItemDrawer({ item, onClose }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(false);
   const [cost, setCost] = useState(null);
-  const [calcLoading, setCalcLoading] = useState(false);
 
   // Recipe
   const [showRecipeForm, setShowRecipeForm] = useState(false);
@@ -130,18 +128,7 @@ export default function MenuItemDrawer({ item, onClose }) {
     }
   };
 
-  // ── Calc ───────────────────────────────────────────────────────────────────
-  const handleCalc = async () => {
-    setCalcLoading(true);
-    try {
-      const res = await calcMenu(item.id, selectedState?.id);
-      setCost(res.data.data);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to calculate cost");
-    } finally {
-      setCalcLoading(false);
-    }
-  };
+
 
   // ── Variants ───────────────────────────────────────────────────────────────
   const handleAddVariant = async (e) => {
@@ -303,35 +290,7 @@ export default function MenuItemDrawer({ item, onClose }) {
               deletingId={deletingStep}
               cost={cost}
             />
-            <button
-              className={`app_btn app_btn_cancel ${calcLoading ? "btn_loading" : ""}`}
-              style={{
-                width: "100%",
-                height: 36,
-                position: "relative",
-                marginTop: 4,
-                fontSize: "0.8rem",
-              }}
-              onClick={handleCalc}
-              disabled={calcLoading}
-            >
-              <span className="btn_text">
-                {selectedState
-                  ? `Calc Cost (${selectedState.name})`
-                  : "Calc Cost"}
-              </span>
-              {calcLoading && (
-                <span
-                  className="btn_loader"
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderColor: "var(--accent)",
-                    borderTopColor: "transparent",
-                  }}
-                />
-              )}
-            </button>
+          
           </Section>
 
           {/* ── Variants ── */}
