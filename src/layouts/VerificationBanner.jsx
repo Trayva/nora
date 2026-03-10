@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { MdOutlineClose, MdOutlineMarkEmailUnread, MdOutlinePhone } from "react-icons/md";
+import {
+  MdOutlineClose,
+  MdOutlineMarkEmailUnread,
+  MdOutlinePhone,
+} from "react-icons/md";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../api/axios";
 import { toast } from "react-toastify";
@@ -55,7 +59,9 @@ export default function VerificationBanner() {
     setVerifying(true);
     try {
       await api.post("/auth/verify-otp", { otp, type: otpModal.type });
-      toast.success(`${otpModal.type === "email" ? "Email" : "Phone"} verified!`);
+      toast.success(
+        `${otpModal.type === "email" ? "Email" : "Phone"} verified!`,
+      );
       setOtpModal(null);
       setOtp("");
       // Refresh user so banner disappears
@@ -67,7 +73,10 @@ export default function VerificationBanner() {
     }
   };
 
-  const closeModal = () => { setOtpModal(null); setOtp(""); };
+  const closeModal = () => {
+    setOtpModal(null);
+    setOtp("");
+  };
 
   return (
     <>
@@ -76,8 +85,13 @@ export default function VerificationBanner() {
           <div className="verification_banner_items">
             {emailUnverified && (
               <div className="verification_banner_item">
-                <MdOutlineMarkEmailUnread size={16} className="verification_banner_icon" />
-                <span className="verification_banner_text">Email is not verified</span>
+                <MdOutlineMarkEmailUnread
+                  size={16}
+                  className="verification_banner_icon"
+                />
+                <span className="verification_banner_text">
+                  Email is not verified
+                </span>
                 <button
                   className="verification_banner_btn"
                   onClick={() => handleRequestCode("email")}
@@ -89,8 +103,13 @@ export default function VerificationBanner() {
             )}
             {phoneUnverified && (
               <div className="verification_banner_item">
-                <MdOutlinePhone size={16} className="verification_banner_icon" />
-                <span className="verification_banner_text">Phone is not verified</span>
+                <MdOutlinePhone
+                  size={16}
+                  className="verification_banner_icon"
+                />
+                <span className="verification_banner_text">
+                  Phone is not verified
+                </span>
                 <button
                   className="verification_banner_btn"
                   onClick={() => handleRequestCode("phone")}
@@ -147,7 +166,15 @@ export default function VerificationBanner() {
             >
               <span className="btn_text">Resend Code</span>
               {resending && (
-                <span className="btn_loader" style={{ width: 14, height: 14, borderColor: "var(--accent)", borderTopColor: "transparent" }} />
+                <span
+                  className="btn_loader"
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderColor: "var(--accent)",
+                    borderTopColor: "transparent",
+                  }}
+                />
               )}
             </button>
             <button
@@ -159,7 +186,10 @@ export default function VerificationBanner() {
             >
               <span className="btn_text">Verify</span>
               {verifying && (
-                <span className="btn_loader" style={{ width: 16, height: 16 }} />
+                <span
+                  className="btn_loader"
+                  style={{ width: 16, height: 16 }}
+                />
               )}
             </button>
           </div>

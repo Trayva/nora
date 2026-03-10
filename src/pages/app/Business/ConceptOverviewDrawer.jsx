@@ -198,6 +198,7 @@ export default function ConceptOverviewDrawer({ concept, onClose }) {
             <input
               type="range"
               min={0}
+              step={10}
               max={1000}
               value={markup}
               onChange={(e) => setMarkup(Number(e.target.value))}
@@ -237,7 +238,7 @@ export default function ConceptOverviewDrawer({ concept, onClose }) {
                       )}
                       <div className="overview_menu_title_block">
                         <span className="overview_menu_name">{item.name}</span>
-                        <div className="overview_menu_badges">
+                        {/* <div className="overview_menu_badges">
                           {item.variant && (
                             <span className="overview_badge overview_badge_variant">
                               ⚡ {item.variant.name}
@@ -251,7 +252,7 @@ export default function ConceptOverviewDrawer({ concept, onClose }) {
                               + {ex.prepItem?.name}
                             </span>
                           ))}
-                        </div>
+                        </div> */}
 
                         <div className="overview_menu_cost_row">
                           {item.recipeCost != null ? (

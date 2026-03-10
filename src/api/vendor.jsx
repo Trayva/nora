@@ -57,3 +57,8 @@ export const uploadMenuTutorial = (menuItemId, file) => {
 
 export const getConceptSummary = (conceptId, params) =>
   api.get(`/vendor/menu/concept/${conceptId}/summary`, { params });
+
+export const updateConceptPackaging = (id, fd) =>
+  api.patch(`/vendor/concept/${id}/packaging`, fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });

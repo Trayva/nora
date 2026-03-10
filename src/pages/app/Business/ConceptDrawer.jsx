@@ -12,6 +12,8 @@ import {
 import MenuItemDrawer from "./MenuItemDrawer";
 import { MdOutlineRestaurantMenu, MdOutlineSettings } from "react-icons/md";
 import MachinerySearchInput from "../../../components/MachinerySearchInput";
+import { updateConceptPackaging } from "../../../api/vendor";
+import { MdOutlineInventory2 } from "react-icons/md";
 import {
   getMachineriesForConcept,
   addMachineryToConcept,
@@ -26,12 +28,19 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
   const [showAddItem, setShowAddItem] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [machineries, setMachineries] = useState([]);
-  const [machOpen, setMachOpen] = useState(false); // collapsible
+  const [machOpen, setMachOpen] = useState(false);
   const [showMachForm, setShowMachForm] = useState(false);
   const [selectedMach, setSelectedMach] = useState(null);
   const [machQty, setMachQty] = useState("1");
   const [savingMach, setSavingMach] = useState(false);
   const [deletingMach, setDeletingMach] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmDeleteMach, setConfirmDeleteMach] = useState(null);
+  const [packOpen, setPackOpen] = useState(false);
+  const [packForm, setPackForm] = useState({ packaging: "" });
+  const [packImage, setPackImage] = useState(null);
+  const [savingPack, setSavingPack] = useState(false);
+  const [showPackForm, setShowPackForm] = useState(false);
 
   const fetchDetail = async () => {
     if (!concept) return;
@@ -59,12 +68,12 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
     else setDetail(null);
   }, [concept?.id]);
 
-  const handleDeleteItem = async (itemId, e) => {
-    e.stopPropagation();
+  const handleDeleteItem = async (itemId) => {
     setDeleting(itemId);
     try {
       await deleteMenuItem(itemId);
       toast.success("Item deleted");
+      setConfirmDelete(null);
       fetchDetail();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to delete");
@@ -100,6 +109,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
     try {
       await removeMachineryFromConcept(concept.id, machineryId);
       toast.success("Machinery removed");
+      setConfirmDeleteMach(null);
       setMachineries((prev) =>
         prev.filter(
           (m) => m.id !== machineryId && m.machineryId !== machineryId,
@@ -109,6 +119,26 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
       toast.error(err.response?.data?.message || "Failed to remove");
     } finally {
       setDeletingMach(null);
+    }
+  };
+
+  const handleUpdatePackaging = async (e) => {
+    e.preventDefault();
+    if (!packForm.packaging.trim() && !packImage) return;
+    setSavingPack(true);
+    try {
+      const fd = new FormData();
+      if (packForm.packaging.trim())
+        fd.append("packaging", packForm.packaging.trim());
+      if (packImage) fd.append("image", packImage);
+      await updateConceptPackaging(concept.id, fd);
+      toast.success("Packaging updated");
+      setShowPackForm(false);
+      fetchDetail();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update packaging");
+    } finally {
+      setSavingPack(false);
     }
   };
 
@@ -228,25 +258,14 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                           <LuChefHat size={14} />
                         </button>
                         <button
-                          className={`biz_icon_btn biz_icon_btn_danger`}
+                          className="biz_icon_btn biz_icon_btn_danger"
                           title="Delete"
-                          onClick={(e) => handleDeleteItem(item.id, e)}
-                          disabled={deleting === item.id}
-                          style={{ position: "relative" }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDelete(item);
+                          }}
                         >
-                          {deleting === item.id ? (
-                            <span
-                              className="btn_loader"
-                              style={{
-                                width: 13,
-                                height: 13,
-                                borderColor: "#ef4444",
-                                borderTopColor: "transparent",
-                              }}
-                            />
-                          ) : (
-                            <LuTrash2 size={14} />
-                          )}
+                          <LuTrash2 size={14} />
                         </button>
                       </div>
                     </div>
@@ -401,23 +420,15 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                             )}
                             <button
                               className="biz_icon_btn biz_icon_btn_danger"
-                              onClick={() => handleRemoveMachinery(mId)}
-                              disabled={deletingMach === mId}
+                              onClick={() =>
+                                setConfirmDeleteMach({
+                                  id: mId,
+                                  name: mach.name,
+                                })
+                              }
                               style={{ position: "relative" }}
                             >
-                              {deletingMach === mId ? (
-                                <span
-                                  className="btn_loader"
-                                  style={{
-                                    width: 13,
-                                    height: 13,
-                                    borderColor: "#ef4444",
-                                    borderTopColor: "transparent",
-                                  }}
-                                />
-                              ) : (
-                                <LuTrash2 size={13} />
-                              )}
+                              <LuTrash2 size={13} />
                             </button>
                           </div>
                         );
@@ -427,6 +438,205 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                 </div>
               )}
             </div>
+
+            {/* ── Packaging (collapsible) ── */}
+            <div className="drawer_section">
+              <div
+                className="drawer_collapsible_header"
+                onClick={() => setPackOpen((v) => !v)}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {packOpen ? (
+                    <LuChevronDown
+                      size={14}
+                      style={{ color: "var(--text-muted)" }}
+                    />
+                  ) : (
+                    <LuChevronRight
+                      size={14}
+                      style={{ color: "var(--text-muted)" }}
+                    />
+                  )}
+                  <span className="wallet_section_title">Packaging</span>
+                </div>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <button
+                    className="app_btn app_btn_confirm biz_add_btn"
+                    onClick={() => setShowPackForm((v) => !v)}
+                  >
+                    <LuPlus size={13} /> {detail.packaging ? "Update" : "Add"}
+                  </button>
+                </div>
+              </div>
+
+              {packOpen && (
+                <div className="drawer_section_body">
+                  {/* Current packaging display */}
+                  {detail.packaging && !showPackForm && (
+                    <div className="pack_preview_row">
+                      {detail.packagingImage && (
+                        <img
+                          src={detail.packagingImage}
+                          alt="packaging"
+                          className="pack_preview_img"
+                        />
+                      )}
+                      <div className="recipe_step_info">
+                        <span className="recipe_step_id">
+                          Packaging Details
+                        </span>
+                        <span className="recipe_step_instruction">
+                          {detail.packaging}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No packaging yet */}
+                  {!detail.packaging && !showPackForm && (
+                    <div className="biz_empty" style={{ padding: "20px 0" }}>
+                      <MdOutlineInventory2 size={22} />
+                      <p>No packaging details yet.</p>
+                    </div>
+                  )}
+
+                  {/* Form */}
+                  {showPackForm && (
+                    <form
+                      onSubmit={handleUpdatePackaging}
+                      className="recipe_add_form"
+                    >
+                      <div className="form-field">
+                        <label className="modal-label">
+                          Packaging Description *
+                        </label>
+                        <textarea
+                          className="modal-input"
+                          rows={3}
+                          style={{ resize: "none" }}
+                          placeholder="e.g. Sealed paper bag, 500g capacity"
+                          value={packForm.packaging}
+                          onChange={(e) =>
+                            setPackForm({ packaging: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label className="modal-label">Packaging Image</label>
+                        <input
+                          className="modal-input"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setPackImage(e.target.files[0])}
+                        />
+                      </div>
+                      <div className="recipe_add_actions">
+                        <button
+                          className="app_btn app_btn_cancel"
+                          type="button"
+                          onClick={() => {
+                            setShowPackForm(false);
+                            setPackImage(null);
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className={`app_btn app_btn_confirm ${savingPack ? "btn_loading" : ""}`}
+                          type="submit"
+                          disabled={
+                            savingPack ||
+                            (!packForm.packaging.trim() && !packImage)
+                          }
+                          style={{ position: "relative", minWidth: 90 }}
+                        >
+                          <span className="btn_text">Save</span>
+                          {savingPack && (
+                            <span
+                              className="btn_loader"
+                              style={{ width: 13, height: 13 }}
+                            />
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <Modal
+              isOpen={!!confirmDelete}
+              onClose={() => setConfirmDelete(null)}
+              title="Delete Menu Item"
+              description={`Are you sure you want to delete "${confirmDelete?.name}"? This cannot be undone.`}
+            >
+              <div className="modal-body">
+                <div className="modal-footer">
+                  <button
+                    className="app_btn app_btn_cancel"
+                    type="button"
+                    onClick={() => setConfirmDelete(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className={`app_btn app_btn_confirm ${deleting ? "btn_loading" : ""}`}
+                    style={{
+                      background: "#ef4444",
+                      position: "relative",
+                      minWidth: 110,
+                    }}
+                    onClick={() => handleDeleteItem(confirmDelete.id)}
+                    disabled={!!deleting}
+                  >
+                    <span className="btn_text">Delete</span>
+                    {deleting && (
+                      <span
+                        className="btn_loader"
+                        style={{ width: 14, height: 14 }}
+                      />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </Modal>
+            <Modal
+              isOpen={!!confirmDeleteMach}
+              onClose={() => setConfirmDeleteMach(null)}
+              title="Remove Machinery"
+              description={`Are you sure you want to remove "${confirmDeleteMach?.name}" from this concept?`}
+            >
+              <div className="modal-body">
+                <div className="modal-footer">
+                  <button
+                    className="app_btn app_btn_cancel"
+                    type="button"
+                    onClick={() => setConfirmDeleteMach(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className={`app_btn app_btn_confirm ${deletingMach ? "btn_loading" : ""}`}
+                    style={{
+                      background: "#ef4444",
+                      position: "relative",
+                      minWidth: 110,
+                    }}
+                    onClick={() => handleRemoveMachinery(confirmDeleteMach.id)}
+                    disabled={!!deletingMach}
+                  >
+                    <span className="btn_text">Remove</span>
+                    {deletingMach && (
+                      <span
+                        className="btn_loader"
+                        style={{ width: 14, height: 14 }}
+                      />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </Modal>
           </>
         ) : null}
       </Drawer>
@@ -456,7 +666,11 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
 }
 
 function AddItemModal({ conceptId, onClose, onSuccess }) {
-  const [form, setForm] = useState({ name: "", description: "" });
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    ticketTime: "",
+  });
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -508,6 +722,19 @@ function AddItemModal({ conceptId, onClose, onSuccess }) {
               value={form.description}
               onChange={(e) =>
                 setForm((p) => ({ ...p, description: e.target.value }))
+              }
+            />
+          </div>
+          <div className="form-field">
+            <label className="modal-label">Ticket Time (minutes)</label>
+            <input
+              className="modal-input"
+              type="number"
+              min="1"
+              placeholder="e.g. 15"
+              value={form.ticketTime}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, ticketTime: e.target.value }))
               }
             />
           </div>

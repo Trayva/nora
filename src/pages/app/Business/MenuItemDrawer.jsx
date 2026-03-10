@@ -22,6 +22,7 @@ import {
   uploadMenuTutorial,
 } from "../../../api/vendor";
 import { useAppState } from "../../../contexts/StateContext";
+import Modal from "../../../components/Modal";
 
 // ── Collapsible section wrapper ──────────────────────────────────────────────
 function Section({ title, count, defaultOpen = true, children, action }) {
@@ -57,6 +58,8 @@ export default function MenuItemDrawer({ item, onClose }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(false);
   const [cost, setCost] = useState(null);
+  const [confirmVariant, setConfirmVariant] = useState(null);
+  const [confirmExtra, setConfirmExtra] = useState(null);
 
   // Recipe
   const [showRecipeForm, setShowRecipeForm] = useState(false);
@@ -158,6 +161,7 @@ export default function MenuItemDrawer({ item, onClose }) {
     try {
       await removeMenuVariant(variantId);
       toast.success("Variant removed");
+      setConfirmVariant(null);
       fetchDetail();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to remove variant");
@@ -165,7 +169,6 @@ export default function MenuItemDrawer({ item, onClose }) {
       setDeletingVariant(null);
     }
   };
-
   // ── Extras ─────────────────────────────────────────────────────────────────
   const handleAddExtra = async (e) => {
     e.preventDefault();
@@ -189,6 +192,7 @@ export default function MenuItemDrawer({ item, onClose }) {
     try {
       await removeMenuExtra(extraId);
       toast.success("Extra removed");
+      setConfirmExtra(null);
       fetchDetail();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to remove extra");
@@ -233,31 +237,24 @@ export default function MenuItemDrawer({ item, onClose }) {
         <>
           {/* Hero */}
           <div className="drawer_item_hero">
-            {detail.image ? (
-              <img
-                src={detail.image}
-                alt={detail.name}
-                className="drawer_hero_img"
-              />
-            ) : (
-              <div className="drawer_hero_img drawer_hero_placeholder">
-                <MdOutlineFastfood size={28} />
-              </div>
-            )}
-            <div className="drawer_meta_grid" style={{ flex: 1 }}>
+            <div>
+              {detail.image ? (
+                <img
+                  src={detail.image}
+                  alt={detail.name}
+                  className="drawer_hero_img"
+                />
+              ) : (
+                <div className="drawer_hero_img drawer_hero_placeholder">
+                  <MdOutlineFastfood size={28} />
+                </div>
+              )}
+            </div>
+            <div className="" style={{ flex: 1 }}>
               <div className="drawer_meta_item">
-                <span className="wallet_info_label">Selling Price</span>
-                <span
-                  className="wallet_info_value"
-                  style={{ color: "#22c55e" }}
-                >
-                  ₦{Number(detail.sellingPrice || 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="drawer_meta_item">
-                <span className="wallet_info_label">Recipe Cost</span>
+                <span className="wallet_info_label">Ticket Time</span>
                 <span className="wallet_info_value">
-                  ₦{Number(detail.recipeCost || 0).toLocaleString()}
+                  {detail.ticketTime ? `${detail.ticketTime} min` : "—"}
                 </span>
               </div>
             </div>
@@ -406,7 +403,7 @@ export default function MenuItemDrawer({ item, onClose }) {
                     <button
                       type="button"
                       className="drawer_tag_remove"
-                      onClick={() => handleDeleteVariant(v.id)}
+                      onClick={() => setConfirmVariant(v)}
                       disabled={deletingVariant === v.id}
                     >
                       {deletingVariant === v.id ? (
@@ -511,7 +508,7 @@ export default function MenuItemDrawer({ item, onClose }) {
                     </div>
                     <button
                       className="biz_icon_btn biz_icon_btn_danger"
-                      onClick={() => handleDeleteExtra(ex.id)}
+                      onClick={() => setConfirmExtra(ex)}
                       disabled={deletingExtra === ex.id}
                       style={{ position: "relative" }}
                     >
@@ -603,6 +600,80 @@ export default function MenuItemDrawer({ item, onClose }) {
               </div>
             </form>
           </Section>
+
+          {/* Confirm delete variant */}
+          <Modal
+            isOpen={!!confirmVariant}
+            onClose={() => setConfirmVariant(null)}
+            title="Remove Variant"
+            description={`Remove variant "${confirmVariant?.name}"? This cannot be undone.`}
+          >
+            <div className="modal-body">
+              <div className="modal-footer">
+                <button
+                  className="app_btn app_btn_cancel"
+                  onClick={() => setConfirmVariant(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={`app_btn app_btn_confirm ${deletingVariant ? "btn_loading" : ""}`}
+                  style={{
+                    background: "#ef4444",
+                    position: "relative",
+                    minWidth: 110,
+                  }}
+                  onClick={() => handleDeleteVariant(confirmVariant.id)}
+                  disabled={!!deletingVariant}
+                >
+                  <span className="btn_text">Remove</span>
+                  {deletingVariant && (
+                    <span
+                      className="btn_loader"
+                      style={{ width: 14, height: 14 }}
+                    />
+                  )}
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+          {/* Confirm delete extra */}
+          <Modal
+            isOpen={!!confirmExtra}
+            onClose={() => setConfirmExtra(null)}
+            title="Remove Extra"
+            description={`Remove extra "${confirmExtra?.prepItem?.name || "this extra"}"? This cannot be undone.`}
+          >
+            <div className="modal-body">
+              <div className="modal-footer">
+                <button
+                  className="app_btn app_btn_cancel"
+                  onClick={() => setConfirmExtra(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={`app_btn app_btn_confirm ${deletingExtra ? "btn_loading" : ""}`}
+                  style={{
+                    background: "#ef4444",
+                    position: "relative",
+                    minWidth: 110,
+                  }}
+                  onClick={() => handleDeleteExtra(confirmExtra.id)}
+                  disabled={!!deletingExtra}
+                >
+                  <span className="btn_text">Remove</span>
+                  {deletingExtra && (
+                    <span
+                      className="btn_loader"
+                      style={{ width: 14, height: 14 }}
+                    />
+                  )}
+                </button>
+              </div>
+            </div>
+          </Modal>
         </>
       ) : null}
     </Drawer>

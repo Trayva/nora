@@ -638,7 +638,6 @@
   margin: 0;
 }
 
-
 /* ── Drawer content styles ────────────────────────────────────── */
 
 .drawer_meta_grid {
@@ -968,15 +967,15 @@
 
 /* ── Extra cost chips ────────────────────────────────────────────────────── */
 .overview_cost_chip_blue {
-  background: rgba(59,130,246,0.08);
+  background: rgba(59, 130, 246, 0.08);
   color: #3b82f6;
-  border: 1px solid rgba(59,130,246,0.2);
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .overview_cost_chip_purple {
   background: var(--bg-active);
   color: var(--accent);
-  border: 1px solid rgba(203,108,220,0.2);
+  border: 1px solid rgba(203, 108, 220, 0.2);
 }
 
 .overview_cache_row {
@@ -997,7 +996,9 @@
   border: 1px solid var(--border);
   position: relative;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
   padding: 0;
 }
 
@@ -1020,4 +1021,23 @@
 
 .overview_cache_toggle_active .overview_cache_knob {
   transform: translateX(16px);
+}
+
+.pack_preview_row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.pack_preview_img {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
 }

@@ -3,7 +3,11 @@ import { toast } from "react-toastify";
 import { LuPlus, LuTrash2, LuX, LuChefHat } from "react-icons/lu";
 import { MdOutlineFastfood, MdOutlineRestaurantMenu } from "react-icons/md";
 import Modal from "../../../components/Modal";
-import { getConcept, deleteMenuItem, createMenuItem } from "../../../api/vendor";
+import {
+  getConcept,
+  deleteMenuItem,
+  createMenuItem,
+} from "../../../api/vendor";
 import MenuItemDetail from "./MenuItemDetail";
 
 export default function ConceptDetail({ concept, onClose, onUpdate }) {
@@ -23,7 +27,9 @@ export default function ConceptDetail({ concept, onClose, onUpdate }) {
     }
   };
 
-  useEffect(() => { fetchDetail(); }, [concept.id]);
+  useEffect(() => {
+    fetchDetail();
+  }, [concept.id]);
 
   const handleDeleteItem = async (itemId, e) => {
     e.stopPropagation();
@@ -46,31 +52,40 @@ export default function ConceptDetail({ concept, onClose, onUpdate }) {
       >
         {loading ? (
           <div className="modal-body">
-            <div className="page_loader"><div className="page_loader_spinner" /></div>
+            <div className="page_loader">
+              <div className="page_loader_spinner" />
+            </div>
           </div>
         ) : (
           <div className="modal-body">
-
             {/* Concept meta info */}
             <div className="concept_detail_meta">
               <div className="concept_detail_meta_row">
                 <div className="concept_detail_meta_item">
                   <span className="wallet_info_label">Origin</span>
-                  <span className="wallet_info_value">{detail.origin || "—"}</span>
+                  <span className="wallet_info_value">
+                    {detail.origin || "—"}
+                  </span>
                 </div>
                 <div className="concept_detail_meta_item">
                   <span className="wallet_info_label">Serves</span>
-                  <span className="wallet_info_value">{detail.serveTo || "—"}</span>
+                  <span className="wallet_info_value">
+                    {detail.serveTo || "—"}
+                  </span>
                 </div>
                 <div className="concept_detail_meta_item">
                   <span className="wallet_info_label">Status</span>
-                  <span className={`email_badge ${detail.status === "ACTIVE" ? "email_badge_verified" : "email_badge_unverified"}`}>
+                  <span
+                    className={`email_badge ${detail.status === "ACTIVE" ? "email_badge_verified" : "email_badge_unverified"}`}
+                  >
                     {detail.status}
                   </span>
                 </div>
                 <div className="concept_detail_meta_item">
                   <span className="wallet_info_label">Items</span>
-                  <span className="wallet_info_value">{detail.menuItems?.length || 0}</span>
+                  <span className="wallet_info_value">
+                    {detail.menuItems?.length || 0}
+                  </span>
                 </div>
               </div>
             </div>
@@ -79,7 +94,10 @@ export default function ConceptDetail({ concept, onClose, onUpdate }) {
             <div className="concept_detail_section">
               <div className="concept_detail_section_header">
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div className="profile_phone_date_icon" style={{ width: 26, height: 26 }}>
+                  <div
+                    className="profile_phone_date_icon"
+                    style={{ width: 26, height: 26 }}
+                  >
                     <MdOutlineRestaurantMenu size={13} />
                   </div>
                   <span className="wallet_section_title">Menu Items</span>
@@ -107,7 +125,11 @@ export default function ConceptDetail({ concept, onClose, onUpdate }) {
                       onClick={() => setSelectedItem(item)}
                     >
                       {item.image ? (
-                        <img src={item.image} alt={item.name} className="concept_item_img" />
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="concept_item_img"
+                        />
                       ) : (
                         <div className="concept_item_img concept_item_img_placeholder">
                           <MdOutlineFastfood size={15} />
@@ -117,14 +139,18 @@ export default function ConceptDetail({ concept, onClose, onUpdate }) {
                       <div className="concept_item_info">
                         <span className="concept_item_name">{item.name}</span>
                         {item.description && (
-                          <span className="concept_item_desc">{item.description}</span>
+                          <span className="concept_item_desc">
+                            {item.description}
+                          </span>
                         )}
                       </div>
 
                       <div className="concept_item_right">
                         {item.sellingPrice > 0 && (
                           <div className="concept_item_prices">
-                            <span className="concept_item_price_label">Price</span>
+                            <span className="concept_item_price_label">
+                              Price
+                            </span>
                             <span className="concept_item_price">
                               ₦{Number(item.sellingPrice).toLocaleString()}
                             </span>
@@ -132,8 +158,16 @@ export default function ConceptDetail({ concept, onClose, onUpdate }) {
                         )}
                         {item.recipeCost > 0 && (
                           <div className="concept_item_prices">
-                            <span className="concept_item_price_label">Cost</span>
-                            <span className="concept_item_price" style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                            <span className="concept_item_price_label">
+                              Cost
+                            </span>
+                            <span
+                              className="concept_item_price"
+                              style={{
+                                color: "var(--text-muted)",
+                                fontSize: "0.75rem",
+                              }}
+                            >
                               ₦{Number(item.recipeCost).toLocaleString()}
                             </span>
                           </div>
@@ -144,7 +178,10 @@ export default function ConceptDetail({ concept, onClose, onUpdate }) {
                         <button
                           className="biz_icon_btn"
                           title="View recipes"
-                          onClick={(e) => { e.stopPropagation(); setSelectedItem(item); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedItem(item);
+                          }}
                         >
                           <LuChefHat size={14} />
                         </button>
@@ -170,7 +207,10 @@ export default function ConceptDetail({ concept, onClose, onUpdate }) {
         <AddItemInline
           conceptId={concept.id}
           onClose={() => setShowAddItem(false)}
-          onSuccess={() => { setShowAddItem(false); fetchDetail(); }}
+          onSuccess={() => {
+            setShowAddItem(false);
+            fetchDetail();
+          }}
         />
       )}
 
@@ -178,7 +218,10 @@ export default function ConceptDetail({ concept, onClose, onUpdate }) {
       {selectedItem && (
         <MenuItemDetail
           item={selectedItem}
-          onClose={() => { setSelectedItem(null); fetchDetail(); }}
+          onClose={() => {
+            setSelectedItem(null);
+            fetchDetail();
+          }}
         />
       )}
     </>
@@ -211,7 +254,12 @@ function AddItemInline({ conceptId, onClose, onSuccess }) {
   };
 
   return (
-    <Modal isOpen onClose={onClose} title="Add Menu Item" description="Add a new item to this concept.">
+    <Modal
+      isOpen
+      onClose={onClose}
+      title="Add Menu Item"
+      description="Add a new item to this concept."
+    >
       <form onSubmit={handleSubmit}>
         <div className="modal-body">
           <div className="form-field">
@@ -230,24 +278,43 @@ function AddItemInline({ conceptId, onClose, onSuccess }) {
               className="modal-input"
               placeholder="Describe the item..."
               value={form.description}
-              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, description: e.target.value }))
+              }
               rows={3}
               style={{ resize: "none" }}
             />
           </div>
           <div className="form-field">
             <label className="modal-label">Image</label>
-            <input className="modal-input" type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
+            <input
+              className="modal-input"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImage(e.target.files[0])}
+            />
           </div>
           <div className="modal-footer">
-            <button className="app_btn app_btn_cancel" type="button" onClick={onClose}>Cancel</button>
+            <button
+              className="app_btn app_btn_cancel"
+              type="button"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
             <button
               className={`app_btn app_btn_confirm ${loading ? "btn_loading" : ""}`}
-              type="submit" disabled={loading}
+              type="submit"
+              disabled={loading}
               style={{ position: "relative", minWidth: 110 }}
             >
               <span className="btn_text">Add Item</span>
-              {loading && <span className="btn_loader" style={{ width: 15, height: 15 }} />}
+              {loading && (
+                <span
+                  className="btn_loader"
+                  style={{ width: 15, height: 15 }}
+                />
+              )}
             </button>
           </div>
         </div>
