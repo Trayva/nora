@@ -44,12 +44,12 @@ const navItems = [
     icon: MdOutlineKitchen,
     path: "/app/icart-home",
   },
-  {
-    id: "invoices",
-    label: "Invoices",
-    icon: LiaFileInvoiceSolid,
-    path: "/app/invoices",
-  },
+  // {
+  //   id: "invoices",
+  //   label: "Invoices",
+  //   icon: LiaFileInvoiceSolid,
+  //   path: "/app/invoices",
+  // },
   { id: "library", label: "Library", icon: LuLibrary, path: "/app/library" },
 ];
 

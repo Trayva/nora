@@ -5,7 +5,7 @@ import api from "../../api/axios";
 
 function PurchaseIcart() {
   const navigate = useNavigate();
-  const numberOfCarts = parseInt(localStorage.getItem("icart_purchase_count") || "1");
+  const [numberOfCarts, setNumberOfCarts] = useState(1);
 
   const [settings, setSettings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,9 +32,8 @@ function PurchaseIcart() {
         settingsId,
         numberOfCarts,
       });
-      localStorage.removeItem("icart_purchase_count");
       toast.success("iCart purchased successfully!");
-      navigate("/app/invoices");
+      navigate("/app/invoices", { state: { openLatest: true } });
     } catch (err) {
       toast.error(err.response?.data?.message || "Purchase failed");
     } finally {
@@ -66,7 +65,7 @@ function PurchaseIcart() {
             const isLoading = purchasing === setting.id;
             const totalAmount = setting.payments.reduce(
               (sum, p) => sum + p.amount * numberOfCarts,
-              0
+              0,
             );
 
             return (
@@ -126,10 +125,34 @@ function PurchaseIcart() {
                   ))}
                 </div>
 
+<div className="icart_qty_row">
+  <span className="icart_qty_label">Number of iCarts</span>
+
+  <div className="icart_qty_control">
+    <button
+      className="icart_qty_btn"
+      onClick={() => setNumberOfCarts((n) => Math.max(1, n - 1))}
+      disabled={numberOfCarts === 1}
+    >
+      -
+    </button>
+
+    <span className="icart_qty_value">{numberOfCarts}</span>
+
+    <button
+      className="icart_qty_btn"
+      onClick={() => setNumberOfCarts((n) => n + 1)}
+    >
+      +
+    </button>
+  </div>
+</div>
+
                 {/* Total */}
                 <div className="icart_card_total">
                   <span className="icart_total_label">
-                    Total for {numberOfCarts} iCart{numberOfCarts > 1 ? "s" : ""}
+                    Total for {numberOfCarts} iCart
+                    {numberOfCarts > 1 ? "s" : ""}
                   </span>
                   <span className="icart_total_amount">
                     {setting.state.currency} {totalAmount.toLocaleString()}
@@ -139,15 +162,21 @@ function PurchaseIcart() {
                 {/* CTA */}
                 <button
                   className={`app_btn app_btn_confirm ${isLoading ? "btn_loading" : ""}`}
-                  style={{ width: "100%", height: 42, position: "relative", marginTop: 4 }}
+                  style={{
+                    width: "100%",
+                    height: 42,
+                    position: "relative",
+                    marginTop: 4,
+                  }}
                   onClick={() => handlePurchase(setting.id)}
                   disabled={!!purchasing}
                 >
-                  <span className="btn_text text-white">
-                    Select this Plan
-                  </span>
+                  <span className="btn_text">Select this Plan</span>
                   {isLoading && (
-                    <span className="btn_loader" style={{ width: 18, height: 18 }} />
+                    <span
+                      className="btn_loader"
+                      style={{ width: 18, height: 18 }}
+                    />
                   )}
                 </button>
               </div>

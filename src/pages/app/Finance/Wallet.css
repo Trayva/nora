@@ -21,38 +21,99 @@
   pointer-events: none;
 }
 
+/* second decorative circle */
+.wallet_card::after {
+  content: "";
+  position: absolute;
+  bottom: -80px;
+  left: -30px;
+  width: 200px;
+  height: 200px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Card top row — label + hide toggle */
+.wallet_card_top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
 .wallet_balance_label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 6px;
-  letter-spacing: 0.04em;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.wallet_hide_btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.wallet_hide_btn:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .wallet_balance_amount {
   font-size: 2.25rem;
   font-weight: 800;
   color: #ffffff;
-  margin-bottom: 24px;
   letter-spacing: -0.02em;
   line-height: 1;
+  margin-bottom: 6px;
 }
 
+/* Currency chip */
+.wallet_currency_row {
+  margin-bottom: 22px;
+}
+
+.wallet_currency_chip {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.85);
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+/* Action buttons */
 .wallet_actions {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 0;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  width: fit-content;
 }
 
 .wallet_action_btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  border: none;
   color: #ffffff;
-  padding: 9px 18px;
-  border-radius: 10px;
+  padding: 10px 20px;
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -61,11 +122,18 @@
 }
 
 .wallet_action_btn:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .wallet_action_btn:active {
   transform: scale(0.97);
+}
+
+.wallet_action_divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
 }
 
 /* ── Layout ───────────────────────────────────────────────────── */
@@ -83,7 +151,7 @@
   }
 }
 
-/* ── Section cards — reuses bg-card/border from global ───────── */
+/* ── Section cards ────────────────────────────────────────────── */
 
 .section_card {
   background: var(--bg-card);
@@ -102,10 +170,28 @@
   font-size: 0.9375rem;
   font-weight: 700;
   color: var(--text-heading);
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Section header with right-side label/action */
+.wallet_section_header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.wallet_tx_count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  padding: 3px 10px;
+  border-radius: 999px;
 }
 
 /* ── Transaction list ─────────────────────────────────────────── */
@@ -113,14 +199,14 @@
 .transaction_list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .transaction_item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
+  padding: 11px 14px;
   background: var(--bg-hover);
   border-radius: 12px;
   border: 1px solid transparent;
@@ -138,9 +224,9 @@
 }
 
 .transaction_icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -170,7 +256,7 @@
 }
 
 .transaction_date {
-  font-size: 0.75rem;
+  font-size: 0.73rem;
   color: var(--text-muted);
 }
 
@@ -188,14 +274,68 @@
   color: var(--text-body);
 }
 
+/* ── Empty state ──────────────────────────────────────────────── */
+
 .wallet_empty {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 32px 0;
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: 0.85rem;
+  text-align: center;
 }
 
-/* ── Sidebar settings ─────────────────────────────────────────── */
+.wallet_empty p {
+  margin: 0;
+}
+
+/* ── Info block (Settlement + Security) ───────────────────────── */
+
+.wallet_info_block {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.wallet_info_row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wallet_info_row:last-child {
+  border-bottom: none;
+}
+
+.wallet_info_label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.wallet_info_value {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+/* PIN status with icon */
+.wallet_pin_status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+/* ── Legacy sidebar settings (kept for backwards compat) ─────── */
 
 .settings_item {
   display: flex;
@@ -263,7 +403,7 @@
   color: var(--text-heading);
 }
 
-/* ── Modal select input (matches modal-input) ─────────────────── */
+/* ── Modal select input ───────────────────────────────────────── */
 
 .modal-input select,
 select.modal-input {
@@ -274,4 +414,88 @@ select.modal-input {
   background-position: right 12px center;
   padding-right: 32px;
   cursor: pointer;
+}
+
+/* ── Quick invoices ───────────────────────────────────────────── */
+
+.quick_invoice_list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quick_invoice_item {
+  padding: 11px 14px;
+  background: var(--bg-hover);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.quick_invoice_item:hover {
+  border-color: var(--border);
+}
+
+.quick_inv_main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.quick_inv_info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quick_inv_id {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+.quick_inv_date {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.quick_inv_side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.quick_inv_amount {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.quick_inv_status {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── View all link ────────────────────────────────────────────── */
+
+.view_all_link {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.15s;
+}
+
+.view_all_link:hover {
+  opacity: 0.75;
 }

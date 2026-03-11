@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
 import Modal from "../../components/Modal";
-import { Col, Row } from "reactstrap";
+import { useLocation } from "react-router-dom";
+import { MdSearch, MdReceiptLong } from "react-icons/md";
+import { LuX } from "react-icons/lu";
+import './Invoice.css'
 
 const statusColors = {
   PENDING: {
@@ -26,6 +29,8 @@ const statusColors = {
     border: "rgba(107,114,128,0.25)",
   },
 };
+
+const STATUS_FILTERS = ["ALL", "PENDING", "PAID", "OVERDUE", "CANCELLED"];
 
 function StatusBadge({ status }) {
   const s = statusColors[status] || statusColors.PENDING;
@@ -58,14 +63,22 @@ function formatAmount(amount, currency) {
 export default function Invoices() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState(null); // invoice object
-  const [paying, setPaying] = useState(null); // method string
+  const [selected, setSelected] = useState(null);
+  const [paying, setPaying] = useState(null);
   const [showMethods, setShowMethods] = useState(false);
+  const location = useLocation();
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const fetchInvoices = async () => {
     try {
       const res = await api.get("/finance/invoice");
-      setInvoices(res.data.data);
+      const list = res.data.data || [];
+      setInvoices(list);
+      if (location.state?.openLatest && list.length > 0) openInvoice(list[0]);
     } catch {
       toast.error("Failed to load invoices");
     } finally {
@@ -75,7 +88,34 @@ export default function Invoices() {
 
   useEffect(() => {
     fetchInvoices();
-  }, []);
+  }, [location.state]);
+
+  const filtered = useMemo(() => {
+    return invoices.filter((inv) => {
+      if (statusFilter !== "ALL" && inv.status !== statusFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (
+          !inv.id.toLowerCase().includes(q) &&
+          !(inv.items || []).some((it) => it.title?.toLowerCase().includes(q))
+        )
+          return false;
+      }
+      if (dateFrom && new Date(inv.dueDate) < new Date(dateFrom)) return false;
+      if (dateTo && new Date(inv.dueDate) > new Date(dateTo)) return false;
+      return true;
+    });
+  }, [invoices, search, statusFilter, dateFrom, dateTo]);
+
+  const hasActiveFilters =
+    search || statusFilter !== "ALL" || dateFrom || dateTo;
+
+  const clearFilters = () => {
+    setSearch("");
+    setStatusFilter("ALL");
+    setDateFrom("");
+    setDateTo("");
+  };
 
   const handlePay = async (method) => {
     setPaying(method);
@@ -90,7 +130,6 @@ export default function Invoices() {
       } else {
         toast.success("Payment successful!");
         await fetchInvoices();
-        // update selected with fresh data
         const updated = await api.get("/finance/invoice");
         const fresh = updated.data.data.find((i) => i.id === selected.id);
         if (fresh) setSelected(fresh);
@@ -106,7 +145,6 @@ export default function Invoices() {
     setSelected(invoice);
     setShowMethods(false);
   };
-
   const closeModal = () => {
     if (paying) return;
     setSelected(null);
@@ -128,44 +166,127 @@ export default function Invoices() {
       <h2 className="page_title_big m-0">Invoices</h2>
       <p className="welcome_message">View and pay your outstanding invoices</p>
 
-      {invoices.length === 0 ? (
+      {/* ── Filter bar ── */}
+      <div className="invoice_filter_bar">
+        <div className="invoice_search_wrap">
+          <MdSearch size={15} className="invoice_search_icon" />
+          <input
+            className="invoice_search_input"
+            placeholder="Search by ID or item..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              className="invoice_search_clear"
+              onClick={() => setSearch("")}
+            >
+              <LuX size={12} />
+            </button>
+          )}
+        </div>
+
+        <div className="invoice_date_wrap">
+          <label className="invoice_date_label">From</label>
+          <input
+            type="date"
+            className="invoice_date_input"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+        </div>
+
+        <div className="invoice_date_wrap">
+          <label className="invoice_date_label">To</label>
+          <input
+            type="date"
+            className="invoice_date_input"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
+
+        {hasActiveFilters && (
+          <button className="invoice_clear_btn" onClick={clearFilters}>
+            <LuX size={12} />
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* ── Status pills ── */}
+      <div className="invoice_status_pills">
+        {STATUS_FILTERS.map((s) => (
+          <button
+            key={s}
+            className={`invoice_status_pill ${statusFilter === s ? "invoice_status_pill_active" : ""}`}
+            onClick={() => setStatusFilter(s)}
+          >
+            {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
+            {s !== "ALL" && (
+              <span className="invoice_pill_count">
+                {invoices.filter((i) => i.status === s).length}
+              </span>
+            )}
+          </button>
+        ))}
+        <span className="invoice_result_count">
+          {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* ── Invoice grid ── */}
+      {filtered.length === 0 ? (
         <div className="invoices_empty">
-          <p>No invoices found.</p>
+          <MdReceiptLong size={28} style={{ opacity: 0.3, marginBottom: 6 }} />
+          <p>
+            {hasActiveFilters
+              ? "No invoices match your filters."
+              : "No invoices found."}
+          </p>
+          {hasActiveFilters && (
+            <button
+              className="invoice_clear_btn"
+              style={{ margin: "8px auto 0" }}
+              onClick={clearFilters}
+            >
+              <LuX size={12} /> Clear filters
+            </button>
+          )}
         </div>
       ) : (
-        <Row className="">
-          {invoices.map((invoice) => (
-            <Col className="mb-3" md={4} key={invoice.id}>
-              <div
-                className="invoice_card"
-                onClick={() => openInvoice(invoice)}
-              >
-                <div className="invoice_card_row">
-                  <div className="invoice_card_left">
-                    <div className="invoice_id_row">
-                      <span className="invoice_id">
-                        #{invoice.id.slice(0, 8).toUpperCase()}
-                      </span>
-                      <StatusBadge status={invoice.status} />
-                    </div>
-                    <span className="invoice_date">
-                      Due {formatDate(invoice.dueDate)}
+        <div className="invoices_list">
+          {filtered.map((invoice) => (
+            <div
+              className="invoice_card"
+              key={invoice.id}
+              onClick={() => openInvoice(invoice)}
+            >
+              <div className="invoice_card_row">
+                <div className="invoice_card_left">
+                  <div className="invoice_id_row">
+                    <span className="invoice_id">
+                      #{invoice.id.slice(0, 8).toUpperCase()}
                     </span>
+                    <StatusBadge status={invoice.status} />
                   </div>
-                  <div className="invoice_card_right">
-                    <span className="invoice_total">
-                      {formatAmount(invoice.total, invoice.currency)}
-                    </span>
-                    <span className="invoice_chevron">›</span>
-                  </div>
+                  <span className="invoice_date">
+                    Due {formatDate(invoice.dueDate)}
+                  </span>
+                </div>
+                <div className="invoice_card_right">
+                  <span className="invoice_total">
+                    {formatAmount(invoice.total, invoice.currency)}
+                  </span>
+                  <span className="invoice_chevron">›</span>
                 </div>
               </div>
-            </Col>
+            </div>
           ))}
-        </Row>
+        </div>
       )}
 
-      {/* Invoice Detail Modal */}
+      {/* ── Invoice detail modal ── */}
       {selected && (
         <Modal
           isOpen={!!selected}
@@ -174,7 +295,6 @@ export default function Invoices() {
           description={`Due ${formatDate(selected.dueDate)}`}
         >
           <div className="modal-body">
-            {/* Status */}
             <div className="invoice_modal_status_row">
               <StatusBadge status={selected.status} />
               <span className="invoice_modal_currency">
@@ -182,7 +302,6 @@ export default function Invoices() {
               </span>
             </div>
 
-            {/* Items */}
             <div className="invoice_items">
               <span className="invoice_section_label">Items</span>
               {selected.items.map((item, i) => (
@@ -206,7 +325,6 @@ export default function Invoices() {
               ))}
             </div>
 
-            {/* Meta */}
             <div className="invoice_meta_grid">
               <div className="invoice_meta_item">
                 <span className="icart_meta_label">Created</span>
@@ -238,7 +356,6 @@ export default function Invoices() {
               )}
             </div>
 
-            {/* Total */}
             <div className="icart_card_total">
               <span className="icart_total_label">Total</span>
               <span className="icart_total_amount">
@@ -246,7 +363,6 @@ export default function Invoices() {
               </span>
             </div>
 
-            {/* Pay section */}
             {selected.status === "PENDING" && (
               <div
                 className="modal-footer"
@@ -261,9 +377,7 @@ export default function Invoices() {
                         onClick={() => handlePay("wallet")}
                         disabled={!!paying}
                       >
-                        <span className="btn_text text-white">
-                          Pay with Wallet
-                        </span>
+                        <span className="btn_text">Pay with Wallet</span>
                         {paying === "wallet" && (
                           <span
                             className="btn_loader"
@@ -277,7 +391,7 @@ export default function Invoices() {
                         onClick={() => handlePay("online")}
                         disabled={!!paying}
                       >
-                        <span className="btn_text text-white">Pay Online</span>
+                        <span className="btn_text">Pay Online</span>
                         {paying === "online" && (
                           <span
                             className="btn_loader"

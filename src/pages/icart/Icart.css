@@ -1,0 +1,630 @@
+/* ── iCart Home ──────────────────────────────────────────────── */
+
+.icart_page_header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 22px;
+  gap: 16px;
+}
+
+/* Summary chips row */
+.icart_summary_row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.icart_summary_chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+/* iCart cards grid */
+.icart_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+/* Individual iCart card */
+.icart_item_card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.icart_item_card:hover {
+  border-color: rgba(203, 108, 220, 0.4);
+  box-shadow: 0 2px 12px rgba(203, 108, 220, 0.08);
+}
+
+/* Card top — icon + status */
+.icart_item_top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.icart_item_icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--bg-active);
+  border: 1px solid rgba(203, 108, 220, 0.2);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icart_status_badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Serial number */
+.icart_item_serial {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  margin-bottom: 12px;
+  letter-spacing: 0.02em;
+  font-family: monospace;
+}
+
+/* Online / lock indicators */
+.icart_item_indicators {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.icart_indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.icart_ind_on {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.icart_ind_off {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.icart_ind_locked {
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.icart_ind_unlocked {
+  background: rgba(34, 197, 94, 0.08);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+/* Meta info block */
+.icart_item_meta {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.icart_meta_row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.icart_meta_row:last-child {
+  border-bottom: none;
+}
+
+.icart_meta_key {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.icart_meta_val {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+.icart_meta_muted {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* Invoices footer pill */
+.icart_item_invoices {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+/* Empty state */
+.icart_empty_state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 64px 24px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.icart_empty_title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.icart_empty_sub {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+/* ── iCart purchase layout ───────────────────────────────────── */
+
+.icart_purchase_layout {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin-top: 8px;
+}
+
+.icart_step_block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.icart_step_label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.icart_step_num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Plan cards grid */
+.icart_settings_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.icart_settings_card {
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.icart_settings_card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(203, 108, 220, 0.1);
+}
+
+.icart_settings_card_active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(203, 108, 220, 0.12);
+}
+
+.icart_card_header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.icart_card_title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  margin: 0 0 4px;
+  text-transform: capitalize;
+}
+
+.icart_card_location {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.icart_card_currency {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bg-active);
+  color: var(--accent);
+  border: 1px solid rgba(203, 108, 220, 0.2);
+}
+
+.icart_selected_badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.icart_card_meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg-hover);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.icart_meta_label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.icart_meta_value {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+.icart_payments_list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.icart_payment_row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.icart_payment_info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.icart_payment_title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+.icart_payment_desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.icart_payment_right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.icart_payment_amount {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.icart_per_unit {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.icart_payment_badges {
+  display: flex;
+  gap: 4px;
+}
+
+.icart_badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.icart_badge_recurring {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.icart_badge_refundable {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.icart_card_select_hint {
+  margin-top: 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-align: right;
+}
+
+/* ── Confirm card (step 2) ───────────────────────────────────── */
+
+.icart_confirm_card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.icart_confirm_header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.icart_confirm_plan {
+  display: block;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  text-transform: capitalize;
+  margin-bottom: 4px;
+}
+
+.icart_confirm_location {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.icart_change_plan {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.icart_change_plan:hover {
+  opacity: 0.75;
+}
+
+.icart_divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
+
+/* Quantity control */
+.icart_qty_row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.icart_qty_label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-body);
+}
+
+.icart_qty_control {
+  display: flex;
+  align-items: center;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.icart_qty_btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-body);
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.icart_qty_btn:hover:not(:disabled) {
+  background: var(--bg-active);
+  color: var(--accent);
+}
+
+.icart_qty_btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.icart_qty_value {
+  min-width: 40px;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  line-height: 36px;
+}
+
+/* Breakdown */
+.icart_breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.icart_breakdown_row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.icart_breakdown_label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.icart_breakdown_value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-body);
+  flex-shrink: 0;
+}
+
+/* Total */
+.icart_confirm_total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--bg-active);
+  border: 1px solid rgba(203, 108, 220, 0.2);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.icart_total_label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.icart_total_amount {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+/* ── Back button ─────────────────────────────────────────────── */
+
+.icart_back_btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+  transition: color 0.15s;
+  font-family: inherit;
+}
+
+.icart_back_btn:hover {
+  color: var(--text-body);
+}
+
+/* ── Empty (purchase page) ───────────────────────────────────── */
+
+.icart_empty {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--text-muted);
+}
