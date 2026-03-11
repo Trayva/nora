@@ -5,6 +5,7 @@ import * as Yup from "yup";
 import { toast } from "react-toastify";
 import Modal from "../../components/Modal";
 import api from "../../api/axios";
+import './Icart.css'
 import {
   MdCircle,
   MdLock,

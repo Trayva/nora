@@ -50,7 +50,7 @@ const navItems = [
   //   icon: LiaFileInvoiceSolid,
   //   path: "/app/invoices",
   // },
-  { id: "library", label: "Library", icon: LuLibrary, path: "/app/library" },
+  // { id: "library", label: "Library", icon: LuLibrary, path: "/app/library" },
 ];
 
 const bottomItems = [
