@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import Modal from "../../components/Modal";
 import ContractDrawer from "./ContractDrawer";
 import api from "../../api/axios";
-import './Icart.css'
+import "./Icart.css";
 import {
   MdCircle,
   MdLock,
@@ -158,7 +158,7 @@ export default function IcartHome() {
         <button
           className="app_btn app_btn_confirm"
           style={{ height: 40, display: "flex", alignItems: "center", gap: 6 }}
-          onClick={() => setOpen(true)}
+          onClick={() => navigate("/app/purchase-icart")}
         >
           <MdAdd size={17} />
           Purchase iCart
@@ -405,77 +405,6 @@ export default function IcartHome() {
             ))}
         </>
       )}
-
-      {/* Purchase modal */}
-      <Modal
-        isOpen={open}
-        onClose={() => setOpen(false)}
-        title="Purchase iCart"
-        description="How many iCarts would you like to purchase?"
-      >
-        <Formik
-          initialValues={{ noOfCarts: 1 }}
-          validationSchema={purchaseSchema}
-          onSubmit={handleSubmit}
-        >
-          {({
-            errors,
-            touched,
-            values,
-            handleChange,
-            handleBlur,
-            isSubmitting,
-          }) => (
-            <Form>
-              <div className="modal-body">
-                <div className="form-field">
-                  <label className="modal-label">Number of iCarts</label>
-                  <input
-                    className={`modal-input ${touched.noOfCarts && errors.noOfCarts ? "modal-input-error" : ""}`}
-                    type="number"
-                    name="noOfCarts"
-                    placeholder="e.g. 2"
-                    min="1"
-                    value={values.noOfCarts}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    disabled={isSubmitting}
-                  />
-                  {touched.noOfCarts && errors.noOfCarts && (
-                    <span className="login_field_error">
-                      {errors.noOfCarts}
-                    </span>
-                  )}
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="app_btn app_btn_cancel"
-                    onClick={() => setOpen(false)}
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className={`app_btn app_btn_confirm ${isSubmitting ? "btn_loading" : ""}`}
-                    disabled={isSubmitting}
-                    style={{ position: "relative", minWidth: 120 }}
-                  >
-                    <span className="btn_text">Continue</span>
-                    {isSubmitting && (
-                      <span
-                        className="btn_loader"
-                        style={{ width: 16, height: 16 }}
-                      />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </Form>
-          )}
-        </Formik>
-      </Modal>
 
       <ContractDrawer
         contract={selectedContract}
