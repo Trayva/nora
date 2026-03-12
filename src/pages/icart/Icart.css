@@ -628,3 +628,334 @@
   padding: 40px 0;
   color: var(--text-muted);
 }
+
+/* ── Append these to your existing Icart.css ────────────────── */
+
+/* Section label rows */
+.icart_section_label_row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.icart_section_label_row_clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.icart_section_label_row_clickable:hover .icart_section_label {
+  color: var(--accent);
+}
+
+.icart_section_chevron {
+  margin-left: auto;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.icart_section_label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.icart_section_count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* ── Contract list rows ──────────────────────────────────────── */
+
+.contract_list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contract_row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.contract_row:hover {
+  border-color: rgba(203, 108, 220, 0.35);
+  box-shadow: 0 2px 10px rgba(203, 108, 220, 0.07);
+}
+
+.contract_row_left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.contract_row_icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.contract_row_info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.contract_row_top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.contract_row_id {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  font-family: monospace;
+}
+
+.contract_row_meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.contract_row_dot {
+  color: var(--border);
+  font-size: 0.9rem;
+}
+
+.contract_row_right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.contract_row_invoice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.contract_row_amount {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+/* ── Contract Drawer content ─────────────────────────────────── */
+
+.contract_drawer_hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 20px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+
+.contract_drawer_hero_left {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.contract_drawer_id {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  font-family: monospace;
+}
+
+.contract_drawer_date {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Meta grid */
+.contract_meta_grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.contract_meta_item {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.contract_meta_label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.contract_meta_value {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+/* Sections */
+.contract_section {
+  margin-bottom: 22px;
+}
+
+.contract_section_header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.contract_section_title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  flex: 1;
+}
+
+.contract_section_count {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+/* Invoice block */
+.contract_invoice_block {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.contract_invoice_item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.contract_invoice_item_info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contract_invoice_item_title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+.contract_invoice_item_desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.contract_invoice_item_right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.contract_invoice_item_qty {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.contract_invoice_item_amount {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.contract_invoice_total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 14px;
+  background: var(--bg-active);
+}
+
+.contract_invoice_total_label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.contract_invoice_total_amount {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.contract_invoice_meta_row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2px;
+}
+
+/* Empty carts */
+.contract_empty_carts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}

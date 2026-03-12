@@ -82,14 +82,14 @@ function PurchaseIcart() {
                     {setting.state.currency}
                   </span>
                 </div>
-
-                {/* Duration */}
-                <div className="icart_card_meta">
-                  <span className="icart_meta_label">Contract Duration</span>
-                  <span className="icart_meta_value">
-                    {setting.durationDays} days
-                  </span>
-                </div>
+                {setting.type !== "PURCHASE" && (
+                  <div className="icart_card_meta">
+                    <span className="icart_meta_label">Contract Duration</span>
+                    <span className="icart_meta_value">
+                      {setting.durationDays} days
+                    </span>
+                  </div>
+                )}
 
                 {/* Payments */}
                 <div className="icart_payments_list">
@@ -125,28 +125,30 @@ function PurchaseIcart() {
                   ))}
                 </div>
 
-<div className="icart_qty_row">
-  <span className="icart_qty_label">Number of iCarts</span>
+                <div className="icart_qty_row">
+                  <span className="icart_qty_label">Number of iCarts</span>
 
-  <div className="icart_qty_control">
-    <button
-      className="icart_qty_btn"
-      onClick={() => setNumberOfCarts((n) => Math.max(1, n - 1))}
-      disabled={numberOfCarts === 1}
-    >
-      -
-    </button>
+                  <div className="icart_qty_control">
+                    <button
+                      className="icart_qty_btn"
+                      onClick={() =>
+                        setNumberOfCarts((n) => Math.max(1, n - 1))
+                      }
+                      disabled={numberOfCarts === 1}
+                    >
+                      -
+                    </button>
 
-    <span className="icart_qty_value">{numberOfCarts}</span>
+                    <span className="icart_qty_value">{numberOfCarts}</span>
 
-    <button
-      className="icart_qty_btn"
-      onClick={() => setNumberOfCarts((n) => n + 1)}
-    >
-      +
-    </button>
-  </div>
-</div>
+                    <button
+                      className="icart_qty_btn"
+                      onClick={() => setNumberOfCarts((n) => n + 1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
 
                 {/* Total */}
                 <div className="icart_card_total">

@@ -157,9 +157,7 @@ export default function Wallet() {
                 <div
                   key={inv.id}
                   className="quick_invoice_item"
-                  onClick={() =>
-                    navigate(`/app/finance/invoices?open_id=${inv.id}`)
-                  }
+                  onClick={() => navigate(`/app/invoices?open_id=${inv.id}`)}
                 >
                   <div className="quick_inv_main">
                     <div className="quick_inv_info">

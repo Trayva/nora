@@ -2,10 +2,10 @@ import { useEffect, useState, useMemo } from "react";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
 import Modal from "../../components/Modal";
-import { useLocation } from "react-router-dom";
 import { MdSearch, MdReceiptLong } from "react-icons/md";
 import { LuX } from "react-icons/lu";
-import './Invoice.css'
+import "./Invoice.css";
+import { useLocation, useSearchParams } from "react-router-dom";
 
 const statusColors = {
   PENDING: {
@@ -68,6 +68,9 @@ export default function Invoices() {
   const [showMethods, setShowMethods] = useState(false);
   const location = useLocation();
 
+  const [searchParams] = useSearchParams();
+  const openId = searchParams.get("open_id");
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [dateFrom, setDateFrom] = useState("");
@@ -78,7 +81,16 @@ export default function Invoices() {
       const res = await api.get("/finance/invoice");
       const list = res.data.data || [];
       setInvoices(list);
-      if (location.state?.openLatest && list.length > 0) openInvoice(list[0]);
+
+      if (openId) {
+        const invoiceToOpen = list.find((i) => i.id === openId);
+        if (invoiceToOpen) {
+          openInvoice(invoiceToOpen);
+          window.history.replaceState({}, "", "/app/invoices");
+        }
+      } else if (location.state?.openLatest && list.length > 0) {
+        openInvoice(list[0]);
+      }
     } catch {
       toast.error("Failed to load invoices");
     } finally {

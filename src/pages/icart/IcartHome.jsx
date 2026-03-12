@@ -4,6 +4,7 @@ import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import { toast } from "react-toastify";
 import Modal from "../../components/Modal";
+import ContractDrawer from "./ContractDrawer";
 import api from "../../api/axios";
 import './Icart.css'
 import {
@@ -14,6 +15,9 @@ import {
   MdWifiOff,
   MdAdd,
   MdReceiptLong,
+  MdChevronRight,
+  MdExpandMore,
+  MdExpandLess,
 } from "react-icons/md";
 import { LuShoppingCart } from "react-icons/lu";
 
@@ -25,7 +29,7 @@ const purchaseSchema = Yup.object().shape({
     .required("Number of iCarts is required"),
 });
 
-const statusColors = {
+const icartStatusColors = {
   PURCHASED: {
     bg: "rgba(203,108,220,0.1)",
     color: "var(--accent)",
@@ -48,8 +52,49 @@ const statusColors = {
   },
 };
 
-function IcartStatusBadge({ status }) {
-  const s = statusColors[status] || statusColors.INACTIVE;
+const contractStatusColors = {
+  SUBMITTED: {
+    bg: "rgba(234,179,8,0.1)",
+    color: "#ca8a04",
+    border: "rgba(234,179,8,0.25)",
+  },
+  APPROVED: {
+    bg: "rgba(34,197,94,0.1)",
+    color: "#16a34a",
+    border: "rgba(34,197,94,0.25)",
+  },
+  REJECTED: {
+    bg: "rgba(239,68,68,0.1)",
+    color: "#ef4444",
+    border: "rgba(239,68,68,0.25)",
+  },
+  CANCELLED: {
+    bg: "rgba(107,114,128,0.1)",
+    color: "#6b7280",
+    border: "rgba(107,114,128,0.25)",
+  },
+};
+
+const invStatusColors = {
+  PENDING: {
+    bg: "rgba(234,179,8,0.1)",
+    color: "#ca8a04",
+    border: "rgba(234,179,8,0.25)",
+  },
+  PAID: {
+    bg: "rgba(34,197,94,0.1)",
+    color: "#16a34a",
+    border: "rgba(34,197,94,0.25)",
+  },
+  OVERDUE: {
+    bg: "rgba(239,68,68,0.1)",
+    color: "#ef4444",
+    border: "rgba(239,68,68,0.25)",
+  },
+};
+
+function StatusBadge({ status, colors }) {
+  const s = colors[status] || Object.values(colors)[0];
   return (
     <span
       className="icart_status_badge"
@@ -68,21 +113,29 @@ function IcartStatusBadge({ status }) {
 export default function IcartHome() {
   const navigate = useNavigate();
   const [icarts, setIcarts] = useState([]);
+  const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [selectedContract, setSelectedContract] = useState(null);
+  const [icartsOpen, setIcartsOpen] = useState(true);
+  const [contractsOpen, setContractsOpen] = useState(true);
 
   useEffect(() => {
-    const fetchIcarts = async () => {
+    const fetchAll = async () => {
       try {
-        const res = await api.get("/icart/vendor");
-        setIcarts(res.data.data.items || []);
+        const [icartsRes, contractsRes] = await Promise.all([
+          api.get("/icart/vendor"),
+          api.get("/contract/application"),
+        ]);
+        setIcarts(icartsRes.data.data.items || []);
+        setContracts(contractsRes.data.data.items || []);
       } catch {
-        toast.error("Failed to load iCarts");
+        toast.error("Failed to load iCart data");
       } finally {
         setLoading(false);
       }
     };
-    fetchIcarts();
+    fetchAll();
   }, []);
 
   const handleSubmit = (values, { setSubmitting }) => {
@@ -94,6 +147,7 @@ export default function IcartHome() {
 
   return (
     <div className="page_wrapper">
+      {/* Page header */}
       <div className="icart_page_header">
         <div>
           <h2 className="page_title_big m-0">iCart</h2>
@@ -104,7 +158,7 @@ export default function IcartHome() {
         <button
           className="app_btn app_btn_confirm"
           style={{ height: 40, display: "flex", alignItems: "center", gap: 6 }}
-         onClick={() => navigate("/app/purchase-icart")}
+          onClick={() => setOpen(true)}
         >
           <MdAdd size={17} />
           Purchase iCart
@@ -115,129 +169,318 @@ export default function IcartHome() {
         <div className="page_loader">
           <div className="page_loader_spinner" />
         </div>
-      ) : icarts.length === 0 ? (
-        <div className="icart_empty_state">
-          <LuShoppingCart size={36} />
-          <p className="icart_empty_title">No iCarts yet</p>
-          <p className="icart_empty_sub">
-            Purchase your first iCart to get started.
-          </p>
-          <button
-            className="app_btn app_btn_confirm"
-            style={{
-              height: 40,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-           onClick={() => navigate("/app/purchase-icart")}
-          >
-            <MdAdd size={16} />
-            Purchase iCart
-          </button>
-        </div>
       ) : (
         <>
-          <div className="icart_summary_row">
-            <div className="icart_summary_chip">
-              <LuShoppingCart size={13} />
-              {icarts.length} iCart{icarts.length !== 1 ? "s" : ""}
-            </div>
-            <div className="icart_summary_chip">
-              <MdCircle size={7} style={{ color: "#22c55e" }} />
-              {icarts.filter((c) => c.isOnline).length} Online
-            </div>
-            <div className="icart_summary_chip">
-              <MdLockOpen size={13} />
-              {icarts.filter((c) => !c.isLocked).length} Unlocked
-            </div>
+          {/* ── iCarts ── */}
+          <div
+            className="icart_section_label_row icart_section_label_row_clickable"
+            onClick={() => setIcartsOpen((v) => !v)}
+          >
+            <span className="icart_section_label">My iCarts</span>
+            <span className="icart_section_count">{icarts.length}</span>
+            <span className="icart_section_chevron">
+              {icartsOpen ? (
+                <MdExpandLess size={18} />
+              ) : (
+                <MdExpandMore size={18} />
+              )}
+            </span>
           </div>
 
-          <div className="icart_grid">
-            {icarts.map((cart) => (
-              <div key={cart.id} className="icart_item_card">
-                {/* Top row */}
-                <div className="icart_item_top">
-                  <div className="icart_item_icon">
-                    <LuShoppingCart size={17} />
+          {icartsOpen &&
+            (icarts.length === 0 ? (
+              <div
+                className="icart_empty_state"
+                style={{ padding: "32px 0", marginBottom: 32 }}
+              >
+                <LuShoppingCart size={32} style={{ opacity: 0.3 }} />
+                <p className="icart_empty_title">No iCarts yet</p>
+                <p className="icart_empty_sub">
+                  Your purchased iCarts will appear here.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="icart_summary_row">
+                  <div className="icart_summary_chip">
+                    <LuShoppingCart size={13} />
+                    {icarts.length} iCart{icarts.length !== 1 ? "s" : ""}
                   </div>
-                  <IcartStatusBadge status={cart.status} />
+                  <div className="icart_summary_chip">
+                    <MdCircle size={7} style={{ color: "#22c55e" }} />
+                    {icarts.filter((c) => c.isOnline).length} Online
+                  </div>
+                  <div className="icart_summary_chip">
+                    <MdLockOpen size={13} />
+                    {icarts.filter((c) => !c.isLocked).length} Unlocked
+                  </div>
                 </div>
 
-                {/* Serial number */}
-                <div className="icart_item_serial">{cart.serialNumber}</div>
-
-                {/* Online / locked indicators */}
-                <div className="icart_item_indicators">
-                  <span
-                    className={`icart_indicator ${cart.isOnline ? "icart_ind_on" : "icart_ind_off"}`}
-                  >
-                    {cart.isOnline ? (
-                      <MdWifi size={12} />
-                    ) : (
-                      <MdWifiOff size={12} />
-                    )}
-                    {cart.isOnline ? "Online" : "Offline"}
-                  </span>
-                  <span
-                    className={`icart_indicator ${cart.isLocked ? "icart_ind_locked" : "icart_ind_unlocked"}`}
-                  >
-                    {cart.isLocked ? (
-                      <MdLock size={11} />
-                    ) : (
-                      <MdLockOpen size={11} />
-                    )}
-                    {cart.isLocked ? "Locked" : "Unlocked"}
-                  </span>
-                </div>
-
-                {/* Meta block */}
-                <div className="icart_item_meta">
-                  <div className="icart_meta_row">
-                    <span className="icart_meta_key">Contract</span>
-                    <span className="icart_meta_val">
-                      {cart.contract?.contractStatus || (
-                        <span className="icart_meta_muted">Not started</span>
+                <div className="icart_grid" style={{ marginBottom: 36 }}>
+                  {icarts.map((cart) => (
+                    <div key={cart.id} className="icart_item_card">
+                      <div className="icart_item_top">
+                        <div className="icart_item_icon">
+                          <LuShoppingCart size={17} />
+                        </div>
+                        <StatusBadge
+                          status={cart.status}
+                          colors={icartStatusColors}
+                        />
+                      </div>
+                      <div className="icart_item_serial">
+                        {cart.serialNumber}
+                      </div>
+                      <div className="icart_item_indicators">
+                        <span
+                          className={`icart_indicator ${cart.isOnline ? "icart_ind_on" : "icart_ind_off"}`}
+                        >
+                          {cart.isOnline ? (
+                            <MdWifi size={12} />
+                          ) : (
+                            <MdWifiOff size={12} />
+                          )}
+                          {cart.isOnline ? "Online" : "Offline"}
+                        </span>
+                        <span
+                          className={`icart_indicator ${cart.isLocked ? "icart_ind_locked" : "icart_ind_unlocked"}`}
+                        >
+                          {cart.isLocked ? (
+                            <MdLock size={11} />
+                          ) : (
+                            <MdLockOpen size={11} />
+                          )}
+                          {cart.isLocked ? "Locked" : "Unlocked"}
+                        </span>
+                      </div>
+                      <div className="icart_item_meta">
+                        <div className="icart_meta_row">
+                          <span className="icart_meta_key">Contract</span>
+                          <span className="icart_meta_val">
+                            {cart.contract?.contractStatus || (
+                              <span className="icart_meta_muted">
+                                Not started
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="icart_meta_row">
+                          <span className="icart_meta_key">Concepts</span>
+                          <span className="icart_meta_val">
+                            {cart.concepts?.length > 0 ? (
+                              cart.concepts.length
+                            ) : (
+                              <span className="icart_meta_muted">None</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      {cart.contractDetails?.invoices?.length > 0 && (
+                        <div className="icart_item_invoices">
+                          <MdReceiptLong size={13} />
+                          {cart.contractDetails.invoices.length} invoice
+                          {cart.contractDetails.invoices.length !== 1
+                            ? "s"
+                            : ""}
+                        </div>
                       )}
-                    </span>
-                  </div>
-                  <div className="icart_meta_row">
-                    <span className="icart_meta_key">Concepts</span>
-                    <span className="icart_meta_val">
-                      {cart.concepts?.length > 0 ? (
-                        cart.concepts.length
-                      ) : (
-                        <span className="icart_meta_muted">None</span>
-                      )}
-                    </span>
-                  </div>
-                  {cart.contract?.nextInvoiceAt && (
-                    <div className="icart_meta_row">
-                      <span className="icart_meta_key">Next Invoice</span>
-                      <span className="icart_meta_val">
-                        {new Date(
-                          cart.contract.nextInvoiceAt,
-                        ).toLocaleDateString()}
-                      </span>
                     </div>
-                  )}
+                  ))}
                 </div>
+              </>
+            ))}
 
-                {/* Invoices footer */}
-                {cart.contractDetails?.invoices?.length > 0 && (
-                  <div className="icart_item_invoices">
-                    <MdReceiptLong size={13} />
-                    {cart.contractDetails.invoices.length} invoice
-                    {cart.contractDetails.invoices.length !== 1 ? "s" : ""}
-                  </div>
-                )}
+          {/* ── Contract Applications ── */}
+          <div
+            className="icart_section_label_row icart_section_label_row_clickable"
+            onClick={() => setContractsOpen((v) => !v)}
+          >
+            <span className="icart_section_label">Contract Applications</span>
+            <span className="icart_section_count">{contracts.length}</span>
+            <span className="icart_section_chevron">
+              {contractsOpen ? (
+                <MdExpandLess size={18} />
+              ) : (
+                <MdExpandMore size={18} />
+              )}
+            </span>
+          </div>
+
+          {contractsOpen &&
+            (contracts.length === 0 ? (
+              <div className="icart_empty_state" style={{ padding: "32px 0" }}>
+                <MdReceiptLong size={28} style={{ opacity: 0.3 }} />
+                <p className="icart_empty_sub" style={{ margin: 0 }}>
+                  No contract applications yet.
+                </p>
+              </div>
+            ) : (
+              <div className="contract_list">
+                {contracts.map((contract) => {
+                  const invoice = contract.invoiceDetails?.[0];
+                  const cs =
+                    contractStatusColors[contract.status] ||
+                    contractStatusColors.SUBMITTED;
+                  const is = invoice
+                    ? invStatusColors[invoice.status] || invStatusColors.PENDING
+                    : null;
+
+                  return (
+                    <div
+                      key={contract.id}
+                      className="contract_row"
+                      onClick={() => setSelectedContract(contract)}
+                    >
+                      <div className="contract_row_left">
+                        <div className="contract_row_icon">
+                          <MdReceiptLong size={16} />
+                        </div>
+                        <div className="contract_row_info">
+                          <div className="contract_row_top">
+                            <span className="contract_row_id">
+                              #{contract.id.slice(0, 8).toUpperCase()}
+                            </span>
+                            <span
+                              className="icart_status_badge"
+                              style={{
+                                background: cs.bg,
+                                color: cs.color,
+                                border: `1px solid ${cs.border}`,
+                              }}
+                            >
+                              <MdCircle size={5} />
+                              {contract.status}
+                            </span>
+                          </div>
+                          <div className="contract_row_meta">
+                            <span>{contract.type}</span>
+                            <span className="contract_row_dot">·</span>
+                            <span>
+                              {contract.numberOfCarts} iCart
+                              {contract.numberOfCarts !== 1 ? "s" : ""}
+                            </span>
+                            <span className="contract_row_dot">·</span>
+                            <span>
+                              {new Date(contract.createdAt).toLocaleDateString(
+                                "en-GB",
+                                {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                },
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="contract_row_right">
+                        {invoice && is && (
+                          <div className="contract_row_invoice">
+                            <span className="contract_row_amount">
+                              {Number(invoice.total).toLocaleString()}
+                            </span>
+                            <span
+                              className="icart_status_badge"
+                              style={{
+                                background: is.bg,
+                                color: is.color,
+                                border: `1px solid ${is.border}`,
+                                fontSize: "0.62rem",
+                              }}
+                            >
+                              {invoice.status}
+                            </span>
+                          </div>
+                        )}
+                        <MdChevronRight
+                          size={18}
+                          style={{ color: "var(--text-muted)", flexShrink: 0 }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ))}
-          </div>
         </>
       )}
 
-     
+      {/* Purchase modal */}
+      <Modal
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        title="Purchase iCart"
+        description="How many iCarts would you like to purchase?"
+      >
+        <Formik
+          initialValues={{ noOfCarts: 1 }}
+          validationSchema={purchaseSchema}
+          onSubmit={handleSubmit}
+        >
+          {({
+            errors,
+            touched,
+            values,
+            handleChange,
+            handleBlur,
+            isSubmitting,
+          }) => (
+            <Form>
+              <div className="modal-body">
+                <div className="form-field">
+                  <label className="modal-label">Number of iCarts</label>
+                  <input
+                    className={`modal-input ${touched.noOfCarts && errors.noOfCarts ? "modal-input-error" : ""}`}
+                    type="number"
+                    name="noOfCarts"
+                    placeholder="e.g. 2"
+                    min="1"
+                    value={values.noOfCarts}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    disabled={isSubmitting}
+                  />
+                  {touched.noOfCarts && errors.noOfCarts && (
+                    <span className="login_field_error">
+                      {errors.noOfCarts}
+                    </span>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="app_btn app_btn_cancel"
+                    onClick={() => setOpen(false)}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className={`app_btn app_btn_confirm ${isSubmitting ? "btn_loading" : ""}`}
+                    disabled={isSubmitting}
+                    style={{ position: "relative", minWidth: 120 }}
+                  >
+                    <span className="btn_text">Continue</span>
+                    {isSubmitting && (
+                      <span
+                        className="btn_loader"
+                        style={{ width: 16, height: 16 }}
+                      />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </Form>
+          )}
+        </Formik>
+      </Modal>
+
+      <ContractDrawer
+        contract={selectedContract}
+        onClose={() => setSelectedContract(null)}
+      />
     </div>
   );
 }
