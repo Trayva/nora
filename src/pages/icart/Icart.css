@@ -46,7 +46,9 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .icart_item_card:hover {
@@ -269,7 +271,9 @@
   border-radius: 16px;
   padding: 20px;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .icart_settings_card:hover {
@@ -689,7 +693,9 @@
   border: 1px solid var(--border);
   border-radius: 13px;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .contract_row:hover {
@@ -965,4 +971,655 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
+}
+
+/* ── Append to Icart.css ─────────────────────────────────────
+   iCart drawer tab components
+   (drawer shell, backdrop, panel, header, body are all handled
+    by the global Drawer component — no overrides needed here)
+   ──────────────────────────────────────────────────────────── */
+
+/* Tabs bar — sits inside .drawer_body, icart-specific */
+.drawer_tabs_bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-main);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* pull out of drawer_body padding so it spans full width */
+  margin: -20px -24px 20px;
+}
+
+.drawer_tabs_bar::-webkit-scrollbar {
+  display: none;
+}
+
+.drawer_tab_btn {
+  flex: 1;
+  min-width: fit-content;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.drawer_tab_btn:hover {
+  color: var(--text-body);
+}
+
+.drawer_tab_active {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+}
+
+.drawer_loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.drawer_section_title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.icart_tab_content {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.icart_toggles_block {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.icart_toggle_row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.icart_toggle_row:last-child {
+  border-bottom: none;
+}
+
+.icart_toggle_left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.icart_toggle_label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-body);
+  flex: 1;
+}
+
+.icart_toggle_switch {
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--border);
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.icart_toggle_switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.icart_toggle_on {
+  background: var(--accent);
+}
+
+.icart_toggle_knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+  display: block;
+}
+
+.icart_toggle_on .icart_toggle_knob {
+  transform: translateX(18px);
+}
+
+.icart_radius_block {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.icart_radius_row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.icart_radius_display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.icart_radius_edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.icart_icon_action_btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  flex-shrink: 0;
+}
+
+.icart_icon_action_btn:hover {
+  background: var(--bg-active);
+  color: var(--accent);
+}
+
+.icart_icon_danger:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.icart_location_card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.icart_location_icon_wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icart_location_info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.icart_location_name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+.icart_location_address {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.icart_empty_inline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.icart_concept_form {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.icart_concepts_list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.icart_concept_row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.icart_concept_icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icart_concept_info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.icart_concept_name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+.icart_concept_markup {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.icart_sub_nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.icart_sub_nav_btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.icart_sub_nav_btn:hover {
+  color: var(--text-body);
+  border-color: rgba(203, 108, 220, 0.3);
+}
+
+.icart_sub_nav_active {
+  background: var(--bg-active);
+  color: var(--accent) !important;
+  border-color: rgba(203, 108, 220, 0.35) !important;
+}
+
+.icart_tasks_list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.icart_task_card {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.icart_task_card_top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  gap: 10px;
+}
+
+.icart_task_card_left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.icart_task_icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icart_task_name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.icart_task_meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.icart_task_expanded {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.icart_task_data {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.icart_task_data_row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+}
+
+.icart_task_data_row:last-child {
+  border-bottom: none;
+}
+
+.icart_manager_comment {
+  background: var(--bg-active);
+  border: 1px solid rgba(203, 108, 220, 0.15);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.icart_manager_comment p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-body);
+  line-height: 1.5;
+}
+
+.icart_template_builder {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.icart_fields_list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.icart_field_row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icart_template_row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.icart_checkbox_btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.icart_checkbox_checked {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
+.icart_task_submit_form {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.icart_current_operator {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.icart_operator_avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-active);
+  border: 1px solid rgba(203, 108, 220, 0.25);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.icart_operator_avatar_lg {
+  width: 44px;
+  height: 44px;
+  font-size: 1.1rem;
+}
+.icart_operator_name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+.icart_operator_meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+.icart_operator_info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.icart_operator_list {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  scrollbar-width: thin;
+}
+
+.icart_operator_row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+
+.icart_operator_row:last-child {
+  border-bottom: none;
+}
+.icart_operator_row:hover {
+  background: var(--bg-hover);
+}
+.icart_operator_selected {
+  background: var(--bg-active) !important;
+}
+
+.icart_search_wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 12px;
+  height: 40px;
+}
+
+.icart_hire_form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.icart_offer_card {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.icart_offer_top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icart_inventory_row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.icart_inventory_low {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.03);
+}
+
+.icart_inventory_info {
+  flex: 1;
+  min-width: 0;
+}
+
+.icart_history_row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }

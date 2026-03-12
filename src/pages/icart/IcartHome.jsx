@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import Modal from "../../components/Modal";
 import ContractDrawer from "./ContractDrawer";
+import IcartDrawer from "./IcartDrawer";
 import api from "../../api/axios";
 import "./Icart.css";
 import {
@@ -107,6 +107,7 @@ export default function IcartHome() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedContract, setSelectedContract] = useState(null);
+  const [selectedCartId, setSelectedCartId] = useState(null);
   const [icartsOpen, setIcartsOpen] = useState(true);
   const [contractsOpen, setContractsOpen] = useState(true);
 
@@ -127,6 +128,14 @@ export default function IcartHome() {
     };
     fetchAll();
   }, []);
+
+  
+  // When a cart is updated from inside the drawer, sync it back to the list
+  const handleCartUpdate = (updatedCart) => {
+    setIcarts((prev) =>
+      prev.map((c) => (c.id === updatedCart.id ? { ...c, ...updatedCart } : c)),
+    );
+  };
 
   return (
     <div className="page_wrapper">
@@ -201,7 +210,12 @@ export default function IcartHome() {
 
                 <div className="icart_grid" style={{ marginBottom: 36 }}>
                   {icarts.map((cart) => (
-                    <div key={cart.id} className="icart_item_card">
+                    <div
+                      key={cart.id}
+                      className="icart_item_card"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setSelectedCartId(cart.id)}
+                    >
                       <div className="icart_item_top">
                         <div className="icart_item_icon">
                           <LuShoppingCart size={17} />
@@ -408,9 +422,17 @@ export default function IcartHome() {
         </>
       )}
 
+      {/* Contract drawer */}
       <ContractDrawer
         contract={selectedContract}
         onClose={() => setSelectedContract(null)}
+      />
+
+      {/* iCart detail drawer */}
+      <IcartDrawer
+        cartId={selectedCartId}
+        onClose={() => setSelectedCartId(null)}
+        onUpdate={handleCartUpdate}
       />
     </div>
   );
