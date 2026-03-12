@@ -959,3 +959,10 @@
   font-size: 0.82rem;
   text-align: center;
 }
+
+/* Location value with icon */
+.icart_location_val {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}

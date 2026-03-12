@@ -9,7 +9,7 @@ function PurchaseIcart() {
 
   const [settings, setSettings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [purchasing, setPurchasing] = useState(null); // holds settingsId being purchased
+  const [purchasing, setPurchasing] = useState(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -82,11 +82,32 @@ function PurchaseIcart() {
                     {setting.state.currency}
                   </span>
                 </div>
+
+                {/* Duration — only for non-purchase types */}
                 {setting.type !== "PURCHASE" && (
                   <div className="icart_card_meta">
                     <span className="icart_meta_label">Contract Duration</span>
                     <span className="icart_meta_value">
                       {setting.durationDays} days
+                    </span>
+                  </div>
+                )}
+
+                {/* Kiosk size */}
+                {setting.kioskSize && (
+                  <div className="icart_card_meta">
+                    <span className="icart_meta_label">Kiosk Size</span>
+                    <span className="icart_meta_value">
+                      {setting.kioskSize.length} × {setting.kioskSize.breadth}{" "}
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          color: "var(--text-muted)",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {setting.kioskSize.unit}
+                      </span>
                     </span>
                   </div>
                 )}
@@ -125,9 +146,9 @@ function PurchaseIcart() {
                   ))}
                 </div>
 
+                {/* Quantity */}
                 <div className="icart_qty_row">
                   <span className="icart_qty_label">Number of iCarts</span>
-
                   <div className="icart_qty_control">
                     <button
                       className="icart_qty_btn"
@@ -138,9 +159,7 @@ function PurchaseIcart() {
                     >
                       -
                     </button>
-
                     <span className="icart_qty_value">{numberOfCarts}</span>
-
                     <button
                       className="icart_qty_btn"
                       onClick={() => setNumberOfCarts((n) => n + 1)}

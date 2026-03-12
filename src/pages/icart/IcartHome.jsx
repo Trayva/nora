@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Formik, Form } from "formik";
-import * as Yup from "yup";
 import { toast } from "react-toastify";
 import Modal from "../../components/Modal";
 import ContractDrawer from "./ContractDrawer";
@@ -18,16 +16,9 @@ import {
   MdChevronRight,
   MdExpandMore,
   MdExpandLess,
+  MdLocationOn,
 } from "react-icons/md";
 import { LuShoppingCart } from "react-icons/lu";
-
-const purchaseSchema = Yup.object().shape({
-  noOfCarts: Yup.number()
-    .typeError("Please enter a valid number")
-    .min(1, "Minimum 1 iCart required")
-    .integer("Must be a whole number")
-    .required("Number of iCarts is required"),
-});
 
 const icartStatusColors = {
   PURCHASED: {
@@ -115,7 +106,6 @@ export default function IcartHome() {
   const [icarts, setIcarts] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState(null);
   const [icartsOpen, setIcartsOpen] = useState(true);
   const [contractsOpen, setContractsOpen] = useState(true);
@@ -137,13 +127,6 @@ export default function IcartHome() {
     };
     fetchAll();
   }, []);
-
-  const handleSubmit = (values, { setSubmitting }) => {
-    localStorage.setItem("icart_purchase_count", values.noOfCarts);
-    setSubmitting(false);
-    setOpen(false);
-    navigate("/app/purchase-icart");
-  };
 
   return (
     <div className="page_wrapper">
@@ -228,9 +211,11 @@ export default function IcartHome() {
                           colors={icartStatusColors}
                         />
                       </div>
+
                       <div className="icart_item_serial">
                         {cart.serialNumber}
                       </div>
+
                       <div className="icart_item_indicators">
                         <span
                           className={`icart_indicator ${cart.isOnline ? "icart_ind_on" : "icart_ind_off"}`}
@@ -253,6 +238,7 @@ export default function IcartHome() {
                           {cart.isLocked ? "Locked" : "Unlocked"}
                         </span>
                       </div>
+
                       <div className="icart_item_meta">
                         <div className="icart_meta_row">
                           <span className="icart_meta_key">Contract</span>
@@ -274,7 +260,23 @@ export default function IcartHome() {
                             )}
                           </span>
                         </div>
+                        <div className="icart_meta_row">
+                          <span className="icart_meta_key">Location</span>
+                          <span className="icart_meta_val">
+                            {cart.location?.name ? (
+                              <span className="icart_location_val">
+                                <MdLocationOn size={12} />
+                                {cart.location.name}
+                              </span>
+                            ) : (
+                              <span className="icart_meta_muted">
+                                Not assigned
+                              </span>
+                            )}
+                          </span>
+                        </div>
                       </div>
+
                       {cart.contractDetails?.invoices?.length > 0 && (
                         <div className="icart_item_invoices">
                           <MdReceiptLong size={13} />
