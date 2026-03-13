@@ -20,6 +20,7 @@ import {
   removeMachineryFromConcept,
 } from "../../../api/library";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
+import api from "../../../api/axios";
 
 export default function ConceptDrawer({ concept, onClose, onUpdate }) {
   const [detail, setDetail] = useState(null);
@@ -41,6 +42,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
   const [packImage, setPackImage] = useState(null);
   const [savingPack, setSavingPack] = useState(false);
   const [showPackForm, setShowPackForm] = useState(false);
+  const [togglingPublic, setTogglingPublic] = useState(false);
 
   const fetchDetail = async () => {
     if (!concept) return;
@@ -50,9 +52,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
       setDetail(res.data.data);
       try {
         const machRes = await getMachineriesForConcept(concept.id);
-        const machData = machRes.data.data;
-        // handle both array and paginated { items: [] } shape
-        setMachineries(machRes.data.data?.data || []); // ← same fix
+        setMachineries(machRes.data.data?.data || []);
       } catch {
         /* silent */
       }
@@ -67,6 +67,25 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
     if (concept) fetchDetail();
     else setDetail(null);
   }, [concept?.id]);
+
+  const handleTogglePublic = async () => {
+    if (!detail) return;
+    setTogglingPublic(true);
+    try {
+      await api.patch(`/vendor/concept/${concept.id}/toggle-public`, {
+        isPublic: !detail.isPublic,
+      });
+      setDetail((prev) => ({ ...prev, isPublic: !prev.isPublic }));
+      toast.success(
+        detail.isPublic ? "Concept set to private" : "Concept is now public"
+      );
+      if (onUpdate) onUpdate({ ...concept, isPublic: !detail.isPublic });
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update visibility");
+    } finally {
+      setTogglingPublic(false);
+    }
+  };
 
   const handleDeleteItem = async (itemId) => {
     setDeleting(itemId);
@@ -96,7 +115,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
       setMachQty("1");
       setShowMachForm(false);
       const machRes = await getMachineriesForConcept(concept.id);
-      setMachineries(machRes.data.data?.data || []); // ← same fix here
+      setMachineries(machRes.data.data?.data || []);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add machinery");
     } finally {
@@ -112,8 +131,8 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
       setConfirmDeleteMach(null);
       setMachineries((prev) =>
         prev.filter(
-          (m) => m.id !== machineryId && m.machineryId !== machineryId,
-        ),
+          (m) => m.id !== machineryId && m.machineryId !== machineryId
+        )
       );
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to remove");
@@ -185,6 +204,24 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                   {detail.menuItems?.length || 0}
                 </span>
               </div>
+            </div>
+
+            {/* Public toggle row */}
+            <div className="concept_public_row">
+              <div className="concept_public_info">
+                <span className="concept_public_label">Public Concept</span>
+                <span className="concept_public_sub">
+                  Allow this concept to appear in the iCart rental marketplace
+                </span>
+              </div>
+              <button
+                className={`concept_public_toggle ${detail.isPublic ? "concept_public_toggle_on" : ""} ${togglingPublic ? "concept_public_toggle_loading" : ""}`}
+                onClick={handleTogglePublic}
+                disabled={togglingPublic}
+                title={detail.isPublic ? "Set to private" : "Make public"}
+              >
+                <span className="concept_public_toggle_knob" />
+              </button>
             </div>
 
             {/* Menu items */}
@@ -471,7 +508,6 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
 
               {packOpen && (
                 <div className="drawer_section_body">
-                  {/* Current packaging display */}
                   {detail.packaging && !showPackForm && (
                     <div className="pack_preview_row">
                       {detail.packagingImage && (
@@ -492,7 +528,6 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                     </div>
                   )}
 
-                  {/* No packaging yet */}
                   {!detail.packaging && !showPackForm && (
                     <div className="biz_empty" style={{ padding: "20px 0" }}>
                       <MdOutlineInventory2 size={22} />
@@ -500,7 +535,6 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                     </div>
                   )}
 
-                  {/* Form */}
                   {showPackForm && (
                     <form
                       onSubmit={handleUpdatePackaging}
@@ -601,6 +635,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                 </div>
               </div>
             </Modal>
+
             <Modal
               isOpen={!!confirmDeleteMach}
               onClose={() => setConfirmDeleteMach(null)}
@@ -641,7 +676,6 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
         ) : null}
       </Drawer>
 
-      {/* Add item modal — small form, stays as modal */}
       {showAddItem && (
         <AddItemModal
           conceptId={concept?.id}
@@ -653,7 +687,6 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
         />
       )}
 
-      {/* Recipe detail — nested drawer */}
       <MenuItemDrawer
         item={selectedItem}
         onClose={() => {

@@ -75,11 +75,11 @@ function PurchaseIcart() {
                   <div>
                     <h3 className="icart_card_title">{setting.type}</h3>
                     <span className="icart_card_location">
-                      {setting.state.name}, {setting.state.country}
+                   {setting.country}
                     </span>
                   </div>
                   <span className="icart_card_currency">
-                    {setting.state.currency}
+                    {setting.currency}
                   </span>
                 </div>
 
@@ -126,7 +126,7 @@ function PurchaseIcart() {
                       </div>
                       <div className="icart_payment_right">
                         <span className="icart_payment_amount">
-                          {setting.state.currency}{" "}
+                          {setting.currency}{" "}
                           {(payment.amount * numberOfCarts).toLocaleString()}
                         </span>
                         <div className="icart_payment_badges">
@@ -176,7 +176,7 @@ function PurchaseIcart() {
                     {numberOfCarts > 1 ? "s" : ""}
                   </span>
                   <span className="icart_total_amount">
-                    {setting.state.currency} {totalAmount.toLocaleString()}
+                    {setting.currency} {totalAmount.toLocaleString()}
                   </span>
                 </div>
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import {
   MdWifi,
@@ -7,15 +7,26 @@ import {
   MdLockOpen,
   MdLocationOn,
   MdEdit,
-  MdCheck,
-  MdClose,
   MdAdd,
   MdStorefront,
   MdSignalCellularAlt,
-  MdCalendarToday,
 } from "react-icons/md";
-import { LuShoppingCart } from "react-icons/lu";
 import api from "../../api/axios";
+
+const LOCATION_TYPES = ["ACTIVE", "POTENTIAL", "INACTIVE", "RESTRICTED"];
+
+const BLANK_LOCATION = {
+  name: "",
+  address: "",
+  city: "",
+  lga: "",
+  country: "",
+  stateId: "",
+  latitude: "",
+  longitude: "",
+  locationIdType: "ACTIVE",
+  notes: "",
+};
 
 function ToggleRow({ icon, label, value, loading, onToggle }) {
   return (
@@ -46,20 +57,238 @@ function InfoRow({ label, value }) {
   );
 }
 
+/* ── Location Form ───────────────────────────────────────────── */
+function LocationForm({ cartId, onSaved, onCancel }) {
+  const [form, setForm] = useState(BLANK_LOCATION);
+  const [saving, setSaving] = useState(false);
+  const [states, setStates] = useState([]);
+  const [statesLoading, setStatesLoading] = useState(true);
+
+  // Fetch states on mount
+  useEffect(() => {
+    api
+      .get("/config/state")
+      .then((res) => setStates(res.data.data || []))
+      .catch(() => toast.error("Failed to load states"))
+      .finally(() => setStatesLoading(false));
+  }, []);
+
+  const set = (key, val) => setForm((p) => ({ ...p, [key]: val }));
+
+  // When a state is selected, auto-fill country and stateName from the state object
+  const handleStateChange = (stateId) => {
+    const selected = states.find((s) => s.id === stateId);
+    setForm((p) => ({
+      ...p,
+      stateId,
+      stateName: selected?.name || p.stateName,
+      country: selected?.country || p.country,
+    }));
+  };
+
+  const handleSubmit = async () => {
+    const required = [
+      "name",
+      "address",
+      "city",
+      "lga",
+      "country",
+      "stateId",
+      "latitude",
+      "longitude",
+      "locationIdType",
+    ];
+    for (const key of required) {
+      if (!String(form[key]).trim()) return toast.error(`${key} is required`);
+    }
+    if (isNaN(form.latitude) || isNaN(form.longitude))
+      return toast.error("Latitude and longitude must be valid numbers");
+
+    setSaving(true);
+    try {
+      const locRes = await api.post("/icart/location", {
+        name: form.name.trim(),
+        address: form.address.trim(),
+        city: form.city.trim(),
+        lga: form.lga.trim(),
+        country: form.country.trim(),
+        stateId: form.stateId.trim(),
+        latitude: Number(form.latitude),
+        longitude: Number(form.longitude),
+        locationIdType: form.locationIdType,
+        notes: form.notes.trim() || undefined,
+      });
+
+      const locationId = locRes.data.data?.id;
+      if (!locationId) throw new Error("No location ID returned");
+
+      await api.post(`/icart/${cartId}/change-location`, { locationId });
+
+      toast.success("Location created and assigned");
+      onSaved(locRes.data.data);
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || err.message || "Failed to save location",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="icart_location_form">
+      <div className="icart_location_form_grid">
+        <div className="form-field" style={{ gridColumn: "1 / -1" }}>
+          <label className="modal-label">Location Name *</label>
+          <input
+            className="modal-input"
+            placeholder="e.g. Wuse Market Stand"
+            value={form.name}
+            onChange={(e) => set("name", e.target.value)}
+          />
+        </div>
+        <div className="form-field" style={{ gridColumn: "1 / -1" }}>
+          <label className="modal-label">Address *</label>
+          <input
+            className="modal-input"
+            placeholder="Street address"
+            value={form.address}
+            onChange={(e) => set("address", e.target.value)}
+          />
+        </div>
+        <div className="form-field">
+          <label className="modal-label">City *</label>
+          <input
+            className="modal-input"
+            placeholder="e.g. Abuja"
+            value={form.city}
+            onChange={(e) => set("city", e.target.value)}
+          />
+        </div>
+        <div className="form-field">
+          <label className="modal-label">LGA *</label>
+          <input
+            className="modal-input"
+            placeholder="e.g. Wuse"
+            value={form.lga}
+            onChange={(e) => set("lga", e.target.value)}
+          />
+        </div>
+        <div className="form-field" style={{ gridColumn: "1 / -1" }}>
+          <label className="modal-label">State *</label>
+          <select
+            className="modal-input"
+            value={form.stateId}
+            onChange={(e) => handleStateChange(e.target.value)}
+            disabled={statesLoading}
+          >
+            <option value="">
+              {statesLoading ? "Loading states…" : "Select a state"}
+            </option>
+            {states.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name} ({s.code}) — {s.country}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-field">
+          <label className="modal-label">Latitude *</label>
+          <input
+            className="modal-input"
+            type="number"
+            placeholder="e.g. 9.0765"
+            value={form.latitude}
+            onChange={(e) => set("latitude", e.target.value)}
+          />
+        </div>
+        <div className="form-field">
+          <label className="modal-label">Longitude *</label>
+          <input
+            className="modal-input"
+            type="number"
+            placeholder="e.g. 7.3986"
+            value={form.longitude}
+            onChange={(e) => set("longitude", e.target.value)}
+          />
+        </div>
+        <div className="form-field">
+          <label className="modal-label">Location Type *</label>
+          <select
+            className="modal-input"
+            value={form.locationIdType}
+            onChange={(e) => set("locationIdType", e.target.value)}
+          >
+            {LOCATION_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-field">
+          <label className="modal-label">Notes</label>
+          <input
+            className="modal-input"
+            placeholder="Optional"
+            value={form.notes}
+            onChange={(e) => set("notes", e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+        <button
+          className={`app_btn app_btn_confirm ${saving ? "btn_loading" : ""}`}
+          style={{ flex: 1, height: 40 }}
+          onClick={handleSubmit}
+          disabled={saving || statesLoading}
+        >
+          <span className="btn_text">Create & Assign</span>
+          {saving && (
+            <span className="btn_loader" style={{ width: 14, height: 14 }} />
+          )}
+        </button>
+        <button
+          className="app_btn app_btn_cancel"
+          style={{ flex: 1, height: 40 }}
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main Component ─────────────────────────────────────────── */
 export default function IcartOverview({ cart, onUpdate, onRefresh }) {
   const [togglingOnline, setTogglingOnline] = useState(false);
   const [togglingLock, setTogglingLock] = useState(false);
-
-  // Service radius edit
   const [editingRadius, setEditingRadius] = useState(false);
   const [radius, setRadius] = useState(cart.serviceRadius || "");
   const [savingRadius, setSavingRadius] = useState(false);
-
-  // Add concept
+  const [showLocationForm, setShowLocationForm] = useState(false);
   const [showConceptForm, setShowConceptForm] = useState(false);
-  const [conceptId, setConceptId] = useState("");
+  const [concepts, setConcepts] = useState([]);
+  const [conceptsLoading, setConceptsLoading] = useState(false);
+  const [selectedConceptId, setSelectedConceptId] = useState("");
   const [markup, setMarkup] = useState("");
   const [addingConcept, setAddingConcept] = useState(false);
+
+  const openConceptForm = async () => {
+    setShowConceptForm(true);
+    if (concepts.length > 0) return;
+    setConceptsLoading(true);
+    try {
+      const res = await api.get("/vendor/concept");
+      setConcepts(res.data.data || []);
+    } catch {
+      toast.error("Failed to load concepts");
+    } finally {
+      setConceptsLoading(false);
+    }
+  };
 
   const handleToggleOnline = async () => {
     setTogglingOnline(true);
@@ -111,17 +340,17 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
   };
 
   const handleAddConcept = async () => {
-    if (!conceptId.trim()) return toast.error("Enter a concept ID");
+    if (!selectedConceptId) return toast.error("Select a concept");
     if (!markup || isNaN(markup)) return toast.error("Enter a valid markup");
     setAddingConcept(true);
     try {
       await api.post(`/icart/${cart.id}/concepts/add`, {
-        id: conceptId.trim(),
+        id: selectedConceptId,
         markup: Number(markup),
       });
       toast.success("Concept added");
       setShowConceptForm(false);
-      setConceptId("");
+      setSelectedConceptId("");
       setMarkup("");
       onRefresh();
     } catch (err) {
@@ -129,6 +358,11 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
     } finally {
       setAddingConcept(false);
     }
+  };
+
+  const handleLocationSaved = (newLocation) => {
+    setShowLocationForm(false);
+    onUpdate({ ...cart, location: newLocation });
   };
 
   const formatDate = (d) =>
@@ -142,7 +376,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
 
   return (
     <div className="icart_tab_content">
-      {/* Status toggles */}
+      {/* Cart Controls */}
       <div className="drawer_section_title">Cart Controls</div>
       <div className="icart_toggles_block">
         <ToggleRow
@@ -255,9 +489,24 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
 
       {/* Location */}
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
-        Location
+        <span>Location</span>
+        <button
+          className="icart_icon_action_btn"
+          style={{ marginLeft: "auto" }}
+          title={cart.location ? "Change location" : "Add location"}
+          onClick={() => setShowLocationForm((v) => !v)}
+        >
+          {cart.location ? <MdEdit size={14} /> : <MdAdd size={15} />}
+        </button>
       </div>
-      {cart.location ? (
+
+      {showLocationForm ? (
+        <LocationForm
+          cartId={cart.id}
+          onSaved={handleLocationSaved}
+          onCancel={() => setShowLocationForm(false)}
+        />
+      ) : cart.location ? (
         <div className="icart_location_card">
           <div className="icart_location_icon_wrap">
             <MdLocationOn size={18} />
@@ -269,11 +518,16 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
                 {cart.location.address}
               </div>
             )}
-            {(cart.location.city || cart.location.lga) && (
+            {(cart.location.lga || cart.location.city) && (
               <div className="icart_location_address">
                 {[cart.location.lga, cart.location.city]
                   .filter(Boolean)
                   .join(", ")}
+              </div>
+            )}
+            {cart.location.country && (
+              <div className="icart_location_address">
+                {cart.location.country}
               </div>
             )}
           </div>
@@ -291,7 +545,9 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
         <button
           className="icart_icon_action_btn"
           style={{ marginLeft: "auto" }}
-          onClick={() => setShowConceptForm((v) => !v)}
+          onClick={() =>
+            showConceptForm ? setShowConceptForm(false) : openConceptForm()
+          }
         >
           <MdAdd size={15} />
         </button>
@@ -300,13 +556,22 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
       {showConceptForm && (
         <div className="icart_concept_form">
           <div className="form-field">
-            <label className="modal-label">Concept ID</label>
-            <input
+            <label className="modal-label">Concept *</label>
+            <select
               className="modal-input"
-              placeholder="Enter concept UUID"
-              value={conceptId}
-              onChange={(e) => setConceptId(e.target.value)}
-            />
+              value={selectedConceptId}
+              onChange={(e) => setSelectedConceptId(e.target.value)}
+              disabled={conceptsLoading}
+            >
+              <option value="">
+                {conceptsLoading ? "Loading concepts…" : "Select a concept"}
+              </option>
+              {concepts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="form-field">
             <label className="modal-label">Markup (%)</label>
@@ -323,7 +588,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
               className={`app_btn app_btn_confirm ${addingConcept ? "btn_loading" : ""}`}
               style={{ flex: 1, height: 38 }}
               onClick={handleAddConcept}
-              disabled={addingConcept}
+              disabled={addingConcept || conceptsLoading}
             >
               <span className="btn_text">Add Concept</span>
               {addingConcept && (
@@ -338,7 +603,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
               style={{ flex: 1, height: 38 }}
               onClick={() => {
                 setShowConceptForm(false);
-                setConceptId("");
+                setSelectedConceptId("");
                 setMarkup("");
               }}
             >

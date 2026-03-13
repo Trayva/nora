@@ -1,0 +1,86 @@
+/* ── Operator Page ────────────────────────────────────────────────────────────
+   Append to Icart.css (or create a separate Operator.css and import it)
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Create profile hero card */
+.op_create_profile_card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 36px 28px;
+  max-width: 440px;
+  margin: 0 auto 32px;
+}
+
+.op_create_profile_icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--bg-active);
+  border: 1px solid rgba(203, 108, 220, 0.2);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.op_create_profile_title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  margin: 0 0 8px;
+}
+
+.op_create_profile_sub {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+.op_create_profile_form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+/* Profile card */
+.op_profile_card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.op_profile_top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Job offer meta grid */
+.op_offer_meta_grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.op_offer_meta_item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+}

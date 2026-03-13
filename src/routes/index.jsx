@@ -25,6 +25,7 @@ import PurchaseIcart from "../pages/icart/PurchaseIcart";
 import Invoices from "../pages/incoices/Invoices";
 import Business from "../pages/app/Business";
 import ConceptPage from "../pages/app/Business/ConceptPage";
+import OperatorHome from "../pages/app/Operator/OperatorHome";
 
 
 // Protected Route - must be logged in
@@ -113,6 +114,8 @@ export default function Routes() {
         { path: "invoices", element: <Invoices /> },
         { path: "business", element: <Business /> },
         { path: "business/concept/:id", element: <ConceptPage /> },
+        { path: "operator", element: <OperatorHome />}
+
       ],
     },
 
