@@ -1,40 +1,93 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import {
-  MdAdd, MdCheckBox, MdCheckBoxOutlineBlank, MdExpandMore, MdExpandLess,
-  MdTask, MdListAlt, MdHistory, MdCheck, MdClose, MdEdit,
+  MdAdd,
+  MdCheckBox,
+  MdCheckBoxOutlineBlank,
+  MdExpandMore,
+  MdExpandLess,
+  MdTask,
+  MdListAlt,
+  MdHistory,
+  MdCheck,
+  MdClose,
+  MdEdit,
 } from "react-icons/md";
 import api from "../../api/axios";
 
 /* ── helpers ───────────────────────────────────────────────── */
 const taskStatusColors = {
-  PENDING:    { bg: "rgba(234,179,8,0.1)",   color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
-  IN_PROGRESS:{ bg: "rgba(59,130,246,0.1)",  color: "#3b82f6", border: "rgba(59,130,246,0.25)" },
-  COMPLETED:  { bg: "rgba(34,197,94,0.1)",   color: "#16a34a", border: "rgba(34,197,94,0.25)" },
-  MISSED:     { bg: "rgba(239,68,68,0.1)",   color: "#ef4444", border: "rgba(239,68,68,0.25)" },
-  SUBMITTED:  { bg: "rgba(168,85,247,0.1)",  color: "#a855f7", border: "rgba(168,85,247,0.25)" },
+  PENDING: {
+    bg: "rgba(234,179,8,0.1)",
+    color: "#ca8a04",
+    border: "rgba(234,179,8,0.25)",
+  },
+  IN_PROGRESS: {
+    bg: "rgba(59,130,246,0.1)",
+    color: "#3b82f6",
+    border: "rgba(59,130,246,0.25)",
+  },
+  COMPLETED: {
+    bg: "rgba(34,197,94,0.1)",
+    color: "#16a34a",
+    border: "rgba(34,197,94,0.25)",
+  },
+  MISSED: {
+    bg: "rgba(239,68,68,0.1)",
+    color: "#ef4444",
+    border: "rgba(239,68,68,0.25)",
+  },
+  SUBMITTED: {
+    bg: "rgba(168,85,247,0.1)",
+    color: "#a855f7",
+    border: "rgba(168,85,247,0.25)",
+  },
 };
 
 function StatusPill({ status }) {
   const s = taskStatusColors[status] || taskStatusColors.PENDING;
   return (
-    <span className="icart_status_badge" style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
+    <span
+      className="icart_status_badge"
+      style={{
+        background: s.bg,
+        color: s.color,
+        border: `1px solid ${s.border}`,
+      }}
+    >
       {status}
     </span>
   );
 }
 
 /* ── Template Builder ──────────────────────────────────────── */
-function TemplateBuilder({ cartId, onCreated }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [type, setType] = useState("CHECKLIST");
-  const [recurrence, setRecurrence] = useState("DAILY");
-  const [isGlobal, setIsGlobal] = useState(false);
-  const [fields, setFields] = useState([{ type: "checkbox", label: "" }]);
+function TemplateBuilder({
+  cartId,
+  operators = [],
+  onCreated,
+  editTemplate = null,
+  onCancelEdit,
+}) {
+  const isEdit = !!editTemplate;
+
+  const [name, setName] = useState(editTemplate?.name || "");
+  const [description, setDescription] = useState(
+    editTemplate?.description || "",
+  );
+  const [type, setType] = useState(editTemplate?.type || "CHECKLIST");
+  const [recurrence, setRecurrence] = useState(
+    editTemplate?.recurrence || "DAILY",
+  );
+  const [isGlobal, setIsGlobal] = useState(editTemplate?.isGlobal || false);
+  const [time, setTime] = useState(editTemplate?.time || "");
+  const [operatorId, setOperatorId] = useState(editTemplate?.operatorId || "");
+  const [fields, setFields] = useState(
+    editTemplate?.schema?.fields || [{ type: "checkbox", label: "" }],
+  );
   const [saving, setSaving] = useState(false);
 
-  const addField = () => setFields([...fields, { type: "checkbox", label: "" }]);
+  const addField = () =>
+    setFields([...fields, { type: "checkbox", label: "" }]);
   const removeField = (i) => setFields(fields.filter((_, idx) => idx !== i));
   const updateField = (i, key, val) => {
     const updated = [...fields];
@@ -47,21 +100,33 @@ function TemplateBuilder({ cartId, onCreated }) {
     const validFields = fields.filter((f) => f.label.trim());
     if (!validFields.length) return toast.error("Add at least one field");
 
+    const payload = {
+      name: name.trim(),
+      description: description.trim() || undefined,
+      type,
+      recurrence,
+      schema: { fields: validFields },
+      isGlobal,
+      cartId: isGlobal ? undefined : cartId,
+      operatorId: operatorId || undefined,
+      time: time || undefined,
+    };
+
     setSaving(true);
     try {
-      await api.post("/icart/tasks/templates", {
-        name: name.trim(),
-        description: description.trim() || undefined,
-        type,
-        recurrence,
-        schema: { fields: validFields },
-        isGlobal,
-        cartId: isGlobal ? undefined : cartId,
-      });
-      toast.success("Template created");
+      if (isEdit) {
+        await api.patch(`/icart/tasks/templates/${editTemplate.id}`, payload);
+        toast.success("Template updated");
+      } else {
+        await api.post("/icart/tasks/templates", payload);
+        toast.success("Template created");
+      }
       onCreated();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to create template");
+      toast.error(
+        err.response?.data?.message ||
+          `Failed to ${isEdit ? "update" : "create"} template`,
+      );
     } finally {
       setSaving(false);
     }
@@ -69,18 +134,59 @@ function TemplateBuilder({ cartId, onCreated }) {
 
   return (
     <div className="icart_template_builder">
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 4,
+        }}
+      >
+        <span
+          style={{
+            fontSize: "0.85rem",
+            fontWeight: 700,
+            color: "var(--text-heading)",
+          }}
+        >
+          {isEdit ? "Edit Template" : "New Template"}
+        </span>
+        {isEdit && onCancelEdit && (
+          <button className="icart_icon_action_btn" onClick={onCancelEdit}>
+            <MdClose size={14} />
+          </button>
+        )}
+      </div>
+
       <div className="form-field">
         <label className="modal-label">Template Name *</label>
-        <input className="modal-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Daily Opening Checklist" />
+        <input
+          className="modal-input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Daily Opening Checklist"
+        />
       </div>
+
       <div className="form-field">
         <label className="modal-label">Description</label>
-        <input className="modal-input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
+        <input
+          className="modal-input"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Optional description"
+        />
       </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div className="form-field">
           <label className="modal-label">Type</label>
-          <select className="modal-input" value={type} onChange={(e) => setType(e.target.value)}>
+          <select
+            className="modal-input"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+          >
             <option value="CHECKLIST">Checklist</option>
             <option value="LOG">Log</option>
             <option value="PROCESS">Process</option>
@@ -88,7 +194,11 @@ function TemplateBuilder({ cartId, onCreated }) {
         </div>
         <div className="form-field">
           <label className="modal-label">Recurrence</label>
-          <select className="modal-input" value={recurrence} onChange={(e) => setRecurrence(e.target.value)}>
+          <select
+            className="modal-input"
+            value={recurrence}
+            onChange={(e) => setRecurrence(e.target.value)}
+          >
             <option value="DAILY">Daily</option>
             <option value="PER_SHIFT">Per Shift</option>
             <option value="WEEKLY">Weekly</option>
@@ -97,6 +207,35 @@ function TemplateBuilder({ cartId, onCreated }) {
         </div>
       </div>
 
+      {/* Time + Operator row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div className="form-field">
+          <label className="modal-label">Scheduled Time (optional)</label>
+          <input
+            className="modal-input"
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          />
+        </div>
+        <div className="form-field">
+          <label className="modal-label">Assign Operator (optional)</label>
+          <select
+            className="modal-input"
+            value={operatorId}
+            onChange={(e) => setOperatorId(e.target.value)}
+          >
+            <option value="">Any operator</option>
+            {operators.map((op) => (
+              <option key={op.id} value={op.id}>
+                {op.user?.fullName || op.user?.email || op.id.slice(0, 8)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Global toggle */}
       <div className="icart_toggle_row" style={{ marginBottom: 14 }}>
         <span className="icart_toggle_label">Apply Globally (all carts)</span>
         <button
@@ -108,9 +247,16 @@ function TemplateBuilder({ cartId, onCreated }) {
       </div>
 
       {/* Fields */}
-      <div className="drawer_section_title" style={{ display: "flex", alignItems: "center" }}>
+      <div
+        className="drawer_section_title"
+        style={{ display: "flex", alignItems: "center" }}
+      >
         <span>Form Fields</span>
-        <button className="icart_icon_action_btn" style={{ marginLeft: "auto" }} onClick={addField}>
+        <button
+          className="icart_icon_action_btn"
+          style={{ marginLeft: "auto" }}
+          onClick={addField}
+        >
           <MdAdd size={15} />
         </button>
       </div>
@@ -120,7 +266,7 @@ function TemplateBuilder({ cartId, onCreated }) {
           <div key={i} className="icart_field_row">
             <select
               className="modal-input"
-              style={{ width: 120, flexShrink: 0 }}
+              style={{ width: 110, flexShrink: 0 }}
               value={field.type}
               onChange={(e) => updateField(i, "type", e.target.value)}
             >
@@ -135,7 +281,11 @@ function TemplateBuilder({ cartId, onCreated }) {
               value={field.label}
               onChange={(e) => updateField(i, "label", e.target.value)}
             />
-            <button className="icart_icon_action_btn icart_icon_danger" onClick={() => removeField(i)} disabled={fields.length === 1}>
+            <button
+              className="icart_icon_action_btn icart_icon_danger"
+              onClick={() => removeField(i)}
+              disabled={fields.length === 1}
+            >
               <MdClose size={14} />
             </button>
           </div>
@@ -144,13 +294,17 @@ function TemplateBuilder({ cartId, onCreated }) {
 
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
         <button
-          className={`app_btn app_btn_confirm ${saving ? "btn_loading" : ""}`}
-          style={{ flex: 1, height: 40 }}
+          className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+          style={{ flex: 1, height: 40, position: "relative" }}
           onClick={handleSubmit}
           disabled={saving}
         >
-          <span className="btn_text">Create Template</span>
-          {saving && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
+          <span className="btn_text">
+            {isEdit ? "Save Changes" : "Create Template"}
+          </span>
+          {saving && (
+            <span className="btn_loader" style={{ width: 14, height: 14 }} />
+          )}
         </button>
       </div>
     </div>
@@ -161,7 +315,9 @@ function TemplateBuilder({ cartId, onCreated }) {
 function TaskSubmitForm({ task, onSubmitted }) {
   const schema = task.template?.schema?.fields || [];
   const [formData, setFormData] = useState(
-    Object.fromEntries(schema.map((f) => [f.label, f.type === "checkbox" ? false : ""]))
+    Object.fromEntries(
+      schema.map((f) => [f.label, f.type === "checkbox" ? false : ""]),
+    ),
   );
   const [submitting, setSubmitting] = useState(false);
 
@@ -186,9 +342,15 @@ function TaskSubmitForm({ task, onSubmitted }) {
           {field.type === "checkbox" ? (
             <button
               className={`icart_checkbox_btn ${formData[field.label] ? "icart_checkbox_checked" : ""}`}
-              onClick={() => setFormData((p) => ({ ...p, [field.label]: !p[field.label] }))}
+              onClick={() =>
+                setFormData((p) => ({ ...p, [field.label]: !p[field.label] }))
+              }
             >
-              {formData[field.label] ? <MdCheckBox size={18} /> : <MdCheckBoxOutlineBlank size={18} />}
+              {formData[field.label] ? (
+                <MdCheckBox size={18} />
+              ) : (
+                <MdCheckBoxOutlineBlank size={18} />
+              )}
               <span>{formData[field.label] ? "Done" : "Mark as done"}</span>
             </button>
           ) : field.type === "number" ? (
@@ -196,13 +358,17 @@ function TaskSubmitForm({ task, onSubmitted }) {
               className="modal-input"
               type="number"
               value={formData[field.label]}
-              onChange={(e) => setFormData((p) => ({ ...p, [field.label]: e.target.value }))}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, [field.label]: e.target.value }))
+              }
             />
           ) : (
             <input
               className="modal-input"
               value={formData[field.label]}
-              onChange={(e) => setFormData((p) => ({ ...p, [field.label]: e.target.value }))}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, [field.label]: e.target.value }))
+              }
             />
           )}
         </div>
@@ -214,7 +380,9 @@ function TaskSubmitForm({ task, onSubmitted }) {
         disabled={submitting}
       >
         <span className="btn_text">Submit Task</span>
-        {submitting && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
+        {submitting && (
+          <span className="btn_loader" style={{ width: 14, height: 14 }} />
+        )}
       </button>
     </div>
   );
@@ -229,7 +397,9 @@ function ReviewForm({ task, onReviewed }) {
     if (!comment.trim()) return toast.error("Enter a comment");
     setSaving(true);
     try {
-      await api.patch(`/icart/tasks/${task.id}/review`, { managerComments: comment.trim() });
+      await api.patch(`/icart/tasks/${task.id}/review`, {
+        managerComments: comment.trim(),
+      });
       toast.success("Review saved");
       onReviewed();
     } catch {
@@ -258,7 +428,9 @@ function ReviewForm({ task, onReviewed }) {
         disabled={saving}
       >
         <span className="btn_text">Save Review</span>
-        {saving && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
+        {saving && (
+          <span className="btn_loader" style={{ width: 14, height: 14 }} />
+        )}
       </button>
     </div>
   );
@@ -271,23 +443,37 @@ function TaskCard({ task, onRefresh }) {
   const [showReview, setShowReview] = useState(false);
 
   const isPending = task.status === "PENDING" || task.status === "IN_PROGRESS";
-  const isSubmitted = task.status === "SUBMITTED" || task.status === "COMPLETED";
+  const isSubmitted =
+    task.status === "SUBMITTED" || task.status === "COMPLETED";
 
   return (
     <div className="icart_task_card">
-      <div className="icart_task_card_top" onClick={() => setExpanded((v) => !v)}>
+      <div
+        className="icart_task_card_top"
+        onClick={() => setExpanded((v) => !v)}
+      >
         <div className="icart_task_card_left">
           <div className="icart_task_icon">
             <MdTask size={14} />
           </div>
           <div>
-            <div className="icart_task_name">{task.template?.name || task.name || "Task"}</div>
+            <div className="icart_task_name">
+              {task.template?.name || task.name || "Task"}
+            </div>
             <div className="icart_task_meta">
-              {task.template?.recurrence && <span>{task.template.recurrence}</span>}
+              {task.template?.recurrence && (
+                <span>{task.template.recurrence}</span>
+              )}
               {task.dueAt && (
                 <>
                   <span className="contract_row_dot">·</span>
-                  <span>Due {new Date(task.dueAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</span>
+                  <span>
+                    Due{" "}
+                    {new Date(task.dueAt).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                    })}
+                  </span>
                 </>
               )}
             </div>
@@ -295,7 +481,11 @@ function TaskCard({ task, onRefresh }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <StatusPill status={task.status} />
-          {expanded ? <MdExpandLess size={16} style={{ color: "var(--text-muted)" }} /> : <MdExpandMore size={16} style={{ color: "var(--text-muted)" }} />}
+          {expanded ? (
+            <MdExpandLess size={16} style={{ color: "var(--text-muted)" }} />
+          ) : (
+            <MdExpandMore size={16} style={{ color: "var(--text-muted)" }} />
+          )}
         </div>
       </div>
 
@@ -308,7 +498,15 @@ function TaskCard({ task, onRefresh }) {
                 <div key={k} className="icart_task_data_row">
                   <span className="icart_meta_key">{k}</span>
                   <span className="icart_meta_val">
-                    {typeof v === "boolean" ? (v ? <MdCheck size={14} style={{ color: "#22c55e" }} /> : <MdClose size={14} style={{ color: "#ef4444" }} />) : String(v)}
+                    {typeof v === "boolean" ? (
+                      v ? (
+                        <MdCheck size={14} style={{ color: "#22c55e" }} />
+                      ) : (
+                        <MdClose size={14} style={{ color: "#ef4444" }} />
+                      )
+                    ) : (
+                      String(v)
+                    )}
                   </span>
                 </div>
               ))}
@@ -343,8 +541,24 @@ function TaskCard({ task, onRefresh }) {
             )}
           </div>
 
-          {showSubmit && <TaskSubmitForm task={task} onSubmitted={() => { setShowSubmit(false); onRefresh(); }} />}
-          {showReview && <ReviewForm task={task} onReviewed={() => { setShowReview(false); onRefresh(); }} />}
+          {showSubmit && (
+            <TaskSubmitForm
+              task={task}
+              onSubmitted={() => {
+                setShowSubmit(false);
+                onRefresh();
+              }}
+            />
+          )}
+          {showReview && (
+            <ReviewForm
+              task={task}
+              onReviewed={() => {
+                setShowReview(false);
+                onRefresh();
+              }}
+            />
+          )}
         </div>
       )}
     </div>
@@ -358,6 +572,7 @@ export default function IcartTasks({ cart }) {
   const [ledger, setLedger] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null); // template being edited
 
   const fetchPending = async () => {
     setLoading(true);
@@ -430,9 +645,18 @@ export default function IcartTasks({ cart }) {
       </div>
 
       {loading ? (
-        <div className="drawer_loading"><div className="page_loader_spinner" /></div>
+        <div className="drawer_loading">
+          <div className="page_loader_spinner" />
+        </div>
       ) : view === "newTemplate" ? (
-        <TemplateBuilder cartId={cart.id} onCreated={() => { setView("templates"); fetchTemplates(); }} />
+        <TemplateBuilder
+          cartId={cart.id}
+          operators={cart.operators || []}
+          onCreated={() => {
+            setView("templates");
+            fetchTemplates();
+          }}
+        />
       ) : view === "pending" ? (
         tasks.length === 0 ? (
           <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
@@ -461,6 +685,22 @@ export default function IcartTasks({ cart }) {
         )
       ) : view === "templates" ? (
         <>
+          {/* Inline edit form */}
+          {editingTemplate && (
+            <div style={{ marginBottom: 16 }}>
+              <TemplateBuilder
+                cartId={cart.id}
+                operators={cart.operators || []}
+                editTemplate={editingTemplate}
+                onCreated={() => {
+                  setEditingTemplate(null);
+                  fetchTemplates();
+                }}
+                onCancelEdit={() => setEditingTemplate(null)}
+              />
+            </div>
+          )}
+
           {templates.length === 0 ? (
             <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
               <MdListAlt size={24} style={{ opacity: 0.3 }} />
@@ -469,14 +709,34 @@ export default function IcartTasks({ cart }) {
           ) : (
             <div className="icart_tasks_list">
               {templates.map((tpl) => (
-                <div key={tpl.id} className="icart_template_row">
-                  <div className="icart_task_icon"><MdListAlt size={14} /></div>
+                <div
+                  key={tpl.id}
+                  className="icart_template_row"
+                  style={{ opacity: editingTemplate?.id === tpl.id ? 0.4 : 1 }}
+                >
+                  <div className="icart_task_icon">
+                    <MdListAlt size={14} />
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="icart_task_name">{tpl.name}</div>
                     <div className="icart_task_meta">
                       <span>{tpl.type}</span>
                       <span className="contract_row_dot">·</span>
                       <span>{tpl.recurrence}</span>
+                      {tpl.time && (
+                        <>
+                          <span className="contract_row_dot">·</span>
+                          <span>{tpl.time}</span>
+                        </>
+                      )}
+                      {tpl.operator?.user?.fullName && (
+                        <>
+                          <span className="contract_row_dot">·</span>
+                          <span style={{ color: "var(--accent)" }}>
+                            {tpl.operator.user.fullName}
+                          </span>
+                        </>
+                      )}
                       {tpl.isGlobal && (
                         <>
                           <span className="contract_row_dot">·</span>
@@ -485,7 +745,29 @@ export default function IcartTasks({ cart }) {
                       )}
                     </div>
                   </div>
-                  <span className="icart_section_count">{tpl.schema?.fields?.length || 0} fields</span>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span className="icart_section_count">
+                      {tpl.schema?.fields?.length || 0} fields
+                    </span>
+                    <button
+                      className="icart_icon_action_btn"
+                      onClick={() => {
+                        setEditingTemplate(
+                          editingTemplate?.id === tpl.id ? null : tpl,
+                        );
+                      }}
+                      title="Edit template"
+                    >
+                      <MdEdit size={13} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

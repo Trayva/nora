@@ -25,6 +25,7 @@ export default function IcartDrawer({ cartId, onClose, onUpdate }) {
     try {
       const res = await api.get(`/icart/${cartId}`);
       setCart(res.data.data);
+      console.log(res)
     } catch {
       toast.error("Failed to load iCart details");
     } finally {

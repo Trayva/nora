@@ -1,31 +1,18 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import {
-  MdWifi,
-  MdWifiOff,
-  MdLock,
-  MdLockOpen,
-  MdLocationOn,
-  MdEdit,
-  MdAdd,
-  MdStorefront,
-  MdSignalCellularAlt,
+  MdWifi, MdWifiOff, MdLock, MdLockOpen, MdLocationOn,
+  MdEdit, MdAdd, MdStorefront, MdSignalCellularAlt,
+  MdPerson, MdVerified,
 } from "react-icons/md";
 import api from "../../api/axios";
 
 const LOCATION_TYPES = ["ACTIVE", "POTENTIAL", "INACTIVE", "RESTRICTED"];
 
 const BLANK_LOCATION = {
-  name: "",
-  address: "",
-  city: "",
-  lga: "",
-  country: "",
-  stateId: "",
-  latitude: "",
-  longitude: "",
-  locationIdType: "ACTIVE",
-  notes: "",
+  name: "", address: "", city: "", lga: "", country: "",
+  stateName: "", latitude: "", longitude: "",
+  locationIdType: "ACTIVE", notes: "",
 };
 
 function ToggleRow({ icon, label, value, loading, onToggle }) {
@@ -50,9 +37,7 @@ function InfoRow({ label, value }) {
   return (
     <div className="icart_meta_row">
       <span className="icart_meta_key">{label}</span>
-      <span className="icart_meta_val">
-        {value || <span className="icart_meta_muted">—</span>}
-      </span>
+      <span className="icart_meta_val">{value || <span className="icart_meta_muted">—</span>}</span>
     </div>
   );
 }
@@ -66,8 +51,7 @@ function LocationForm({ cartId, onSaved, onCancel }) {
 
   // Fetch states on mount
   useEffect(() => {
-    api
-      .get("/config/state")
+    api.get("/config/state")
       .then((res) => setStates(res.data.data || []))
       .catch(() => toast.error("Failed to load states"))
       .finally(() => setStatesLoading(false));
@@ -80,24 +64,14 @@ function LocationForm({ cartId, onSaved, onCancel }) {
     const selected = states.find((s) => s.id === stateId);
     setForm((p) => ({
       ...p,
-      stateId,
+      _selectedStateId: stateId,
       stateName: selected?.name || p.stateName,
       country: selected?.country || p.country,
     }));
   };
 
   const handleSubmit = async () => {
-    const required = [
-      "name",
-      "address",
-      "city",
-      "lga",
-      "country",
-      "stateId",
-      "latitude",
-      "longitude",
-      "locationIdType",
-    ];
+    const required = ["name", "address", "city", "lga", "country", "latitude", "longitude", "locationIdType"];
     for (const key of required) {
       if (!String(form[key]).trim()) return toast.error(`${key} is required`);
     }
@@ -112,7 +86,7 @@ function LocationForm({ cartId, onSaved, onCancel }) {
         city: form.city.trim(),
         lga: form.lga.trim(),
         country: form.country.trim(),
-        stateId: form.stateId.trim(),
+        stateId: form.stateId,
         latitude: Number(form.latitude),
         longitude: Number(form.longitude),
         locationIdType: form.locationIdType,
@@ -127,9 +101,7 @@ function LocationForm({ cartId, onSaved, onCancel }) {
       toast.success("Location created and assigned");
       onSaved(locRes.data.data);
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || err.message || "Failed to save location",
-      );
+      toast.error(err.response?.data?.message || err.message || "Failed to save location");
     } finally {
       setSaving(false);
     }
@@ -140,51 +112,29 @@ function LocationForm({ cartId, onSaved, onCancel }) {
       <div className="icart_location_form_grid">
         <div className="form-field" style={{ gridColumn: "1 / -1" }}>
           <label className="modal-label">Location Name *</label>
-          <input
-            className="modal-input"
-            placeholder="e.g. Wuse Market Stand"
-            value={form.name}
-            onChange={(e) => set("name", e.target.value)}
-          />
+          <input className="modal-input" placeholder="e.g. Wuse Market Stand" value={form.name} onChange={(e) => set("name", e.target.value)} />
         </div>
         <div className="form-field" style={{ gridColumn: "1 / -1" }}>
           <label className="modal-label">Address *</label>
-          <input
-            className="modal-input"
-            placeholder="Street address"
-            value={form.address}
-            onChange={(e) => set("address", e.target.value)}
-          />
+          <input className="modal-input" placeholder="Street address" value={form.address} onChange={(e) => set("address", e.target.value)} />
         </div>
         <div className="form-field">
           <label className="modal-label">City *</label>
-          <input
-            className="modal-input"
-            placeholder="e.g. Abuja"
-            value={form.city}
-            onChange={(e) => set("city", e.target.value)}
-          />
+          <input className="modal-input" placeholder="e.g. Abuja" value={form.city} onChange={(e) => set("city", e.target.value)} />
         </div>
         <div className="form-field">
           <label className="modal-label">LGA *</label>
-          <input
-            className="modal-input"
-            placeholder="e.g. Wuse"
-            value={form.lga}
-            onChange={(e) => set("lga", e.target.value)}
-          />
+          <input className="modal-input" placeholder="e.g. Wuse" value={form.lga} onChange={(e) => set("lga", e.target.value)} />
         </div>
         <div className="form-field" style={{ gridColumn: "1 / -1" }}>
           <label className="modal-label">State *</label>
           <select
             className="modal-input"
-            value={form.stateId}
+            value={form._selectedStateId || ""}
             onChange={(e) => handleStateChange(e.target.value)}
             disabled={statesLoading}
           >
-            <option value="">
-              {statesLoading ? "Loading states…" : "Select a state"}
-            </option>
+            <option value="">{statesLoading ? "Loading states…" : "Select a state"}</option>
             {states.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name} ({s.code}) — {s.country}
@@ -194,46 +144,21 @@ function LocationForm({ cartId, onSaved, onCancel }) {
         </div>
         <div className="form-field">
           <label className="modal-label">Latitude *</label>
-          <input
-            className="modal-input"
-            type="number"
-            placeholder="e.g. 9.0765"
-            value={form.latitude}
-            onChange={(e) => set("latitude", e.target.value)}
-          />
+          <input className="modal-input" type="number" placeholder="e.g. 9.0765" value={form.latitude} onChange={(e) => set("latitude", e.target.value)} />
         </div>
         <div className="form-field">
           <label className="modal-label">Longitude *</label>
-          <input
-            className="modal-input"
-            type="number"
-            placeholder="e.g. 7.3986"
-            value={form.longitude}
-            onChange={(e) => set("longitude", e.target.value)}
-          />
+          <input className="modal-input" type="number" placeholder="e.g. 7.3986" value={form.longitude} onChange={(e) => set("longitude", e.target.value)} />
         </div>
         <div className="form-field">
           <label className="modal-label">Location Type *</label>
-          <select
-            className="modal-input"
-            value={form.locationIdType}
-            onChange={(e) => set("locationIdType", e.target.value)}
-          >
-            {LOCATION_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
+          <select className="modal-input" value={form.locationIdType} onChange={(e) => set("locationIdType", e.target.value)}>
+            {LOCATION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
         <div className="form-field">
           <label className="modal-label">Notes</label>
-          <input
-            className="modal-input"
-            placeholder="Optional"
-            value={form.notes}
-            onChange={(e) => set("notes", e.target.value)}
-          />
+          <input className="modal-input" placeholder="Optional" value={form.notes} onChange={(e) => set("notes", e.target.value)} />
         </div>
       </div>
 
@@ -245,15 +170,9 @@ function LocationForm({ cartId, onSaved, onCancel }) {
           disabled={saving || statesLoading}
         >
           <span className="btn_text">Create & Assign</span>
-          {saving && (
-            <span className="btn_loader" style={{ width: 14, height: 14 }} />
-          )}
+          {saving && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
         </button>
-        <button
-          className="app_btn app_btn_cancel"
-          style={{ flex: 1, height: 40 }}
-          onClick={onCancel}
-        >
+        <button className="app_btn app_btn_cancel" style={{ flex: 1, height: 40 }} onClick={onCancel}>
           Cancel
         </button>
       </div>
@@ -294,10 +213,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
     setTogglingOnline(true);
     try {
       const res = await api.patch(`/icart/${cart.id}/status/online`);
-      onUpdate({
-        ...cart,
-        isOnline: res.data.data?.isOnline ?? !cart.isOnline,
-      });
+      onUpdate({ ...cart, isOnline: res.data.data?.isOnline ?? !cart.isOnline });
       toast.success(`Cart is now ${!cart.isOnline ? "online" : "offline"}`);
     } catch {
       toast.error("Failed to toggle online status");
@@ -310,10 +226,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
     setTogglingLock(true);
     try {
       const res = await api.patch(`/icart/${cart.id}/status/lock`);
-      onUpdate({
-        ...cart,
-        isLocked: res.data.data?.isLocked ?? !cart.isLocked,
-      });
+      onUpdate({ ...cart, isLocked: res.data.data?.isLocked ?? !cart.isLocked });
       toast.success(`Cart is now ${!cart.isLocked ? "locked" : "unlocked"}`);
     } catch {
       toast.error("Failed to toggle lock status");
@@ -326,9 +239,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
     if (!radius || isNaN(radius)) return toast.error("Enter a valid radius");
     setSavingRadius(true);
     try {
-      await api.patch(`/icart/service-radius/${cart.id}`, {
-        serviceRadius: Number(radius),
-      });
+      await api.patch(`/icart/service-radius/${cart.id}`, { serviceRadius: Number(radius) });
       onUpdate({ ...cart, serviceRadius: Number(radius) });
       toast.success("Service radius updated");
       setEditingRadius(false);
@@ -344,10 +255,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
     if (!markup || isNaN(markup)) return toast.error("Enter a valid markup");
     setAddingConcept(true);
     try {
-      await api.post(`/icart/${cart.id}/concepts/add`, {
-        id: selectedConceptId,
-        markup: Number(markup),
-      });
+      await api.post(`/icart/${cart.id}/concepts/add`, { id: selectedConceptId, markup: Number(markup) });
       toast.success("Concept added");
       setShowConceptForm(false);
       setSelectedConceptId("");
@@ -366,13 +274,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
   };
 
   const formatDate = (d) =>
-    d
-      ? new Date(d).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
-      : null;
+    d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : null;
 
   return (
     <div className="icart_tab_content">
@@ -381,83 +283,47 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
       <div className="icart_toggles_block">
         <ToggleRow
           icon={cart.isOnline ? <MdWifi size={15} /> : <MdWifiOff size={15} />}
-          label="Online Status"
-          value={cart.isOnline}
-          loading={togglingOnline}
-          onToggle={handleToggleOnline}
+          label="Online Status" value={cart.isOnline} loading={togglingOnline} onToggle={handleToggleOnline}
         />
         <ToggleRow
           icon={cart.isLocked ? <MdLock size={15} /> : <MdLockOpen size={15} />}
-          label="Cart Lock"
-          value={cart.isLocked}
-          loading={togglingLock}
-          onToggle={handleToggleLock}
+          label="Cart Lock" value={cart.isLocked} loading={togglingLock} onToggle={handleToggleLock}
         />
       </div>
 
       {/* Service Radius */}
-      <div className="drawer_section_title" style={{ marginTop: 20 }}>
-        Service Radius
-      </div>
+      <div className="drawer_section_title" style={{ marginTop: 20 }}>Service Radius</div>
       <div className="icart_radius_block">
         <div className="icart_radius_row">
-          <span className="profile_phone_date_icon">
-            <MdSignalCellularAlt size={15} />
-          </span>
+          <span className="profile_phone_date_icon"><MdSignalCellularAlt size={15} /></span>
           <span className="icart_toggle_label">Radius</span>
           {editingRadius ? (
             <div className="icart_radius_edit">
               <input
                 className="modal-input"
-                style={{
-                  width: 90,
-                  height: 34,
-                  padding: "0 10px",
-                  fontSize: "0.82rem",
-                }}
-                type="number"
-                value={radius}
-                onChange={(e) => setRadius(e.target.value)}
-                placeholder="km"
+                style={{ width: 90, height: 34, padding: "0 10px", fontSize: "0.82rem" }}
+                type="number" value={radius} onChange={(e) => setRadius(e.target.value)} placeholder="km"
               />
               <button
                 className={`app_btn app_btn_confirm ${savingRadius ? "btn_loading" : ""}`}
                 style={{ height: 34, padding: "0 14px", fontSize: "0.78rem" }}
-                onClick={handleSaveRadius}
-                disabled={savingRadius}
+                onClick={handleSaveRadius} disabled={savingRadius}
               >
                 <span className="btn_text">Save</span>
-                {savingRadius && (
-                  <span
-                    className="btn_loader"
-                    style={{ width: 14, height: 14 }}
-                  />
-                )}
+                {savingRadius && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
               </button>
               <button
                 className="app_btn app_btn_cancel"
                 style={{ height: 34, padding: "0 14px", fontSize: "0.78rem" }}
-                onClick={() => {
-                  setEditingRadius(false);
-                  setRadius(cart.serviceRadius || "");
-                }}
-              >
-                Cancel
-              </button>
+                onClick={() => { setEditingRadius(false); setRadius(cart.serviceRadius || ""); }}
+              >Cancel</button>
             </div>
           ) : (
             <div className="icart_radius_display">
               <span className="icart_meta_val">
-                {cart.serviceRadius ? (
-                  `${cart.serviceRadius} km`
-                ) : (
-                  <span className="icart_meta_muted">Not set</span>
-                )}
+                {cart.serviceRadius ? `${cart.serviceRadius} km` : <span className="icart_meta_muted">Not set</span>}
               </span>
-              <button
-                className="icart_icon_action_btn"
-                onClick={() => setEditingRadius(true)}
-              >
+              <button className="icart_icon_action_btn" onClick={() => setEditingRadius(true)}>
                 <MdEdit size={14} />
               </button>
             </div>
@@ -466,25 +332,14 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
       </div>
 
       {/* Cart Info */}
-      <div className="drawer_section_title" style={{ marginTop: 20 }}>
-        Cart Info
-      </div>
+      <div className="drawer_section_title" style={{ marginTop: 20 }}>Cart Info</div>
       <div className="icart_item_meta" style={{ marginBottom: 0 }}>
         <InfoRow label="Serial Number" value={cart.serialNumber} />
         <InfoRow label="Status" value={cart.status} />
-        <InfoRow
-          label="Vendor"
-          value={cart.vendor?.businessName || cart.vendor?.name}
-        />
+        <InfoRow label="Vendor" value={cart.vendor?.businessName || cart.vendor?.name} />
         <InfoRow label="Owner" value={cart.owner?.name || cart.owner?.email} />
-        <InfoRow
-          label="Contract Start"
-          value={formatDate(cart.contractStartDate)}
-        />
-        <InfoRow
-          label="Contract End"
-          value={formatDate(cart.contractEndDate)}
-        />
+        <InfoRow label="Contract Start" value={formatDate(cart.contractStartDate)} />
+        <InfoRow label="Contract End" value={formatDate(cart.contractEndDate)} />
       </div>
 
       {/* Location */}
@@ -514,21 +369,15 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
           <div className="icart_location_info">
             <div className="icart_location_name">{cart.location.name}</div>
             {cart.location.address && (
-              <div className="icart_location_address">
-                {cart.location.address}
-              </div>
+              <div className="icart_location_address">{cart.location.address}</div>
             )}
             {(cart.location.lga || cart.location.city) && (
               <div className="icart_location_address">
-                {[cart.location.lga, cart.location.city]
-                  .filter(Boolean)
-                  .join(", ")}
+                {[cart.location.lga, cart.location.city].filter(Boolean).join(", ")}
               </div>
             )}
             {cart.location.country && (
-              <div className="icart_location_address">
-                {cart.location.country}
-              </div>
+              <div className="icart_location_address">{cart.location.country}</div>
             )}
           </div>
         </div>
@@ -545,9 +394,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
         <button
           className="icart_icon_action_btn"
           style={{ marginLeft: "auto" }}
-          onClick={() =>
-            showConceptForm ? setShowConceptForm(false) : openConceptForm()
-          }
+          onClick={() => showConceptForm ? setShowConceptForm(false) : openConceptForm()}
         >
           <MdAdd size={15} />
         </button>
@@ -563,52 +410,29 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
               onChange={(e) => setSelectedConceptId(e.target.value)}
               disabled={conceptsLoading}
             >
-              <option value="">
-                {conceptsLoading ? "Loading concepts…" : "Select a concept"}
-              </option>
+              <option value="">{conceptsLoading ? "Loading concepts…" : "Select a concept"}</option>
               {concepts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </div>
           <div className="form-field">
             <label className="modal-label">Markup (%)</label>
-            <input
-              className="modal-input"
-              type="number"
-              placeholder="e.g. 10"
-              value={markup}
-              onChange={(e) => setMarkup(e.target.value)}
-            />
+            <input className="modal-input" type="number" placeholder="e.g. 10" value={markup} onChange={(e) => setMarkup(e.target.value)} />
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
             <button
               className={`app_btn app_btn_confirm ${addingConcept ? "btn_loading" : ""}`}
               style={{ flex: 1, height: 38 }}
-              onClick={handleAddConcept}
-              disabled={addingConcept || conceptsLoading}
+              onClick={handleAddConcept} disabled={addingConcept || conceptsLoading}
             >
               <span className="btn_text">Add Concept</span>
-              {addingConcept && (
-                <span
-                  className="btn_loader"
-                  style={{ width: 14, height: 14 }}
-                />
-              )}
+              {addingConcept && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
             </button>
             <button
-              className="app_btn app_btn_cancel"
-              style={{ flex: 1, height: 38 }}
-              onClick={() => {
-                setShowConceptForm(false);
-                setSelectedConceptId("");
-                setMarkup("");
-              }}
-            >
-              Cancel
-            </button>
+              className="app_btn app_btn_cancel" style={{ flex: 1, height: 38 }}
+              onClick={() => { setShowConceptForm(false); setSelectedConceptId(""); setMarkup(""); }}
+            >Cancel</button>
           </div>
         </div>
       )}
@@ -617,16 +441,10 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
         <div className="icart_concepts_list">
           {cart.concepts.map((c, i) => (
             <div key={c.id || i} className="icart_concept_row">
-              <div className="icart_concept_icon">
-                <MdStorefront size={14} />
-              </div>
+              <div className="icart_concept_icon"><MdStorefront size={14} /></div>
               <div className="icart_concept_info">
-                <div className="icart_concept_name">
-                  {c.name || c.concept?.name || `Concept ${i + 1}`}
-                </div>
-                {c.markup != null && (
-                  <div className="icart_concept_markup">{c.markup}% markup</div>
-                )}
+                <div className="icart_concept_name">{c.name || c.concept?.name || `Concept ${i + 1}`}</div>
+                {c.markup != null && <div className="icart_concept_markup">{c.markup}% markup</div>}
               </div>
             </div>
           ))}
@@ -638,6 +456,85 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
             <span>No concepts attached</span>
           </div>
         )
+      )}
+
+      {/* ── Operators ── */}
+      <div className="drawer_section_title" style={{ marginTop: 24 }}>
+        Operators
+        <span className="icart_section_count" style={{ marginLeft: 8 }}>
+          {cart.operators?.length || 0}
+        </span>
+      </div>
+
+      {cart.operators?.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {cart.operators.map((op) => {
+            const name = op.user?.fullName || op.user?.email || `Operator #${op.id.slice(0, 6).toUpperCase()}`;
+            const initial = name[0].toUpperCase();
+            return (
+              <div
+                key={op.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 14px",
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                }}
+              >
+                {/* Avatar */}
+                <div className="icart_operator_avatar" style={{ flexShrink: 0 }}>
+                  {initial}
+                </div>
+
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span className="icart_operator_name">{name}</span>
+                    {op.isApproved && (
+                      <MdVerified size={14} style={{ color: "#16a34a", flexShrink: 0 }} />
+                    )}
+                  </div>
+                  <div className="icart_operator_meta">
+                    {op.user?.email && <span>{op.user.email}</span>}
+                    {op.state?.name && (
+                      <span style={{ marginLeft: op.user?.email ? 6 : 0 }}>
+                        {op.user?.email ? "· " : ""}{op.state.name}
+                      </span>
+                    )}
+                    {op.certification && (
+                      <span style={{ marginLeft: 6 }}>· {op.certification}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status chip */}
+                <span
+                  style={{
+                    fontSize: "0.65rem",
+                    fontWeight: 700,
+                    padding: "3px 9px",
+                    borderRadius: 999,
+                    flexShrink: 0,
+                    ...(op.isApproved
+                      ? { background: "rgba(34,197,94,0.1)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.25)" }
+                      : { background: "rgba(234,179,8,0.1)", color: "#ca8a04", border: "1px solid rgba(234,179,8,0.25)" }
+                    ),
+                  }}
+                >
+                  {op.isApproved ? "Active" : "Pending"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="icart_empty_inline">
+          <MdPerson size={18} style={{ opacity: 0.3 }} />
+          <span>No operators assigned</span>
+        </div>
       )}
     </div>
   );

@@ -14,8 +14,21 @@ import {
   MdAdd,
   MdExpandMore,
   MdExpandLess,
+  MdAttachMoney,
+  MdAccessTime,
+  MdNotes,
 } from "react-icons/md";
 import { LuShoppingCart } from "react-icons/lu";
+
+/* ── Duration options ───────────────────────────────────────── */
+const DURATION_OPTIONS = [
+  { key: "1m", label: "1 Month", days: 30 },
+  { key: "2m", label: "2 Months", days: 60 },
+  { key: "3m", label: "3 Months", days: 90 },
+  { key: "6m", label: "6 Months", days: 180 },
+  { key: "1y", label: "1 Year", days: 365 },
+  { key: "2y", label: "2 Years", days: 730 },
+];
 
 /* ── status colour maps ──────────────────────────────────────── */
 const offerStatusColors = {
@@ -103,7 +116,7 @@ function formatDate(dateStr) {
 function daysRemaining(endDate) {
   if (!endDate) return null;
   const diff = Math.ceil(
-    (new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24)
+    (new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24),
   );
   return diff;
 }
@@ -178,7 +191,9 @@ function CreateProfileForm({ states, onCreated, submitting, setSubmitting }) {
           disabled={submitting}
         >
           <span className="btn_text">Create Profile</span>
-          {submitting && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
+          {submitting && (
+            <span className="btn_loader" style={{ width: 18, height: 18 }} />
+          )}
         </button>
       </div>
     </div>
@@ -187,14 +202,16 @@ function CreateProfileForm({ states, onCreated, submitting, setSubmitting }) {
 
 /* ── Renew Modal ─────────────────────────────────────────────── */
 function RenewModal({ offer, onClose, onDone }) {
-  const [days, setDays] = useState(30);
+  const [renewDuration, setRenewDuration] = useState("1m");
   const [saving, setSaving] = useState(false);
 
   const handleRenew = async () => {
+    const days =
+      DURATION_OPTIONS.find((d) => d.key === renewDuration)?.days || 30;
     setSaving(true);
     try {
       await api.patch(`/icart/operator/job-offers/${offer.id}/renew`, {
-        durationDays: Number(days),
+        durationDays: days,
       });
       toast.success("Contract renewed!");
       onDone();
@@ -222,7 +239,6 @@ function RenewModal({ offer, onClose, onDone }) {
       }}
     >
       <div
-        className="modal_card"
         onClick={(e) => e.stopPropagation()}
         style={{
           background: "var(--bg-card)",
@@ -250,21 +266,52 @@ function RenewModal({ offer, onClose, onDone }) {
             color: "var(--text-muted)",
           }}
         >
-          Add days to your current contract.
+          How long would you like to extend?
         </p>
 
         <div className="form-field">
-          <label className="modal-label">Additional Days</label>
-          <input
-            className="modal-input"
-            type="number"
-            min={1}
-            value={days}
-            onChange={(e) => setDays(e.target.value)}
-          />
+          <label className="modal-label">Extension Duration</label>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 8,
+            }}
+          >
+            {DURATION_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setRenewDuration(opt.key)}
+                style={{
+                  height: 40,
+                  border: "1px solid var(--border)",
+                  borderRadius: 9,
+                  cursor: "pointer",
+                  background:
+                    renewDuration === opt.key
+                      ? "var(--bg-active)"
+                      : "var(--bg-hover)",
+                  color:
+                    renewDuration === opt.key
+                      ? "var(--accent)"
+                      : "var(--text-muted)",
+                  borderColor:
+                    renewDuration === opt.key
+                      ? "rgba(203,108,220,0.4)"
+                      : "var(--border)",
+                  fontWeight: 700,
+                  fontSize: "0.78rem",
+                  transition: "all 0.15s",
+                  fontFamily: "inherit",
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
           <button
             className="app_btn app_btn_cancel"
             style={{ flex: 1, height: 40 }}
@@ -278,7 +325,7 @@ function RenewModal({ offer, onClose, onDone }) {
             onClick={handleRenew}
             disabled={saving}
           >
-            <span className="btn_text">Renew</span>
+            <span className="btn_text">Extend Contract</span>
             {saving && (
               <span className="btn_loader" style={{ width: 16, height: 16 }} />
             )}
@@ -359,7 +406,14 @@ function JobOfferCard({ offer, onAction }) {
 
         <div style={{ padding: "14px 16px" }}>
           {/* Top row: cart icon + serial + from + status badge */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginBottom: 12,
+            }}
+          >
             <div
               style={{
                 width: 36,
@@ -377,11 +431,24 @@ function JobOfferCard({ offer, onAction }) {
               <LuShoppingCart size={15} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: "0.875rem", fontWeight: 800, color: "var(--text-heading)", fontFamily: "monospace" }}>
+              <div
+                style={{
+                  fontSize: "0.875rem",
+                  fontWeight: 800,
+                  color: "var(--text-heading)",
+                  fontFamily: "monospace",
+                }}
+              >
                 {cartLabel}
               </div>
               {ownerLabel !== "—" && (
-                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 1 }}>
+                <div
+                  style={{
+                    fontSize: "0.72rem",
+                    color: "var(--text-muted)",
+                    marginTop: 1,
+                  }}
+                >
                   from {ownerLabel}
                 </div>
               )}
@@ -409,36 +476,224 @@ function JobOfferCard({ offer, onAction }) {
           </div>
 
           {/* Meta row */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: offer.status === "PENDING" || offer.status === "ACTIVE" || offer.status === "ACCEPTED" ? 14 : 0 }}>
-            <div className="icart_meta_row" style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 10px", display: "inline-flex", alignItems: "center", gap: 5 }}>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+              marginBottom:
+                offer.status === "PENDING" ||
+                offer.status === "ACTIVE" ||
+                offer.status === "ACCEPTED"
+                  ? 14
+                  : 0,
+            }}
+          >
+            <div
+              className="icart_meta_row"
+              style={{
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: "5px 10px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
               <MdTimer size={12} style={{ color: "var(--text-muted)" }} />
-              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-body)" }}>{offer.durationDays} days</span>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  color: "var(--text-body)",
+                }}
+              >
+                {DURATION_OPTIONS.find((d) => d.days === offer.durationDays)
+                  ?.label || `${offer.durationDays} days`}
+              </span>
             </div>
             {offer.startDate && (
-              <div style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 10px", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <MdCalendarToday size={11} style={{ color: "var(--text-muted)" }} />
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-body)" }}>Start: {formatDate(offer.startDate)}</span>
+              <div
+                style={{
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "5px 10px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+              >
+                <MdCalendarToday
+                  size={11}
+                  style={{ color: "var(--text-muted)" }}
+                />
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: "var(--text-body)",
+                  }}
+                >
+                  Start: {formatDate(offer.startDate)}
+                </span>
               </div>
             )}
             {offer.endDate && (
-              <div style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 10px", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <MdCalendarToday size={11} style={{ color: "var(--text-muted)" }} />
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-body)" }}>End: {formatDate(offer.endDate)}</span>
+              <div
+                style={{
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "5px 10px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+              >
+                <MdCalendarToday
+                  size={11}
+                  style={{ color: "var(--text-muted)" }}
+                />
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: "var(--text-body)",
+                  }}
+                >
+                  End: {formatDate(offer.endDate)}
+                </span>
               </div>
             )}
-            {(offer.status === "ACTIVE") && daysLeft !== null && (
-              <div style={{ background: daysLeft <= 7 ? "rgba(239,68,68,0.08)" : "var(--bg-hover)", border: `1px solid ${daysLeft <= 7 ? "rgba(239,68,68,0.25)" : "var(--border)"}`, borderRadius: 8, padding: "5px 10px", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <MdTimer size={11} style={{ color: daysLeft <= 7 ? "#ef4444" : "var(--text-muted)" }} />
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: daysLeft <= 7 ? "#ef4444" : "var(--text-body)" }}>
+            {offer.status === "ACTIVE" && daysLeft !== null && (
+              <div
+                style={{
+                  background:
+                    daysLeft <= 7 ? "rgba(239,68,68,0.08)" : "var(--bg-hover)",
+                  border: `1px solid ${daysLeft <= 7 ? "rgba(239,68,68,0.25)" : "var(--border)"}`,
+                  borderRadius: 8,
+                  padding: "5px 10px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+              >
+                <MdTimer
+                  size={11}
+                  style={{
+                    color: daysLeft <= 7 ? "#ef4444" : "var(--text-muted)",
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: daysLeft <= 7 ? "#ef4444" : "var(--text-body)",
+                  }}
+                >
                   {daysLeft > 0 ? `${daysLeft} days left` : "Expired"}
+                </span>
+              </div>
+            )}
+            {offer.salary != null && (
+              <div
+                style={{
+                  background: "rgba(34,197,94,0.08)",
+                  border: "1px solid rgba(34,197,94,0.2)",
+                  borderRadius: 8,
+                  padding: "5px 10px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+              >
+                <MdAttachMoney size={13} style={{ color: "#16a34a" }} />
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    color: "#16a34a",
+                  }}
+                >
+                  ₦{Number(offer.salary).toLocaleString()}/mo
+                </span>
+              </div>
+            )}
+            {offer.workingHours && (
+              <div
+                style={{
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "5px 10px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+              >
+                <MdAccessTime
+                  size={11}
+                  style={{ color: "var(--text-muted)" }}
+                />
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: "var(--text-body)",
+                  }}
+                >
+                  {offer.workingHours}
                 </span>
               </div>
             )}
           </div>
 
+          {/* Note from owner */}
+          {offer.note && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 8,
+                padding: "10px 12px",
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                borderRadius: 9,
+                marginBottom: 14,
+              }}
+            >
+              <MdNotes
+                size={14}
+                style={{
+                  color: "var(--text-muted)",
+                  flexShrink: 0,
+                  marginTop: 1,
+                }}
+              />
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "0.78rem",
+                  color: "var(--text-body)",
+                  lineHeight: 1.5,
+                }}
+              >
+                {offer.note}
+              </p>
+            </div>
+          )}
+
           {/* Actions — PENDING */}
           {offer.status === "PENDING" && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 2fr",
+                gap: 8,
+              }}
+            >
               <button
                 className="app_btn"
                 style={{
@@ -459,10 +714,16 @@ function JobOfferCard({ offer, onAction }) {
                 onClick={() => handleRespond("REJECTED")}
                 disabled={!!actioning}
               >
-                {actioning === "REJECTED"
-                  ? <span className="btn_loader" style={{ width: 14, height: 14 }} />
-                  : <><MdClose size={14} /> Decline</>
-                }
+                {actioning === "REJECTED" ? (
+                  <span
+                    className="btn_loader"
+                    style={{ width: 14, height: 14 }}
+                  />
+                ) : (
+                  <>
+                    <MdClose size={14} /> Decline
+                  </>
+                )}
               </button>
               <button
                 className="app_btn app_btn_confirm"
@@ -479,10 +740,16 @@ function JobOfferCard({ offer, onAction }) {
                 onClick={() => handleRespond("ACCEPTED")}
                 disabled={!!actioning}
               >
-                {actioning === "ACCEPTED"
-                  ? <span className="btn_loader" style={{ width: 14, height: 14 }} />
-                  : <><MdCheck size={14} /> Accept Offer</>
-                }
+                {actioning === "ACCEPTED" ? (
+                  <span
+                    className="btn_loader"
+                    style={{ width: 14, height: 14 }}
+                  />
+                ) : (
+                  <>
+                    <MdCheck size={14} /> Accept Offer
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -492,7 +759,15 @@ function JobOfferCard({ offer, onAction }) {
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 className="app_btn app_btn_cancel"
-                style={{ flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: "0.78rem" }}
+                style={{
+                  flex: 1,
+                  height: 36,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 5,
+                  fontSize: "0.78rem",
+                }}
                 onClick={() => setShowRenew(true)}
               >
                 <MdRefresh size={13} /> Renew
@@ -500,21 +775,33 @@ function JobOfferCard({ offer, onAction }) {
               <button
                 className="app_btn"
                 style={{
-                  flex: 1, height: 36,
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                  fontSize: "0.78rem", fontWeight: 600,
+                  flex: 1,
+                  height: 36,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 5,
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
                   color: "#ef4444",
                   border: "1px solid rgba(239,68,68,0.25)",
                   background: "rgba(239,68,68,0.06)",
-                  borderRadius: 9, cursor: "pointer",
+                  borderRadius: 9,
+                  cursor: "pointer",
                 }}
                 onClick={handleTerminate}
                 disabled={!!actioning}
               >
-                {actioning === "TERMINATE"
-                  ? <span className="btn_loader" style={{ width: 13, height: 13 }} />
-                  : <><MdClose size={13} /> Terminate</>
-                }
+                {actioning === "TERMINATE" ? (
+                  <span
+                    className="btn_loader"
+                    style={{ width: 13, height: 13 }}
+                  />
+                ) : (
+                  <>
+                    <MdClose size={13} /> Terminate
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -580,11 +867,13 @@ export default function OperatorHome() {
 
   const pendingOffers = offers.filter((o) => o.status === "PENDING");
   const activeOffers = offers.filter(
-    (o) => o.status === "ACTIVE" || o.status === "ACCEPTED"
+    (o) => o.status === "ACTIVE" || o.status === "ACCEPTED",
   );
   const pastOffers = offers.filter(
     (o) =>
-      o.status !== "PENDING" && o.status !== "ACTIVE" && o.status !== "ACCEPTED"
+      o.status !== "PENDING" &&
+      o.status !== "ACTIVE" &&
+      o.status !== "ACCEPTED",
   );
 
   if (loading) {
@@ -628,15 +917,34 @@ export default function OperatorHome() {
           }}
         >
           {/* Avatar + name + status */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              marginBottom: 14,
+            }}
+          >
             <div
               className="icart_operator_avatar"
-              style={{ width: 44, height: 44, fontSize: "1.1rem", flexShrink: 0 }}
+              style={{
+                width: 44,
+                height: 44,
+                fontSize: "1.1rem",
+                flexShrink: 0,
+              }}
             >
               <MdPerson size={20} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: "1rem", fontWeight: 800, color: "var(--text-heading)", marginBottom: 5 }}>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 800,
+                  color: "var(--text-heading)",
+                  marginBottom: 5,
+                }}
+              >
                 My Operator Profile
               </div>
               <StatusBadge
@@ -645,7 +953,17 @@ export default function OperatorHome() {
               />
             </div>
             {profile.isApproved && (
-              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.75rem", fontWeight: 600, color: "#16a34a", flexShrink: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  color: "#16a34a",
+                  flexShrink: 0,
+                }}
+              >
                 <MdVerified size={16} />
                 Hirable
               </div>
@@ -664,14 +982,18 @@ export default function OperatorHome() {
               <div className="icart_meta_row">
                 <span className="icart_meta_key">State</span>
                 <span className="icart_meta_val">
-                  {profile.state.name}{profile.state.country ? `, ${profile.state.country}` : ""}
+                  {profile.state.name}
+                  {profile.state.country ? `, ${profile.state.country}` : ""}
                 </span>
               </div>
             )}
             {profile.cart?.serialNumber && (
               <div className="icart_meta_row">
                 <span className="icart_meta_key">Assigned Cart</span>
-                <span className="icart_meta_val" style={{ fontFamily: "monospace" }}>
+                <span
+                  className="icart_meta_val"
+                  style={{ fontFamily: "monospace" }}
+                >
                   {profile.cart.serialNumber}
                 </span>
               </div>
@@ -679,13 +1001,22 @@ export default function OperatorHome() {
             {profile.createdAt && (
               <div className="icart_meta_row">
                 <span className="icart_meta_key">Joined</span>
-                <span className="icart_meta_val">{formatDate(profile.createdAt)}</span>
+                <span className="icart_meta_val">
+                  {formatDate(profile.createdAt)}
+                </span>
               </div>
             )}
             {!profile.isApproved && (
               <div className="icart_meta_row">
-                <span style={{ fontSize: "0.75rem", color: "#ca8a04", fontWeight: 500 }}>
-                  Your profile is awaiting admin approval before you can receive job offers.
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "#ca8a04",
+                    fontWeight: 500,
+                  }}
+                >
+                  Your profile is awaiting admin approval before you can receive
+                  job offers.
                 </span>
               </div>
             )}
@@ -729,7 +1060,10 @@ export default function OperatorHome() {
           {offersOpen && (
             <>
               {offers.length === 0 ? (
-                <div className="icart_empty_state" style={{ padding: "32px 0" }}>
+                <div
+                  className="icart_empty_state"
+                  style={{ padding: "32px 0" }}
+                >
                   <MdWork size={28} style={{ opacity: 0.3 }} />
                   <p className="icart_empty_title">No job offers yet</p>
                   <p className="icart_empty_sub">
@@ -743,12 +1077,19 @@ export default function OperatorHome() {
                   {/* Pending */}
                   {pendingOffers.length > 0 && (
                     <>
-                      <p className="drawer_section_title" style={{ marginBottom: 10 }}>
+                      <p
+                        className="drawer_section_title"
+                        style={{ marginBottom: 10 }}
+                      >
                         <MdCircle size={6} style={{ color: "#ca8a04" }} />
                         Pending ({pendingOffers.length})
                       </p>
                       {pendingOffers.map((o) => (
-                        <JobOfferCard key={o.id} offer={o} onAction={fetchAll} />
+                        <JobOfferCard
+                          key={o.id}
+                          offer={o}
+                          onAction={fetchAll}
+                        />
                       ))}
                     </>
                   )}
@@ -756,12 +1097,22 @@ export default function OperatorHome() {
                   {/* Active */}
                   {activeOffers.length > 0 && (
                     <>
-                      <p className="drawer_section_title" style={{ marginBottom: 10, marginTop: pendingOffers.length ? 16 : 0 }}>
+                      <p
+                        className="drawer_section_title"
+                        style={{
+                          marginBottom: 10,
+                          marginTop: pendingOffers.length ? 16 : 0,
+                        }}
+                      >
                         <MdCircle size={6} style={{ color: "#16a34a" }} />
                         Active ({activeOffers.length})
                       </p>
                       {activeOffers.map((o) => (
-                        <JobOfferCard key={o.id} offer={o} onAction={fetchAll} />
+                        <JobOfferCard
+                          key={o.id}
+                          offer={o}
+                          onAction={fetchAll}
+                        />
                       ))}
                     </>
                   )}
@@ -769,11 +1120,18 @@ export default function OperatorHome() {
                   {/* Past */}
                   {pastOffers.length > 0 && (
                     <>
-                      <p className="drawer_section_title" style={{ marginBottom: 10, marginTop: 16 }}>
+                      <p
+                        className="drawer_section_title"
+                        style={{ marginBottom: 10, marginTop: 16 }}
+                      >
                         History ({pastOffers.length})
                       </p>
                       {pastOffers.map((o) => (
-                        <JobOfferCard key={o.id} offer={o} onAction={fetchAll} />
+                        <JobOfferCard
+                          key={o.id}
+                          offer={o}
+                          onAction={fetchAll}
+                        />
                       ))}
                     </>
                   )}

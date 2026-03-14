@@ -1,23 +1,67 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import {
-  MdPerson, MdAdd, MdCheck, MdClose, MdRefresh, MdBlock,
-  MdWorkOutline, MdAccessTime, MdSearch,
+  MdPerson,
+  MdAdd,
+  MdCheck,
+  MdClose,
+  MdRefresh,
+  MdBlock,
+  MdWorkOutline,
+  MdAccessTime,
+  MdSearch,
 } from "react-icons/md";
 import api from "../../api/axios";
 
+/* ── Duration options ─────────────────────────────────────── */
+const DURATION_OPTIONS = [
+  { key: "1m", label: "1 Month", days: 30 },
+  { key: "2m", label: "2 Months", days: 60 },
+  { key: "3m", label: "3 Months", days: 90 },
+  { key: "6m", label: "6 Months", days: 180 },
+  { key: "1y", label: "1 Year", days: 365 },
+  { key: "2y", label: "2 Years", days: 730 },
+];
+
 const offerStatusColors = {
-  PENDING:    { bg: "rgba(234,179,8,0.1)",   color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
-  ACCEPTED:   { bg: "rgba(34,197,94,0.1)",   color: "#16a34a", border: "rgba(34,197,94,0.25)" },
-  REJECTED:   { bg: "rgba(239,68,68,0.1)",   color: "#ef4444", border: "rgba(239,68,68,0.25)" },
-  TERMINATED: { bg: "rgba(107,114,128,0.1)", color: "#6b7280", border: "rgba(107,114,128,0.25)" },
-  EXPIRED:    { bg: "rgba(107,114,128,0.1)", color: "#6b7280", border: "rgba(107,114,128,0.25)" },
+  PENDING: {
+    bg: "rgba(234,179,8,0.1)",
+    color: "#ca8a04",
+    border: "rgba(234,179,8,0.25)",
+  },
+  ACCEPTED: {
+    bg: "rgba(34,197,94,0.1)",
+    color: "#16a34a",
+    border: "rgba(34,197,94,0.25)",
+  },
+  REJECTED: {
+    bg: "rgba(239,68,68,0.1)",
+    color: "#ef4444",
+    border: "rgba(239,68,68,0.25)",
+  },
+  TERMINATED: {
+    bg: "rgba(107,114,128,0.1)",
+    color: "#6b7280",
+    border: "rgba(107,114,128,0.25)",
+  },
+  EXPIRED: {
+    bg: "rgba(107,114,128,0.1)",
+    color: "#6b7280",
+    border: "rgba(107,114,128,0.25)",
+  },
 };
 
 function StatusPill({ status }) {
   const s = offerStatusColors[status] || offerStatusColors.PENDING;
   return (
-    <span className="icart_status_badge" style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
+    <span
+      className="icart_status_badge"
+      style={{
+        background: s.bg,
+        color: s.color,
+        border: `1px solid ${s.border}`,
+      }}
+    >
       {status}
     </span>
   );
@@ -29,7 +73,10 @@ function HireForm({ cartId, onHired }) {
   const [loadingList, setLoadingList] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedOperator, setSelectedOperator] = useState(null);
-  const [durationDays, setDurationDays] = useState(30);
+  const [duration, setDuration] = useState("1m"); // option key
+  const [salary, setSalary] = useState("");
+  const [workingHours, setWorkingHours] = useState("");
+  const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -54,14 +101,18 @@ function HireForm({ cartId, onHired }) {
 
   const handleSubmit = async () => {
     if (!selectedOperator) return toast.error("Select an operator");
-    if (!durationDays || durationDays < 1) return toast.error("Enter valid duration");
+    if (!duration) return toast.error("Select a contract duration");
 
     setSubmitting(true);
     try {
       await api.post("/icart/operator/job-offers", {
         operatorId: selectedOperator.id,
         cartId,
-        durationDays: Number(durationDays),
+        durationDays:
+          DURATION_OPTIONS.find((d) => d.key === duration)?.days || 30,
+        salary: salary ? Number(salary) : undefined,
+        workingHours: workingHours.trim() || undefined,
+        note: note.trim() || undefined,
       });
       toast.success("Job offer sent");
       onHired();
@@ -77,10 +128,19 @@ function HireForm({ cartId, onHired }) {
       <div className="form-field">
         <label className="modal-label">Search Operators</label>
         <div className="icart_search_wrap">
-          <MdSearch size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+          <MdSearch
+            size={16}
+            style={{ color: "var(--text-muted)", flexShrink: 0 }}
+          />
           <input
             className="modal-input"
-            style={{ border: "none", background: "transparent", padding: 0, flex: 1, outline: "none" }}
+            style={{
+              border: "none",
+              background: "transparent",
+              padding: 0,
+              flex: 1,
+              outline: "none",
+            }}
             placeholder="Search by name or email"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -90,10 +150,16 @@ function HireForm({ cartId, onHired }) {
 
       {loadingList ? (
         <div className="drawer_loading" style={{ padding: "20px 0" }}>
-          <div className="page_loader_spinner" style={{ width: 20, height: 20 }} />
+          <div
+            className="page_loader_spinner"
+            style={{ width: 20, height: 20 }}
+          />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="icart_empty_inline"><MdPerson size={18} style={{ opacity: 0.3 }} /><span>No operators found</span></div>
+        <div className="icart_empty_inline">
+          <MdPerson size={18} style={{ opacity: 0.3 }} />
+          <span>No operators found</span>
+        </div>
       ) : (
         <div className="icart_operator_list">
           {filtered.map((op) => (
@@ -103,14 +169,24 @@ function HireForm({ cartId, onHired }) {
               onClick={() => setSelectedOperator(op)}
             >
               <div className="icart_operator_avatar">
-                {(op.user?.fullName || op.user?.name || op.user?.email || "?")[0].toUpperCase()}
+                {(op.user?.fullName ||
+                  op.user?.name ||
+                  op.user?.email ||
+                  "?")[0].toUpperCase()}
               </div>
               <div className="icart_operator_info">
-                <div className="icart_operator_name">{op.user?.fullName || op.user?.name || op.user?.email}</div>
-                {op.state?.name && <div className="icart_operator_meta">{op.state.name}</div>}
+                <div className="icart_operator_name">
+                  {op.user?.fullName || op.user?.name || op.user?.email}
+                </div>
+                {op.state?.name && (
+                  <div className="icart_operator_meta">{op.state.name}</div>
+                )}
               </div>
               {selectedOperator?.id === op.id && (
-                <MdCheck size={16} style={{ color: "var(--accent)", flexShrink: 0 }} />
+                <MdCheck
+                  size={16}
+                  style={{ color: "var(--accent)", flexShrink: 0 }}
+                />
               )}
             </div>
           ))}
@@ -118,13 +194,73 @@ function HireForm({ cartId, onHired }) {
       )}
 
       <div className="form-field" style={{ marginTop: 12 }}>
-        <label className="modal-label">Contract Duration (days)</label>
+        <label className="modal-label">Contract Duration</label>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 6,
+          }}
+        >
+          {DURATION_OPTIONS.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => setDuration(opt.key)}
+              style={{
+                height: 38,
+                border: "1px solid var(--border)",
+                borderRadius: 9,
+                cursor: "pointer",
+                background:
+                  duration === opt.key ? "var(--bg-active)" : "var(--bg-hover)",
+                color:
+                  duration === opt.key ? "var(--accent)" : "var(--text-muted)",
+                borderColor:
+                  duration === opt.key
+                    ? "rgba(203,108,220,0.4)"
+                    : "var(--border)",
+                fontWeight: 700,
+                fontSize: "0.78rem",
+                transition: "all 0.15s",
+                fontFamily: "inherit",
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div className="form-field">
+          <label className="modal-label">Proposed Salary (NGN)</label>
+          <input
+            className="modal-input"
+            type="number"
+            min={0}
+            placeholder="e.g. 50000"
+            value={salary}
+            onChange={(e) => setSalary(e.target.value)}
+          />
+        </div>
+        <div className="form-field">
+          <label className="modal-label">Working Hours</label>
+          <input
+            className="modal-input"
+            placeholder="e.g. 8am – 5pm"
+            value={workingHours}
+            onChange={(e) => setWorkingHours(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="form-field">
+        <label className="modal-label">Note</label>
         <input
           className="modal-input"
-          type="number"
-          min={1}
-          value={durationDays}
-          onChange={(e) => setDurationDays(e.target.value)}
+          placeholder="Any additional details for the operator"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
         />
       </div>
 
@@ -136,7 +272,9 @@ function HireForm({ cartId, onHired }) {
           disabled={submitting || !selectedOperator}
         >
           <span className="btn_text">Send Job Offer</span>
-          {submitting && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
+          {submitting && (
+            <span className="btn_loader" style={{ width: 14, height: 14 }} />
+          )}
         </button>
       </div>
     </div>
@@ -145,7 +283,7 @@ function HireForm({ cartId, onHired }) {
 
 /* ── Job Offer Card ────────────────────────────────────────── */
 function JobOfferCard({ offer, onRefresh }) {
-  const [renewDays, setRenewDays] = useState(30);
+  const [renewDuration, setRenewDuration] = useState("1m");
   const [showRenew, setShowRenew] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -167,10 +305,14 @@ function JobOfferCard({ offer, onRefresh }) {
   };
 
   const handleRenew = async () => {
-    if (!renewDays || renewDays < 1) return toast.error("Enter valid days");
+    if (!renewDuration) return toast.error("Select a duration");
+    const days =
+      DURATION_OPTIONS.find((d) => d.key === renewDuration)?.days || 30;
     setLoading(true);
     try {
-      await api.patch(`/icart/operator/job-offers/${offer.id}/renew`, { durationDays: Number(renewDays) });
+      await api.patch(`/icart/operator/job-offers/${offer.id}/renew`, {
+        durationDays: days,
+      });
       toast.success("Contract renewed");
       setShowRenew(false);
       onRefresh();
@@ -182,14 +324,24 @@ function JobOfferCard({ offer, onRefresh }) {
   };
 
   const formatDate = (d) =>
-    d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+    d
+      ? new Date(d).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : "—";
 
   const operatorName =
     offer.operator?.user?.fullName ||
     offer.operator?.user?.email ||
-    (offer.operatorId ? `Operator #${offer.operatorId.slice(0, 6).toUpperCase()}` : "Operator");
+    (offer.operatorId
+      ? `Operator #${offer.operatorId.slice(0, 6).toUpperCase()}`
+      : "Operator");
 
-  const operatorEmail = offer.operator?.user?.fullName ? offer.operator?.user?.email : null;
+  const operatorEmail = offer.operator?.user?.fullName
+    ? offer.operator?.user?.email
+    : null;
   const operatorState = offer.operator?.state?.name || null;
 
   // cart serial from the nested cart object
@@ -212,33 +364,110 @@ function JobOfferCard({ offer, onRefresh }) {
 
       <div style={{ padding: "14px 16px" }}>
         {/* Top: avatar + name + status */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-          <div className="icart_operator_avatar" style={{ width: 38, height: 38, fontSize: "0.9rem", flexShrink: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 10,
+          }}
+        >
+          <div
+            className="icart_operator_avatar"
+            style={{ width: 38, height: 38, fontSize: "0.9rem", flexShrink: 0 }}
+          >
             {operatorName[0].toUpperCase()}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="icart_operator_name" style={{ marginBottom: 2 }}>{operatorName}</div>
+            <div className="icart_operator_name" style={{ marginBottom: 2 }}>
+              {operatorName}
+            </div>
             {(operatorEmail || operatorState) && (
-              <div className="icart_operator_meta">{operatorEmail || operatorState}</div>
+              <div className="icart_operator_meta">
+                {operatorEmail || operatorState}
+              </div>
             )}
           </div>
           <StatusPill status={offer.status} />
         </div>
 
         {/* Meta chips */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: (canTerminate || canRenew) ? 12 : 0 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 10px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 6,
+            marginBottom: canTerminate || canRenew ? 12 : 0,
+          }}
+        >
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              background: "var(--bg-hover)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              padding: "4px 10px",
+            }}
+          >
             <MdAccessTime size={12} style={{ color: "var(--text-muted)" }} />
-            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-body)" }}>{offer.durationDays} days</span>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "var(--text-body)",
+              }}
+            >
+              {DURATION_OPTIONS.find((d) => d.days === offer.durationDays)
+                ?.label || `${offer.durationDays} days`}
+            </span>
           </div>
           {cartSerial && (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 10px" }}>
-              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-body)", fontFamily: "monospace" }}>{cartSerial}</span>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: "4px 10px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  color: "var(--text-body)",
+                  fontFamily: "monospace",
+                }}
+              >
+                {cartSerial}
+              </span>
             </div>
           )}
           {offer.endDate && (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 10px" }}>
-              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-body)" }}>Ends {formatDate(offer.endDate)}</span>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: "4px 10px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  color: "var(--text-body)",
+                }}
+              >
+                Ends {formatDate(offer.endDate)}
+              </span>
             </div>
           )}
         </div>
@@ -249,7 +478,15 @@ function JobOfferCard({ offer, onRefresh }) {
             {canRenew && (
               <button
                 className="app_btn app_btn_cancel"
-                style={{ flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: "0.78rem" }}
+                style={{
+                  flex: 1,
+                  height: 36,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 5,
+                  fontSize: "0.78rem",
+                }}
                 onClick={() => setShowRenew(true)}
               >
                 <MdRefresh size={13} /> Renew
@@ -258,14 +495,34 @@ function JobOfferCard({ offer, onRefresh }) {
             {canTerminate && (
               <button
                 className="app_btn"
-                style={{ flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: "0.78rem", fontWeight: 600, color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.06)", borderRadius: 9, cursor: "pointer" }}
+                style={{
+                  flex: 1,
+                  height: 36,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 5,
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  color: "#ef4444",
+                  border: "1px solid rgba(239,68,68,0.25)",
+                  background: "rgba(239,68,68,0.06)",
+                  borderRadius: 9,
+                  cursor: "pointer",
+                }}
                 onClick={handleTerminate}
                 disabled={loading}
               >
-                {loading
-                  ? <span className="btn_loader" style={{ width: 13, height: 13 }} />
-                  : <><MdBlock size={13} /> Terminate</>
-                }
+                {loading ? (
+                  <span
+                    className="btn_loader"
+                    style={{ width: 13, height: 13 }}
+                  />
+                ) : (
+                  <>
+                    <MdBlock size={13} /> Terminate
+                  </>
+                )}
               </button>
             )}
           </div>
@@ -273,31 +530,73 @@ function JobOfferCard({ offer, onRefresh }) {
 
         {/* Renew inline form */}
         {showRenew && (
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input
-              className="modal-input"
-              type="number"
-              style={{ flex: 1, height: 38 }}
-              placeholder="Days to add"
-              value={renewDays}
-              onChange={(e) => setRenewDays(e.target.value)}
-            />
-            <button
-              className="app_btn app_btn_cancel"
-              style={{ height: 38, padding: "0 14px", fontSize: "0.78rem", flexShrink: 0 }}
-              onClick={() => setShowRenew(false)}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 6,
+              }}
             >
-              Cancel
-            </button>
-            <button
-              className={`app_btn app_btn_confirm${loading ? " btn_loading" : ""}`}
-              style={{ height: 38, padding: "0 16px", fontSize: "0.78rem", position: "relative", flexShrink: 0 }}
-              onClick={handleRenew}
-              disabled={loading}
-            >
-              <span className="btn_text">Confirm</span>
-              {loading && <span className="btn_loader" style={{ width: 12, height: 12 }} />}
-            </button>
+              {DURATION_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setRenewDuration(opt.key)}
+                  style={{
+                    height: 34,
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    background:
+                      renewDuration === opt.key
+                        ? "var(--bg-active)"
+                        : "var(--bg-hover)",
+                    color:
+                      renewDuration === opt.key
+                        ? "var(--accent)"
+                        : "var(--text-muted)",
+                    borderColor:
+                      renewDuration === opt.key
+                        ? "rgba(203,108,220,0.4)"
+                        : "var(--border)",
+                    fontWeight: 700,
+                    fontSize: "0.73rem",
+                    transition: "all 0.15s",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                className="app_btn app_btn_cancel"
+                style={{ flex: 1, height: 36, fontSize: "0.78rem" }}
+                onClick={() => setShowRenew(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className={`app_btn app_btn_confirm${loading ? " btn_loading" : ""}`}
+                style={{
+                  flex: 2,
+                  height: 36,
+                  fontSize: "0.78rem",
+                  position: "relative",
+                }}
+                onClick={handleRenew}
+                disabled={loading}
+              >
+                <span className="btn_text">Extend Contract</span>
+                {loading && (
+                  <span
+                    className="btn_loader"
+                    style={{ width: 12, height: 12 }}
+                  />
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -317,7 +616,9 @@ export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
       // job-offers returns offeredJobs = offers this owner sent out (with nested operator.user)
       const res = await api.get("/icart/operator/job-offers");
       const all = res.data.data?.offeredJobs || [];
-      setOffers(all.filter((o) => o.cartId === cart.id || o.cart?.id === cart.id));
+      setOffers(
+        all.filter((o) => o.cartId === cart.id || o.cart?.id === cart.id),
+      );
     } catch {
       toast.error("Failed to load job offers");
     } finally {
@@ -340,17 +641,31 @@ export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
           <div className="drawer_section_title">Current Operator</div>
           <div className="icart_current_operator">
             <div className="icart_operator_avatar icart_operator_avatar_lg">
-              {(activeOperator.user?.fullName || activeOperator.user?.name || activeOperator.user?.email || "O")[0].toUpperCase()}
+              {(activeOperator.user?.fullName ||
+                activeOperator.user?.name ||
+                activeOperator.user?.email ||
+                "O")[0].toUpperCase()}
             </div>
             <div>
-              <div className="icart_operator_name" style={{ fontSize: "0.95rem" }}>
-                {activeOperator.user?.fullName || activeOperator.user?.name || activeOperator.user?.email}
+              <div
+                className="icart_operator_name"
+                style={{ fontSize: "0.95rem" }}
+              >
+                {activeOperator.user?.fullName ||
+                  activeOperator.user?.name ||
+                  activeOperator.user?.email}
               </div>
-              {activeOperator.user?.email && (activeOperator.user?.fullName || activeOperator.user?.name) && (
-                <div className="icart_operator_meta">{activeOperator.user.email}</div>
-              )}
+              {activeOperator.user?.email &&
+                (activeOperator.user?.fullName ||
+                  activeOperator.user?.name) && (
+                  <div className="icart_operator_meta">
+                    {activeOperator.user.email}
+                  </div>
+                )}
               {activeOperator.state?.name && (
-                <div className="icart_operator_meta">{activeOperator.state.name}</div>
+                <div className="icart_operator_meta">
+                  {activeOperator.state.name}
+                </div>
               )}
             </div>
           </div>
@@ -358,7 +673,10 @@ export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
       )}
 
       {/* Sub-nav */}
-      <div className="icart_sub_nav" style={{ marginTop: activeOperator ? 20 : 0 }}>
+      <div
+        className="icart_sub_nav"
+        style={{ marginTop: activeOperator ? 20 : 0 }}
+      >
         <button
           className={`icart_sub_nav_btn ${view === "offers" ? "icart_sub_nav_active" : ""}`}
           onClick={() => setView("offers")}
@@ -384,7 +702,9 @@ export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
           }}
         />
       ) : loading ? (
-        <div className="drawer_loading"><div className="page_loader_spinner" /></div>
+        <div className="drawer_loading">
+          <div className="page_loader_spinner" />
+        </div>
       ) : offers.length === 0 ? (
         <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
           <MdWorkOutline size={24} style={{ opacity: 0.3 }} />
@@ -393,7 +713,11 @@ export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
       ) : (
         <div className="icart_tasks_list">
           {offers.map((offer) => (
-            <JobOfferCard key={offer.id} offer={offer} onRefresh={fetchOffers} />
+            <JobOfferCard
+              key={offer.id}
+              offer={offer}
+              onRefresh={fetchOffers}
+            />
           ))}
         </div>
       )}
