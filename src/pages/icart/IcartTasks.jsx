@@ -125,7 +125,7 @@ function TemplateBuilder({
     } catch (err) {
       toast.error(
         err.response?.data?.message ||
-          `Failed to ${isEdit ? "update" : "create"} template`,
+        `Failed to ${isEdit ? "update" : "create"} template`,
       );
     } finally {
       setSaving(false);
@@ -235,8 +235,8 @@ function TemplateBuilder({
         </div>
       </div>
 
-      {/* Global toggle */}
-      <div className="icart_toggle_row" style={{ marginBottom: 14 }}>
+      {/* Global toggle for ADMIN ONLY */}
+      {/* <div className="icart_toggle_row" style={{ marginBottom: 14 }}>
         <span className="icart_toggle_label">Apply Globally (all carts)</span>
         <button
           className={`icart_toggle_switch ${isGlobal ? "icart_toggle_on" : ""}`}
@@ -244,7 +244,7 @@ function TemplateBuilder({
         >
           <span className="icart_toggle_knob" />
         </button>
-      </div>
+      </div> */}
 
       {/* Fields */}
       <div
@@ -601,7 +601,7 @@ export default function IcartTasks({ cart }) {
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/icart/tasks/templates");
+      const res = await api.get(`/icart/tasks/templates?cartId=${cart.id}`);
       setTemplates(res.data.data?.items || res.data.data || []);
     } catch {
       toast.error("Failed to load templates");
