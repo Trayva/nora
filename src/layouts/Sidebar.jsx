@@ -7,6 +7,7 @@ import {
   MdOutlineKitchen,
   MdChevronLeft,
   MdChevronRight,
+  MdOutlineBadge,
   MdLocationOn,
 } from "react-icons/md";
 import nora_logo_white from "../assets/nora_white.png";
@@ -22,6 +23,36 @@ import { BsShop } from "react-icons/bs";
 import { LiaFileInvoiceSolid } from "react-icons/lia";
 import { LuLibrary } from "react-icons/lu";
 import { useAppState } from "../contexts/StateContext";
+
+// const navItems = [
+//   { id: "dashboard", label: "Dashboard", icon: RxDashboard, path: "/app" },
+//   { id: "finance", label: "Finance", icon: RxBarChart, path: "/app/finance" },
+//   {
+//     id: "suppliers",
+//     label: "Suppliers",
+//     icon: PiTruck,
+//     path: "/app/suppliers",
+//   },
+//   {
+//     id: "mybusiness",
+//     label: "My Business",
+//     icon: BsShop,
+//     path: "/app/business",
+//   },
+//   {
+//     id: "icart",
+//     label: "iCarts",
+//     icon: MdOutlineKitchen,
+//     path: "/app/icart-home",
+//   },
+// {
+//   id: "invoices",
+//   label: "Invoices",
+//   icon: LiaFileInvoiceSolid,
+//   path: "/app/invoices",
+// },
+// { id: "library", label: "Library", icon: LuLibrary, path: "/app/library" },
+// ];
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: RxDashboard, path: "/app" },
@@ -44,13 +75,12 @@ const navItems = [
     icon: MdOutlineKitchen,
     path: "/app/icart-home",
   },
-  // {
-  //   id: "invoices",
-  //   label: "Invoices",
-  //   icon: LiaFileInvoiceSolid,
-  //   path: "/app/invoices",
-  // },
-  // { id: "library", label: "Library", icon: LuLibrary, path: "/app/library" },
+  {
+    id: "operator",
+    label: "Operator",
+    icon: MdOutlineBadge,
+    path: "/app/operator",
+  }, // ← add this
 ];
 
 const bottomItems = [

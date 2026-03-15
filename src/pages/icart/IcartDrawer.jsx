@@ -6,12 +6,14 @@ import IcartOverview from "./IcartOverview";
 import IcartTasks from "./IcartTasks";
 import IcartWorkforce from "./IcartWorkforce";
 import IcartInventory from "./IcartInventory";
+import IcartSales from "./IcartSales";
 
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "tasks", label: "Tasks" },
   { key: "workforce", label: "Workforce" },
   { key: "inventory", label: "Inventory" },
+  { key: "sales",     label: "Sales" },
 ];
 
 export default function IcartDrawer({ cartId, onClose, onUpdate }) {
@@ -25,7 +27,6 @@ export default function IcartDrawer({ cartId, onClose, onUpdate }) {
     try {
       const res = await api.get(`/icart/${cartId}`);
       setCart(res.data.data);
-      console.log(res)
     } catch {
       toast.error("Failed to load iCart details");
     } finally {
@@ -52,7 +53,7 @@ export default function IcartDrawer({ cartId, onClose, onUpdate }) {
       isOpen={!!cartId}
       onClose={onClose}
       title={cart ? cart.serialNumber : "iCart Details"}
-      description={cart ? cart.location?.name || "No location assigned" : ""}
+      description={cart ? (cart.location?.name || "No location assigned") : ""}
       width={520}
     >
       {/* Sticky Tabs */}
@@ -87,6 +88,7 @@ export default function IcartDrawer({ cartId, onClose, onUpdate }) {
             <IcartWorkforce cart={cart} onRefresh={fetchCart} />
           )}
           {activeTab === "inventory" && <IcartInventory cart={cart} />}
+          {activeTab === "sales" && <IcartSales cart={cart} />}
         </>
       )}
     </Drawer>

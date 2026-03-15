@@ -107,6 +107,7 @@ function LocationForm({ cartId, onSaved, onCancel }) {
     }
     if (isNaN(form.latitude) || isNaN(form.longitude))
       return toast.error("Latitude and longitude must be valid numbers");
+    if (!form._selectedStateId) return toast.error("Please select a state");
 
     setSaving(true);
     try {
@@ -116,7 +117,7 @@ function LocationForm({ cartId, onSaved, onCancel }) {
         city: form.city.trim(),
         lga: form.lga.trim(),
         country: form.country.trim(),
-        stateId: form.stateId,
+        stateId: form._selectedStateId,
         latitude: Number(form.latitude),
         longitude: Number(form.longitude),
         locationIdType: form.locationIdType,
@@ -652,14 +653,18 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
           value={cart.vendor?.businessName || cart.vendor?.name}
         />
         <InfoRow label="Owner" value={cart.owner?.name || cart.owner?.email} />
-        <InfoRow
-          label="Contract Start"
-          value={formatDate(cart.contractStartDate)}
-        />
-        <InfoRow
-          label="Contract End"
-          value={formatDate(cart.contractEndDate)}
-        />
+        {cart.status !== "PURCHASED" ? (
+          <>
+            <InfoRow
+              label="Contract Start"
+              value={formatDate(cart.contractStartDate)}
+            />
+            <InfoRow
+              label="Contract End"
+              value={formatDate(cart.contractEndDate)}
+            />
+          </>
+        ) : null}
       </div>
 
       {/* Location */}
