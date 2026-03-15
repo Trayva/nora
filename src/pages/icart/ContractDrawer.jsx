@@ -110,18 +110,22 @@ export default function ContractDrawer({ contract, onClose }) {
                 {contract.numberOfCarts}
               </span>
             </div>
-            <div className="contract_meta_item">
-              <span className="contract_meta_label">Contract Start</span>
-              <span className="contract_meta_value">
-                {formatDate(contract.contractStartDate)}
-              </span>
-            </div>
-            <div className="contract_meta_item">
-              <span className="contract_meta_label">Contract Status</span>
-              <span className="contract_meta_value">
-                {contract.contractStatus || "—"}
-              </span>
-            </div>
+            {contract?.type !== "PURCHASE" ? (
+              <>
+                <div className="contract_meta_item">
+                  <span className="contract_meta_label">Contract Start</span>
+                  <span className="contract_meta_value">
+                    {formatDate(contract.contractStartDate)}
+                  </span>
+                </div>
+                <div className="contract_meta_item">
+                  <span className="contract_meta_label">Contract Status</span>
+                  <span className="contract_meta_value">
+                    {contract.contractStatus || "—"}
+                  </span>
+                </div>
+              </>
+            ) : null}
             {contract.nextInvoiceAt && (
               <div className="contract_meta_item">
                 <span className="contract_meta_label">Next Invoice</span>

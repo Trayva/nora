@@ -125,7 +125,7 @@ function TemplateBuilder({
     } catch (err) {
       toast.error(
         err.response?.data?.message ||
-        `Failed to ${isEdit ? "update" : "create"} template`,
+          `Failed to ${isEdit ? "update" : "create"} template`,
       );
     } finally {
       setSaving(false);

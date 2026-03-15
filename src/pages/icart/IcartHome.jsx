@@ -254,6 +254,7 @@ export default function IcartHome() {
                       </div>
 
                       <div className="icart_item_meta">
+                        {cart?.status !=='PURCHASED'?
                         <div className="icart_meta_row">
                           <span className="icart_meta_key">Contract</span>
                           <span className="icart_meta_val">
@@ -264,6 +265,7 @@ export default function IcartHome() {
                             )}
                           </span>
                         </div>
+                          :null}
                         <div className="icart_meta_row">
                           <span className="icart_meta_key">Concepts</span>
                           <span className="icart_meta_val">

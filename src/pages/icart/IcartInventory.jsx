@@ -12,6 +12,7 @@ import {
   MdExpandMore,
   MdExpandLess,
   MdImage,
+  MdRemoveCircleOutline,
 } from "react-icons/md";
 import api from "../../api/axios";
 
@@ -566,68 +567,366 @@ function AddInventoryForm({ cartId, onAdded }) {
 }
 
 /* ── Supply Request Form ────────────────────────────────────── */
-function SupplyRequestForm({ cartId, onSubmitted }) {
+function SupplyRequestForm({ cartId, cart, onSubmitted }) {
+  // Supplier state
+  const [suppliers, setSuppliers] = useState([]);
+  const [suppliersLoading, setSuppliersLoading] = useState(true);
   const [supplierId, setSupplierId] = useState("");
-  const [ingredientId, setIngredientId] = useState("");
-  const [quantity, setQuantity] = useState("");
+
+  // Ingredient list — each row: { ingredient: obj|null, query: string, quantity: string, unit: string }
+  const [items, setItems] = useState([
+    { ingredient: null, query: "", quantity: "", unit: "g" },
+  ]);
+
   const [saving, setSaving] = useState(false);
 
+  // Fetch suppliers filtered by cart's state
+  useEffect(() => {
+    const stateId = cart?.location?.stateId || cart?.stateId || "";
+    const url = stateId ? `/supplier?stateId=${stateId}` : "/supplier";
+    api
+      .get(url)
+      .then((res) => {
+        const data = res.data.data;
+        setSuppliers(
+          Array.isArray(data) ? data : data?.items || data?.suppliers || [],
+        );
+      })
+      .catch(() => toast.error("Failed to load suppliers"))
+      .finally(() => setSuppliersLoading(false));
+  }, [cart]);
+
+  // Per-row helpers
+  const updateItem = (i, key, val) => {
+    setItems((prev) => {
+      const updated = [...prev];
+      updated[i] = { ...updated[i], [key]: val };
+      return updated;
+    });
+  };
+
+  const addRow = () =>
+    setItems((prev) => [
+      ...prev,
+      { ingredient: null, query: "", quantity: "", unit: "g" },
+    ]);
+
+  const removeRow = (i) =>
+    setItems((prev) => prev.filter((_, idx) => idx !== i));
+
+  // Submit — API expects { cartId, supplierId, items: [{ ingredientId, quantity }] }
   const handleSubmit = async () => {
-    if (!supplierId.trim() || !ingredientId.trim() || !quantity)
-      return toast.error("All fields required");
+    if (!supplierId) return toast.error("Select a supplier");
+    const valid = items.filter(
+      (r) => r.ingredient && r.quantity && Number(r.quantity) > 0,
+    );
+    if (!valid.length)
+      return toast.error("Add at least one ingredient with a quantity");
+
     setSaving(true);
     try {
       await api.post("/icart/supply", {
         cartId,
-        supplierId: supplierId.trim(),
-        ingredientId: ingredientId.trim(),
-        quantity: Number(quantity),
+        supplierId,
+        items: valid.map((row) => ({
+          ingredientId: row.ingredient.id,
+          quantity: toBaseQuantity(row.quantity, row.unit),
+        })),
       });
-      toast.success("Supply request created");
+      toast.success(`Supply request${valid.length > 1 ? "s" : ""} created`);
       onSubmitted();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to create request");
+      toast.error(
+        err.response?.data?.message || "Failed to create supply request",
+      );
     } finally {
       setSaving(false);
     }
   };
 
+  const selectedSupplier = suppliers.find((s) => s.id === supplierId);
+
   return (
-    <div className="icart_template_builder">
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Supplier selector */}
       <div className="form-field">
-        <label className="modal-label">Supplier ID *</label>
-        <input
-          className="modal-input"
-          value={supplierId}
-          onChange={(e) => setSupplierId(e.target.value)}
-          placeholder="Supplier UUID"
-        />
+        <label className="modal-label">Supplier *</label>
+        {suppliersLoading ? (
+          <div
+            className="modal-input"
+            style={{
+              color: "var(--text-muted)",
+              fontSize: "0.82rem",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            Loading suppliers…
+          </div>
+        ) : suppliers.length === 0 ? (
+          <div
+            className="modal-input"
+            style={{
+              color: "var(--text-muted)",
+              fontSize: "0.82rem",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            No suppliers available
+          </div>
+        ) : (
+          <select
+            className="modal-input"
+            value={supplierId}
+            onChange={(e) => setSupplierId(e.target.value)}
+          >
+            <option value="">Select a supplier…</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.businessName ||
+                  s.user?.fullName ||
+                  s.user?.name ||
+                  s.id.slice(0, 8).toUpperCase()}
+                {s.state?.name ? ` — ${s.state.name}` : ""}
+              </option>
+            ))}
+          </select>
+        )}
+        {selectedSupplier && (
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: "0.72rem",
+              color: "var(--text-muted)",
+            }}
+          >
+            {selectedSupplier.user?.email && (
+              <span>{selectedSupplier.user.email}</span>
+            )}
+            {selectedSupplier.phone && (
+              <span style={{ marginLeft: 8 }}>· {selectedSupplier.phone}</span>
+            )}
+          </div>
+        )}
       </div>
-      <div className="form-field">
-        <label className="modal-label">Ingredient ID *</label>
-        <input
-          className="modal-input"
-          value={ingredientId}
-          onChange={(e) => setIngredientId(e.target.value)}
-          placeholder="Ingredient UUID"
-        />
+
+      {/* Ingredient rows */}
+      <div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 10,
+          }}
+        >
+          <label className="modal-label" style={{ margin: 0 }}>
+            Ingredients *
+          </label>
+          <button
+            onClick={addRow}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              background: "none",
+              border: "none",
+              color: "var(--accent)",
+              fontWeight: 700,
+              fontSize: "0.78rem",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              padding: 0,
+            }}
+          >
+            <MdAdd size={15} /> Add ingredient
+          </button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {items.map((row, i) => (
+            <div
+              key={i}
+              style={{
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                borderRadius: 12,
+                padding: 12,
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+              }}
+            >
+              {/* Header row with remove button */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    color: "var(--text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  Ingredient {i + 1}
+                </span>
+                {items.length > 1 && (
+                  <button
+                    className="icart_icon_action_btn icart_icon_danger"
+                    onClick={() => removeRow(i)}
+                    style={{ width: 24, height: 24 }}
+                  >
+                    <MdClose size={13} />
+                  </button>
+                )}
+              </div>
+
+              {/* Search */}
+              <ItemSearchSelect
+                type="INGREDIENT"
+                value={row.ingredient}
+                onChange={(item) => updateItem(i, "ingredient", item)}
+              />
+
+              {/* Qty + unit */}
+              {row.ingredient && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    className="modal-input"
+                    type="number"
+                    style={{ flex: 1 }}
+                    placeholder="Quantity"
+                    value={row.quantity}
+                    onChange={(e) => updateItem(i, "quantity", e.target.value)}
+                  />
+                  <select
+                    className="modal-input"
+                    style={{ width: 76, flexShrink: 0 }}
+                    value={row.unit}
+                    onChange={(e) => updateItem(i, "unit", e.target.value)}
+                  >
+                    {["g", "kg", "ml", "L"].map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Conversion preview */}
+              {row.ingredient &&
+                row.quantity &&
+                (row.unit === "kg" || row.unit === "L") && (
+                  <div
+                    style={{
+                      fontSize: "0.72rem",
+                      color: "var(--accent)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    → {toBaseQuantity(row.quantity, row.unit).toLocaleString()}{" "}
+                    {row.unit === "kg" ? "g" : "ml"} will be requested
+                  </div>
+                )}
+
+              {/* Selected ingredient preview */}
+              {row.ingredient && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {row.ingredient.image ? (
+                    <img
+                      src={row.ingredient.image}
+                      alt=""
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 6,
+                        objectFit: "cover",
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 6,
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <MdImage
+                        size={13}
+                        style={{ color: "var(--text-muted)" }}
+                      />
+                    </div>
+                  )}
+                  <span
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      color: "var(--text-body)",
+                    }}
+                  >
+                    {row.ingredient.name}
+                  </span>
+                  {row.ingredient.unit && (
+                    <span
+                      style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
+                    >
+                      ({row.ingredient.unit})
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="form-field">
-        <label className="modal-label">Quantity *</label>
-        <input
-          className="modal-input"
-          type="number"
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
-        />
-      </div>
+
+      {/* Summary */}
+      {items.filter((r) => r.ingredient && r.quantity).length > 0 && (
+        <div
+          style={{
+            background: "var(--bg-active)",
+            border: "1px solid rgba(203,108,220,0.2)",
+            borderRadius: 10,
+            padding: "10px 14px",
+            fontSize: "0.78rem",
+            color: "var(--text-muted)",
+          }}
+        >
+          {items.filter((r) => r.ingredient && r.quantity).length} ingredient
+          {items.filter((r) => r.ingredient && r.quantity).length > 1
+            ? "s"
+            : ""}{" "}
+          ready to request
+        </div>
+      )}
+
       <button
         className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
-        style={{ width: "100%", height: 40, position: "relative" }}
+        style={{ width: "100%", height: 42, position: "relative" }}
         onClick={handleSubmit}
-        disabled={saving}
+        disabled={saving || !supplierId}
       >
-        <span className="btn_text">Create Supply Request</span>
+        <span className="btn_text">
+          Submit Supply Request
+          {items.filter((r) => r.ingredient && r.quantity).length > 1
+            ? "s"
+            : ""}
+        </span>
         {saving && (
           <span className="btn_loader" style={{ width: 14, height: 14 }} />
         )}
@@ -648,11 +947,19 @@ const REASON_OPTIONS = [
 
 function InventoryItemRow({ item, onRefresh }) {
   const [editing, setEditing] = useState(false);
+  const [recordingUsage, setRecordingUsage] = useState(false);
+
+  // Edit (update qty/cost) state
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("g");
   const [totalCost, setTotalCost] = useState("");
-  const [notes, setNotes] = useState("");
-  const [reason, setReason] = useState("Restock");
+
+  // Record usage state
+  const [usageQty, setUsageQty] = useState("");
+  const [usageUnit, setUsageUnit] = useState("g");
+  const [usageNotes, setUsageNotes] = useState("");
+  const [usageReason, setUsageReason] = useState("Waste");
+
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -676,27 +983,46 @@ function InventoryItemRow({ item, onRefresh }) {
     totalCost && quantity ? toUnitCost(totalCost, quantity, unit) : null;
   const showConv = (unit === "kg" || unit === "L") && quantity;
 
+  const usageBaseQty = usageQty ? toBaseQuantity(usageQty, usageUnit) : null;
+  const usageShowConv = (usageUnit === "kg" || usageUnit === "L") && usageQty;
+
   const handleUpdate = async () => {
     if (!quantity || isNaN(quantity) || Number(quantity) <= 0)
       return toast.error("Enter a valid quantity");
     setSaving(true);
     try {
-      const notesStr = notes.trim()
-        ? `[${reason}] ${notes.trim()}`
-        : reason !== "Restock"
-          ? reason
-          : undefined;
-
       await api.patch(`/icart/inventory/${item.id}`, {
         quantity: baseQty ?? Number(quantity),
         cost: unitCost ?? (totalCost ? Number(totalCost) : undefined),
-        notes: notesStr,
       });
       toast.success("Updated");
       setEditing(false);
       onRefresh();
     } catch {
       toast.error("Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRecordUsage = async () => {
+    if (!usageQty || isNaN(usageQty) || Number(usageQty) <= 0)
+      return toast.error("Enter a valid quantity");
+    const notesStr = usageNotes.trim()
+      ? `[${usageReason}] ${usageNotes.trim()}`
+      : usageReason;
+    setSaving(true);
+    try {
+      await api.post("/icart/inventory/record-usage", {
+        itemId: item.id,
+        quantity: usageBaseQty ?? Number(usageQty),
+        notes: notesStr,
+      });
+      toast.success("Usage recorded");
+      setRecordingUsage(false);
+      onRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to record usage");
     } finally {
       setSaving(false);
     }
@@ -827,9 +1153,24 @@ function InventoryItemRow({ item, onRefresh }) {
           </div>
           <button
             className="icart_icon_action_btn"
-            onClick={() => setEditing((v) => !v)}
+            title="Edit quantity / cost"
+            onClick={() => {
+              setEditing((v) => !v);
+              setRecordingUsage(false);
+            }}
           >
             <MdEdit size={13} />
+          </button>
+          <button
+            className="icart_icon_action_btn"
+            title="Record usage"
+            style={{ color: editing ? "var(--text-muted)" : undefined }}
+            onClick={() => {
+              setRecordingUsage((v) => !v);
+              setEditing(false);
+            }}
+          >
+            <MdRemoveCircleOutline size={14} />
           </button>
           <button
             className="icart_icon_action_btn icart_icon_danger"
@@ -841,7 +1182,7 @@ function InventoryItemRow({ item, onRefresh }) {
         </div>
       </div>
 
-      {/* Edit form */}
+      {/* Edit form — update qty / cost */}
       {editing && (
         <div
           style={{
@@ -863,7 +1204,6 @@ function InventoryItemRow({ item, onRefresh }) {
             Update Stock
           </div>
 
-          {/* Qty + unit */}
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
             <div className="form-field" style={{ flex: 1, marginBottom: 0 }}>
               <label className="modal-label">New Quantity *</label>
@@ -909,7 +1249,6 @@ function InventoryItemRow({ item, onRefresh }) {
             </div>
           )}
 
-          {/* Total cost */}
           <div className="form-field">
             <label className="modal-label">Total Cost (NGN) — optional</label>
             <input
@@ -934,41 +1273,7 @@ function InventoryItemRow({ item, onRefresh }) {
             )}
           </div>
 
-          {/* Reason + Notes */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 8,
-              marginTop: 2,
-            }}
-          >
-            <div className="form-field">
-              <label className="modal-label">Reason</label>
-              <select
-                className="modal-input"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-              >
-                {REASON_OPTIONS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-field">
-              <label className="modal-label">Notes (optional)</label>
-              <input
-                className="modal-input"
-                placeholder="e.g. Spoiled batch"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button
               className="app_btn app_btn_cancel"
               style={{ flex: 1, height: 38 }}
@@ -983,6 +1288,127 @@ function InventoryItemRow({ item, onRefresh }) {
               disabled={saving}
             >
               <span className="btn_text">Save Changes</span>
+              {saving && (
+                <span
+                  className="btn_loader"
+                  style={{ width: 13, height: 13 }}
+                />
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Record usage panel */}
+      {recordingUsage && (
+        <div
+          style={{
+            padding: "0 14px 14px",
+            borderTop: "1px solid var(--border)",
+          }}
+        >
+          <div
+            style={{
+              paddingTop: 12,
+              paddingBottom: 8,
+              fontSize: "0.75rem",
+              fontWeight: 700,
+              color: "var(--text-muted)",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            }}
+          >
+            Record Usage
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <div className="form-field" style={{ flex: 1, marginBottom: 0 }}>
+              <label className="modal-label">Quantity Used *</label>
+              <input
+                className="modal-input"
+                type="number"
+                placeholder="e.g. 500"
+                value={usageQty}
+                onChange={(e) => setUsageQty(e.target.value)}
+              />
+            </div>
+            {itemType !== "MENU_ITEM" && (
+              <div
+                className="form-field"
+                style={{ width: 76, marginBottom: 0 }}
+              >
+                <label className="modal-label">Unit</label>
+                <select
+                  className="modal-input"
+                  value={usageUnit}
+                  onChange={(e) => setUsageUnit(e.target.value)}
+                >
+                  {UNIT_OPTIONS[itemType]?.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          {usageShowConv && (
+            <div
+              style={{
+                fontSize: "0.72rem",
+                color: "var(--accent)",
+                fontWeight: 600,
+                marginBottom: 10,
+              }}
+            >
+              → {usageBaseQty?.toLocaleString()}{" "}
+              {usageUnit === "kg" ? "g" : "ml"} will be recorded
+            </div>
+          )}
+
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+          >
+            <div className="form-field">
+              <label className="modal-label">Reason *</label>
+              <select
+                className="modal-input"
+                value={usageReason}
+                onChange={(e) => setUsageReason(e.target.value)}
+              >
+                {REASON_OPTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label className="modal-label">Notes</label>
+              <input
+                className="modal-input"
+                placeholder="e.g. Spoiled batch"
+                value={usageNotes}
+                onChange={(e) => setUsageNotes(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <button
+              className="app_btn app_btn_cancel"
+              style={{ flex: 1, height: 38 }}
+              onClick={() => setRecordingUsage(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+              style={{ flex: 2, height: 38, position: "relative" }}
+              onClick={handleRecordUsage}
+              disabled={saving}
+            >
+              <span className="btn_text">Record Usage</span>
               {saving && (
                 <span
                   className="btn_loader"
@@ -1193,6 +1619,7 @@ export default function IcartInventory({ cart }) {
       ) : view === "addSupply" ? (
         <SupplyRequestForm
           cartId={cart.id}
+          cart={cart}
           onSubmitted={() => {
             setView("supply");
             fetchSupply();
