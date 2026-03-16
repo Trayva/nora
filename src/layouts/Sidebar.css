@@ -23,7 +23,7 @@
   padding: 1.5rem 0.5rem;
 }
 
-/* ── Logo ── */
+/* ── Logo row ── */
 .sidebar-logo {
   display: flex;
   align-items: center;
@@ -38,18 +38,6 @@
 .sidebar--collapsed .sidebar-logo {
   justify-content: center;
   padding: 0 0 1.75rem 0;
-}
-
-.sidebar-logo-icon {
-  font-size: 1.2rem;
-  color: var(--accent, #6366f1);
-}
-
-.sidebar-logo-text {
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--text-heading);
 }
 
 .sidebar_logo {
@@ -76,7 +64,7 @@
 }
 
 .sidebar-logo-collapsed-btn:hover {
-  background-color: var(--bg-active, rgba(99, 102, 241, 0.12));
+  background-color: var(--bg-active);
 }
 
 .sidebar_logo--icon {
@@ -108,7 +96,7 @@
   transform: scale(1);
 }
 
-/* ── Collapse toggle button ── */
+/* ── Collapse / close buttons ── */
 .sidebar-collapse-btn {
   display: flex;
   align-items: center;
@@ -125,8 +113,18 @@
 }
 
 .sidebar-collapse-btn:hover {
-  background-color: var(--bg-active, rgba(99, 102, 241, 0.12));
+  background-color: var(--bg-active);
   color: var(--accent);
+}
+
+/* Desktop collapse button: always visible on desktop, hidden on mobile */
+.sidebar-collapse-btn--desktop {
+  display: flex;
+}
+
+/* Mobile close button: hidden on desktop, shown only on mobile */
+.sidebar-collapse-btn--mobile {
+  display: none;
 }
 
 /* ── Nav — scrollable ── */
@@ -134,12 +132,12 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .sidebar-nav::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  display: none;
 }
 
 .sidebar-list {
@@ -151,7 +149,7 @@
   gap: 0.25rem;
 }
 
-/* ── Item ── */
+/* ── Nav item ── */
 .sidebar-item {
   position: relative;
   display: flex;
@@ -169,6 +167,7 @@
   text-align: left;
   transition: background-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
+  font-family: inherit;
 }
 
 .sidebar--collapsed .sidebar-item {
@@ -183,7 +182,7 @@
 }
 
 .sidebar-item.active {
-  background-color: var(--bg-active, rgba(99, 102, 241, 0.12));
+  background-color: var(--bg-active);
   color: var(--accent);
   font-weight: 600;
 }
@@ -208,12 +207,6 @@
   flex-shrink: 0;
 }
 
-/* ── Label fade ── */
-.sidebar-label {
-  overflow: hidden;
-  white-space: nowrap;
-}
-
 /* ── Bottom section ── */
 .sidebar-bottom {
   border-top: 1px solid var(--divider);
@@ -222,7 +215,7 @@
   flex-shrink: 0;
 }
 
-/* ── Location item — styled like a sidebar-item ── */
+/* ── State selector ── */
 .sidebar_state_section {
   position: relative;
   display: flex;
@@ -249,13 +242,11 @@
   padding: 0.65rem;
 }
 
-/* The icon sits naturally like other sidebar icons */
 .sidebar_state_icon {
   font-size: 1.2rem;
   flex-shrink: 0;
 }
 
-/* The select overlays the entire row, invisible itself */
 .sidebar_state_select {
   position: absolute;
   inset: 0;
@@ -269,7 +260,6 @@
   z-index: 1;
 }
 
-/* The visible label text */
 .sidebar_state_label {
   overflow: hidden;
   white-space: nowrap;
@@ -277,4 +267,68 @@
   flex: 1;
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MOBILE STYLES (≤ 768px)
+   ════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* Sidebar hides off-screen by default on mobile */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 300;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0.25s ease,
+                min-width 0.25s ease,
+                padding 0.25s ease;
+    /* Always show full expanded sidebar on mobile (never collapsed) */
+    width: 260px !important;
+    min-width: 260px !important;
+    padding: 1.25rem 0.75rem !important;
+  }
+
+  /* Slide in when open */
+  .sidebar--mobile-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.18);
+  }
+
+  /* On mobile, always show full layout (not collapsed) */
+  .sidebar--mobile-open .sidebar-item {
+    justify-content: flex-start;
+    gap: 0.55rem;
+    padding: 0.65rem 0.45rem;
+  }
+
+  .sidebar--mobile-open .sidebar-label {
+    display: inline;
+  }
+
+  .sidebar--mobile-open .sidebar-active-bar {
+    left: -0.75rem;
+  }
+
+  .sidebar--mobile-open .sidebar_state_section {
+    justify-content: flex-start;
+    padding: 0.65rem 0.45rem;
+  }
+
+  /* Show close button, hide collapse button */
+  .sidebar-collapse-btn--desktop {
+    display: none;
+  }
+
+  .sidebar-collapse-btn--mobile {
+    display: flex;
+  }
+
+  /* Logo padding adjustment */
+  .sidebar-logo {
+    padding: 0 0.25rem 1.25rem 0.25rem;
+  }
 }

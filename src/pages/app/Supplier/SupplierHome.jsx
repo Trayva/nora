@@ -1507,26 +1507,12 @@ export default function SupplierHome() {
               marginBottom: 3,
             }}
           >
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: "var(--bg-active)",
-                border: "1px solid rgba(203,108,220,0.2)",
-                color: "var(--accent)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <PiTruck size={15} />
-            </div>
+    
             <h2 className="page_title_big m-0">Supplier</h2>
           </div>
           <p
             className="welcome_message"
-            style={{ marginBottom: 0, paddingLeft: 41 }}
+            style={{ marginBottom: 0}}
           >
             Manage your business and fulfil supply requests
           </p>

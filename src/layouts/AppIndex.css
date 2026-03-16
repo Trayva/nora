@@ -1,4 +1,5 @@
 /* AppIndex.css */
+
 .app-layout {
   display: flex;
   height: 100vh;
@@ -8,11 +9,245 @@
 .app-main {
   flex: 1;
   overflow-y: auto;
-  min-width: 0; /* prevents flex blowout */
+  min-width: 0;
+}
+
+/* ── Mobile top navbar ─────────────────────────────────────── */
+.mobile-navbar {
+  display: none; /* hidden on desktop */
+}
+
+/* ── Sidebar backdrop (mobile overlay) ───────────────────── */
+.sidebar-backdrop {
+  display: none;
+}
+
+/* ── Mobile breakpoint ────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  /* Show top navbar */
+  .mobile-navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    height: 54px;
+    padding: 0 16px;
+    background: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* Mobile logo inside navbar — injected via CSS variable / sidebar handles its own */
+  .mobile-navbar-logo {
+    height: 28px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  /* Hamburger button */
+  .mobile-hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    transition: background 0.15s;
+  }
+
+  .mobile-hamburger:hover {
+    background: var(--bg-hover);
+  }
+
+  .mobile-hamburger span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background: var(--text-muted);
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  /* Backdrop */
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 299;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* Push main content below the fixed navbar */
+  .app-main {
+    padding-top: 54px;
+  }
+
+  /* Logo absolutely centred */
+  .mobile-navbar {
+    position: fixed; /* already set above, reinforce */
+  }
+
+  .mobile-navbar-logo {
+    height: 26px;
+    width: auto;
+    object-fit: contain;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Settings icon button */
+  .mobile-nav-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+
+  .mobile-nav-action:hover {
+    background: var(--bg-hover);
+    color: var(--text-body);
+  }
 }
 
 
+/* ── Mobile responsive ─────────────────────────────────────── */
 
+/* Mobile top navbar — hidden on desktop */
+.mobile-navbar {
+  display: none;
+}
+
+/* Backdrop — hidden on desktop */
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  /* Show top navbar */
+  .mobile-navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    height: 54px;
+    padding: 0 16px;
+    background: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* Logo absolutely centred */
+  .mobile-navbar-logo {
+    height: 26px;
+    width: auto;
+    object-fit: contain;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Hamburger + settings — shared base */
+  .mobile-hamburger,
+  .mobile-nav-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+    padding: 0;
+  }
+
+  .mobile-hamburger:hover,
+  .mobile-nav-action:hover {
+    background: var(--bg-hover);
+    color: var(--text-body);
+  }
+
+  /* Hamburger lines */
+  .mobile-hamburger {
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px;
+  }
+
+  .mobile-hamburger span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background: currentColor;
+    border-radius: 2px;
+  }
+
+  /* Backdrop */
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 299;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    animation: backdropFadeIn 0.2s ease;
+  }
+
+  @keyframes backdropFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* Push main content below the fixed navbar */
+  .app-main {
+    padding-top: 54px;
+  }
+
+  /* Move verification banner below navbar on mobile */
+  .verification_banner {
+    top: 66px;
+  }
+}
 /* ── Verification Banner ──────────────────────────────────────── */
 
 .verification_banner {
