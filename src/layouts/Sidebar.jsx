@@ -58,10 +58,10 @@ const navItems = [
   { id: "dashboard", label: "Dashboard", icon: RxDashboard, path: "/app" },
   { id: "finance", label: "Finance", icon: RxBarChart, path: "/app/finance" },
   {
-    id: "suppliers",
-    label: "Suppliers",
+    id: "supplier",
+    label: "Supplier",
     icon: PiTruck,
-    path: "/app/suppliers",
+    path: "/app/supplier",
   },
   {
     id: "mybusiness",

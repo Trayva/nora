@@ -357,6 +357,22 @@ function toBase(val, unit) {
   return n;
 }
 
+function getUnitOptions(baseUnit) {
+  if (!baseUnit) return ["g", "kg", "ml", "L"];
+  const u = baseUnit.toLowerCase();
+  if (u === "g" || u === "kg") return ["g", "kg"];
+  if (u === "ml" || u === "l") return ["ml", "L"];
+  return ["unit"];
+}
+
+function getDefaultUnit(baseUnit) {
+  if (!baseUnit) return "g";
+  const u = baseUnit.toLowerCase();
+  if (u === "g" || u === "kg") return "g";
+  if (u === "ml" || u === "l") return "ml";
+  return "unit";
+}
+
 export function InventoryTab({ cartId }) {
   const [view, setView] = useState("stock"); // stock | supply | history
   const [inventory, setInventory] = useState([]);
@@ -467,7 +483,10 @@ export function InventoryTab({ cartId }) {
     try {
       const r = await api.get(SEARCH_URL(q));
       const d = r.data.data;
-      const items = [...(d?.ingredient || []), ...(d?.preps || [])];
+      const items = [
+        ...(d?.ingredient || []).map((i) => ({ ...i, _type: "INGREDIENT" })),
+        ...(d?.preps || []).map((i) => ({ ...i, _type: "PREP_ITEM" })),
+      ];
       setSearchResults((p) => ({ ...p, [idx]: items }));
     } catch {
       setSearchResults((p) => ({ ...p, [idx]: [] }));
@@ -699,16 +718,37 @@ export function InventoryTab({ cartId }) {
                           value={usageQty}
                           onChange={(e) => setUsageQty(e.target.value)}
                         />
-                        <select
-                          className="modal-input"
-                          style={{ width: 76 }}
-                          value={usageUnit}
-                          onChange={(e) => setUsageUnit(e.target.value)}
-                        >
-                          {["g", "kg", "ml", "L"].map((u) => (
-                            <option key={u}>{u}</option>
-                          ))}
-                        </select>
+                        {(() => {
+                          const uOpts = getUnitOptions(
+                            item.ingredient?.unit || item.prepItem?.unit,
+                          );
+                          return uOpts.length > 1 ? (
+                            <select
+                              className="modal-input"
+                              style={{ width: 76 }}
+                              value={usageUnit}
+                              onChange={(e) => setUsageUnit(e.target.value)}
+                            >
+                              {uOpts.map((u) => (
+                                <option key={u}>{u}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div
+                              className="modal-input"
+                              style={{
+                                width: 76,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "var(--text-muted)",
+                                fontSize: "0.82rem",
+                              }}
+                            >
+                              {uOpts[0] || "unit"}
+                            </div>
+                          );
+                        })()}
                       </div>
                       {(usageUnit === "kg" || usageUnit === "L") &&
                         usageQty && (
@@ -1002,7 +1042,7 @@ export function InventoryTab({ cartId }) {
                           })
                         }
                       >
-                        {["g", "kg", "ml", "L"].map((u) => (
+                        {getUnitOptions(row.ingredient?.unit).map((u) => (
                           <option key={u}>{u}</option>
                         ))}
                       </select>

@@ -27,7 +27,7 @@ import Business from "../pages/app/Business";
 import ConceptPage from "../pages/app/Business/ConceptPage";
 import OperatorHome from "../pages/app/Operator/OperatorHome";
 import OperatorCartPage from "../pages/app/Operator/OperatorCart";
-
+import SupplierHome from "../pages/app/Supplier/SupplierHome";
 
 // Protected Route - must be logged in
 function ProtectedRoute({ children }) {
@@ -114,10 +114,10 @@ export default function Routes() {
         { path: "purchase-icart", element: <PurchaseIcart /> },
         { path: "invoices", element: <Invoices /> },
         { path: "business", element: <Business /> },
+        { path: "supplier", element: <SupplierHome /> },
         { path: "business/concept/:id", element: <ConceptPage /> },
-        { path: "operator", element: <OperatorHome />},
-        { path: "operator/cart/:cartId", element: <OperatorCartPage />}
-
+        { path: "operator", element: <OperatorHome /> },
+        { path: "operator/cart/:cartId", element: <OperatorCartPage /> },
       ],
     },
 

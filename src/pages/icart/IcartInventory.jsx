@@ -25,9 +25,34 @@ const SEARCH_INGREDIENT_URL = (q) =>
   `/library/ingredient?returnPrep=true&search=${encodeURIComponent(q)}&limit=8`;
 
 // Parse library response: { data: { ingredient: [...], preps: [...] } }
-function parseLibraryResults(data, type) {
-  if (type === "PREP_ITEM") return data?.preps || [];
-  return data?.ingredient || [];
+// Returns both merged, each tagged with _type for payload dispatch
+function parseLibraryResults(data) {
+  const ingredients = (data?.ingredient || []).map((i) => ({
+    ...i,
+    _type: "INGREDIENT",
+  }));
+  const preps = (data?.preps || []).map((i) => ({ ...i, _type: "PREP_ITEM" }));
+  return [...ingredients, ...preps];
+}
+
+// Derive allowed units from an item's base unit
+function getUnitOptions(baseUnit) {
+  if (!baseUnit) return ["g", "kg", "ml", "L"];
+  const u = baseUnit.toLowerCase();
+  if (u === "g") return ["g", "kg"];
+  if (u === "kg") return ["g", "kg"];
+  if (u === "ml") return ["ml", "L"];
+  if (u === "l") return ["ml", "L"];
+  return ["unit"]; // pcs, unit, or anything else
+}
+
+// Default entry unit from item's base unit
+function getDefaultUnit(baseUnit) {
+  if (!baseUnit) return "g";
+  const u = baseUnit.toLowerCase();
+  if (u === "g" || u === "kg") return "g";
+  if (u === "ml" || u === "l") return "ml";
+  return "unit";
 }
 
 /* ── Unit conversion helpers ─────────────────────────────────── */
@@ -43,11 +68,6 @@ function toUnitCost(totalCost, displayQty, displayUnit) {
   if (!baseQty) return 0;
   return Number(totalCost) / baseQty;
 }
-
-const UNIT_OPTIONS = {
-  INGREDIENT: ["g", "kg", "ml", "L"],
-  PREP_ITEM: ["g", "kg", "ml", "L"],
-};
 
 const supplyStatusColors = {
   PENDING: {
@@ -94,7 +114,7 @@ function StatusPill({ status }) {
 }
 
 /* ── Item Search Select ──────────────────────────────────────── */
-function ItemSearchSelect({ type, value, onChange }) {
+function ItemSearchSelect({ value, onChange }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -121,7 +141,7 @@ function ItemSearchSelect({ type, value, onChange }) {
       setSearching(true);
       try {
         const res = await api.get(SEARCH_INGREDIENT_URL(q));
-        setResults(parseLibraryResults(res.data.data, type));
+        setResults(parseLibraryResults(res.data.data));
       } catch {
         setResults([]);
       } finally {
@@ -172,7 +192,7 @@ function ItemSearchSelect({ type, value, onChange }) {
             flex: 1,
             outline: "none",
           }}
-          placeholder={`Search ${type === "PREP_ITEM" ? "prep item" : "ingredient"}…`}
+          placeholder="Search ingredient or prep item…"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -313,7 +333,7 @@ function ItemSearchSelect({ type, value, onChange }) {
 
 /* ── Quantity + Unit + Cost input group ──────────────────────── */
 function QtyUnitCostFields({
-  itemType,
+  unitOpts = ["g", "kg", "ml", "L"],
   quantity,
   setQuantity,
   unit,
@@ -339,19 +359,34 @@ function QtyUnitCostFields({
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
           />
-          {itemType !== "MENU_ITEM" && (
+          {unitOpts.length > 1 ? (
             <select
               className="modal-input"
               style={{ width: 76, flexShrink: 0 }}
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
             >
-              {UNIT_OPTIONS[itemType]?.map((u) => (
+              {unitOpts.map((u) => (
                 <option key={u} value={u}>
                   {u}
                 </option>
               ))}
             </select>
+          ) : (
+            <div
+              className="modal-input"
+              style={{
+                width: 76,
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--text-muted)",
+                fontSize: "0.82rem",
+              }}
+            >
+              {unitOpts[0] || "unit"}
+            </div>
           )}
         </div>
         {showConv && (
@@ -398,24 +433,26 @@ function QtyUnitCostFields({
 
 /* ── Add Inventory Form ─────────────────────────────────────── */
 function AddInventoryForm({ cartId, onAdded }) {
-  const [type, setType] = useState("INGREDIENT");
   const [selectedItem, setSelectedItem] = useState(null);
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("g");
   const [totalCost, setTotalCost] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setUnit(type === "MENU_ITEM" ? "pcs" : "g");
-    setSelectedItem(null);
+  const handleSelect = (item) => {
+    setSelectedItem(item);
     setQuantity("");
     setTotalCost("");
-  }, [type]);
+    setUnit(getDefaultUnit(item?.unit));
+  };
 
+  const type = selectedItem?._type || "INGREDIENT";
   const itemIdKey = type === "PREP_ITEM" ? "prepItemId" : "ingredientId";
+  const unitOpts = getUnitOptions(selectedItem?.unit);
   const baseQty = quantity ? toBaseQuantity(quantity, unit) : null;
   const unitCost =
     totalCost && quantity ? toUnitCost(totalCost, quantity, unit) : null;
+  const showConv = (unit === "kg" || unit === "L") && quantity;
 
   const handleSubmit = async () => {
     if (!selectedItem) return toast.error("Search and select an item");
@@ -442,43 +479,10 @@ function AddInventoryForm({ cartId, onAdded }) {
 
   return (
     <div className="icart_template_builder">
-      {/* Type tabs */}
-      <div className="form-field">
-        <label className="modal-label">Item Type</label>
-        <div style={{ display: "flex", gap: 6 }}>
-          {["INGREDIENT", "PREP_ITEM"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setType(t)}
-              style={{
-                flex: 1,
-                height: 36,
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                cursor: "pointer",
-                background: type === t ? "var(--bg-active)" : "var(--bg-hover)",
-                color: type === t ? "var(--accent)" : "var(--text-muted)",
-                borderColor:
-                  type === t ? "rgba(203,108,220,0.35)" : "var(--border)",
-                fontWeight: 600,
-                fontSize: "0.75rem",
-                transition: "all 0.15s",
-              }}
-            >
-              {t === "INGREDIENT" ? "Ingredient" : "Prep Item"}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Search */}
+      {/* Search — no type tab */}
       <div className="form-field">
         <label className="modal-label">Search & Select Item *</label>
-        <ItemSearchSelect
-          type={type}
-          value={selectedItem}
-          onChange={setSelectedItem}
-        />
+        <ItemSearchSelect value={selectedItem} onChange={handleSelect} />
         {selectedItem && (
           <div
             style={{
@@ -521,7 +525,7 @@ function AddInventoryForm({ cartId, onAdded }) {
                 <MdImage size={15} style={{ color: "var(--text-muted)" }} />
               </div>
             )}
-            <div>
+            <div style={{ flex: 1 }}>
               <div
                 style={{
                   fontSize: "0.82rem",
@@ -531,25 +535,116 @@ function AddInventoryForm({ cartId, onAdded }) {
               >
                 {selectedItem.name}
               </div>
-              {selectedItem.unit && (
-                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                  {selectedItem.unit}
-                </div>
-              )}
+              <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
+                {selectedItem.unit && (
+                  <span
+                    style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}
+                  >
+                    {selectedItem.unit}
+                  </span>
+                )}
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    fontWeight: 600,
+                    padding: "1px 7px",
+                    borderRadius: 999,
+                    background:
+                      type === "PREP_ITEM"
+                        ? "rgba(59,130,246,0.1)"
+                        : "rgba(34,197,94,0.1)",
+                    color: type === "PREP_ITEM" ? "#3b82f6" : "#16a34a",
+                  }}
+                >
+                  {type === "PREP_ITEM" ? "Prep Item" : "Ingredient"}
+                </span>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      <QtyUnitCostFields
-        itemType={type}
-        quantity={quantity}
-        setQuantity={setQuantity}
-        unit={unit}
-        setUnit={setUnit}
-        totalCost={totalCost}
-        setTotalCost={setTotalCost}
-      />
+      {/* Qty + smart unit */}
+      <div className="form-field">
+        <label className="modal-label">Quantity *</label>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            className="modal-input"
+            type="number"
+            style={{ flex: 1 }}
+            placeholder="e.g. 10"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+          />
+          {unitOpts.length > 1 ? (
+            <select
+              className="modal-input"
+              style={{ width: 76, flexShrink: 0 }}
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+            >
+              {unitOpts.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div
+              className="modal-input"
+              style={{
+                width: 76,
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--text-muted)",
+                fontSize: "0.82rem",
+              }}
+            >
+              {unitOpts[0] || "unit"}
+            </div>
+          )}
+        </div>
+        {showConv && (
+          <div
+            style={{
+              fontSize: "0.72rem",
+              color: "var(--accent)",
+              marginTop: 5,
+              fontWeight: 600,
+            }}
+          >
+            → {baseQty?.toLocaleString()} {unit === "kg" ? "g" : "ml"} will be
+            sent to server
+          </div>
+        )}
+      </div>
+
+      {/* Total cost */}
+      <div className="form-field">
+        <label className="modal-label">Total Cost (NGN) — optional</label>
+        <input
+          className="modal-input"
+          type="number"
+          placeholder={`e.g. 4000 for ${quantity || "10"} ${unit}`}
+          value={totalCost}
+          onChange={(e) => setTotalCost(e.target.value)}
+        />
+        {unitCost != null && unitCost > 0 && (
+          <div
+            style={{
+              fontSize: "0.72rem",
+              color: "var(--accent)",
+              marginTop: 5,
+              fontWeight: 600,
+            }}
+          >
+            → ₦{unitCost.toFixed(4)} per{" "}
+            {unit === "kg" ? "g" : unit === "L" ? "ml" : unit}
+          </div>
+        )}
+      </div>
 
       <button
         className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
@@ -790,9 +885,27 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
 
               {/* Search */}
               <ItemSearchSelect
-                type="INGREDIENT"
                 value={row.ingredient}
-                onChange={(item) => updateItem(i, "ingredient", item)}
+                onChange={(item) => {
+                  const defaultUnit = item
+                    ? item.unit?.toLowerCase() === "ml" ||
+                      item.unit?.toLowerCase() === "l"
+                      ? "ml"
+                      : item.unit?.toLowerCase() === "unit"
+                        ? "unit"
+                        : "g"
+                    : "g";
+                  setItems((prev) => {
+                    const u = [...prev];
+                    u[i] = {
+                      ...u[i],
+                      ingredient: item,
+                      quantity: "",
+                      unit: defaultUnit,
+                    };
+                    return u;
+                  });
+                }}
               />
 
               {/* Qty + unit */}
@@ -806,18 +919,38 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
                     value={row.quantity}
                     onChange={(e) => updateItem(i, "quantity", e.target.value)}
                   />
-                  <select
-                    className="modal-input"
-                    style={{ width: 76, flexShrink: 0 }}
-                    value={row.unit}
-                    onChange={(e) => updateItem(i, "unit", e.target.value)}
-                  >
-                    {["g", "kg", "ml", "L"].map((u) => (
-                      <option key={u} value={u}>
-                        {u}
-                      </option>
-                    ))}
-                  </select>
+                  {(() => {
+                    const uOpts = getUnitOptions(row.ingredient?.unit);
+                    return uOpts.length > 1 ? (
+                      <select
+                        className="modal-input"
+                        style={{ width: 76, flexShrink: 0 }}
+                        value={row.unit}
+                        onChange={(e) => updateItem(i, "unit", e.target.value)}
+                      >
+                        {uOpts.map((u) => (
+                          <option key={u} value={u}>
+                            {u}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div
+                        className="modal-input"
+                        style={{
+                          width: 76,
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "var(--text-muted)",
+                          fontSize: "0.82rem",
+                        }}
+                      >
+                        {uOpts[0] || "unit"}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -1226,7 +1359,9 @@ function InventoryItemRow({ item, onRefresh }) {
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
                 >
-                  {UNIT_OPTIONS[itemType]?.map((u) => (
+                  {getUnitOptions(
+                    item.ingredient?.unit || item.prepItem?.unit,
+                  ).map((u) => (
                     <option key={u} value={u}>
                       {u}
                     </option>
@@ -1343,7 +1478,9 @@ function InventoryItemRow({ item, onRefresh }) {
                   value={usageUnit}
                   onChange={(e) => setUsageUnit(e.target.value)}
                 >
-                  {UNIT_OPTIONS[itemType]?.map((u) => (
+                  {getUnitOptions(
+                    item.ingredient?.unit || item.prepItem?.unit,
+                  ).map((u) => (
                     <option key={u} value={u}>
                       {u}
                     </option>
@@ -1516,7 +1653,8 @@ export default function IcartInventory({ cart }) {
       const res = await api.get(`/icart/supply?cartId=${cart.id}`);
       const all = res.data.data?.items || res.data.data || [];
       setSupplyRequests(
-        all.filter ? all.filter((r) => !r.cartId || r.cartId === cart.id) : all,
+        // all.filter ? all.filter((r) => !r.cartId || r.cartId === cart.id) : all,
+        all,
       );
     } catch {
       toast.error("Failed to load supply requests");
