@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import {
   LuTrash2,
   LuPlus,
   LuChevronDown,
   LuChevronRight,
+  LuPencil,
+  LuX,
 } from "react-icons/lu";
-import { MdOutlineFastfood } from "react-icons/md";
+import { MdOutlineFastfood, MdUpload } from "react-icons/md";
 import Drawer from "../../../components/Drawer";
 import RecipeStepForm from "../../../components/RecipeStepForm";
 import RecipeStepsList from "../../../components/RecipeStepsList";
@@ -14,17 +16,19 @@ import IngredientSearchInput from "../../../components/IngredientSearchInput";
 import {
   getMenuItem,
   addMenuRecipe,
+  updateMenuRecipe,
   deleteMenuRecipe,
   addMenuVariant,
   removeMenuVariant,
   addMenuExtra,
   removeMenuExtra,
   uploadMenuTutorial,
+  updateMenuItem,
 } from "../../../api/vendor";
 import { useAppState } from "../../../contexts/StateContext";
 import Modal from "../../../components/Modal";
 
-// ── Collapsible section wrapper ──────────────────────────────────────────────
+/* ── Collapsible section wrapper ─────────────────────────────────────────── */
 function Section({ title, count, defaultOpen = true, children, action }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -52,14 +56,188 @@ function Section({ title, count, defaultOpen = true, children, action }) {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-export default function MenuItemDrawer({ item, onClose }) {
+/* ── Edit Menu Item Form ──────────────────────────────────────────────────── */
+function EditMenuItemForm({ item, onSaved, onCancel }) {
+  const [name, setName] = useState(item?.name || "");
+  const [description, setDescription] = useState(item?.description || "");
+  const [ticketTime, setTicketTime] = useState(item?.ticketTime || "");
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(item?.image || null);
+  const [saving, setSaving] = useState(false);
+  const fileRef = useRef(null);
+
+  const handleImageChange = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setImageFile(f);
+    setImagePreview(URL.createObjectURL(f));
+  };
+
+  const handleSubmit = async () => {
+    if (!name.trim()) return toast.error("Name is required");
+    const fd = new FormData();
+    fd.append("name", name.trim());
+    if (description) fd.append("description", description);
+    if (ticketTime) fd.append("ticketTime", Number(ticketTime));
+    if (imageFile) fd.append("image", imageFile);
+
+    setSaving(true);
+    try {
+      await updateMenuItem(item.id, fd);
+      toast.success("Menu item updated");
+      onSaved();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="recipe_add_form">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 14,
+        }}
+      >
+        <span
+          style={{
+            fontSize: "0.85rem",
+            fontWeight: 700,
+            color: "var(--text-heading)",
+          }}
+        >
+          Edit Menu Item
+        </span>
+        <button className="biz_icon_btn" onClick={onCancel}>
+          <LuX size={14} />
+        </button>
+      </div>
+
+      {/* Image upload */}
+      <div className="form-field">
+        <label className="modal-label">Image</label>
+        <div
+          onClick={() => fileRef.current?.click()}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "8px 12px",
+            background: "var(--bg-hover)",
+            border: "1px dashed var(--border)",
+            borderRadius: 10,
+            cursor: "pointer",
+          }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.borderColor = "rgba(203,108,220,0.5)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.borderColor = "var(--border)")
+          }
+        >
+          {imagePreview ? (
+            <img
+              src={imagePreview}
+              alt=""
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                objectFit: "cover",
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: "var(--bg-active)",
+                border: "1px solid rgba(203,108,220,0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <MdUpload size={16} style={{ color: "var(--accent)" }} />
+            </div>
+          )}
+          <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+            {imageFile ? imageFile.name : "Click to upload image"}
+          </span>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={handleImageChange}
+        />
+      </div>
+
+      <div className="form-field">
+        <label className="modal-label">Name *</label>
+        <input
+          className="modal-input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+
+      <div className="form-field">
+        <label className="modal-label">Description</label>
+        <textarea
+          className="modal-input"
+          rows={3}
+          style={{ resize: "vertical" }}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </div>
+
+      <div className="form-field">
+        <label className="modal-label">Ticket Time (minutes)</label>
+        <input
+          className="modal-input"
+          type="number"
+          placeholder="e.g. 15"
+          value={ticketTime}
+          onChange={(e) => setTicketTime(e.target.value)}
+        />
+      </div>
+
+      <div className="recipe_add_actions">
+        <button className="app_btn app_btn_cancel" onClick={onCancel}>
+          Cancel
+        </button>
+        <button
+          className={`app_btn app_btn_confirm ${saving ? "btn_loading" : ""}`}
+          onClick={handleSubmit}
+          disabled={saving}
+          style={{ position: "relative", minWidth: 100 }}
+        >
+          <span className="btn_text">Save Changes</span>
+          {saving && (
+            <span className="btn_loader" style={{ width: 13, height: 13 }} />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main component ──────────────────────────────────────────────────────── */
+export default function MenuItemDrawer({ item, onClose, onUpdated }) {
   const { selectedState } = useAppState();
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [cost, setCost] = useState(null);
-  const [confirmVariant, setConfirmVariant] = useState(null);
-  const [confirmExtra, setConfirmExtra] = useState(null);
+  const [editingMenuItem, setEditingMenuItem] = useState(false);
 
   // Recipe
   const [showRecipeForm, setShowRecipeForm] = useState(false);
@@ -67,7 +245,6 @@ export default function MenuItemDrawer({ item, onClose }) {
 
   // Variants
   const [showVariantForm, setShowVariantForm] = useState(false);
-
   const [variantForm, setVariantForm] = useState({
     name: "",
     instruction: "",
@@ -76,13 +253,16 @@ export default function MenuItemDrawer({ item, onClose }) {
   const [selectedVariantPrep, setSelectedVariantPrep] = useState(null);
   const [savingVariant, setSavingVariant] = useState(false);
   const [deletingVariant, setDeletingVariant] = useState(null);
+  const [confirmVariant, setConfirmVariant] = useState(null);
 
   // Extras
   const [showExtraForm, setShowExtraForm] = useState(false);
   const [selectedExtra, setSelectedExtra] = useState(null);
   const [savingExtra, setSavingExtra] = useState(false);
   const [deletingExtra, setDeletingExtra] = useState(null);
+  const [confirmExtra, setConfirmExtra] = useState(null);
 
+  // Tutorial
   const [tutorialFile, setTutorialFile] = useState(null);
   const [uploadingTutorial, setUploadingTutorial] = useState(false);
 
@@ -102,8 +282,9 @@ export default function MenuItemDrawer({ item, onClose }) {
   useEffect(() => {
     if (item) {
       fetchDetail();
-      setCost(null);
-    } else setDetail(null);
+    } else {
+      setDetail(null);
+    }
   }, [item?.id]);
 
   // ── Recipe ─────────────────────────────────────────────────────────────────
@@ -116,6 +297,11 @@ export default function MenuItemDrawer({ item, onClose }) {
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add step");
     }
+  };
+
+  const handleUpdateStep = async (stepId, body) => {
+    await updateMenuRecipe(stepId, body);
+    fetchDetail();
   };
 
   const handleDeleteStep = async (stepId) => {
@@ -156,6 +342,7 @@ export default function MenuItemDrawer({ item, onClose }) {
       setSavingVariant(false);
     }
   };
+
   const handleDeleteVariant = async (variantId) => {
     setDeletingVariant(variantId);
     try {
@@ -169,6 +356,7 @@ export default function MenuItemDrawer({ item, onClose }) {
       setDeletingVariant(null);
     }
   };
+
   // ── Extras ─────────────────────────────────────────────────────────────────
   const handleAddExtra = async (e) => {
     e.preventDefault();
@@ -201,6 +389,7 @@ export default function MenuItemDrawer({ item, onClose }) {
     }
   };
 
+  // ── Tutorial ───────────────────────────────────────────────────────────────
   const handleUploadTutorial = async (e) => {
     e.preventDefault();
     if (!tutorialFile) return;
@@ -235,7 +424,7 @@ export default function MenuItemDrawer({ item, onClose }) {
         </div>
       ) : detail ? (
         <>
-          {/* Hero */}
+          {/* ── Hero (always visible) ── */}
           <div className="drawer_item_hero">
             <div>
               {detail.image ? (
@@ -250,15 +439,50 @@ export default function MenuItemDrawer({ item, onClose }) {
                 </div>
               )}
             </div>
-            <div className="" style={{ flex: 1 }}>
+            <div style={{ flex: 1 }}>
               <div className="drawer_meta_item">
                 <span className="wallet_info_label">Ticket Time</span>
                 <span className="wallet_info_value">
                   {detail.ticketTime ? `${detail.ticketTime} min` : "—"}
                 </span>
               </div>
+              {detail.description && (
+                <div className="drawer_meta_item" style={{ marginTop: 4 }}>
+                  <span className="wallet_info_label">Description</span>
+                  <span
+                    className="wallet_info_value"
+                    style={{ fontSize: "0.78rem" }}
+                  >
+                    {detail.description}
+                  </span>
+                </div>
+              )}
             </div>
+            <button
+              className="biz_icon_btn"
+              title="Edit menu item"
+              onClick={() => setEditingMenuItem((v) => !v)}
+              style={{
+                alignSelf: "flex-start",
+                color: editingMenuItem ? "var(--accent)" : "var(--text-muted)",
+              }}
+            >
+              <LuPencil size={14} />
+            </button>
           </div>
+
+          {/* ── Inline edit form — shown below hero when editing ── */}
+          {editingMenuItem && (
+            <EditMenuItemForm
+              item={detail}
+              onSaved={() => {
+                setEditingMenuItem(false);
+                fetchDetail();
+                onUpdated?.();
+              }}
+              onCancel={() => setEditingMenuItem(false)}
+            />
+          )}
 
           {/* ── Recipe Steps ── */}
           <Section
@@ -283,7 +507,7 @@ export default function MenuItemDrawer({ item, onClose }) {
               steps={steps}
               onDelete={handleDeleteStep}
               deletingId={deletingStep}
-              cost={cost}
+              onUpdate={handleUpdateStep}
             />
           </Section>
 
@@ -307,7 +531,7 @@ export default function MenuItemDrawer({ item, onClose }) {
                   <label className="modal-label">Variant Name *</label>
                   <input
                     className="modal-input"
-                    placeholder="e.g. Small, Large, Family Size"
+                    placeholder="e.g. Small, Large"
                     value={variantForm.name}
                     onChange={(e) =>
                       setVariantForm((p) => ({ ...p, name: e.target.value }))
@@ -390,10 +614,9 @@ export default function MenuItemDrawer({ item, onClose }) {
                 </div>
               </form>
             )}
-
             {variants.length === 0 ? (
               <div className="biz_empty" style={{ padding: "20px 0" }}>
-                <p>No variants yet. Add size or portion options.</p>
+                <p>No variants yet.</p>
               </div>
             ) : (
               <div className="drawer_tag_list">
@@ -491,7 +714,6 @@ export default function MenuItemDrawer({ item, onClose }) {
                 </div>
               </form>
             )}
-
             {extras.length === 0 ? (
               <div className="biz_empty" style={{ padding: "20px 0" }}>
                 <p>No extras yet.</p>
@@ -533,7 +755,6 @@ export default function MenuItemDrawer({ item, onClose }) {
           </Section>
 
           {/* ── Tutorial ── */}
-          {/* ── Tutorial ── */}
           <Section title="Tutorial Video" defaultOpen={false}>
             {detail.tutorialVideo ? (
               <div className="tutorial_preview">
@@ -566,7 +787,6 @@ export default function MenuItemDrawer({ item, onClose }) {
                 <p>No tutorial video yet.</p>
               </div>
             )}
-
             <form onSubmit={handleUploadTutorial} className="recipe_add_form">
               <div className="form-field">
                 <label className="modal-label">

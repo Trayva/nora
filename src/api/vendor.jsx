@@ -16,8 +16,18 @@ export const createConcept = (fd) =>
   api.post("/vendor/concept", fd, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+export const updateConcept = (id, fd) =>
+  api.patch(`/vendor/concept/${id}`, fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 export const updateConceptStatus = (id, status) =>
   api.patch(`/vendor/concept/${id}/status`, { status });
+export const toggleConceptPublic = (id) =>
+  api.patch(`/vendor/concept/${id}/toggle-public`);
+export const updateConceptPackaging = (id, fd) =>
+  api.patch(`/vendor/concept/${id}/packaging`, fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 
 export const getMenuByConcept = (conceptId) =>
   api.get(`/vendor/menu/concept/${conceptId}`);
@@ -39,13 +49,11 @@ export const deleteMenuRecipe = (id) => api.delete(`/vendor/menu/step/${id}`);
 
 export const addMenuVariant = (menuItemId, body) =>
   api.post(`/vendor/menu/${menuItemId}/variants/add`, body);
-
 export const removeMenuVariant = (variantId) =>
   api.delete(`/vendor/menu/variants/${variantId}`);
 
 export const addMenuExtra = (menuItemId, body) =>
   api.post(`/vendor/menu/${menuItemId}/extras/add`, body);
-
 export const removeMenuExtra = (extraId) =>
   api.delete(`/vendor/menu/extras/${extraId}`);
 
@@ -57,8 +65,3 @@ export const uploadMenuTutorial = (menuItemId, file) => {
 
 export const getConceptSummary = (conceptId, params) =>
   api.get(`/vendor/menu/concept/${conceptId}/summary`, { params });
-
-export const updateConceptPackaging = (id, fd) =>
-  api.patch(`/vendor/concept/${id}/packaging`, fd, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });

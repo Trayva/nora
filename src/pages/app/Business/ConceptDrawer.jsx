@@ -1,25 +1,35 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import { LuPlus, LuTrash2, LuChefHat } from "react-icons/lu";
-import { MdOutlineFastfood } from "react-icons/md";
+import {
+  LuPlus,
+  LuTrash2,
+  LuChefHat,
+  LuChevronDown,
+  LuChevronRight,
+  LuPencil,
+} from "react-icons/lu";
+import {
+  MdOutlineFastfood,
+  MdOutlineRestaurantMenu,
+  MdOutlineSettings,
+  MdOutlineInventory2,
+} from "react-icons/md";
 import Drawer from "../../../components/Drawer";
 import Modal from "../../../components/Modal";
+import MachinerySearchInput from "../../../components/MachinerySearchInput";
 import {
   getConcept,
   createMenuItem,
   deleteMenuItem,
+  updateConceptPackaging,
 } from "../../../api/vendor";
 import MenuItemDrawer from "./MenuItemDrawer";
-import { MdOutlineRestaurantMenu, MdOutlineSettings } from "react-icons/md";
-import MachinerySearchInput from "../../../components/MachinerySearchInput";
-import { updateConceptPackaging } from "../../../api/vendor";
-import { MdOutlineInventory2 } from "react-icons/md";
+import ConceptEditForm from "./ConceptEditForm";
 import {
   getMachineriesForConcept,
   addMachineryToConcept,
   removeMachineryFromConcept,
 } from "../../../api/library";
-import { LuChevronDown, LuChevronRight } from "react-icons/lu";
 import api from "../../../api/axios";
 
 export default function ConceptDrawer({ concept, onClose, onUpdate }) {
@@ -43,6 +53,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
   const [savingPack, setSavingPack] = useState(false);
   const [showPackForm, setShowPackForm] = useState(false);
   const [togglingPublic, setTogglingPublic] = useState(false);
+  const [editingConcept, setEditingConcept] = useState(false);
 
   const fetchDetail = async () => {
     if (!concept) return;
@@ -77,7 +88,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
       });
       setDetail((prev) => ({ ...prev, isPublic: !prev.isPublic }));
       toast.success(
-        detail.isPublic ? "Concept set to private" : "Concept is now public"
+        detail.isPublic ? "Concept set to private" : "Concept is now public",
       );
       if (onUpdate) onUpdate({ ...concept, isPublic: !detail.isPublic });
     } catch (err) {
@@ -131,8 +142,8 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
       setConfirmDeleteMach(null);
       setMachineries((prev) =>
         prev.filter(
-          (m) => m.id !== machineryId && m.machineryId !== machineryId
-        )
+          (m) => m.id !== machineryId && m.machineryId !== machineryId,
+        ),
       );
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to remove");
@@ -176,7 +187,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
           </div>
         ) : detail ? (
           <>
-            {/* Meta grid */}
+            {/* ── Meta grid ── */}
             <div className="drawer_meta_grid">
               <div className="drawer_meta_item">
                 <span className="wallet_info_label">Origin</span>
@@ -206,7 +217,49 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
               </div>
             </div>
 
-            {/* Public toggle row */}
+            {/* ── Edit concept button + inline form ── */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginBottom: 8,
+              }}
+            >
+              <button
+                className="biz_icon_btn"
+                onClick={() => setEditingConcept((v) => !v)}
+                title="Edit concept"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "4px 10px",
+                  width: "auto",
+                  color: editingConcept ? "var(--accent)" : "var(--text-muted)",
+                }}
+              >
+                <LuPencil size={12} />
+                <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+                  Edit Concept
+                </span>
+              </button>
+            </div>
+
+            {editingConcept && (
+              <div style={{ marginBottom: 16 }}>
+                <ConceptEditForm
+                  concept={detail}
+                  onSaved={() => {
+                    setEditingConcept(false);
+                    fetchDetail();
+                    if (onUpdate) onUpdate(concept);
+                  }}
+                  onCancel={() => setEditingConcept(false)}
+                />
+              </div>
+            )}
+
+            {/* ── Public toggle ── */}
             <div className="concept_public_row">
               <div className="concept_public_info">
                 <span className="concept_public_label">Public Concept</span>
@@ -224,7 +277,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
               </button>
             </div>
 
-            {/* Menu items */}
+            {/* ── Menu items ── */}
             <div className="drawer_section">
               <div className="drawer_section_header">
                 <span className="wallet_section_title">Menu Items</span>
@@ -232,8 +285,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                   className="app_btn app_btn_confirm biz_add_btn"
                   onClick={() => setShowAddItem(true)}
                 >
-                  <LuPlus size={14} />
-                  Add Item
+                  <LuPlus size={14} /> Add Item
                 </button>
               </div>
 
@@ -261,7 +313,6 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                           <MdOutlineFastfood size={15} />
                         </div>
                       )}
-
                       <div className="drawer_item_info">
                         <span className="concept_item_name">{item.name}</span>
                         {item.description && (
@@ -282,7 +333,6 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                           )}
                         </div>
                       </div>
-
                       <div className="drawer_item_actions">
                         <button
                           className="biz_icon_btn"
@@ -311,7 +361,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
               )}
             </div>
 
-            {/* ── Machineries (collapsible) ── */}
+            {/* ── Machineries ── */}
             <div className="drawer_section">
               <div
                 className="drawer_collapsible_header"
@@ -416,7 +466,6 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                       </div>
                     </form>
                   )}
-
                   {machineries.length === 0 ? (
                     <div className="biz_empty" style={{ padding: "20px 0" }}>
                       <p>No machineries mapped to this concept yet.</p>
@@ -476,7 +525,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
               )}
             </div>
 
-            {/* ── Packaging (collapsible) ── */}
+            {/* ── Packaging ── */}
             <div className="drawer_section">
               <div
                 className="drawer_collapsible_header"
@@ -505,7 +554,6 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                   </button>
                 </div>
               </div>
-
               {packOpen && (
                 <div className="drawer_section_body">
                   {detail.packaging && !showPackForm && (
@@ -527,14 +575,12 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
                       </div>
                     </div>
                   )}
-
                   {!detail.packaging && !showPackForm && (
                     <div className="biz_empty" style={{ padding: "20px 0" }}>
                       <MdOutlineInventory2 size={22} />
                       <p>No packaging details yet.</p>
                     </div>
                   )}
-
                   {showPackForm && (
                     <form
                       onSubmit={handleUpdatePackaging}
@@ -715,6 +761,7 @@ function AddItemModal({ conceptId, onClose, onSuccess }) {
       fd.append("conceptId", conceptId);
       fd.append("name", form.name);
       if (form.description) fd.append("description", form.description);
+      if (form.ticketTime) fd.append("ticketTime", form.ticketTime);
       if (image) fd.append("image", image);
       await createMenuItem(fd);
       toast.success("Item added!");
