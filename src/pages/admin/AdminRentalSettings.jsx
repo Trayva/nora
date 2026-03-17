@@ -6,13 +6,6 @@ import Drawer from "../../components/Drawer";
 import api from "../../api/axios";
 import { CountrySelect } from "./AdminUtils";
 
-const DURATION_PRESETS = [
-  { label: "1 Month", days: 30 },
-  { label: "3 Months", days: 90 },
-  { label: "6 Months", days: 180 },
-  { label: "1 Year", days: 365 },
-  { label: "Custom", days: null },
-];
 const EMPTY_PAYMENT = {
   title: "",
   description: "",
@@ -22,18 +15,13 @@ const EMPTY_PAYMENT = {
   intervalInDays: "",
 };
 const EMPTY_FORM = {
-  durationDays: "",
   country: "",
   currency: "",
-  type: "LEASE",
   terms: "",
-  length: "",
-  breadth: "",
-  unit: "m",
   payments: [{ ...EMPTY_PAYMENT }],
 };
 
-export default function AdminContractSettings() {
+export default function AdminRentalSettings() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -41,11 +29,10 @@ export default function AdminContractSettings() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(null);
-  const [durationPreset, setDurationPreset] = useState(null);
 
   const fetch = async () => {
     try {
-      const r = await api.get("/contract/settings");
+      const r = await api.get("/icart/concept-rental-settings");
       setItems(r.data.data || []);
     } catch {
       toast.error("Failed");
@@ -60,19 +47,11 @@ export default function AdminContractSettings() {
   const openCreate = () => {
     setForm(EMPTY_FORM);
     setEditing(null);
-    setDurationPreset(null);
     setOpen(true);
   };
   const openEdit = (i) => {
-    setForm({
-      ...i,
-      length: i.kioskSize?.length || "",
-      breadth: i.kioskSize?.breadth || "",
-      unit: i.kioskSize?.unit || "m",
-      payments: i.payments || [{ ...EMPTY_PAYMENT }],
-    });
+    setForm({ ...i, payments: i.payments || [{ ...EMPTY_PAYMENT }] });
     setEditing(i);
-    setDurationPreset(null);
     setOpen(true);
   };
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
@@ -91,21 +70,9 @@ export default function AdminContractSettings() {
       payments: p.payments.filter((_, idx) => idx !== i),
     }));
 
-  const selectPreset = (preset) => {
-    setDurationPreset(preset.label);
-    if (preset.days)
-      setForm((p) => ({ ...p, durationDays: preset.days.toString() }));
-  };
-
   const handleSave = async () => {
-    if (
-      !form.country ||
-      !form.currency ||
-      !form.durationDays ||
-      !form.length ||
-      !form.breadth
-    )
-      return toast.error("Fill all required fields");
+    if (!form.country || !form.currency)
+      return toast.error("Country and currency required");
     if (
       !form.payments.length ||
       form.payments.some((p) => !p.title || !p.amount)
@@ -114,14 +81,8 @@ export default function AdminContractSettings() {
     setSaving(true);
     try {
       const body = {
-        ...(editing?.id && { id: editing.id }),
-        durationDays: Number(form.durationDays),
         country: form.country.trim(),
         currency: form.currency.trim(),
-        type: form.type,
-        length: Number(form.length),
-        breadth: Number(form.breadth),
-        unit: form.unit,
         ...(form.terms && { terms: form.terms }),
         payments: form.payments.map((p) => ({
           title: p.title,
@@ -129,11 +90,12 @@ export default function AdminContractSettings() {
           amount: Number(p.amount),
           refundable: Boolean(p.refundable),
           recurring: Boolean(p.recurring),
-          ...(p.recurring &&
-            p.intervalInDays && { intervalInDays: Number(p.intervalInDays) }),
+          ...(p.intervalInDays && { intervalInDays: Number(p.intervalInDays) }),
         })),
       };
-      await api.post("/contract/settings", body);
+      if (editing)
+        await api.patch(`/icart/concept-rental-settings/${editing.id}`, body);
+      else await api.post("/icart/concept-rental-settings", body);
       toast.success(editing ? "Updated" : "Created");
       setOpen(false);
       fetch();
@@ -148,7 +110,7 @@ export default function AdminContractSettings() {
     if (!window.confirm("Delete?")) return;
     setDeleting(id);
     try {
-      await api.delete(`/contract/settings/${id}`);
+      await api.delete(`/icart/concept-rental-settings/${id}`);
       toast.success("Deleted");
       fetch();
     } catch (err) {
@@ -160,9 +122,11 @@ export default function AdminContractSettings() {
 
   return (
     <>
-      <div className="admin_settings_panel" style={{ gridColumn: "1 / -1" }}>
+      <div className="admin_settings_panel">
         <div className="admin_settings_panel_header">
-          <span className="admin_settings_panel_title">Contract Settings</span>
+          <span className="admin_settings_panel_title">
+            Concept Rental Settings
+          </span>
           <button
             className="app_btn app_btn_confirm biz_add_btn"
             onClick={openCreate}
@@ -184,7 +148,7 @@ export default function AdminContractSettings() {
                 fontSize: "0.8rem",
               }}
             >
-              No contract settings yet.
+              No rental settings yet.
             </div>
           ) : (
             items.map((item) => (
@@ -201,39 +165,34 @@ export default function AdminContractSettings() {
                 <div style={{ flex: 1 }}>
                   <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      color: "var(--text-heading)",
                       marginBottom: 4,
                     }}
                   >
+                    {item.country}{" "}
                     <span
-                      style={{
-                        fontSize: "0.82rem",
-                        fontWeight: 700,
-                        color: "var(--text-heading)",
-                      }}
+                      style={{ fontWeight: 500, color: "var(--text-muted)" }}
                     >
-                      {item.type} — {item.country}
+                      · {item.currency}
                     </span>
                   </div>
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                    <span className="admin_meta_chip">{item.currency}</span>
-                    {item.durationDays && (
-                      <span className="admin_meta_chip">
-                        {item.durationDays} days
-                      </span>
-                    )}
-                    {item.kioskSize && (
-                      <span className="admin_meta_chip">
-                        {item.kioskSize.length}×{item.kioskSize.breadth}
-                        {item.kioskSize.unit}
-                      </span>
-                    )}
                     <span className="admin_meta_chip">
                       {item.payments?.length || 0} payment
                       {item.payments?.length !== 1 ? "s" : ""}
                     </span>
+                    {item.payments?.map((p, i) => (
+                      <span
+                        key={i}
+                        className="admin_meta_chip"
+                        style={{ color: "var(--accent)" }}
+                      >
+                        {p.title}: {item.currency}{" "}
+                        {Number(p.amount).toLocaleString()}
+                      </span>
+                    ))}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 4 }}>
@@ -273,9 +232,9 @@ export default function AdminContractSettings() {
       <Drawer
         isOpen={open}
         onClose={() => setOpen(false)}
-        title={editing ? "Edit Contract Setting" : "New Contract Setting"}
-        description="Define lease or purchase plans for iCart contracts"
-        width={540}
+        title={editing ? "Edit Rental Setting" : "New Rental Setting"}
+        description="Define concept rental pricing per country"
+        width={520}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div className="admin_form_grid">
@@ -296,104 +255,7 @@ export default function AdminContractSettings() {
                 onChange={set("currency")}
               />
             </div>
-            <div className="form-field">
-              <label className="modal-label">Type *</label>
-              <select
-                className="modal-input"
-                value={form.type}
-                onChange={set("type")}
-              >
-                <option value="LEASE">LEASE</option>
-                <option value="PURCHASE">PURCHASE</option>
-              </select>
-            </div>
-            <div className="form-field">
-              <label className="modal-label">Duration (days) *</label>
-              <input
-                className="modal-input"
-                type="number"
-                min="0"
-                placeholder="e.g. 365"
-                value={form.durationDays}
-                onChange={set("durationDays")}
-              />
-            </div>
           </div>
-
-          <div>
-            <label className="modal-label">Quick Duration</label>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {DURATION_PRESETS.map((p) => (
-                <button
-                  key={p.label}
-                  type="button"
-                  onClick={() => selectPreset(p)}
-                  style={{
-                    padding: "4px 12px",
-                    borderRadius: 8,
-                    border: `1px solid ${durationPreset === p.label ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                    background:
-                      durationPreset === p.label
-                        ? "var(--bg-active)"
-                        : "var(--bg-hover)",
-                    color:
-                      durationPreset === p.label
-                        ? "var(--accent)"
-                        : "var(--text-muted)",
-                    fontSize: "0.75rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 80px",
-              gap: 12,
-            }}
-          >
-            <div className="form-field" style={{ marginBottom: 0 }}>
-              <label className="modal-label">Length *</label>
-              <input
-                className="modal-input"
-                type="number"
-                min="0"
-                placeholder="2"
-                value={form.length}
-                onChange={set("length")}
-              />
-            </div>
-            <div className="form-field" style={{ marginBottom: 0 }}>
-              <label className="modal-label">Breadth *</label>
-              <input
-                className="modal-input"
-                type="number"
-                min="0"
-                placeholder="1.5"
-                value={form.breadth}
-                onChange={set("breadth")}
-              />
-            </div>
-            <div className="form-field" style={{ marginBottom: 0 }}>
-              <label className="modal-label">Unit *</label>
-              <select
-                className="modal-input"
-                value={form.unit}
-                onChange={set("unit")}
-              >
-                <option value="m">m</option>
-                <option value="cm">cm</option>
-              </select>
-            </div>
-          </div>
-
           <div className="form-field">
             <label className="modal-label">Terms</label>
             <textarea
@@ -477,7 +339,7 @@ export default function AdminContractSettings() {
                     <label className="modal-label">Title *</label>
                     <input
                       className="modal-input"
-                      placeholder="e.g. Security Deposit"
+                      placeholder="e.g. Base Fare"
                       value={p.title}
                       onChange={(e) =>
                         updatePayment(i, "title", e.target.value)
@@ -490,7 +352,7 @@ export default function AdminContractSettings() {
                       className="modal-input"
                       type="number"
                       min="0"
-                      placeholder="e.g. 100000"
+                      placeholder="e.g. 2000"
                       value={p.amount}
                       onChange={(e) =>
                         updatePayment(i, "amount", e.target.value)
@@ -509,14 +371,7 @@ export default function AdminContractSettings() {
                     }
                   />
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 6,
-                    flexWrap: "wrap",
-                    alignItems: "flex-start",
-                  }}
-                >
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {[
                     { k: "refundable", l: "Refundable" },
                     { k: "recurring", l: "Recurring" },
@@ -553,64 +408,25 @@ export default function AdminContractSettings() {
                       {l}
                     </button>
                   ))}
-                </div>
-                {p.recurring && (
-                  <div style={{ marginTop: 10 }}>
-                    <label className="modal-label">Interval</label>
+                  {p.recurring && (
                     <div
-                      style={{
-                        display: "flex",
-                        gap: 6,
-                        flexWrap: "wrap",
-                        marginBottom: 6,
-                      }}
+                      className="form-field"
+                      style={{ marginBottom: 0, marginTop: 8, width: "100%" }}
                     >
-                      {[
-                        { l: "1 Month", d: 30 },
-                        { l: "3 Months", d: 90 },
-                        { l: "6 Months", d: 180 },
-                        { l: "1 Year", d: 365 },
-                      ].map((opt) => (
-                        <button
-                          key={opt.l}
-                          type="button"
-                          onClick={() =>
-                            updatePayment(i, "intervalInDays", opt.d.toString())
-                          }
-                          style={{
-                            padding: "3px 10px",
-                            borderRadius: 7,
-                            border: `1px solid ${Number(p.intervalInDays) === opt.d ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                            background:
-                              Number(p.intervalInDays) === opt.d
-                                ? "var(--bg-active)"
-                                : "var(--bg-hover)",
-                            color:
-                              Number(p.intervalInDays) === opt.d
-                                ? "var(--accent)"
-                                : "var(--text-muted)",
-                            fontSize: "0.72rem",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            fontFamily: "inherit",
-                          }}
-                        >
-                          {opt.l}
-                        </button>
-                      ))}
+                      <label className="modal-label">Interval (days)</label>
+                      <input
+                        className="modal-input"
+                        type="number"
+                        min="1"
+                        placeholder="e.g. 30"
+                        value={p.intervalInDays}
+                        onChange={(e) =>
+                          updatePayment(i, "intervalInDays", e.target.value)
+                        }
+                      />
                     </div>
-                    <input
-                      className="modal-input"
-                      type="number"
-                      min="1"
-                      placeholder="Custom days"
-                      value={p.intervalInDays}
-                      onChange={(e) =>
-                        updatePayment(i, "intervalInDays", e.target.value)
-                      }
-                    />
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             ))}
           </div>

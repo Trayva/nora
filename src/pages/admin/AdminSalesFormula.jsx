@@ -1,174 +1,22 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import {
-  MdOutlineCalculate,
-  MdAdd,
-  MdEdit,
-  MdDelete,
-  MdClose,
-} from "react-icons/md";
+import { MdEdit, MdDelete, MdClose } from "react-icons/md";
+import { LuPlus } from "react-icons/lu";
 import api from "../../api/axios";
+import { CountrySelect } from "./AdminUtils";
 
 const EMPTY = { country: "", vendorPercent: "", noraPercent: "" };
 
-function FormulaForm({ initial = EMPTY, onSave, onCancel, saving }) {
-  const [form, setForm] = useState(initial);
-  const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
-
-  const ownerPercent = (() => {
-    const v = Number(form.vendorPercent);
-    const n = Number(form.noraPercent);
-    if (!isNaN(v) && !isNaN(n) && v + n <= 100) return (100 - v - n).toFixed(1);
-    return "—";
-  })();
-
-  return (
-    <div className="admin_form_card">
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 14,
-        }}
-      >
-        <span className="admin_form_title" style={{ margin: 0 }}>
-          {initial.id ? "Edit Formula" : "New Sales Formula"}
-        </span>
-        <button className="biz_icon_btn" onClick={onCancel}>
-          <MdClose size={15} />
-        </button>
-      </div>
-
-      <div className="admin_form_grid_3" style={{ marginBottom: 12 }}>
-        <div className="form-field" style={{ marginBottom: 0 }}>
-          <label className="modal-label">Country *</label>
-          <input
-            className="modal-input"
-            placeholder="e.g. Nigeria"
-            value={form.country}
-            onChange={set("country")}
-          />
-        </div>
-        <div className="form-field" style={{ marginBottom: 0 }}>
-          <label className="modal-label">Vendor % *</label>
-          <input
-            className="modal-input"
-            type="number"
-            min="0"
-            max="100"
-            placeholder="e.g. 5"
-            value={form.vendorPercent}
-            onChange={set("vendorPercent")}
-          />
-        </div>
-        <div className="form-field" style={{ marginBottom: 0 }}>
-          <label className="modal-label">Nora % *</label>
-          <input
-            className="modal-input"
-            type="number"
-            min="0"
-            max="100"
-            placeholder="e.g. 25"
-            value={form.noraPercent}
-            onChange={set("noraPercent")}
-          />
-        </div>
-      </div>
-
-      {/* Live breakdown */}
-      {form.vendorPercent && form.noraPercent && (
-        <div
-          style={{
-            display: "flex",
-            gap: 6,
-            marginBottom: 14,
-            flexWrap: "wrap",
-          }}
-        >
-          {[
-            {
-              label: "Vendor",
-              val: `${form.vendorPercent}%`,
-              color: "#3b82f6",
-            },
-            {
-              label: "Nora",
-              val: `${form.noraPercent}%`,
-              color: "var(--accent)",
-            },
-            { label: "Owner", val: `${ownerPercent}%`, color: "#16a34a" },
-          ].map((c) => (
-            <div
-              key={c.label}
-              style={{
-                flex: 1,
-                minWidth: 80,
-                padding: "8px 12px",
-                background: "var(--bg-card)",
-                border: "1px solid var(--border)",
-                borderRadius: 9,
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.62rem",
-                  fontWeight: 700,
-                  color: "var(--text-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  marginBottom: 3,
-                }}
-              >
-                {c.label}
-              </div>
-              <div
-                style={{ fontSize: "1rem", fontWeight: 900, color: c.color }}
-              >
-                {c.val}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-        <button
-          className="app_btn app_btn_cancel"
-          style={{ height: 38 }}
-          onClick={onCancel}
-        >
-          Cancel
-        </button>
-        <button
-          className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
-          style={{ height: 38, minWidth: 100, position: "relative" }}
-          onClick={() => onSave(form)}
-          disabled={saving}
-        >
-          <span className="btn_text">
-            {initial.id ? "Save Changes" : "Create"}
-          </span>
-          {saving && (
-            <span className="btn_loader" style={{ width: 13, height: 13 }} />
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-export default function SalesFormula() {
+export default function AdminSalesFormula() {
   const [formulas, setFormulas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(EMPTY);
   const [deleting, setDeleting] = useState(null);
 
   const fetch = async () => {
-    setLoading(true);
     try {
       const r = await api.get("/icart/sales-formula");
       setFormulas(r.data.data || []);
@@ -178,18 +26,39 @@ export default function SalesFormula() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetch();
   }, []);
 
-  const handleSave = async (form) => {
-    if (!form.country.trim()) return toast.error("Country is required");
-    if (form.vendorPercent === "" || form.noraPercent === "")
-      return toast.error("Both percentages are required");
-    const total = Number(form.vendorPercent) + Number(form.noraPercent);
-    if (total > 100) return toast.error("Vendor % + Nora % cannot exceed 100%");
+  const openCreate = () => {
+    setForm(EMPTY);
+    setEditing(null);
+    setShowForm(true);
+  };
+  const openEdit = (f) => {
+    setForm(f);
+    setEditing(f);
+    setShowForm(true);
+  };
+  const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
+  const ownerPct = () => {
+    const v = Number(form.vendorPercent),
+      n = Number(form.noraPercent);
+    return !isNaN(v) && !isNaN(n) && v + n <= 100
+      ? (100 - v - n).toFixed(1)
+      : "—";
+  };
+
+  const handleSave = async () => {
+    if (
+      !form.country.trim() ||
+      form.vendorPercent === "" ||
+      form.noraPercent === ""
+    )
+      return toast.error("All fields required");
+    if (Number(form.vendorPercent) + Number(form.noraPercent) > 100)
+      return toast.error("Cannot exceed 100%");
     setSaving(true);
     try {
       const body = {
@@ -197,18 +66,13 @@ export default function SalesFormula() {
         vendorPercent: Number(form.vendorPercent),
         noraPercent: Number(form.noraPercent),
       };
-      if (form.id) {
-        await api.patch(`/icart/sales-formula/${form.id}`, body);
-        toast.success("Formula updated");
-      } else {
-        await api.post("/icart/sales-formula", body);
-        toast.success("Formula created");
-      }
+      if (editing) await api.patch(`/icart/sales-formula/${editing.id}`, body);
+      else await api.post("/icart/sales-formula", body);
+      toast.success(editing ? "Updated" : "Created");
       setShowForm(false);
-      setEditing(null);
       fetch();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to save");
+      toast.error(err.response?.data?.message || "Failed");
     } finally {
       setSaving(false);
     }
@@ -222,159 +86,240 @@ export default function SalesFormula() {
       toast.success("Deleted");
       fetch();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to delete");
+      toast.error(err.response?.data?.message || "Failed");
     } finally {
       setDeleting(null);
     }
   };
 
   return (
-    <div className="admin_page">
-      <div className="admin_page_header">
-        <div>
-          <h2 className="admin_page_title">Sales Formula</h2>
-          <p className="admin_page_sub">
-            Define how sale revenue is split between vendor, Nora, and cart
-            owner — per country.
-          </p>
-        </div>
-        {!showForm && !editing && (
-          <button
-            className="app_btn app_btn_confirm"
-            style={{
-              height: 38,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-            onClick={() => setShowForm(true)}
-          >
-            <MdAdd size={16} />
-            <span className="btn_text_label"> New Formula</span>
-          </button>
-        )}
+    <div className="admin_settings_panel">
+      <div className="admin_settings_panel_header">
+        <span className="admin_settings_panel_title">Sales Formula</span>
+        <button
+          className="app_btn app_btn_confirm biz_add_btn"
+          onClick={openCreate}
+        >
+          <LuPlus size={13} /> Add
+        </button>
       </div>
-
-      {showForm && (
-        <FormulaForm
-          onSave={handleSave}
-          onCancel={() => setShowForm(false)}
-          saving={saving}
-        />
-      )}
-
-      {loading ? (
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
-        </div>
-      ) : formulas.length === 0 && !showForm ? (
-        <div className="admin_empty">
-          <MdOutlineCalculate size={28} style={{ opacity: 0.3 }} />
-          <p className="admin_empty_title">No formulas yet</p>
-          <p className="admin_empty_sub">
-            Create a formula to define how revenue is distributed for each
-            country.
-          </p>
-        </div>
-      ) : (
-        <div className="admin_card_list">
-          {formulas.map((f) =>
-            editing?.id === f.id ? (
-              <FormulaForm
-                key={f.id}
-                initial={editing}
-                onSave={handleSave}
-                onCancel={() => setEditing(null)}
-                saving={saving}
-              />
-            ) : (
-              <div key={f.id} className="admin_card">
+      <div className="admin_settings_panel_body">
+        {showForm && (
+          <div className="admin_form_card">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  color: "var(--text-heading)",
+                }}
+              >
+                {editing ? "Edit" : "New"} Formula
+              </span>
+              <button
+                className="biz_icon_btn"
+                onClick={() => setShowForm(false)}
+              >
+                <MdClose size={13} />
+              </button>
+            </div>
+            <div className="admin_form_grid_3" style={{ marginBottom: 10 }}>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <label className="modal-label">Country *</label>
+                <CountrySelect
+                  value={form.country}
+                  onChange={set("country")}
+                  required
+                />
+              </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <label className="modal-label">Vendor %</label>
+                <input
+                  className="modal-input"
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="5"
+                  value={form.vendorPercent}
+                  onChange={set("vendorPercent")}
+                />
+              </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <label className="modal-label">Nora %</label>
+                <input
+                  className="modal-input"
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="25"
+                  value={form.noraPercent}
+                  onChange={set("noraPercent")}
+                />
+              </div>
+            </div>
+            {form.vendorPercent && form.noraPercent && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                {[
+                  { l: "Vendor", v: `${form.vendorPercent}%`, c: "#3b82f6" },
+                  { l: "Nora", v: `${form.noraPercent}%`, c: "var(--accent)" },
+                  { l: "Owner", v: `${ownerPct()}%`, c: "#16a34a" },
+                ].map((x) => (
+                  <div
+                    key={x.l}
+                    style={{
+                      flex: 1,
+                      padding: "6px 10px",
+                      background: "var(--bg-card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      textAlign: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "0.58rem",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        textTransform: "uppercase",
+                        marginBottom: 2,
+                      }}
+                    >
+                      {x.l}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.9rem",
+                        fontWeight: 900,
+                        color: x.c,
+                      }}
+                    >
+                      {x.v}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div
+              style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+            >
+              <button
+                className="app_btn app_btn_cancel"
+                style={{ height: 34 }}
+                onClick={() => setShowForm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+                style={{ height: 34, minWidth: 80, position: "relative" }}
+                onClick={handleSave}
+                disabled={saving}
+              >
+                <span className="btn_text">{editing ? "Save" : "Create"}</span>
+                {saving && (
+                  <span
+                    className="btn_loader"
+                    style={{ width: 12, height: 12 }}
+                  />
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+        {loading ? (
+          <div className="page_loader" style={{ padding: 24 }}>
+            <div className="page_loader_spinner" />
+          </div>
+        ) : formulas.length === 0 && !showForm ? (
+          <div
+            style={{
+              padding: "20px 0",
+              textAlign: "center",
+              color: "var(--text-muted)",
+              fontSize: "0.8rem",
+            }}
+          >
+            No formulas yet.
+          </div>
+        ) : (
+          formulas.map((f) => (
+            <div
+              key={f.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 0",
+                borderBottom: "1px solid var(--border)",
+              }}
+            >
+              <div style={{ flex: 1 }}>
                 <div
                   style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 10,
-                    background: "var(--bg-active)",
-                    border: "1px solid rgba(203,108,220,0.2)",
-                    color: "var(--accent)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-heading)",
+                    marginBottom: 4,
                   }}
                 >
-                  <MdOutlineCalculate size={17} />
+                  {f.country}
                 </div>
-                <div className="admin_card_body">
-                  <div className="admin_card_title">{f.country}</div>
-                  <div className="admin_card_meta">
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  {[
+                    { l: "Vendor", v: f.vendorPercent, c: "#3b82f6" },
+                    { l: "Nora", v: f.noraPercent, c: "var(--accent)" },
+                    {
+                      l: "Owner",
+                      v: (100 - f.vendorPercent - f.noraPercent).toFixed(1),
+                      c: "#16a34a",
+                    },
+                  ].map((x) => (
                     <span
+                      key={x.l}
                       className="admin_meta_chip"
-                      style={{
-                        color: "#3b82f6",
-                        borderColor: "rgba(59,130,246,0.2)",
-                        background: "rgba(59,130,246,0.08)",
-                      }}
+                      style={{ color: x.c }}
                     >
-                      Vendor {f.vendorPercent}%
+                      {x.l} {x.v}%
                     </span>
-                    <span
-                      className="admin_meta_chip"
-                      style={{
-                        color: "var(--accent)",
-                        borderColor: "rgba(203,108,220,0.2)",
-                        background: "rgba(203,108,220,0.08)",
-                      }}
-                    >
-                      Nora {f.noraPercent}%
-                    </span>
-                    <span
-                      className="admin_meta_chip"
-                      style={{
-                        color: "#16a34a",
-                        borderColor: "rgba(34,197,94,0.2)",
-                        background: "rgba(34,197,94,0.08)",
-                      }}
-                    >
-                      Owner {(100 - f.vendorPercent - f.noraPercent).toFixed(1)}
-                      %
-                    </span>
-                  </div>
-                </div>
-                <div className="admin_card_actions">
-                  <button
-                    className="biz_icon_btn"
-                    onClick={() => setEditing(f)}
-                    title="Edit"
-                  >
-                    <MdEdit size={14} />
-                  </button>
-                  <button
-                    className="biz_icon_btn biz_icon_btn_danger"
-                    onClick={() => handleDelete(f.id)}
-                    disabled={deleting === f.id}
-                    style={{ position: "relative" }}
-                  >
-                    {deleting === f.id ? (
-                      <span
-                        className="btn_loader"
-                        style={{
-                          width: 13,
-                          height: 13,
-                          borderColor: "#ef4444",
-                          borderTopColor: "transparent",
-                        }}
-                      />
-                    ) : (
-                      <MdDelete size={14} />
-                    )}
-                  </button>
+                  ))}
                 </div>
               </div>
-            ),
-          )}
-        </div>
-      )}
+              <div style={{ display: "flex", gap: 4 }}>
+                <button className="biz_icon_btn" onClick={() => openEdit(f)}>
+                  <MdEdit size={13} />
+                </button>
+                <button
+                  className="biz_icon_btn biz_icon_btn_danger"
+                  onClick={() => handleDelete(f.id)}
+                  disabled={deleting === f.id}
+                  style={{ position: "relative" }}
+                >
+                  {deleting === f.id ? (
+                    <span
+                      className="btn_loader"
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderColor: "#ef4444",
+                        borderTopColor: "transparent",
+                      }}
+                    />
+                  ) : (
+                    <MdDelete size={13} />
+                  )}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
