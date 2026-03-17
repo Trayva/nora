@@ -84,3 +84,195 @@
   border-radius: 999px;
   padding: 3px 10px;
 }
+
+/* ── Operator avatar ── */
+.icart_operator_avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg-active);
+  border: 1px solid rgba(203, 108, 220, 0.2);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Section label row ── */
+.icart_section_label_row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.icart_section_label_row_clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.icart_section_chevron {
+  margin-left: auto;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+/* ── Status badge (operator) ── */
+.icart_status_badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Meta rows ── */
+.icart_item_meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.icart_meta_row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icart_meta_key {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.icart_meta_val {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+/* ── Empty state ── */
+.icart_empty_state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.icart_empty_title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-body);
+  margin: 0;
+}
+
+.icart_empty_sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 280px;
+}
+
+/* ── Section label ── */
+.icart_section_label {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.icart_section_count {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+/* ── Icon action button ── */
+.icart_icon_action_btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.icart_icon_action_btn:hover {
+  background: var(--bg-active);
+  color: var(--accent);
+  border-color: rgba(203, 108, 220, 0.3);
+}
+
+/* ── Drawer section title ── */
+.drawer_section_title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+/* ── Loading ── */
+.drawer_loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+/* ── Sub nav ── */
+.icart_sub_nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.icart_sub_nav_btn {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.icart_sub_nav_btn:hover {
+  border-color: rgba(203, 108, 220, 0.3);
+  color: var(--text-body);
+}
+
+.icart_sub_nav_active {
+  background: var(--bg-active);
+  color: var(--accent);
+  border-color: rgba(203, 108, 220, 0.4);
+}

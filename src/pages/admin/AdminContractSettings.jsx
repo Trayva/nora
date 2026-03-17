@@ -4,7 +4,7 @@ import { MdEdit, MdDelete } from "react-icons/md";
 import { LuPlus, LuTrash2 } from "react-icons/lu";
 import Drawer from "../../components/Drawer";
 import api from "../../api/axios";
-import { CountrySelect } from "./AdminUtils";
+import { CountrySelect } from "./adminUtils";
 
 const DURATION_PRESETS = [
   { label: "1 Month", days: 30 },

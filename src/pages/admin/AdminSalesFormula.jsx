@@ -3,7 +3,7 @@ import { toast } from "react-toastify";
 import { MdEdit, MdDelete, MdClose } from "react-icons/md";
 import { LuPlus } from "react-icons/lu";
 import api from "../../api/axios";
-import { CountrySelect } from "./AdminUtils";
+import { CountrySelect } from "./adminUtils";
 
 const EMPTY = { country: "", vendorPercent: "", noraPercent: "" };
 
