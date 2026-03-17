@@ -28,7 +28,7 @@ import AdminApplications from "./AdminApplications";
 import AdminOperators from "./AdminOperators";
 import AdminVendorDetail from "./AdminVendorDetail";
 import AdminIcarts from "./AdminIcarts";
-import { getS, StatusBadge } from "./adminUtils";
+import { getS, StatusBadge } from "./adminUtils_";
 
 const fmtDate = (d) =>
   d

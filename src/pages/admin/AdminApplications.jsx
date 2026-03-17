@@ -10,7 +10,7 @@ import {
 } from "react-icons/md";
 import Drawer from "../../components/Drawer";
 import api from "../../api/axios";
-import { StatusBadge, getS } from "./adminUtils";
+import { StatusBadge, getS } from "./adminUtils_";
 
 const fmtDate = (d) =>
   d
