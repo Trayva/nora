@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import {
   BsFacebook,
   BsInstagram,
@@ -5,12 +6,28 @@ import {
   BsTwitterX,
   BsYoutube,
 } from "react-icons/bs";
+import { useAuth } from "../../contexts/AuthContext";
+
+const scrollTo = (id) =>
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
 function Footer() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // If logged in, go to the app route. If not, go to register.
+  const handleRoleLink = (appPath) => {
+    if (user) {
+      navigate(appPath);
+    } else {
+      navigate("/auth/register");
+    }
+  };
+
   return (
     <>
       {/* CTA Band */}
-      <section className="footer-cta">
+      <section className="footer-cta" id="solutions">
         <div className="footer-cta-inner">
           <h1 className="footer-cta-heading">
             Ready to Transform Your Operations?
@@ -19,7 +36,7 @@ function Footer() {
             Join industry leaders using nora to streamline operations, reduce
             costs, and scale confidently.
           </p>
-          <button className="footer-cta-btn">
+          <button className="footer-cta-btn" onClick={() => scrollTo("how")}>
             Explore Solutions
           </button>
         </div>
@@ -47,9 +64,24 @@ function Footer() {
           {/* Platform */}
           <div className="footer-col">
             <span className="footer-col-heading">Platform</span>
-            <a href="#">Marketplace</a>
-            <a href="#">Become an Operator</a>
-            <a href="#">Vendor Application</a>
+            <button
+              className="footer-link-btn"
+              onClick={() => handleRoleLink("/app/supplier")}
+            >
+              Become a Supplier
+            </button>
+            <button
+              className="footer-link-btn"
+              onClick={() => handleRoleLink("/app/operator")}
+            >
+              Become an Operator
+            </button>
+            <button
+              className="footer-link-btn"
+              onClick={() => handleRoleLink("/app/business")}
+            >
+              Vendor Application
+            </button>
             <a href="#">Careers</a>
           </div>
 
@@ -57,7 +89,12 @@ function Footer() {
           <div className="footer-col">
             <span className="footer-col-heading">Support</span>
             <a href="#">Help Center</a>
-            <a href="#">Contact Us</a>
+            <button
+              className="footer-link-btn"
+              onClick={() => scrollTo("contact")}
+            >
+              Contact Us
+            </button>
             <a href="#">Warranty</a>
             <a href="#">Locations</a>
           </div>

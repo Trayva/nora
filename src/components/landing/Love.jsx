@@ -3,6 +3,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/autoplay";
+import { useNavigate } from "react-router-dom";
 
 import img1 from "../../assets/icart11.png";
 import img2 from "../../assets/cc.jpg";
@@ -10,6 +11,8 @@ import img3 from "../../assets/bb.jpg";
 import img4 from "../../assets/aa.jpg";
 
 function Love() {
+  const navigate = useNavigate();
+
   const slides = [
     {
       img: img1,
@@ -39,7 +42,7 @@ function Love() {
   ];
 
   return (
-    <section className="love-section">
+    <section className="love-section" id="how">
       <div className="love-inner">
         {/* Left */}
         <div className="love-left">
@@ -69,12 +72,18 @@ function Love() {
             <button
               className="app_btn app_btn_confirm"
               style={{ height: 50, padding: "0 28px", fontSize: "0.9375rem" }}
+              onClick={() => navigate("/auth/register")}
             >
               Launch Your Concept
             </button>
             <button
               className="app_btn app_btn_cancel"
               style={{ height: 50, padding: "0 28px", fontSize: "0.9375rem" }}
+              onClick={() =>
+                document
+                  .getElementById("contact")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
             >
               Learn More
             </button>

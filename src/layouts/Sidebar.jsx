@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   MdOutlineSettings,
   MdOutlinePerson,
@@ -22,58 +22,69 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import { BsShop } from "react-icons/bs";
 import { useAppState } from "../contexts/StateContext";
+import { useAuth } from "../contexts/AuthContext";
 
-const navItems = [
-  { id: "dashboard", label: "Dashboard", icon: RxDashboard, path: "/app" },
-  { id: "finance", label: "Finance", icon: RxBarChart, path: "/app/finance" },
-  { id: "supplier", label: "Supplier", icon: PiTruck, path: "/app/supplier" },
-  {
-    id: "mybusiness",
-    label: "My Business",
-    icon: BsShop,
-    path: "/app/business",
-  },
-  {
-    id: "icart",
-    label: "iCarts",
-    icon: MdOutlineKitchen,
-    path: "/app/icart-home",
-  },
-  {
-    id: "operator",
-    label: "Operator",
-    icon: MdOutlineBadge,
-    path: "/app/operator",
-  },
+// All possible nav items
+const ALL_NAV_ITEMS = [
+  { id: "dashboard", label: "Dashboard",   icon: RxDashboard,    path: "/app",            roles: ["CUSTOMER"] },
+  { id: "finance",   label: "Finance",     icon: RxBarChart,     path: "/app/finance",    roles: ["CUSTOMER"] },
+  { id: "supplier",  label: "Supplier",    icon: PiTruck,        path: "/app/supplier",   roles: ["CUSTOMER", "SUPPLIER"] },
+  { id: "mybusiness",label: "My Business", icon: BsShop,         path: "/app/business",   roles: ["CUSTOMER"] },
+  { id: "icart",     label: "iCarts",      icon: MdOutlineKitchen, path: "/app/icart-home", roles: ["CUSTOMER"] },
+  { id: "operator",  label: "Operator",    icon: MdOutlineBadge, path: "/app/operator",   roles: ["OPERATOR", "CUSTOMER"] },
 ];
 
-const bottomItems = [
-  {
-    id: "settings",
-    label: "Settings",
-    icon: MdOutlineSettings,
-    path: "/app/settings",
-  },
-  {
-    id: "profile",
-    label: "Profile",
-    icon: MdOutlinePerson,
-    path: "/app/profile",
-  },
+const BOTTOM_ITEMS = [
+  { id: "settings", label: "Settings", icon: MdOutlineSettings, path: "/app/settings", roles: ["CUSTOMER", "OPERATOR", "SUPPLIER"] },
+  { id: "profile",  label: "Profile",  icon: MdOutlinePerson,   path: "/app/profile",  roles: ["CUSTOMER", "OPERATOR", "SUPPLIER"] },
 ];
+
+// Derive which nav items to show based on user roles + linked IDs
+function getVisibleItems(user) {
+  if (!user) return [];
+  const roles = user.roles || [];
+
+  // OPERATOR only sees Operator + bottom items
+  if (roles.includes("OPERATOR") && !roles.includes("CUSTOMER")) {
+    return ALL_NAV_ITEMS.filter((item) => item.id === "operator");
+  }
+
+  // Pure SUPPLIER (no CUSTOMER role) sees only Supplier
+  if (roles.includes("SUPPLIER") && !roles.includes("CUSTOMER")) {
+    return ALL_NAV_ITEMS.filter((item) => item.id === "supplier");
+  }
+
+  // CUSTOMER — show items they have access to based on linked IDs
+  if (roles.includes("CUSTOMER")) {
+    return ALL_NAV_ITEMS.filter((item) => {
+      // Always show base customer items
+      if (["dashboard", "finance", "mybusiness", "icart"].includes(item.id)) return true;
+      // Show supplier tab only if they have a supplierId
+      if (item.id === "supplier") return !!user.supplierId;
+      // Show operator tab only if they have an aggregatorId or operator role
+      if (item.id === "operator") return !!user.aggregatorId || roles.includes("OPERATOR");
+      return false;
+    });
+  }
+
+  // Fallback: show everything
+  return ALL_NAV_ITEMS;
+}
 
 export default function Sidebar({ mobileOpen = false, onMobileClose }) {
   const { theme, toggle } = useTheme();
   const { states, selectedState, changeState } = useAppState();
+  const { user } = useAuth();
   const [active, setActive] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
   const navigate = useNavigate();
 
+  const visibleNavItems = useMemo(() => getVisibleItems(user), [user]);
+
   const handleNav = (id, path) => {
     setActive(id);
     navigate(path);
-    // Close on mobile after navigation
     if (onMobileClose) onMobileClose();
   };
 
@@ -86,10 +97,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
         {collapsed ? (
           <button
             className="sidebar-logo-collapsed-btn"
-            onClick={() => {
-              setCollapsed(false);
-              setLogoHovered(false);
-            }}
+            onClick={() => { setCollapsed(false); setLogoHovered(false); }}
             onMouseEnter={() => setLogoHovered(true)}
             onMouseLeave={() => setLogoHovered(false)}
             title="Expand sidebar"
@@ -111,7 +119,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
               className="sidebar_logo"
             />
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              {/* Desktop collapse button */}
               <button
                 className="sidebar-collapse-btn sidebar-collapse-btn--desktop"
                 onClick={() => setCollapsed(true)}
@@ -119,7 +126,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
               >
                 <MdChevronLeft className="sidebar-icon" />
               </button>
-              {/* Mobile close button */}
               <button
                 className="sidebar-collapse-btn sidebar-collapse-btn--mobile"
                 onClick={onMobileClose}
@@ -135,7 +141,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
       {/* Main nav */}
       <nav className="sidebar-nav">
         <ul className="sidebar-list">
-          {navItems.map(({ id, label, icon: Icon, path }) => (
+          {visibleNavItems.map(({ id, label, icon: Icon, path }) => (
             <li key={id}>
               <button
                 className={`sidebar-item ${active === id ? "active" : ""}`}
@@ -154,7 +160,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
       {/* Bottom nav */}
       <div className="sidebar-bottom">
         <ul className="sidebar-list">
-          {bottomItems.map(({ id, label, icon: Icon, path }) => (
+          {BOTTOM_ITEMS.map(({ id, label, icon: Icon, path }) => (
             <li key={id}>
               <button
                 className={`sidebar-item ${active === id ? "active" : ""}`}
@@ -200,13 +206,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
             <button
               className="sidebar-item"
               onClick={toggle}
-              title={
-                collapsed
-                  ? theme === "dark"
-                    ? "Light Mode"
-                    : "Dark Mode"
-                  : undefined
-              }
+              title={collapsed ? (theme === "dark" ? "Light Mode" : "Dark Mode") : undefined}
             >
               {theme === "dark" ? (
                 <MdOutlineLightMode className="sidebar-icon" />

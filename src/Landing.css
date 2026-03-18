@@ -1228,3 +1228,363 @@ color: var(--text-body);
   color: var(--text-heading); /* was #ffffff */
   background: var(--bg-hover); /* was rgba(255,255,255,0.15) */
 }
+
+
+/* ── Theme toggle & hamburger additions ──────────────────────── */
+
+/* Hamburger — only visible on mobile */
+.landing-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--text-body);
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.landing-hamburger:hover {
+  background: var(--bg-hover);
+  color: var(--text-heading);
+}
+
+@media (max-width: 768px) {
+  .landing-hamburger {
+    display: flex;
+  }
+
+  /* Hide desktop icon buttons on mobile */
+  .landing-header-icons {
+    display: none;
+  }
+}
+
+/* ── State dropdown (desktop) ────────────────────────────────── */
+
+.state_dropdown_backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 98;
+}
+
+.state_dropdown {
+  position: absolute;
+  top: 64px; /* header height */
+  right: 40px;
+  z-index: 200;
+  min-width: 220px;
+  background: var(--modal-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  padding: 8px;
+  animation: dropdownFadeIn 0.15s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.state_dropdown_label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 10px 8px;
+  margin: 0;
+}
+
+.state_dropdown_empty {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  padding: 8px 10px;
+  margin: 0;
+}
+
+.state_dropdown_item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  text-align: left;
+}
+
+.state_dropdown_item:hover {
+  background: var(--bg-hover);
+}
+
+.state_dropdown_item_active {
+  background: var(--bg-active);
+}
+
+.state_dropdown_item_left {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.state_dropdown_name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-body);
+}
+
+.state_dropdown_currency {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Mobile slide-in drawer ──────────────────────────────────── */
+
+.mobile_menu_backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.mobile_menu_drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 300px;
+  max-width: 85vw;
+  height: 100dvh;
+  z-index: 200;
+  background: var(--bg-main);
+  border-right: 1px solid var(--border);
+  box-shadow: 8px 0 40px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+}
+
+.mobile_menu_drawer_open {
+  transform: translateX(0);
+}
+
+.mobile_menu_header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mobile_menu_nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 12px 8px;
+}
+
+.mobile_menu_link {
+  display: block;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-body);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mobile_menu_link:hover {
+  background: var(--bg-hover);
+  color: var(--text-heading);
+}
+
+.mobile_menu_divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 12px;
+  flex-shrink: 0;
+}
+
+.mobile_menu_section_label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0 14px;
+  margin: 8px 0 6px;
+}
+
+.mobile_menu_region {
+  padding: 0 12px;
+}
+
+.mobile_menu_region_list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobile_menu_region_btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-body);
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.mobile_menu_region_btn:hover {
+  background: var(--bg-hover);
+}
+
+.mobile_menu_region_btn_active {
+  background: var(--bg-active);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mobile_menu_currency {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.mobile_menu_actions {
+  padding: 8px 12px 24px;
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.mobile_menu_action_row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-body);
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.mobile_menu_action_row:hover {
+  background: var(--bg-hover);
+}
+
+/* Only show hamburger on mobile, keep desktop icons visible */
+@media (min-width: 769px) {
+  .mobile_menu_drawer {
+    display: none;
+  }
+
+  .mobile_menu_backdrop {
+    display: none;
+  }
+}
+
+/* Footer buttons that look like links — add to landing.css */
+.footer-link-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  text-align: left;
+  transition: color 0.15s;
+  line-height: 1.5;
+}
+
+.footer-link-btn:hover {
+  color: var(--accent);
+}
+
+/* Nav buttons (replace <a> tags in header nav) */
+.landing-nav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-body);
+  padding: 6px 14px;
+  border-radius: 8px;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+  display: block;
+}
+
+.landing-nav-btn:hover {
+  color: var(--text-heading);
+  background: var(--bg-hover);
+}
+
+/* Mobile menu link as button */
+.mobile_menu_link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.footer-link-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  text-align: left;
+  transition: color 0.15s;
+  line-height: 1.5;
+}
+
+.footer-link-btn:hover {
+  color: var(--accent);
+}

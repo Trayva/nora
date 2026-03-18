@@ -2,6 +2,7 @@
 import Contact from "../../components/landing/Contact";
 import Hero from "../../components/landing/Hero";
 import Love from "../../components/landing/Love";
+import PublicConceptsSection from "../../components/landing/PublicConceptsSection";
 import Trayva from "../../components/landing/Trayva";
 import WhoWeAre from "../../components/landing/WhoWeAre";
 
@@ -18,14 +19,10 @@ function Home(props) {
         <Hero />
         <WhoWeAre />
         <Trayva />
+        <PublicConceptsSection />
         <Love />
         <Contact />
-     
       </section>
-
-      {/* <HowItWorks />
-      <Why />
-      <Contact /> */}
     </>
   );
 }
