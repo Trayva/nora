@@ -8,6 +8,7 @@ import {
   MdMenuBook,
   MdSchool,
   MdPointOfSale,
+  MdOutlineShoppingBag,
 } from "react-icons/md";
 import { LuShoppingCart } from "react-icons/lu";
 
@@ -24,6 +25,7 @@ import {
   ELearningTab,
   SalesTab,
 } from "./OperatorCart";
+import IcartOrders from "../../icart/IcartOrders";
 
 const TABS = [
   { key: "tasks", label: "Tasks", icon: <MdTask size={13} /> },
@@ -31,6 +33,7 @@ const TABS = [
   { key: "menu", label: "Menu", icon: <MdMenuBook size={13} /> },
   { key: "elearning", label: "E-Learning", icon: <MdSchool size={13} /> },
   { key: "sales", label: "Sales", icon: <MdPointOfSale size={13} /> },
+  { key: "orders", label: "Orders", icon: <MdOutlineShoppingBag size={13} /> },
 ];
 
 export default function OperatorCartDrawer({ cartId, onClose }) {
@@ -96,6 +99,7 @@ export default function OperatorCartDrawer({ cartId, onClose }) {
               isOperator={true}
             />
           )}
+          {activeTab === "orders" && <IcartOrders cartId={cartId} />}
         </>
       )}
     </Drawer>

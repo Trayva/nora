@@ -5,6 +5,7 @@ import Love from "../../components/landing/Love";
 import PublicConceptsSection from "../../components/landing/PublicConceptsSection";
 import Trayva from "../../components/landing/Trayva";
 import WhoWeAre from "../../components/landing/WhoWeAre";
+import ShopLanding from "./ShopLanding";
 
 function Home(props) {
   return (
@@ -19,6 +20,7 @@ function Home(props) {
         <Hero />
         <WhoWeAre />
         <Trayva />
+        <ShopLanding/>
         <PublicConceptsSection />
         <Love />
         <Contact />

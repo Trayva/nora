@@ -304,6 +304,7 @@ export default function AdminUserDetail({ user, onClose }) {
 
   // Wallet actions
   const [walletAction, setWalletAction] = useState(null); // "credit" | "debit"
+  const [confirmMarkPaid, setConfirmMarkPaid] = useState(null); // invoice id
   const [walletAmount, setWalletAmount] = useState("");
   const [walletNote, setWalletNote] = useState("");
   const [doingWallet, setDoingWallet] = useState(false);
@@ -365,20 +366,30 @@ export default function AdminUserDetail({ user, onClose }) {
       return toast.error("Enter a valid amount");
     setDoingWallet(true);
     try {
+      // Debit = negative amount, Credit = positive
+      const amount =
+        walletAction === "debit" ? -Number(walletAmount) : Number(walletAmount);
       await api.post("/finance/wallet/manual-credit", {
         userId: user.id,
-        amount: Number(walletAmount),
+        amount,
         description: walletNote || undefined,
       });
-      toast.success("Wallet credited");
+      toast.success(
+        walletAction === "debit" ? "Wallet debited" : "Wallet credited",
+      );
       setWalletAction(null);
       setWalletAmount("");
       setWalletNote("");
-      // Refresh wallet
       const r = await api.get("/finance/wallet", {
         params: { userId: user.id },
       });
       setWallet(r.data.data);
+      // Also refresh transactions
+      const t = await api.get("/finance/wallet/transactions", {
+        params: { userId: user.id },
+      });
+      const td = t.data.data;
+      setTxns(Array.isArray(td) ? td : td?.items || []);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed");
     } finally {
@@ -387,6 +398,12 @@ export default function AdminUserDetail({ user, onClose }) {
   };
 
   const handleMarkPaid = async (invId) => {
+    setConfirmMarkPaid(invId);
+  };
+
+  const confirmAndMarkPaid = async () => {
+    const invId = confirmMarkPaid;
+    setConfirmMarkPaid(null);
     try {
       await api.patch(`/finance/invoice/${invId}/mark-paid`);
       toast.success("Marked as paid");
@@ -467,624 +484,816 @@ export default function AdminUserDetail({ user, onClose }) {
   };
 
   return (
-    <Drawer
-      isOpen
-      onClose={onClose}
-      title={user.fullName || "User"}
-      description={user.email}
-      width={540}
-    >
-      {/* Header chips */}
-      <div
-        style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 }}
+    <>
+      <Drawer
+        isOpen
+        onClose={onClose}
+        title={user.fullName || "User"}
+        description={user.email}
+        width={540}
       >
-        {user.roles?.map((r) => {
-          const role = r.role || r;
-          const c = ROLE_COLORS[role] || ROLE_COLORS.CUSTOMER;
-          return (
-            <span
-              key={role}
-              style={{
-                fontSize: "0.62rem",
-                fontWeight: 800,
-                padding: "2px 9px",
-                borderRadius: 999,
-                background: c.bg,
-                color: c.color,
-                border: `1px solid ${c.border}`,
-                textTransform: "uppercase",
-              }}
-            >
-              {role}
-            </span>
-          );
-        })}
-        {user.passwordLockedUntil && (
-          <button
-            className="app_btn app_btn_cancel"
-            style={{ height: 26, padding: "0 10px", fontSize: "0.7rem" }}
-            onClick={handleUnlock}
-          >
-            Unlock Account
-          </button>
-        )}
-      </div>
-
-      {/* Basic info */}
-      <Section icon={MdOutlinePerson} title="Profile">
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
-        >
-          {[
-            { l: "Phone", v: user.phone || "—" },
-            { l: "Joined", v: fmtDt(user.createdAt) },
-            { l: "Email Verified", v: user.emailVerified ? "Yes" : "No" },
-            { l: "Phone Verified", v: user.phoneVerified ? "Yes" : "No" },
-            { l: "Active", v: user.isActive ? "Yes" : "No" },
-            { l: "Attempts", v: user.passwordAttempts ?? "—" },
-          ].map(({ l, v }) => (
-            <div
-              key={l}
-              style={{
-                padding: "8px 10px",
-                background: "var(--bg-hover)",
-                border: "1px solid var(--border)",
-                borderRadius: 9,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  color: "var(--text-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  marginBottom: 3,
-                }}
-              >
-                {l}
-              </div>
-              <div
-                style={{
-                  fontSize: "0.8rem",
-                  fontWeight: 700,
-                  color: "var(--text-body)",
-                }}
-              >
-                {String(v)}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* Roles editor */}
-      <Section icon={MdOutlineShield} title="Roles">
+        {/* Header chips */}
         <div
           style={{
             display: "flex",
             flexWrap: "wrap",
             gap: 6,
-            marginBottom: 12,
+            marginBottom: 20,
           }}
         >
-          {ALL_ROLES.map((role) => {
-            const active = roles.includes(role);
+          {user.roles?.map((r) => {
+            const role = r.role || r;
             const c = ROLE_COLORS[role] || ROLE_COLORS.CUSTOMER;
             return (
-              <button
+              <span
                 key={role}
-                onClick={() => toggleRole(role)}
                 style={{
-                  padding: "4px 12px",
-                  borderRadius: 8,
-                  border: `1px solid ${active ? c.border : "var(--border)"}`,
-                  background: active ? c.bg : "var(--bg-hover)",
-                  color: active ? c.color : "var(--text-muted)",
-                  fontSize: "0.72rem",
+                  fontSize: "0.62rem",
                   fontWeight: 800,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
+                  padding: "2px 9px",
+                  borderRadius: 999,
+                  background: c.bg,
+                  color: c.color,
+                  border: `1px solid ${c.border}`,
                   textTransform: "uppercase",
-                  letterSpacing: "0.04em",
                 }}
               >
                 {role}
-              </button>
+              </span>
             );
           })}
-        </div>
-        <button
-          className={`app_btn app_btn_confirm${savingRoles ? " btn_loading" : ""}`}
-          style={{ height: 34, padding: "0 16px", position: "relative" }}
-          onClick={handleSaveRoles}
-          disabled={savingRoles}
-        >
-          <span className="btn_text">Save Roles</span>
-          {savingRoles && (
-            <span className="btn_loader" style={{ width: 12, height: 12 }} />
+          {user.passwordLockedUntil && (
+            <button
+              className="app_btn app_btn_cancel"
+              style={{ height: 26, padding: "0 10px", fontSize: "0.7rem" }}
+              onClick={handleUnlock}
+            >
+              Unlock Account
+            </button>
           )}
-        </button>
-      </Section>
+        </div>
 
-      {/* Wallet */}
-      <Section icon={MdOutlineAccountBalanceWallet} title="Wallet">
-        {loading ? (
+        {/* Basic info */}
+        <Section icon={MdOutlinePerson} title="Profile">
           <div
-            className="page_loader_spinner"
-            style={{ width: 20, height: 20, margin: "12px auto" }}
-          />
-        ) : !wallet ? (
-          <div
-            style={{
-              fontSize: "0.8rem",
-              color: "var(--text-muted)",
-              padding: "12px 0",
-            }}
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
           >
-            No wallet found.
-          </div>
-        ) : (
-          <>
-            {/* Balance card */}
-            <div
-              style={{
-                background: "var(--bg-active)",
-                border: "1px solid rgba(203,108,220,0.2)",
-                borderRadius: 12,
-                padding: "14px 16px",
-                marginBottom: 12,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontSize: "0.62rem",
-                    fontWeight: 700,
-                    color: "var(--text-muted)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    marginBottom: 4,
-                  }}
-                >
-                  Balance
-                </div>
-                <div
-                  style={{
-                    fontSize: "1.5rem",
-                    fontWeight: 900,
-                    color: "var(--accent)",
-                  }}
-                >
-                  {wallet.currency} {fmt(wallet.balance)}
-                </div>
-              </div>
-              {wallet.bankName && (
-                <div style={{ textAlign: "right" }}>
-                  <div
-                    style={{
-                      fontSize: "0.68rem",
-                      fontWeight: 700,
-                      color: "var(--text-body)",
-                    }}
-                  >
-                    {wallet.bankName}
-                  </div>
-                  <div
-                    style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}
-                  >
-                    {wallet.bankAccount}
-                  </div>
-                  <div
-                    style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}
-                  >
-                    {wallet.accountName}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Credit action */}
-            {walletAction ? (
-              <div className="admin_form_card" style={{ marginBottom: 12 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 10,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "0.8rem",
-                      fontWeight: 700,
-                      color: "var(--text-heading)",
-                    }}
-                  >
-                    Manual Credit
-                  </span>
-                  <button
-                    className="biz_icon_btn"
-                    onClick={() => {
-                      setWalletAction(null);
-                      setWalletAmount("");
-                      setWalletNote("");
-                    }}
-                  >
-                    <MdClose size={13} />
-                  </button>
-                </div>
-                <div className="admin_form_grid" style={{ marginBottom: 10 }}>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label className="modal-label">
-                      Amount ({wallet.currency}) *
-                    </label>
-                    <input
-                      className="modal-input"
-                      type="number"
-                      min="1"
-                      placeholder="e.g. 5000"
-                      value={walletAmount}
-                      onChange={(e) => setWalletAmount(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label className="modal-label">Note</label>
-                    <input
-                      className="modal-input"
-                      placeholder="Optional description"
-                      value={walletNote}
-                      onChange={(e) => setWalletNote(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    justifyContent: "flex-end",
-                  }}
-                >
-                  <button
-                    className="app_btn app_btn_cancel"
-                    style={{ height: 34 }}
-                    onClick={() => setWalletAction(null)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className={`app_btn app_btn_confirm${doingWallet ? " btn_loading" : ""}`}
-                    style={{ height: 34, minWidth: 90, position: "relative" }}
-                    onClick={handleWalletAction}
-                    disabled={doingWallet}
-                  >
-                    <span className="btn_text">Credit Wallet</span>
-                    {doingWallet && (
-                      <span
-                        className="btn_loader"
-                        style={{ width: 12, height: 12 }}
-                      />
-                    )}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                className="app_btn app_btn_confirm biz_add_btn"
-                style={{ marginBottom: 12 }}
-                onClick={() => setWalletAction("credit")}
-              >
-                <LuPlus size={13} /> Credit Wallet
-              </button>
-            )}
-
-            {/* Transactions */}
-            {transactions.length > 0 && (
-              <div>
-                <div
-                  style={{
-                    fontSize: "0.7rem",
-                    fontWeight: 700,
-                    color: "var(--text-muted)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    marginBottom: 8,
-                  }}
-                >
-                  Recent Transactions
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 5,
-                    maxHeight: 200,
-                    overflowY: "auto",
-                  }}
-                >
-                  {transactions.slice(0, 20).map((tx) => {
-                    const isCredit =
-                      tx.type === "CREDIT" || tx.type === "TOPUP";
-                    return (
-                      <div
-                        key={tx.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          padding: "8px 10px",
-                          background: "var(--bg-hover)",
-                          border: "1px solid var(--border)",
-                          borderRadius: 9,
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: "50%",
-                            background: isCredit ? "#16a34a" : "#ef4444",
-                            flexShrink: 0,
-                          }}
-                        />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
-                            style={{
-                              fontSize: "0.72rem",
-                              fontWeight: 700,
-                              color: "var(--text-body)",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {tx.description || tx.type}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "0.62rem",
-                              color: "var(--text-muted)",
-                            }}
-                          >
-                            {fmtDt(tx.createdAt)}
-                          </div>
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "0.78rem",
-                            fontWeight: 800,
-                            color: isCredit ? "#16a34a" : "#ef4444",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {isCredit ? "+" : "-"}
-                          {wallet.currency} {fmt(tx.amount)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </Section>
-
-      {/* Invoices */}
-      <Section
-        icon={MdOutlineReceiptLong}
-        title={`Invoices (${invoices.length})`}
-      >
-        {/* Create invoice button */}
-        {!showInvForm && (
-          <button
-            className="app_btn app_btn_confirm biz_add_btn"
-            style={{ marginBottom: 12 }}
-            onClick={() => setShowInvForm(true)}
-          >
-            <LuPlus size={13} /> Create Invoice
-          </button>
-        )}
-        {showInvForm && (
-          <div className="admin_form_card" style={{ marginBottom: 12 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 12,
-              }}
-            >
-              <span
+            {[
+              { l: "Phone", v: user.phone || "—" },
+              { l: "Joined", v: fmtDt(user.createdAt) },
+              { l: "Email Verified", v: user.emailVerified ? "Yes" : "No" },
+              { l: "Phone Verified", v: user.phoneVerified ? "Yes" : "No" },
+              { l: "Active", v: user.isActive ? "Yes" : "No" },
+              { l: "Attempts", v: user.passwordAttempts ?? "—" },
+            ].map(({ l, v }) => (
+              <div
+                key={l}
                 style={{
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  color: "var(--text-heading)",
+                  padding: "8px 10px",
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 9,
                 }}
               >
-                New Invoice
-              </span>
-              <button
-                className="biz_icon_btn"
-                onClick={() => setShowInvForm(false)}
-              >
-                <MdClose size={13} />
-              </button>
-            </div>
-            <div className="admin_form_grid" style={{ marginBottom: 10 }}>
-              <div className="form-field" style={{ marginBottom: 0 }}>
-                <label className="modal-label">Currency</label>
-                <input
-                  className="modal-input"
-                  value={invForm.currency}
-                  onChange={(e) =>
-                    setInvForm((p) => ({ ...p, currency: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="form-field" style={{ marginBottom: 0 }}>
-                <label className="modal-label">Due Date *</label>
-                <input
-                  className="modal-input"
-                  type="date"
-                  value={invForm.dueDate}
-                  onChange={(e) =>
-                    setInvForm((p) => ({ ...p, dueDate: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
-            {invForm.items.map((it, i) => (
-              <div key={i} className="admin_payment_item">
                 <div
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 8,
+                    fontSize: "0.6rem",
+                    fontWeight: 700,
+                    color: "var(--text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    marginBottom: 3,
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: "0.68rem",
-                      fontWeight: 700,
-                      color: "var(--text-muted)",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Item {i + 1}
-                  </span>
-                  {invForm.items.length > 1 && (
-                    <button
-                      className="biz_icon_btn biz_icon_btn_danger"
-                      onClick={() => removeInvItem(i)}
-                      style={{ width: 20, height: 20 }}
-                    >
-                      <MdClose size={11} />
-                    </button>
-                  )}
+                  {l}
                 </div>
-                <div className="admin_form_grid" style={{ marginBottom: 6 }}>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label className="modal-label">Title *</label>
-                    <input
-                      className="modal-input"
-                      value={it.title}
-                      onChange={(e) =>
-                        updateInvItem(i, "title", e.target.value)
-                      }
-                    />
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label className="modal-label">Amount *</label>
-                    <input
-                      className="modal-input"
-                      type="number"
-                      min="0"
-                      value={it.amount}
-                      onChange={(e) =>
-                        updateInvItem(i, "amount", e.target.value)
-                      }
-                    />
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label className="modal-label">Qty</label>
-                    <input
-                      className="modal-input"
-                      type="number"
-                      min="1"
-                      value={it.quantity}
-                      onChange={(e) =>
-                        updateInvItem(i, "quantity", e.target.value)
-                      }
-                    />
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <label className="modal-label">Description</label>
-                    <input
-                      className="modal-input"
-                      value={it.description}
-                      onChange={(e) =>
-                        updateInvItem(i, "description", e.target.value)
-                      }
-                    />
-                  </div>
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    color: "var(--text-body)",
+                  }}
+                >
+                  {String(v)}
                 </div>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={addInvItem}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                background: "none",
-                border: "none",
-                color: "var(--accent)",
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                padding: "4px 0",
-                marginBottom: 10,
-              }}
-            >
-              <LuPlus size={13} /> Add Item
-            </button>
-            <div
-              style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
-            >
-              <button
-                className="app_btn app_btn_cancel"
-                style={{ height: 34 }}
-                onClick={() => setShowInvForm(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className={`app_btn app_btn_confirm${creatingInv ? " btn_loading" : ""}`}
-                style={{ height: 34, minWidth: 90, position: "relative" }}
-                onClick={handleCreateInvoice}
-                disabled={creatingInv}
-              >
-                <span className="btn_text">Create</span>
-                {creatingInv && (
-                  <span
-                    className="btn_loader"
-                    style={{ width: 12, height: 12 }}
-                  />
-                )}
-              </button>
-            </div>
           </div>
-        )}
+        </Section>
 
-        {loading ? (
-          <div
-            className="page_loader_spinner"
-            style={{ width: 20, height: 20, margin: "12px auto" }}
-          />
-        ) : invoices.length === 0 ? (
+        {/* Roles editor */}
+        <Section icon={MdOutlineShield} title="Roles">
           <div
             style={{
-              fontSize: "0.8rem",
-              color: "var(--text-muted)",
-              padding: "8px 0",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+              marginBottom: 12,
             }}
           >
-            No invoices.
+            {ALL_ROLES.map((role) => {
+              const active = roles.includes(role);
+              const c = ROLE_COLORS[role] || ROLE_COLORS.CUSTOMER;
+              return (
+                <button
+                  key={role}
+                  onClick={() => toggleRole(role)}
+                  style={{
+                    padding: "4px 12px",
+                    borderRadius: 8,
+                    border: `1px solid ${active ? c.border : "var(--border)"}`,
+                    background: active ? c.bg : "var(--bg-hover)",
+                    color: active ? c.color : "var(--text-muted)",
+                    fontSize: "0.72rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {role}
+                </button>
+              );
+            })}
           </div>
-        ) : (
-          invoices.map((inv) => (
-            <InvoiceRow key={inv.id} inv={inv} onMarkPaid={handleMarkPaid} />
-          ))
-        )}
-      </Section>
-    </Drawer>
+          <button
+            className={`app_btn app_btn_confirm${savingRoles ? " btn_loading" : ""}`}
+            style={{ height: 34, padding: "0 16px", position: "relative" }}
+            onClick={handleSaveRoles}
+            disabled={savingRoles}
+          >
+            <span className="btn_text">Save Roles</span>
+            {savingRoles && (
+              <span className="btn_loader" style={{ width: 12, height: 12 }} />
+            )}
+          </button>
+        </Section>
+
+        {/* Wallet */}
+        <Section icon={MdOutlineAccountBalanceWallet} title="Wallet">
+          {loading ? (
+            <div
+              className="page_loader_spinner"
+              style={{ width: 20, height: 20, margin: "12px auto" }}
+            />
+          ) : !wallet ? (
+            <div
+              style={{
+                fontSize: "0.8rem",
+                color: "var(--text-muted)",
+                padding: "12px 0",
+              }}
+            >
+              No wallet found.
+            </div>
+          ) : (
+            <>
+              {/* Balance card */}
+              <div
+                style={{
+                  background: "var(--bg-active)",
+                  border: "1px solid rgba(203,108,220,0.2)",
+                  borderRadius: 12,
+                  padding: "14px 16px",
+                  marginBottom: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: "0.62rem",
+                      fontWeight: 700,
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      marginBottom: 4,
+                    }}
+                  >
+                    Balance
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "1.5rem",
+                      fontWeight: 900,
+                      color: "var(--accent)",
+                    }}
+                  >
+                    {wallet.currency} {fmt(wallet.balance)}
+                  </div>
+                </div>
+                {wallet.bankName && (
+                  <div style={{ textAlign: "right" }}>
+                    <div
+                      style={{
+                        fontSize: "0.68rem",
+                        fontWeight: 700,
+                        color: "var(--text-body)",
+                      }}
+                    >
+                      {wallet.bankName}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.72rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      {wallet.bankAccount}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.68rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      {wallet.accountName}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Credit / Debit action */}
+              {walletAction ? (
+                <div className="admin_form_card" style={{ marginBottom: 12 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 12,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        color: "var(--text-heading)",
+                      }}
+                    >
+                      Wallet Adjustment
+                    </span>
+                    <button
+                      className="biz_icon_btn"
+                      onClick={() => {
+                        setWalletAction(null);
+                        setWalletAmount("");
+                        setWalletNote("");
+                      }}
+                    >
+                      <MdClose size={13} />
+                    </button>
+                  </div>
+                  {/* Credit / Debit toggle */}
+                  <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                    {[
+                      { k: "credit", l: "Credit", color: "#16a34a" },
+                      { k: "debit", l: "Debit", color: "#ef4444" },
+                    ].map(({ k, l, color }) => (
+                      <button
+                        key={k}
+                        onClick={() => setWalletAction(k)}
+                        style={{
+                          flex: 1,
+                          height: 34,
+                          borderRadius: 8,
+                          border: `1px solid ${walletAction === k ? color + "55" : "var(--border)"}`,
+                          background:
+                            walletAction === k
+                              ? color + "12"
+                              : "var(--bg-hover)",
+                          color:
+                            walletAction === k ? color : "var(--text-muted)",
+                          fontSize: "0.78rem",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          transition: "all 0.12s",
+                        }}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="admin_form_grid" style={{ marginBottom: 10 }}>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">
+                        Amount ({wallet.currency}) *
+                      </label>
+                      <input
+                        className="modal-input"
+                        type="number"
+                        min="1"
+                        placeholder="e.g. 5000"
+                        value={walletAmount}
+                        onChange={(e) => setWalletAmount(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">Note</label>
+                      <input
+                        className="modal-input"
+                        placeholder="Optional description"
+                        value={walletNote}
+                        onChange={(e) => setWalletNote(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  {walletAmount && (
+                    <div
+                      style={{
+                        marginBottom: 10,
+                        padding: "8px 11px",
+                        background:
+                          walletAction === "debit"
+                            ? "rgba(239,68,68,0.06)"
+                            : "rgba(34,197,94,0.06)",
+                        border: `1px solid ${walletAction === "debit" ? "rgba(239,68,68,0.2)" : "rgba(34,197,94,0.2)"}`,
+                        borderRadius: 8,
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        color: walletAction === "debit" ? "#ef4444" : "#16a34a",
+                      }}
+                    >
+                      {walletAction === "debit" ? "−" : "+"}
+                      {wallet.currency}{" "}
+                      {Number(walletAmount || 0).toLocaleString("en-NG")} will
+                      be{" "}
+                      {walletAction === "debit" ? "deducted from" : "added to"}{" "}
+                      this wallet
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <button
+                      className="app_btn app_btn_cancel"
+                      style={{ height: 34 }}
+                      onClick={() => setWalletAction(null)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className={`app_btn app_btn_confirm${doingWallet ? " btn_loading" : ""}`}
+                      style={{
+                        height: 34,
+                        minWidth: 90,
+                        position: "relative",
+                        ...(walletAction === "debit"
+                          ? {
+                              background: "rgba(239,68,68,0.9)",
+                              borderColor: "transparent",
+                            }
+                          : {}),
+                      }}
+                      onClick={handleWalletAction}
+                      disabled={doingWallet}
+                    >
+                      <span className="btn_text">
+                        {walletAction === "debit"
+                          ? "Debit Wallet"
+                          : "Credit Wallet"}
+                      </span>
+                      {doingWallet && (
+                        <span
+                          className="btn_loader"
+                          style={{ width: 12, height: 12 }}
+                        />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                  <button
+                    className="app_btn app_btn_confirm biz_add_btn"
+                    onClick={() => setWalletAction("credit")}
+                  >
+                    <LuPlus size={13} /> Credit
+                  </button>
+                  <button
+                    className="app_btn biz_add_btn"
+                    style={{
+                      height: 30,
+                      padding: "0 12px",
+                      fontSize: "0.75rem",
+                      border: "1px solid rgba(239,68,68,0.3)",
+                      background: "rgba(239,68,68,0.08)",
+                      color: "#ef4444",
+                    }}
+                    onClick={() => setWalletAction("debit")}
+                  >
+                    − Debit
+                  </button>
+                </div>
+              )}
+
+              {/* Transactions */}
+              {transactions.length > 0 && (
+                <div>
+                  <div
+                    style={{
+                      fontSize: "0.7rem",
+                      fontWeight: 700,
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Recent Transactions
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 5,
+                      maxHeight: 200,
+                      overflowY: "auto",
+                    }}
+                  >
+                    {transactions.slice(0, 20).map((tx) => {
+                      const isCredit =
+                        tx.type === "CREDIT" || tx.type === "TOPUP";
+                      return (
+                        <div
+                          key={tx.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "8px 10px",
+                            background: "var(--bg-hover)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 9,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              background: isCredit ? "#16a34a" : "#ef4444",
+                              flexShrink: 0,
+                            }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                color: "var(--text-body)",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {tx.description || tx.type}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "0.62rem",
+                                color: "var(--text-muted)",
+                              }}
+                            >
+                              {fmtDt(tx.createdAt)}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.78rem",
+                              fontWeight: 800,
+                              color: isCredit ? "#16a34a" : "#ef4444",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {isCredit ? "+" : "-"}
+                            {wallet.currency} {fmt(tx.amount)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </Section>
+
+        {/* Invoices */}
+        <Section
+          icon={MdOutlineReceiptLong}
+          title={`Invoices (${invoices.length})`}
+        >
+          {/* Create invoice button */}
+          {!showInvForm && (
+            <button
+              className="app_btn app_btn_confirm biz_add_btn"
+              style={{ marginBottom: 12 }}
+              onClick={() => setShowInvForm(true)}
+            >
+              <LuPlus size={13} /> Create Invoice
+            </button>
+          )}
+          {showInvForm && (
+            <div className="admin_form_card" style={{ marginBottom: 12 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 12,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: "var(--text-heading)",
+                  }}
+                >
+                  New Invoice
+                </span>
+                <button
+                  className="biz_icon_btn"
+                  onClick={() => setShowInvForm(false)}
+                >
+                  <MdClose size={13} />
+                </button>
+              </div>
+              <div className="admin_form_grid" style={{ marginBottom: 10 }}>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">Currency</label>
+                  <input
+                    className="modal-input"
+                    value={invForm.currency}
+                    onChange={(e) =>
+                      setInvForm((p) => ({ ...p, currency: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">Due Date *</label>
+                  <input
+                    className="modal-input"
+                    type="date"
+                    value={invForm.dueDate}
+                    onChange={(e) =>
+                      setInvForm((p) => ({ ...p, dueDate: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+              {invForm.items.map((it, i) => (
+                <div key={i} className="admin_payment_item">
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "0.68rem",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Item {i + 1}
+                    </span>
+                    {invForm.items.length > 1 && (
+                      <button
+                        className="biz_icon_btn biz_icon_btn_danger"
+                        onClick={() => removeInvItem(i)}
+                        style={{ width: 20, height: 20 }}
+                      >
+                        <MdClose size={11} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="admin_form_grid" style={{ marginBottom: 6 }}>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">Title *</label>
+                      <input
+                        className="modal-input"
+                        value={it.title}
+                        onChange={(e) =>
+                          updateInvItem(i, "title", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">Amount *</label>
+                      <input
+                        className="modal-input"
+                        type="number"
+                        min="0"
+                        value={it.amount}
+                        onChange={(e) =>
+                          updateInvItem(i, "amount", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">Qty</label>
+                      <input
+                        className="modal-input"
+                        type="number"
+                        min="1"
+                        value={it.quantity}
+                        onChange={(e) =>
+                          updateInvItem(i, "quantity", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">Description</label>
+                      <input
+                        className="modal-input"
+                        value={it.description}
+                        onChange={(e) =>
+                          updateInvItem(i, "description", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addInvItem}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  background: "none",
+                  border: "none",
+                  color: "var(--accent)",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  padding: "4px 0",
+                  marginBottom: 10,
+                }}
+              >
+                <LuPlus size={13} /> Add Item
+              </button>
+              <div
+                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+              >
+                <button
+                  className="app_btn app_btn_cancel"
+                  style={{ height: 34 }}
+                  onClick={() => setShowInvForm(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={`app_btn app_btn_confirm${creatingInv ? " btn_loading" : ""}`}
+                  style={{ height: 34, minWidth: 90, position: "relative" }}
+                  onClick={handleCreateInvoice}
+                  disabled={creatingInv}
+                >
+                  <span className="btn_text">Create</span>
+                  {creatingInv && (
+                    <span
+                      className="btn_loader"
+                      style={{ width: 12, height: 12 }}
+                    />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {loading ? (
+            <div
+              className="page_loader_spinner"
+              style={{ width: 20, height: 20, margin: "12px auto" }}
+            />
+          ) : invoices.length === 0 ? (
+            <div
+              style={{
+                fontSize: "0.8rem",
+                color: "var(--text-muted)",
+                padding: "8px 0",
+              }}
+            >
+              No invoices.
+            </div>
+          ) : (
+            invoices.map((inv) => (
+              <InvoiceRow key={inv.id} inv={inv} onMarkPaid={handleMarkPaid} />
+            ))
+          )}
+        </Section>
+      </Drawer>
+
+      {/* ── Mark Paid Confirmation ── */}
+      {confirmMarkPaid && (
+        <MarkPaidConfirm
+          invId={confirmMarkPaid}
+          inv={invoices.find((i) => i.id === confirmMarkPaid)}
+          onConfirm={confirmAndMarkPaid}
+          onCancel={() => setConfirmMarkPaid(null)}
+        />
+      )}
+    </>
+  );
+}
+
+function MarkPaidConfirm({ invId, inv, onConfirm, onCancel }) {
+  return (
+    <div
+      onClick={onCancel}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.5)",
+        zIndex: 1200,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 16,
+          padding: 24,
+          width: "100%",
+          maxWidth: 360,
+        }}
+      >
+        <div
+          style={{
+            fontSize: "1rem",
+            fontWeight: 800,
+            color: "var(--text-heading)",
+            marginBottom: 6,
+          }}
+        >
+          Mark Invoice as Paid
+        </div>
+        <div
+          style={{
+            fontSize: "0.82rem",
+            color: "var(--text-muted)",
+            marginBottom: 16,
+          }}
+        >
+          Are you sure you want to mark invoice{" "}
+          <span
+            style={{
+              fontFamily: "monospace",
+              fontWeight: 700,
+              color: "var(--text-body)",
+            }}
+          >
+            #{invId.slice(0, 8).toUpperCase()}
+          </span>
+          {inv && (
+            <>
+              {" "}
+              for{" "}
+              <strong>
+                {inv.currency} {Number(inv.total || 0).toLocaleString()}
+              </strong>
+            </>
+          )}{" "}
+          as paid? This cannot be undone.
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            className="app_btn app_btn_cancel"
+            style={{ flex: 1, height: 40 }}
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+          <button
+            className="app_btn app_btn_confirm"
+            style={{ flex: 1, height: 40 }}
+            onClick={onConfirm}
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

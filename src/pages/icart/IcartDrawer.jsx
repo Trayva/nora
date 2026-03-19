@@ -7,13 +7,15 @@ import IcartTasks from "./IcartTasks";
 import IcartWorkforce from "./IcartWorkforce";
 import IcartInventory from "./IcartInventory";
 import IcartSales from "./IcartSales";
+import IcartOrders from "./IcartOrders";
 
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "tasks", label: "Tasks" },
   { key: "workforce", label: "Workforce" },
   { key: "inventory", label: "Inventory" },
-  { key: "sales",     label: "Sales" },
+  { key: "sales", label: "Sales" },
+  { key: "orders", label: "Orders" },
 ];
 
 export default function IcartDrawer({ cartId, onClose, onUpdate }) {
@@ -53,7 +55,7 @@ export default function IcartDrawer({ cartId, onClose, onUpdate }) {
       isOpen={!!cartId}
       onClose={onClose}
       title={cart ? cart.serialNumber : "iCart Details"}
-      description={cart ? (cart.location?.name || "No location assigned") : ""}
+      description={cart ? cart.location?.name || "No location assigned" : ""}
       width={520}
     >
       {/* Sticky Tabs */}
@@ -89,6 +91,7 @@ export default function IcartDrawer({ cartId, onClose, onUpdate }) {
           )}
           {activeTab === "inventory" && <IcartInventory cart={cart} />}
           {activeTab === "sales" && <IcartSales cart={cart} />}
+          {activeTab === "orders" && <IcartOrders cartId={cart.id} />}
         </>
       )}
     </Drawer>
