@@ -35,15 +35,11 @@ function Header() {
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
   useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth > 768) setMobileOpen(false);
-    };
+    const onResize = () => { if (window.innerWidth > 768) setMobileOpen(false); };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -51,6 +47,22 @@ function Header() {
   const handleStateSelect = (state) => {
     changeState(state);
     setStateOpen(false);
+  };
+
+  // Shared shop navigation — requests geolocation then routes to /shop
+  const goToShop = (closeMobile = false) => {
+    if (closeMobile) setMobileOpen(false);
+    const go = (lat, lng) =>
+      navigate(lat && lng ? `/shop?lat=${lat}&lng=${lng}` : "/shop");
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => go(pos.coords.latitude, pos.coords.longitude),
+        () => go(),
+        { timeout: 4000 }
+      );
+    } else {
+      go();
+    }
   };
 
   return (
@@ -68,109 +80,33 @@ function Header() {
 
           {/* Desktop Nav */}
           <ul className="landing-header-nav">
-            <li>
-              <button
-                className="landing-nav-btn"
-                onClick={() => scrollTo("home")}
-              >
-                Home
-              </button>
-            </li>
-            <li>
-              <button
-                className="landing-nav-btn"
-                onClick={() => scrollTo("how")}
-              >
-                Why Nora
-              </button>
-            </li>
-            <li>
-              <button
-                className="landing-nav-btn"
-                onClick={() => scrollTo("solutions")}
-              >
-                Solution
-              </button>
-            </li>
-            <li>
-              <button
-                className="landing-nav-btn"
-                onClick={() => navigate("/shop")}
-              >
-                Shop
-              </button>
-            </li>
-            <li>
-              <button
-                className="landing-nav-btn"
-                onClick={() => scrollTo("contact")}
-              >
-                Contact
-              </button>
-            </li>
+            <li><button className="landing-nav-btn" onClick={() => scrollTo("home")}>Home</button></li>
+            <li><button className="landing-nav-btn" onClick={() => scrollTo("how")}>Why Nora</button></li>
+            <li><button className="landing-nav-btn" onClick={() => scrollTo("solutions")}>Solution</button></li>
+            <li><button className="landing-nav-btn" onClick={() => goToShop()}>Shop</button></li>
+            <li><button className="landing-nav-btn" onClick={() => scrollTo("contact")}>Contact</button></li>
           </ul>
 
           {/* Desktop Actions */}
           <div className="landing-header-actions">
-            {/* {user ? (
-              <button
-                className="app_btn app_btn_confirm"
-                style={{ height: 36, padding: "0 20px" }}
-                onClick={() => navigate("/app")}
-              >
-                Dashboard
+            <div className="landing-header-icons">
+              <button className="landing-icon-btn" title="Contact support" onClick={() => scrollTo("contact")}>
+                <MdOutlineHeadsetMic size={18} />
               </button>
-            ) : ( */}
-              <div className="landing-header-icons">
-                {/* Support — scrolls to contact section */}
-                <button
-                  className="landing-icon-btn"
-                  title="Contact support"
-                  onClick={() => scrollTo("contact")}
-                >
-                  <MdOutlineHeadsetMic size={18} />
-                </button>
-
-                {/* Theme toggle */}
-                <button
-                  className="landing-icon-btn"
-                  onClick={toggle}
-                  title={theme === "dark" ? "Light mode" : "Dark mode"}
-                >
-                  {theme === "dark" ? (
-                    <MdOutlineLightMode size={18} />
-                  ) : (
-                    <MdOutlineDarkMode size={18} />
-                  )}
-                </button>
-
-                {/* Region / State picker */}
-                <button
-                  className="landing-icon-btn"
-                  onClick={() => setStateOpen((v) => !v)}
-                  title="Select region"
-                >
-                  <MdOutlineLanguage size={18} />
-                  {selectedState && <span className="region-dot" />}
-                </button>
-
-                {/* Sign in */}
-                <button
-                  className="landing-icon-btn"
-                  onClick={() => navigate(`/auth/login${prefix}`)}
-                  title="Sign in"
-                >
-                  <MdPersonOutline size={18} />
-                </button>
-              </div>
-            {/* )} */}
+              <button className="landing-icon-btn" onClick={toggle} title={theme === "dark" ? "Light mode" : "Dark mode"}>
+                {theme === "dark" ? <MdOutlineLightMode size={18} /> : <MdOutlineDarkMode size={18} />}
+              </button>
+              <button className="landing-icon-btn" onClick={() => setStateOpen((v) => !v)} title="Select region">
+                <MdOutlineLanguage size={18} />
+                {selectedState && <span className="region-dot" />}
+              </button>
+              <button className="landing-icon-btn" onClick={() => navigate(`/auth/login${prefix}`)} title="Sign in">
+                <MdPersonOutline size={18} />
+              </button>
+            </div>
 
             {/* Hamburger — mobile only */}
-            <button
-              className="landing-hamburger"
-              onClick={() => setMobileOpen(true)}
-              aria-label="Open menu"
-            >
+            <button className="landing-hamburger" onClick={() => setMobileOpen(true)} aria-label="Open menu">
               <MdMenu size={22} />
             </button>
           </div>
@@ -179,10 +115,7 @@ function Header() {
         {/* State dropdown (desktop) */}
         {stateOpen && (
           <>
-            <div
-              className="state_dropdown_backdrop"
-              onClick={() => setStateOpen(false)}
-            />
+            <div className="state_dropdown_backdrop" onClick={() => setStateOpen(false)} />
             <div className="state_dropdown">
               <p className="state_dropdown_label">Select Region</p>
               {states.length === 0 ? (
@@ -197,26 +130,13 @@ function Header() {
                       onClick={() => handleStateSelect(state)}
                     >
                       <div className="state_dropdown_item_left">
-                        <span className="state_dropdown_name">
-                          {state.name}
-                        </span>
-                        {state.currency && (
-                          <span className="state_dropdown_currency">
-                            {state.currency}
-                          </span>
-                        )}
+                        <span className="state_dropdown_name">{state.name}</span>
+                        {state.currency && <span className="state_dropdown_currency">{state.currency}</span>}
                       </div>
-                      {active ? (
-                        <MdCheckCircle
-                          size={15}
-                          style={{ color: "var(--accent)", flexShrink: 0 }}
-                        />
-                      ) : (
-                        <MdCircle
-                          size={13}
-                          style={{ color: "var(--border)", flexShrink: 0 }}
-                        />
-                      )}
+                      {active
+                        ? <MdCheckCircle size={15} style={{ color: "var(--accent)", flexShrink: 0 }} />
+                        : <MdCircle size={13} style={{ color: "var(--border)", flexShrink: 0 }} />
+                      }
                     </button>
                   );
                 })
@@ -227,82 +147,23 @@ function Header() {
       </header>
 
       {/* ── Mobile Slide-in Menu ── */}
-      {mobileOpen && (
-        <div
-          className="mobile_menu_backdrop"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-      <div
-        className={`mobile_menu_drawer ${mobileOpen ? "mobile_menu_drawer_open" : ""}`}
-      >
+      {mobileOpen && <div className="mobile_menu_backdrop" onClick={() => setMobileOpen(false)} />}
+      <div className={`mobile_menu_drawer ${mobileOpen ? "mobile_menu_drawer_open" : ""}`}>
         <div className="mobile_menu_header">
-          <Link
-            to="/"
-            className="landing-header-logo"
-            onClick={() => setMobileOpen(false)}
-          >
-            <img
-              src={theme === "dark" ? nora_logo_white : nora_logo_dark}
-              alt="nora_logo"
-              className="sidebar_logo"
-            />
+          <Link to="/" className="landing-header-logo" onClick={() => setMobileOpen(false)}>
+            <img src={theme === "dark" ? nora_logo_white : nora_logo_dark} alt="nora_logo" className="sidebar_logo" />
           </Link>
-          <button
-            className="landing-icon-btn"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Close menu"
-          >
+          <button className="landing-icon-btn" onClick={() => setMobileOpen(false)} aria-label="Close menu">
             <MdClose size={20} />
           </button>
         </div>
 
         <nav className="mobile_menu_nav">
-          <button
-            className="mobile_menu_link"
-            onClick={() => {
-              scrollTo("home");
-              setMobileOpen(false);
-            }}
-          >
-            Home
-          </button>
-          <button
-            className="mobile_menu_link"
-            onClick={() => {
-              scrollTo("how");
-              setMobileOpen(false);
-            }}
-          >
-            Why Nora
-          </button>
-          <button
-            className="mobile_menu_link"
-            onClick={() => {
-              scrollTo("solutions");
-              setMobileOpen(false);
-            }}
-          >
-            Solution
-          </button>
-          <button
-            className="mobile_menu_link"
-            onClick={() => {
-              navigate("/shop");
-              setMobileOpen(false);
-            }}
-          >
-            Shop
-          </button>
-          <button
-            className="mobile_menu_link"
-            onClick={() => {
-              scrollTo("contact");
-              setMobileOpen(false);
-            }}
-          >
-            Contact
-          </button>
+          <button className="mobile_menu_link" onClick={() => { scrollTo("home"); setMobileOpen(false); }}>Home</button>
+          <button className="mobile_menu_link" onClick={() => { scrollTo("how"); setMobileOpen(false); }}>Why Nora</button>
+          <button className="mobile_menu_link" onClick={() => { scrollTo("solutions"); setMobileOpen(false); }}>Solution</button>
+          <button className="mobile_menu_link" onClick={() => goToShop(true)}>Shop</button>
+          <button className="mobile_menu_link" onClick={() => { scrollTo("contact"); setMobileOpen(false); }}>Contact</button>
         </nav>
 
         <div className="mobile_menu_divider" />
@@ -317,23 +178,11 @@ function Header() {
                   <button
                     key={state.id}
                     className={`mobile_menu_region_btn ${active ? "mobile_menu_region_btn_active" : ""}`}
-                    onClick={() => {
-                      handleStateSelect(state);
-                      setMobileOpen(false);
-                    }}
+                    onClick={() => { handleStateSelect(state); setMobileOpen(false); }}
                   >
                     {state.name}
-                    {state.currency && (
-                      <span className="mobile_menu_currency">
-                        {state.currency}
-                      </span>
-                    )}
-                    {active && (
-                      <MdCheckCircle
-                        size={14}
-                        style={{ color: "var(--accent)", marginLeft: "auto" }}
-                      />
-                    )}
+                    {state.currency && <span className="mobile_menu_currency">{state.currency}</span>}
+                    {active && <MdCheckCircle size={14} style={{ color: "var(--accent)", marginLeft: "auto" }} />}
                   </button>
                 );
               })}
@@ -345,40 +194,8 @@ function Header() {
 
         <div className="mobile_menu_actions">
           <button className="mobile_menu_action_row" onClick={toggle}>
-            {theme === "dark" ? (
-              <>
-                <MdOutlineLightMode size={17} /> Light Mode
-              </>
-            ) : (
-              <>
-                <MdOutlineDarkMode size={17} /> Dark Mode
-              </>
-            )}
+            {theme === "dark" ? <><MdOutlineLightMode size={17} /> Light Mode</> : <><MdOutlineDarkMode size={17} /> Dark Mode</>}
           </button>
-
-          {/* {user ? (
-            <button
-              className="app_btn app_btn_confirm"
-              style={{ width: "100%", height: 44, marginTop: 8 }}
-              onClick={() => {
-                navigate("/app");
-                setMobileOpen(false);
-              }}
-            >
-              Dashboard
-            </button>
-          ) : (
-            <button
-              className="app_btn app_btn_confirm"
-              style={{ width: "100%", height: 44, marginTop: 8 }}
-              onClick={() => {
-                navigate(`/auth/login${prefix}`);
-                setMobileOpen(false);
-              }}
-            >
-              Sign In
-            </button>
-          )} */}
         </div>
       </div>
     </>
