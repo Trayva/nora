@@ -116,9 +116,8 @@ function Footer() {
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} nora.</span>
           <div className="footer-legal">
-            <a href="/legal/privacy-policy">Privacy & Legal</a>
+            <a href="/legal/privacy-policy">Privacy Policy</a>
             <a href="/legal/terms">Terms of Service</a>
-            <a href="/news">News</a>
           </div>
         </div>
       </footer>

@@ -67,6 +67,12 @@ const STATUS = {
     border: "rgba(107,114,128,0.2)",
     label: "Cancelled",
   },
+  SUPPLIER_REVIEWED: {
+    color: "#8b5cf6",
+    bg: "rgba(139,92,246,0.1)",
+    border: "rgba(139,92,246,0.25)",
+    label: "Reviewed",
+  },
 };
 const getS = (k) => STATUS[k] || STATUS.PENDING;
 
@@ -1037,27 +1043,35 @@ function SupplyItemRow({ item, stateId }) {
 
 /* ── Review Panel ─────────────────────────────────────────── */
 function ReviewPanel({ req, profile, onDone, onCancel }) {
-  const firstItem = req.items?.[0];
-  const [ingredient, setIngredient] = useState(firstItem?.ingredient || null);
-  const [suppliedQty, setSuppliedQty] = useState(
-    firstItem?.quantity?.toString() || "",
+  // One qty entry per supply item, keyed by item.id
+  const [qtys, setQtys] = useState(() =>
+    Object.fromEntries(
+      (req.items || []).map((it) => [it.id, it.quantity?.toString() || ""]),
+    ),
   );
   const [cannotSupply, setCannotSupply] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const setQty = (id, val) => setQtys((prev) => ({ ...prev, [id]: val }));
+
   const submit = async () => {
-    if (!ingredient) return toast.error("Select an ingredient");
-    const qty = cannotSupply ? 0 : Number(suppliedQty);
-    if (!cannotSupply && (isNaN(qty) || qty <= 0))
-      return toast.error("Enter a valid quantity");
+    if (!cannotSupply) {
+      const invalid = (req.items || []).some(
+        (it) => isNaN(Number(qtys[it.id])) || Number(qtys[it.id]) < 0,
+      );
+      if (invalid) return toast.error("Enter valid quantities for all items");
+    }
     setSubmitting(true);
     try {
+      // One PATCH to the supply request id, items array uses ingredientId + suppliedQuantity
       await api.patch(`/icart/supply/${req.id}/review`, {
-        ingredientId: ingredient.id,
-        suppliedQuantity: qty,
+        items: (req.items || []).map((it) => ({
+          itemId: it.id,
+          suppliedQuantity: cannotSupply ? 0 : Number(qtys[it.id] || 0),
+        })),
       });
       toast.success(
-        cannotSupply ? "Submitted — 0 supplied" : "Request accepted!",
+        cannotSupply ? "Submitted — 0 supplied" : "Review submitted!",
       );
       onDone();
     } catch (err) {
@@ -1075,81 +1089,122 @@ function ReviewPanel({ req, profile, onDone, onCancel }) {
         borderTop: "1px solid var(--border)",
         display: "flex",
         flexDirection: "column",
-        gap: 10,
+        gap: 12,
       }}
     >
       <div
         style={{
-          fontSize: "0.7rem",
-          fontWeight: 800,
-          color: "var(--text-muted)",
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        Review Request
-      </div>
-
-      <div>
-        <label className="modal-label">Ingredient *</label>
-        <IngredientSearch
-          value={ingredient}
-          onChange={(item) => setIngredient(item)}
-        />
-      </div>
-
-      <div>
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 6,
+            fontSize: "0.7rem",
+            fontWeight: 800,
+            color: "var(--text-muted)",
+            textTransform: "uppercase",
+            letterSpacing: "0.06em",
           }}
         >
-          <label className="modal-label" style={{ margin: 0 }}>
-            Quantity to Supply
-          </label>
-          <button
-            onClick={() => setCannotSupply((v) => !v)}
-            style={{
-              background: "none",
-              border: "none",
-              color: cannotSupply ? "#ef4444" : "var(--text-muted)",
-              fontSize: "0.7rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              fontFamily: "inherit",
-              padding: 0,
-            }}
-          >
-            {cannotSupply ? "✕ Can't supply" : "Can't supply?"}
-          </button>
+          Review Request
         </div>
-        {cannotSupply ? (
-          <div
-            style={{
-              padding: "9px 12px",
-              background: "rgba(239,68,68,0.06)",
-              border: "1px solid rgba(239,68,68,0.2)",
-              borderRadius: 9,
-              fontSize: "0.78rem",
-              color: "#ef4444",
-              fontWeight: 600,
-            }}
-          >
-            Will submit 0 as supplied quantity
-          </div>
-        ) : (
-          <input
-            className="modal-input"
-            type="number"
-            placeholder={`Requested: ${firstItem?.quantity?.toLocaleString() || "—"}`}
-            value={suppliedQty}
-            onChange={(e) => setSuppliedQty(e.target.value)}
-          />
-        )}
+        <button
+          onClick={() => setCannotSupply((v) => !v)}
+          style={{
+            background: "none",
+            border: "none",
+            color: cannotSupply ? "#ef4444" : "var(--text-muted)",
+            fontSize: "0.7rem",
+            fontWeight: 700,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            padding: 0,
+          }}
+        >
+          {cannotSupply ? "✕ Can't supply" : "Can't supply?"}
+        </button>
       </div>
+
+      {cannotSupply ? (
+        <div
+          style={{
+            padding: "9px 12px",
+            background: "rgba(239,68,68,0.06)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            borderRadius: 9,
+            fontSize: "0.78rem",
+            color: "#ef4444",
+            fontWeight: 600,
+          }}
+        >
+          Will submit 0 as supplied quantity for all items
+        </div>
+      ) : (
+        (req.items || []).map((it) => (
+          <div key={it.id}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 6,
+              }}
+            >
+              {it.ingredient?.image ? (
+                <img
+                  src={it.ingredient.image}
+                  alt=""
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    objectFit: "cover",
+                    flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    background: "var(--bg-hover)",
+                    border: "1px solid var(--border)",
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    color: "var(--text-body)",
+                  }}
+                >
+                  {it.ingredient?.name || "Item"}
+                </div>
+                <div
+                  style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
+                >
+                  Requested: {it.quantity?.toLocaleString()}
+                  {it.ingredient?.unit || ""}
+                </div>
+              </div>
+            </div>
+            <input
+              className="modal-input"
+              type="number"
+              min="0"
+              placeholder={`Qty to supply (of ${it.quantity?.toLocaleString()}${it.ingredient?.unit || ""})`}
+              value={qtys[it.id] || ""}
+              onChange={(e) => setQty(it.id, e.target.value)}
+            />
+          </div>
+        ))
+      )}
 
       <div style={{ display: "flex", gap: 8 }}>
         <button
@@ -1876,7 +1931,7 @@ export default function SupplierHome() {
     try {
       const r = await api.get("/icart/supply");
       const d = r.data.data;
-      setRequests(Array.isArray(d) ? d : d?.items || []);
+      setRequests(Array.isArray(d) ? d : d?.requests || []);
     } catch {
       toast.error("Failed to load supply requests");
     } finally {
@@ -1915,9 +1970,27 @@ export default function SupplierHome() {
               marginBottom: 3,
             }}
           >
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: "var(--bg-active)",
+                border: "1px solid rgba(203,108,220,0.2)",
+                color: "var(--accent)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <PiTruck size={15} />
+            </div>
             <h2 className="page_title_big m-0">Supplier</h2>
           </div>
-          <p className="welcome_message" style={{ marginBottom: 0 }}>
+          <p
+            className="welcome_message"
+            style={{ marginBottom: 0, paddingLeft: 41 }}
+          >
             Manage your business and fulfil supply requests
           </p>
         </div>
