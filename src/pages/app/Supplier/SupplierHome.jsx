@@ -381,14 +381,14 @@ function ProfileCard({ profile, onEdit }) {
         marginBottom: 28,
       }}
     >
-      <div
+      {/* <div
         style={{
           height: 3,
           background: profile.isApproved
             ? "linear-gradient(90deg,#16a34a,#22c55e)"
             : "linear-gradient(90deg,#ca8a04,#eab308)",
         }}
-      />
+      /> */}
       <div style={{ padding: "18px 20px" }}>
         <div
           style={{
