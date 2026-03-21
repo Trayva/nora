@@ -50,7 +50,7 @@ export default function ConceptCard({ concept, onUpdate, onOpen, onOverview }) {
               e.stopPropagation();
               onOverview();
             }}
-            title="Concept overview"
+            title="Concept overviez"
             style={{ width: 28, height: 28, borderRadius: 7 }}
           >
             <MdOutlineBarChart size={14} />

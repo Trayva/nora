@@ -761,9 +761,14 @@ function AddItemModal({ conceptId, onClose, onSuccess }) {
       fd.append("conceptId", conceptId);
       fd.append("name", form.name);
       if (form.description) fd.append("description", form.description);
-      if (form.ticketTime) fd.append("ticketTime", form.ticketTime);
       if (image) fd.append("image", image);
-      await createMenuItem(fd);
+
+      // Build query string for numeric field
+      const params = new URLSearchParams();
+      if (form.ticketTime)
+        params.append("ticketTime", parseInt(form.ticketTime, 10));
+
+      await createMenuItem(fd, params.toString());
       toast.success("Item added!");
       onSuccess();
     } catch (err) {
@@ -772,7 +777,6 @@ function AddItemModal({ conceptId, onClose, onSuccess }) {
       setLoading(false);
     }
   };
-
   return (
     <Modal
       isOpen

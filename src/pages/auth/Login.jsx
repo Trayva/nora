@@ -9,6 +9,8 @@ import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 import nora_logo_white from "../../assets/nora_white.png";
 import nora_logo_dark from "../../assets/nora_dark.png";
 import { useTheme } from "../../contexts/ThemeContext";
+import { getDefaultRoute } from "../../utils/AuthHelpers";
+import useQuery from "../../hooks/useQuery";
 
 const loginSchema = Yup.object().shape({
   email: Yup.string().email("Invalid email").required("Email is required"),
@@ -18,9 +20,11 @@ const loginSchema = Yup.object().shape({
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { theme } = useTheme();
+  const query = useQuery();
+  const cbUrl = query.get("cbUrl"); // honour callback URL if present
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { theme, toggle } = useTheme();
 
   const handleSubmit = async (values) => {
     setLoading(true);
@@ -28,8 +32,9 @@ export default function Login() {
       const response = await api.post("/auth/login", values);
       const { accessToken, refreshToken, user } = response.data.data;
       login(user, accessToken, refreshToken);
-      toast.success("Login successful!");
-      navigate("/app");
+      toast.success("Welcome back!");
+      // Honour cbUrl first, then default to role-based route
+      navigate(cbUrl || getDefaultRoute(user));
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed");
     } finally {

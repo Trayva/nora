@@ -7,6 +7,7 @@ import {
   BsYoutube,
 } from "react-icons/bs";
 import { useAuth } from "../../contexts/AuthContext";
+import { getDefaultRoute, getPrimaryRole } from "../../utils/AuthHelpers";
 
 const scrollTo = (id) =>
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -15,12 +16,24 @@ function Footer() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // If logged in, go to the app route. If not, go to register.
-  const handleRoleLink = (appPath) => {
+  /**
+   * Role-aware navigation for platform links.
+   * - Logged in + already has the matching role → send to their default route
+   * - Logged in + different role → send to the requested app path directly
+   * - Not logged in → register with ?role= so registration pre-selects the role
+   */
+  const handleRoleLink = (appPath, targetRole) => {
     if (user) {
-      navigate(appPath);
+      const primaryRole = getPrimaryRole(user);
+      // If they already are this role, go to their natural home
+      // Otherwise go to the specific page (they may have multiple roles)
+      if (primaryRole === targetRole.toUpperCase()) {
+        navigate(getDefaultRoute(user));
+      } else {
+        navigate(appPath);
+      }
     } else {
-      navigate("/auth/register");
+      navigate(`/auth/register?role=${targetRole}`);
     }
   };
 
@@ -45,7 +58,6 @@ function Footer() {
       {/* Footer */}
       <footer className="footer-main">
         <div className="footer-inner">
-
           {/* Brand */}
           <div className="footer-col">
             <span className="footer-logo">nora</span>
@@ -53,11 +65,21 @@ function Footer() {
               Empowering business owners to scale smarter and faster.
             </p>
             <div className="footer-socials">
-              <a href="#" aria-label="Twitter"><BsTwitterX size={16} /></a>
-              <a href="#" aria-label="Facebook"><BsFacebook size={16} /></a>
-              <a href="#" aria-label="Instagram"><BsInstagram size={16} /></a>
-              <a href="#" aria-label="YouTube"><BsYoutube size={16} /></a>
-              <a href="#" aria-label="LinkedIn"><BsLinkedin size={16} /></a>
+              <a href="#" aria-label="Twitter">
+                <BsTwitterX size={16} />
+              </a>
+              <a href="#" aria-label="Facebook">
+                <BsFacebook size={16} />
+              </a>
+              <a href="#" aria-label="Instagram">
+                <BsInstagram size={16} />
+              </a>
+              <a href="#" aria-label="YouTube">
+                <BsYoutube size={16} />
+              </a>
+              <a href="#" aria-label="LinkedIn">
+                <BsLinkedin size={16} />
+              </a>
             </div>
           </div>
 
@@ -66,19 +88,19 @@ function Footer() {
             <span className="footer-col-heading">Platform</span>
             <button
               className="footer-link-btn"
-              onClick={() => handleRoleLink("/app/supplier")}
+              onClick={() => handleRoleLink("/app/supplier", "supplier")}
             >
               Become a Supplier
             </button>
             <button
               className="footer-link-btn"
-              onClick={() => handleRoleLink("/app/operator")}
+              onClick={() => handleRoleLink("/app/operator", "operator")}
             >
               Become an Operator
             </button>
             <button
               className="footer-link-btn"
-              onClick={() => handleRoleLink("/app/business")}
+              onClick={() => handleRoleLink("/app/business", "vendor")}
             >
               Vendor Application
             </button>
@@ -103,13 +125,13 @@ function Footer() {
           <div className="footer-col">
             <span className="footer-col-heading">Contact</span>
             <p className="footer-address">
-              Office 1703- Fahidi Heights-Alhamriya<br />
+              Office 1703- Fahidi Heights-Alhamriya
+              <br />
               Dubai-United Arab Emirates
             </p>
             <a href="mailto:support@trynora.net">support@trynora.net</a>
             <a href="tel:+2348012345678">+234 80 123 4567</a>
           </div>
-
         </div>
 
         {/* Copyright bar */}

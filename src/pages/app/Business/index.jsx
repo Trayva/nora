@@ -1,26 +1,29 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
-import { LuPenLine, LuPlus } from "react-icons/lu";
+import { LuPlus } from "react-icons/lu";
 import { MdOutlineBusiness } from "react-icons/md";
 import { getVendorProfile } from "../../../api/vendor";
 import BusinessProfile from "./BusinessProfile";
 import ConceptsTab from "./ConceptsTab";
 import RegisterBusinessModal from "./RegisterBusinessModal";
+import ConceptOverviewDrawer from "./ConceptOverviewDrawer";
 import "./Business.css";
 import ExtrasTab from "./ExtrasTab";
 
 export default function Business() {
+  const location = useLocation();
   const [vendor, setVendor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("concepts");
   const [showRegister, setShowRegister] = useState(false);
+  const [overviewConcept, setOverviewConcept] = useState(null);
 
   const fetchVendor = async () => {
     try {
       const res = await getVendorProfile();
       setVendor(res.data.data);
     } catch (err) {
-      // 404 = not registered yet, that's fine
       if (err.response?.status !== 404) {
         toast.error("Failed to load business profile");
       }
@@ -33,6 +36,15 @@ export default function Business() {
     fetchVendor();
   }, []);
 
+  // If navigated here from IcartDrawer with a concept to preview
+  useEffect(() => {
+    if (location.state?.openConcept) {
+      setOverviewConcept(location.state.openConcept);
+      // Clear state so a refresh doesn't re-open it
+      window.history.replaceState({}, "");
+    }
+  }, [location.state]);
+
   if (loading) {
     return (
       <div className="page_wrapper">
@@ -43,7 +55,6 @@ export default function Business() {
     );
   }
 
-  // Not registered yet
   if (!vendor) {
     return (
       <div className="page_wrapper">
@@ -74,16 +85,20 @@ export default function Business() {
           }}
           mode="register"
         />
+
+        {/* Still allow overview to open even if vendor not loaded yet */}
+        <ConceptOverviewDrawer
+          concept={overviewConcept}
+          onClose={() => setOverviewConcept(null)}
+        />
       </div>
     );
   }
 
   return (
     <div className="business_page">
-      {/* Profile header */}
       <BusinessProfile vendor={vendor} onUpdate={fetchVendor} />
 
-      {/* X-style tab bar */}
       <div className="business_tabs">
         <button
           className={`business_tab ${activeTab === "concepts" ? "business_tab_active" : ""}`}
@@ -105,7 +120,6 @@ export default function Business() {
         </button>
       </div>
 
-      {/* Tab content */}
       <div className="business_tab_content">
         {activeTab === "extras" ? (
           <ExtrasTab />
@@ -113,6 +127,12 @@ export default function Business() {
           <ConceptsTab activeTab={activeTab} />
         )}
       </div>
+
+      {/* Opens automatically when navigated from iCart active concepts */}
+      <ConceptOverviewDrawer
+        concept={overviewConcept}
+        onClose={() => setOverviewConcept(null)}
+      />
     </div>
   );
 }

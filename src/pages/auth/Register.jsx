@@ -12,6 +12,7 @@ import useQuery from "../../hooks/useQuery";
 import nora_logo_white from "../../assets/nora_white.png";
 import nora_logo_dark from "../../assets/nora_dark.png";
 import { useTheme } from "../../contexts/ThemeContext";
+import { roleParamToRoles, getDefaultRoute } from "../../utils/AuthHelpers";
 
 const registerSchema = Yup.object().shape({
   fullName: Yup.string()
@@ -31,7 +32,7 @@ const registerSchema = Yup.object().shape({
 export default function Register() {
   const navigate = useNavigate();
   const query = useQuery();
-  const roleFromQuery = query.get("role");
+  const roleParam = query.get("role"); // e.g. "vendor", "supplier", "operator"
   const { login } = useAuth();
   const { theme } = useTheme();
   const [loading, setLoading] = useState(false);
@@ -40,14 +41,14 @@ export default function Register() {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      const dataWithRoles = {
+      // 1. Register — include roles from ?role= param
+      await api.post("/auth/register", {
         ...values,
         phone: `+${values.phone}`,
-        roles: roleFromQuery ? [roleFromQuery] : [],
-      };
+        roles: roleParamToRoles(roleParam),
+      });
 
-      await api.post("/auth/register", dataWithRoles);
-
+      // 2. Auto-login immediately after registration
       const loginResponse = await api.post("/auth/login", {
         email: values.email,
         password: values.password,
@@ -55,36 +56,47 @@ export default function Register() {
 
       const { accessToken, refreshToken, user } = loginResponse.data.data;
 
-      localStorage.setItem(
-        "trayva-auth",
-        JSON.stringify({ token: accessToken, refreshToken, user }),
-      );
+      // 3. Persist session
+      login(user, accessToken, refreshToken);
 
-      try {
-        await api.post(
+      // 4. Request email verification (non-blocking)
+      api
+        .post(
           "/auth/request-verification",
           { type: "email" },
           { headers: { Authorization: `Bearer ${accessToken}` } },
-        );
-        toast.success("Verification code sent to your email!");
-      } catch (verifyError) {
-        console.error("Verification request failed:", verifyError);
-        toast.info("Please check your email for verification code.");
-      }
+        )
+        .catch(() => {});
 
+      toast.success("Account created! Welcome to Nora 🎉");
+
+      // 5. Redirect to OTP verification, then deep-link to role's default page
       navigate("/auth/verify-otp", {
-        state: { email: values.email, verificationType: "email" },
+        state: {
+          email: values.email,
+          verificationType: "email",
+          // After OTP, redirect to the right page for this role
+          nextRoute: getDefaultRoute(user),
+        },
       });
     } catch (error) {
-      const errorMessage =
+      toast.error(
         error.response?.data?.message ||
-        error.response?.data?.error ||
-        "Registration failed";
-      toast.error(errorMessage);
+          error.response?.data?.error ||
+          "Registration failed",
+      );
     } finally {
       setLoading(false);
     }
   };
+
+  // Role label for the heading
+  const roleLabel =
+    {
+      vendor: "as a Vendor",
+      supplier: "as a Supplier",
+      operator: "as an Operator",
+    }[roleParam?.toLowerCase()] || "";
 
   return (
     <div>
@@ -94,7 +106,7 @@ export default function Register() {
         className="sidebar_logo"
         style={{ marginBottom: 16 }}
       />
-      <h3 className="profile_header">Get Started</h3>
+      <h3 className="profile_header">Get Started {roleLabel}</h3>
       <p className="welcome_message">
         Nora - Your All-in-One Ecosystem for Quick Restaurant Expansion
       </p>
@@ -122,6 +134,7 @@ export default function Register() {
                 <span className="login_field_error">{errors.fullName}</span>
               )}
             </div>
+
             {/* Email + Phone row */}
             <div className="register_row">
               <div className="form-field" style={{ flex: 1 }}>
@@ -160,6 +173,7 @@ export default function Register() {
                 )}
               </div>
             </div>
+
             {/* Password */}
             <div className="form-field">
               <label className="modal-label">Password</label>
@@ -203,7 +217,7 @@ export default function Register() {
                 height: 42,
               }}
             >
-              <span className="btn_text">Continue</span>
+              <span className="btn_text">Create Account</span>
               {loading && (
                 <span
                   className="btn_loader"
