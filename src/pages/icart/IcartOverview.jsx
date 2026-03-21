@@ -15,6 +15,7 @@ import {
   MdExpandMore,
   MdExpandLess,
   MdImage,
+  MdRestaurantMenu,
 } from "react-icons/md";
 import api from "../../api/axios";
 
@@ -267,9 +268,30 @@ function LocationForm({ cartId, onSaved, onCancel }) {
 }
 
 /* ── Concept Card ───────────────────────────────────────────── */
-function ConceptCard({ concept, onConceptClick }) {
+function ConceptCard({ concept, cartId, onConceptClick, onMarkupUpdated }) {
   const [expanded, setExpanded] = useState(false);
+  const [editingMarkup, setEditingMarkup] = useState(false);
+  const [markupVal, setMarkupVal] = useState(concept.markup?.toString() || "");
+  const [savingMarkup, setSavingMarkup] = useState(false);
   const menuItems = concept.menuItems || [];
+
+  const saveMarkup = async () => {
+    const val = Number(markupVal);
+    if (isNaN(val) || val < 0) return toast.error("Enter a valid markup %");
+    setSavingMarkup(true);
+    try {
+      await api.patch(`/icart/${cartId}/concepts/${concept.id}/markup`, {
+        markup: val,
+      });
+      toast.success("Markup updated");
+      setEditingMarkup(false);
+      if (onMarkupUpdated) onMarkupUpdated(concept.id, val);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update markup");
+    } finally {
+      setSavingMarkup(false);
+    }
+  };
 
   return (
     <div
@@ -295,7 +317,7 @@ function ConceptCard({ concept, onConceptClick }) {
           <MdStorefront size={14} />
         </div>
         <div className="icart_concept_info" style={{ flex: 1, minWidth: 0 }}>
-          <div className="icart_concept_name">{concept.name || `Concept`}</div>
+          <div className="icart_concept_name">{concept.name || "Concept"}</div>
           <div className="icart_task_meta">
             {concept.status && <span>{concept.status}</span>}
             {menuItems.length > 0 && (
@@ -304,12 +326,6 @@ function ConceptCard({ concept, onConceptClick }) {
                 <span>
                   {menuItems.length} item{menuItems.length !== 1 ? "s" : ""}
                 </span>
-              </>
-            )}
-            {concept.markup != null && (
-              <>
-                <span className="contract_row_dot">·</span>
-                <span>{concept.markup}% markup</span>
               </>
             )}
           </div>
@@ -326,28 +342,156 @@ function ConceptCard({ concept, onConceptClick }) {
               style={{ color: "var(--text-muted)", flexShrink: 0 }}
             />
           ))}
-        {onConceptClick && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onConceptClick(concept);
-            }}
-            style={{
-              background: "var(--bg-active)",
-              border: "1px solid rgba(203,108,220,0.25)",
-              borderRadius: 7,
-              color: "var(--accent)",
-              fontSize: "0.65rem",
-              fontWeight: 700,
-              padding: "3px 9px",
-              cursor: "pointer",
-              fontFamily: "inherit",
-              flexShrink: 0,
-              whiteSpace: "nowrap",
-            }}
+      </div>
+
+      {/* Action row — markup editor + overview CTA */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "8px 14px 12px",
+          borderTop: "1px solid var(--border)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {editingMarkup ? (
+          <div
+            style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}
           >
-            Overview
-          </button>
+            <div style={{ position: "relative", flex: 1 }}>
+              <input
+                className="modal-input"
+                type="number"
+                min="0"
+                style={{
+                  marginBottom: 0,
+                  height: 32,
+                  paddingRight: 24,
+                  fontSize: "0.8rem",
+                }}
+                placeholder="e.g. 30"
+                value={markupVal}
+                onChange={(e) => setMarkupVal(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && saveMarkup()}
+                autoFocus
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  right: 9,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  fontSize: "0.72rem",
+                  color: "var(--text-muted)",
+                  pointerEvents: "none",
+                  fontWeight: 700,
+                }}
+              >
+                %
+              </span>
+            </div>
+            <button
+              className={`app_btn app_btn_confirm${savingMarkup ? " btn_loading" : ""}`}
+              style={{
+                height: 32,
+                padding: "0 12px",
+                fontSize: "0.74rem",
+                position: "relative",
+                flexShrink: 0,
+              }}
+              onClick={saveMarkup}
+              disabled={savingMarkup}
+            >
+              <span className="btn_text">Save</span>
+              {savingMarkup && (
+                <span
+                  className="btn_loader"
+                  style={{ width: 11, height: 11 }}
+                />
+              )}
+            </button>
+            <button
+              className="app_btn app_btn_cancel"
+              style={{
+                height: 32,
+                padding: "0 10px",
+                fontSize: "0.74rem",
+                flexShrink: 0,
+              }}
+              onClick={() => {
+                setEditingMarkup(false);
+                setMarkupVal(concept.markup?.toString() || "");
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              onClick={() => setEditingMarkup(true)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                background: "none",
+                border: "1px dashed var(--border)",
+                borderRadius: 7,
+                padding: "4px 10px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                color:
+                  concept.markup != null
+                    ? "var(--accent)"
+                    : "var(--text-muted)",
+                flex: 1,
+                transition: "border-color 0.15s",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.borderColor = "rgba(203,108,220,0.5)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.borderColor = "var(--border)")
+              }
+            >
+              <MdEdit size={12} />
+              {concept.markup != null
+                ? `${concept.markup}% markup`
+                : "Set markup"}
+            </button>
+
+            {onConceptClick && (
+              <button
+                onClick={() => onConceptClick(concept)}
+                style={{
+                  height: 32,
+                  padding: "0 14px",
+                  fontSize: "0.74rem",
+                  fontWeight: 800,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  flexShrink: 0,
+                  background: "var(--accent)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  boxShadow: "0 2px 8px rgba(203,108,220,0.35)",
+                  transition: "opacity 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+              >
+                <MdRestaurantMenu size={13} />
+                View Overview
+              </button>
+            )}
+          </>
         )}
       </div>
 
@@ -1168,7 +1312,17 @@ export default function IcartOverview({
             <ConceptCard
               key={c.id || i}
               concept={c}
+              cartId={cart.id}
               onConceptClick={onConceptClick}
+              onMarkupUpdated={(conceptId, markup) => {
+                // Optimistically update local cart state
+                onUpdate({
+                  ...cart,
+                  concepts: cart.concepts.map((cc) =>
+                    cc.id === conceptId ? { ...cc, markup } : cc,
+                  ),
+                });
+              }}
             />
           ))}
         </div>
