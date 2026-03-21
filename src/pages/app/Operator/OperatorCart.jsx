@@ -898,43 +898,203 @@ function PaymentBadge({ method }) {
   );
 }
 
-/* ── Record Sale Form ─────────────────────────────────────── */
-function QtyControl({ value, onChange }) {
+/* ── Record Sale Form — shop-style with variants & extras ─── */
+function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
+  const hasVariants = item.variants?.length > 0;
+  const hasExtras   = item.extras?.length > 0;
+  const [selectedVariant, setSelectedVariant] = useState(hasVariants ? item.variants[0].id : null);
+  const [selectedExtras,  setSelectedExtras]  = useState([]);
+  const [qty,             setQty]             = useState(1);
+  const [price,           setPrice]           = useState(item.sellingPrice || 0);
+  const [fetchingPrice,   setFetchingPrice]   = useState(false);
+
+  useEffect(() => {
+    setFetchingPrice(true);
+    api.get(`/library/price/menu/${item.id}`, { params: {
+      cartId,
+      ...(selectedVariant ? { variantId: selectedVariant } : {}),
+      ...(selectedExtras.length ? { "extras[]": selectedExtras } : {}),
+    }})
+      .then((r) => {
+        const d = r.data.data;
+        setPrice(Number(d?.sellingPrice ?? d?.price ?? d?.total ?? item.sellingPrice ?? 0));
+      })
+      .catch(() => setPrice(item.sellingPrice || 0))
+      .finally(() => setFetchingPrice(false));
+  }, [selectedVariant, selectedExtras.join(",")]);
+
+  const toggleExtra = (id) => setSelectedExtras((p) => p.includes(id) ? p.filter((e) => e !== id) : [...p, id]);
+
+  const confirm = () => {
+    const variantObj = item.variants?.find((v) => v.id === selectedVariant) || null;
+    const extrasObjs = item.extras?.filter((e) => selectedExtras.includes(e.id)) || [];
+    onConfirm({ item, qty, variantId: selectedVariant, extraIds: selectedExtras, variantLabel: variantObj?.name || null, extrasLabels: extrasObjs.map((e) => e.name), unitPrice: price });
+    onClose();
+  };
+
+  const totalPrice = price * qty;
+  const fmt = (n) => Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+
   return (
-    <div style={{ display: "flex", alignItems: "center", background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 9, overflow: "hidden" }}>
-      <button onClick={() => onChange(Math.max(1, value - 1))} style={{ width: 32, height: 32, background: "transparent", border: "none", color: "var(--text-body)", cursor: "pointer", fontSize: "1rem", fontFamily: "inherit" }}>−</button>
-      <div style={{ minWidth: 36, textAlign: "center", fontSize: "0.9rem", fontWeight: 800, color: "var(--text-heading)", borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)", lineHeight: "32px" }}>{value}</div>
-      <button onClick={() => onChange(value + 1)} style={{ width: 32, height: 32, background: "transparent", border: "none", color: "var(--text-body)", cursor: "pointer", fontSize: "1rem", fontFamily: "inherit" }}>+</button>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1200, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)" }} />
+      <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 520, background: "var(--bg-card)", borderRadius: "20px 20px 0 0", maxHeight: "88vh", display: "flex", flexDirection: "column", boxShadow: "0 -8px 40px rgba(0,0,0,0.2)", animation: "saleSlideUp 0.25s ease" }}>
+        <style>{`@keyframes saleSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
+          <div style={{ width: 36, height: 4, borderRadius: 999, background: "var(--border)" }} />
+        </div>
+        <div style={{ overflowY: "auto", flex: 1, padding: "0 20px 8px" }}>
+          {/* Item header */}
+          <div style={{ display: "flex", gap: 14, marginBottom: 20, paddingTop: 4 }}>
+            {item.image
+              ? <img src={item.image} alt={item.name} style={{ width: 72, height: 72, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+              : <div style={{ width: 72, height: 72, borderRadius: 12, background: "var(--bg-hover)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MdImage size={24} style={{ color: "var(--text-muted)" }} /></div>
+            }
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: "1rem", fontWeight: 800, color: "var(--text-heading)", marginBottom: 4 }}>{item.name}</div>
+              {item.description && <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", lineHeight: 1.5 }}>{item.description}</div>}
+              <div style={{ marginTop: 6, fontSize: "1rem", fontWeight: 900, color: "var(--accent)" }}>
+                {fetchingPrice ? <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Calculating…</span> : price > 0 ? `₦${fmt(price)}` : "Price TBD"}
+              </div>
+            </div>
+          </div>
+
+          {/* Variants */}
+          {hasVariants && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                Choose Variant <span style={{ color: "#ef4444" }}>*</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                {item.variants.map((v) => {
+                  const active = selectedVariant === v.id;
+                  return (
+                    <button key={v.id} onClick={() => setSelectedVariant(v.id)}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", borderRadius: 11, cursor: "pointer", fontFamily: "inherit", background: active ? "var(--bg-active)" : "var(--bg-hover)", border: `1px solid ${active ? "rgba(203,108,220,0.4)" : "var(--border)"}`, transition: "all 0.12s" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 18, height: 18, borderRadius: "50%", border: `2px solid ${active ? "var(--accent)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          {active && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)" }} />}
+                        </div>
+                        <span style={{ fontSize: "0.85rem", fontWeight: active ? 700 : 500, color: active ? "var(--accent)" : "var(--text-body)" }}>{v.name}</span>
+                      </div>
+                      {v.priceAddition > 0 && <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)" }}>+₦{fmt(v.priceAddition)}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Extras */}
+          {hasExtras && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                Extras <span style={{ fontSize: "0.65rem", fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>(optional)</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                {item.extras.map((ex) => {
+                  const active = selectedExtras.includes(ex.id);
+                  return (
+                    <button key={ex.id} onClick={() => toggleExtra(ex.id)}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", borderRadius: 11, cursor: "pointer", fontFamily: "inherit", background: active ? "var(--bg-active)" : "var(--bg-hover)", border: `1px solid ${active ? "rgba(203,108,220,0.4)" : "var(--border)"}`, transition: "all 0.12s" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${active ? "var(--accent)" : "var(--border)"}`, background: active ? "var(--accent)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          {active && <MdCheck size={12} style={{ color: "#fff" }} />}
+                        </div>
+                        <span style={{ fontSize: "0.85rem", fontWeight: active ? 700 : 500, color: active ? "var(--accent)" : "var(--text-body)" }}>{ex.name}</span>
+                      </div>
+                      {ex.price > 0 && <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)" }}>+₦{fmt(ex.price)}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sticky footer */}
+        <div style={{ padding: "14px 20px 28px", borderTop: "1px solid var(--border)", background: "var(--bg-card)", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Qty stepper */}
+            <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+              <button onClick={() => setQty((q) => Math.max(1, q - 1))} style={{ width: 38, height: 42, background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--text-body)", fontSize: "1.2rem", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+              <span style={{ minWidth: 36, textAlign: "center", fontSize: "0.9rem", fontWeight: 900, color: "var(--text-heading)", borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)", lineHeight: "42px" }}>{qty}</span>
+              <button onClick={() => setQty((q) => q + 1)} style={{ width: 38, height: 42, background: "var(--bg-hover)", border: "none", cursor: "pointer", color: "var(--text-body)", fontSize: "1.2rem", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+            </div>
+            <button onClick={confirm} className="app_btn app_btn_confirm" style={{ flex: 1, height: 44, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: "0.9rem", fontWeight: 800 }}>
+              <MdAdd size={17} />
+              Add to Order
+              {!fetchingPrice && totalPrice > 0 && <span style={{ opacity: 0.85 }}>· ₦{fmt(totalPrice)}</span>}
+              {fetchingPrice && <span style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "saleSpin 0.7s linear infinite" }} />}
+            </button>
+            <style>{`@keyframes saleSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 function RecordSaleForm({ cartId, concepts, onSaved }) {
   const allItems = (concepts || []).flatMap((c) =>
-    (c.menuItems || []).map((item) => ({ ...item, conceptName: c.name }))
+    (c.menuItems || []).map((item) => ({ ...item, conceptName: c.name, conceptId: c.id }))
   );
+  const fmt = (n) => Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
 
-  // items: [{ menuItemId, quantity }]
-  const [orderItems, setOrderItems] = useState([{ menuItemId: allItems[0]?.id || "", quantity: 1 }]);
+  // Cart: { key: { item, qty, variantId, extraIds, variantLabel, extrasLabels, unitPrice } }
+  const [cart,         setCart]         = useState({});
+  const [customising,  setCustomising]  = useState(null); // item being customised
   const [paymentMethod, setPaymentMethod] = useState("CASH");
-  const [saving, setSaving] = useState(false);
+  const [saving,       setSaving]       = useState(false);
+  const [activeConceptId, setActiveConceptId] = useState(allItems[0]?.conceptId || null);
 
-  const updateItem = (i, key, val) => setOrderItems((prev) => {
-    const u = [...prev]; u[i] = { ...u[i], [key]: val }; return u;
+  const pmColors = {
+    CASH:     { bg: "rgba(34,197,94,0.1)",   color: "#16a34a", border: "rgba(34,197,94,0.2)" },
+    POS:      { bg: "rgba(59,130,246,0.1)",  color: "#3b82f6", border: "rgba(59,130,246,0.2)" },
+    TRANSFER: { bg: "rgba(168,85,247,0.1)",  color: "#a855f7", border: "rgba(168,85,247,0.2)" },
+    OTHER:    { bg: "rgba(107,114,128,0.1)", color: "#6b7280", border: "rgba(107,114,128,0.2)" },
+  };
+
+  const addToCart = ({ item, qty, variantId, extraIds, variantLabel, extrasLabels, unitPrice }) => {
+    const key = [item.id, variantId || "", ...(extraIds || []).sort()].join("_");
+    setCart((prev) => ({
+      ...prev,
+      [key]: prev[key]
+        ? { ...prev[key], qty: prev[key].qty + qty }
+        : { item, qty, variantId, extraIds, variantLabel, extrasLabels, unitPrice }
+    }));
+    // haptic-like toast
+    toast.success(`${item.name} added`, { autoClose: 800 });
+  };
+
+  const removeFromCart = (key) => setCart((prev) => {
+    const n = { ...prev }; delete n[key]; return n;
+  });
+  const adjustQty = (key, delta) => setCart((prev) => {
+    const e = prev[key];
+    if (!e) return prev;
+    const newQty = e.qty + delta;
+    if (newQty <= 0) { const n = { ...prev }; delete n[key]; return n; }
+    return { ...prev, [key]: { ...e, qty: newQty } };
   });
 
-  const addItem = () => setOrderItems((prev) => [...prev, { menuItemId: allItems[0]?.id || "", quantity: 1 }]);
-  const removeItem = (i) => setOrderItems((prev) => prev.filter((_, idx) => idx !== i));
+  const cartEntries = Object.entries(cart);
+  const cartTotal   = cartEntries.reduce((s, [, e]) => s + (e.unitPrice || 0) * e.qty, 0);
+  const cartCount   = cartEntries.reduce((s, [, e]) => s + e.qty, 0);
 
   const handleSubmit = async () => {
-    const valid = orderItems.filter((r) => r.menuItemId && r.quantity >= 1);
-    if (!valid.length) return toast.error("Add at least one item");
+    if (!cartEntries.length) return toast.error("Add at least one item");
     setSaving(true);
     try {
       await api.post("/icart/sale", {
         cartId,
         paymentMethod,
-        items: valid.map((r) => ({ menuItemId: r.menuItemId, quantity: Number(r.quantity) })),
+        items: cartEntries.map(([, e]) => ({
+          menuItemId: e.item.id,
+          quantity:   e.qty,
+          ...(e.variantId  ? { variantId: e.variantId }     : {}),
+          ...(e.extraIds?.length ? { extras: e.extraIds }   : {}),
+        })),
       });
       toast.success("Sale recorded!");
       onSaved();
@@ -945,19 +1105,28 @@ function RecordSaleForm({ cartId, concepts, onSaved }) {
     }
   };
 
-  return (
-    <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: 18, marginBottom: 16 }}>
-      <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--text-heading)", marginBottom: 16 }}>Record Sale</div>
+  // Group concepts
+  const conceptGroups = (concepts || []).map((c) => ({
+    ...c,
+    items: c.menuItems || [],
+  }));
 
-      {/* Payment method */}
-      <div className="form-field">
-        <label className="modal-label">Payment Method *</label>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+  return (
+    <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden", marginBottom: 16 }}>
+      {/* Header */}
+      <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "0.88rem", fontWeight: 800, color: "var(--text-heading)" }}>Record Sale</div>
+          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>Tap an item to customise and add</div>
+        </div>
+        {/* Payment method */}
+        <div style={{ display: "flex", gap: 5 }}>
           {["CASH", "POS", "TRANSFER", "OTHER"].map((m) => {
-            const c = pmColors[m];
+            const col = pmColors[m];
             const active = paymentMethod === m;
             return (
-              <button key={m} onClick={() => setPaymentMethod(m)} style={{ height: 36, border: `1px solid ${active ? c.border : "var(--border)"}`, borderRadius: 9, cursor: "pointer", background: active ? c.bg : "var(--bg-hover)", color: active ? c.color : "var(--text-muted)", fontWeight: 700, fontSize: "0.72rem", transition: "all 0.15s", fontFamily: "inherit" }}>
+              <button key={m} onClick={() => setPaymentMethod(m)}
+                style={{ height: 30, padding: "0 10px", border: `1px solid ${active ? col.border : "var(--border)"}`, borderRadius: 7, cursor: "pointer", background: active ? col.bg : "var(--bg-hover)", color: active ? col.color : "var(--text-muted)", fontWeight: 700, fontSize: "0.66rem", fontFamily: "inherit", transition: "all 0.15s" }}>
                 {m}
               </button>
             );
@@ -965,58 +1134,112 @@ function RecordSaleForm({ cartId, concepts, onSaved }) {
         </div>
       </div>
 
-      {/* Order items */}
-      <div className="form-field">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-          <label className="modal-label" style={{ margin: 0 }}>Items *</label>
-          <button onClick={addItem} style={{ background: "none", border: "none", color: "var(--accent)", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4, padding: 0 }}>
-            <MdAdd size={14} /> Add item
-          </button>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {orderItems.map((row, i) => {
-            const selected = allItems.find((it) => it.id === row.menuItemId);
+      {/* Concept tabs (if multiple) */}
+      {conceptGroups.length > 1 && (
+        <div style={{ display: "flex", overflowX: "auto", scrollbarWidth: "none", borderBottom: "1px solid var(--border)", padding: "0 16px" }}>
+          {conceptGroups.map((c) => {
+            const active = activeConceptId === c.id;
             return (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
-                {selected?.image ? (
-                  <img src={selected.image} alt="" style={{ width: 30, height: 30, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
-                ) : (
-                  <div style={{ width: 30, height: 30, borderRadius: 6, background: "var(--bg-card)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <MdImage size={13} style={{ color: "var(--text-muted)" }} />
-                  </div>
-                )}
-                <select
-                  className="modal-input"
-                  style={{ flex: 1 }}
-                  value={row.menuItemId}
-                  onChange={(e) => updateItem(i, "menuItemId", e.target.value)}
-                >
-                  {allItems.length === 0
-                    ? <option value="">No items available</option>
-                    : allItems.map((item) => <option key={item.id} value={item.id}>{item.name}{item.conceptName ? ` (${item.conceptName})` : ""}</option>)
-                  }
-                </select>
-                <QtyControl value={row.quantity} onChange={(v) => updateItem(i, "quantity", v)} />
-                {orderItems.length > 1 && (
-                  <button className="icart_icon_action_btn icart_icon_danger" style={{ width: 26, height: 26, flexShrink: 0 }} onClick={() => removeItem(i)}>
-                    <MdClose size={13} />
-                  </button>
-                )}
-              </div>
+              <button key={c.id} onClick={() => setActiveConceptId(c.id)}
+                style={{ padding: "10px 14px", background: "transparent", border: "none", borderBottom: `2px solid ${active ? "var(--accent)" : "transparent"}`, color: active ? "var(--accent)" : "var(--text-muted)", fontSize: "0.78rem", fontWeight: active ? 700 : 500, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit", flexShrink: 0 }}>
+                {c.name}
+              </button>
             );
           })}
         </div>
+      )}
+
+      {/* Menu items grid */}
+      <div style={{ padding: "12px 16px", maxHeight: 320, overflowY: "auto" }}>
+        {conceptGroups
+          .filter((c) => conceptGroups.length === 1 || c.id === activeConceptId)
+          .map((c) => (
+            <div key={c.id}>
+              {conceptGroups.length === 1 && <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>{c.name}</div>}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 8, marginBottom: 12 }}>
+                {c.items.map((item) => {
+                  const inCart = Object.values(cart).filter((e) => e.item.id === item.id).reduce((s, e) => s + e.qty, 0);
+                  return (
+                    <button key={item.id} onClick={() => setCustomising(item)}
+                      style={{ background: inCart > 0 ? "var(--bg-active)" : "var(--bg-hover)", border: `1px solid ${inCart > 0 ? "rgba(203,108,220,0.35)" : "var(--border)"}`, borderRadius: 10, padding: "10px 10px 8px", cursor: "pointer", fontFamily: "inherit", textAlign: "left", transition: "all 0.15s", position: "relative" }}>
+                      {item.image
+                        ? <img src={item.image} alt={item.name} style={{ width: "100%", height: 70, objectFit: "cover", borderRadius: 7, marginBottom: 7, display: "block" }} />
+                        : <div style={{ width: "100%", height: 70, borderRadius: 7, background: "var(--bg-card)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 7 }}><MdImage size={20} style={{ color: "var(--text-muted)", opacity: 0.4 }} /></div>
+                      }
+                      <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--text-body)", lineHeight: 1.3, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+                      <div style={{ fontSize: "0.72rem", fontWeight: 800, color: inCart > 0 ? "var(--accent)" : "var(--text-muted)" }}>
+                        {item.sellingPrice > 0 ? `₦${Number(item.sellingPrice).toLocaleString("en-NG", { maximumFractionDigits: 0 })}` : "—"}
+                      </div>
+                      {inCart > 0 && (
+                        <div style={{ position: "absolute", top: 6, right: 6, width: 18, height: 18, borderRadius: "50%", background: "var(--accent)", color: "#fff", fontSize: "0.62rem", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>{inCart}</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
       </div>
 
-      <button
-        className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
-        style={{ width: "100%", height: 42, position: "relative", marginTop: 4 }}
-        onClick={handleSubmit}
-        disabled={saving}
-      >
-        <span className="btn_text">Submit Sale</span>
-        {saving && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
-      </button>
+      {/* Order summary */}
+      {cartEntries.length > 0 && (
+        <div style={{ borderTop: "1px solid var(--border)", padding: "12px 16px" }}>
+          <div style={{ fontSize: "0.68rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>Order ({cartCount} item{cartCount !== 1 ? "s" : ""})</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+            {cartEntries.map(([key, entry]) => (
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: "var(--bg-hover)", borderRadius: 9 }}>
+                {entry.item.image
+                  ? <img src={entry.item.image} alt="" style={{ width: 30, height: 30, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
+                  : <div style={{ width: 30, height: 30, borderRadius: 6, background: "var(--bg-card)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MdImage size={12} style={{ color: "var(--text-muted)" }} /></div>
+                }
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.item.name}</div>
+                  {(entry.variantLabel || entry.extrasLabels?.length > 0) && (
+                    <div style={{ fontSize: "0.64rem", color: "var(--text-muted)" }}>
+                      {[entry.variantLabel, ...(entry.extrasLabels || [])].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                  <button onClick={() => adjustQty(key, -1)} style={{ width: 22, height: 22, borderRadius: 5, background: "var(--bg-card)", border: "1px solid var(--border)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "0.9rem" }}>−</button>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-heading)", minWidth: 16, textAlign: "center" }}>{entry.qty}</span>
+                  <button onClick={() => adjustQty(key, +1)} style={{ width: 22, height: 22, borderRadius: 5, background: "var(--bg-card)", border: "1px solid var(--border)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "0.9rem" }}>+</button>
+                </div>
+                <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--text-heading)", flexShrink: 0, minWidth: 56, textAlign: "right" }}>
+                  {entry.unitPrice > 0 ? `₦${fmt(entry.unitPrice * entry.qty)}` : "—"}
+                </div>
+                <button onClick={() => removeFromCart(key)} style={{ width: 20, height: 20, borderRadius: 4, background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <MdClose size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Total + submit */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Total</div>
+              <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--accent)" }}>₦{fmt(cartTotal)}</div>
+            </div>
+            <button onClick={handleSubmit} disabled={saving}
+              className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+              style={{ height: 44, padding: "0 24px", position: "relative", fontSize: "0.88rem", fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 7 }}>
+              <span className="btn_text"><MdPointOfSale size={16} /> Submit Sale</span>
+              {saving && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Customiser sheet */}
+      {customising && (
+        <ItemCustomiser
+          item={customising}
+          cartId={cartId}
+          onConfirm={addToCart}
+          onClose={() => setCustomising(null)}
+        />
+      )}
     </div>
   );
 }

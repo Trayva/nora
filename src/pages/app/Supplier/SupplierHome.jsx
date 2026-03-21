@@ -381,14 +381,14 @@ function ProfileCard({ profile, onEdit }) {
         marginBottom: 28,
       }}
     >
-      {/* <div
+      <div
         style={{
           height: 3,
           background: profile.isApproved
             ? "linear-gradient(90deg,#16a34a,#22c55e)"
             : "linear-gradient(90deg,#ca8a04,#eab308)",
         }}
-      /> */}
+      />
       <div style={{ padding: "18px 20px" }}>
         <div
           style={{
@@ -792,7 +792,7 @@ function ReviewPanel({ req, onDone, onCancel }) {
     try {
       await api.patch(`/icart/supply/${req.id}/review`, {
         items: (req.items || []).map((it) => ({
-          id: it.id,
+          itemId: it.id,
           suppliedQuantity: cannotSupply ? 0 : Number(qtys[it.id] || 0),
         })),
       });
@@ -2424,9 +2424,27 @@ export default function SupplierHome() {
               marginBottom: 3,
             }}
           >
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: "var(--bg-active)",
+                border: "1px solid rgba(203,108,220,0.2)",
+                color: "var(--accent)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <PiTruck size={15} />
+            </div>
             <h2 className="page_title_big m-0">Supplier</h2>
           </div>
-          <p className="welcome_message" style={{ marginBottom: 0 }}>
+          <p
+            className="welcome_message"
+            style={{ marginBottom: 0, paddingLeft: 41 }}
+          >
             Manage your business and fulfil supply requests
           </p>
         </div>
