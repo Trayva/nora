@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "react-toastify";
-import api from "../../../api/axios";
 import {
   MdVerified,
   MdEdit,
@@ -18,8 +17,16 @@ import {
   MdImage,
   MdOutlineLocationOn,
   MdOutlinePriceChange,
+  MdContentCopy,
+  MdMap,
+  MdFilterList,
+  MdOutlineInventory2,
+  MdRefresh,
+  MdCircle,
 } from "react-icons/md";
 import { PiTruck } from "react-icons/pi";
+import api from "../../../api/axios";
+import Drawer from "../../../components/Drawer";
 
 /* ── helpers ──────────────────────────────────────────────── */
 const fmt = (n) =>
@@ -76,7 +83,7 @@ const STATUS = {
 };
 const getS = (k) => STATUS[k] || STATUS.PENDING;
 
-function Chip({ status }) {
+function Chip({ status, small }) {
   const s = getS(status);
   return (
     <span
@@ -84,9 +91,9 @@ function Chip({ status }) {
         display: "inline-flex",
         alignItems: "center",
         gap: 4,
-        fontSize: "0.62rem",
+        fontSize: small ? "0.58rem" : "0.62rem",
         fontWeight: 800,
-        padding: "2px 9px",
+        padding: small ? "1px 7px" : "2px 9px",
         borderRadius: 999,
         background: s.bg,
         color: s.color,
@@ -96,14 +103,7 @@ function Chip({ status }) {
         flexShrink: 0,
       }}
     >
-      <span
-        style={{
-          width: 5,
-          height: 5,
-          borderRadius: "50%",
-          background: s.color,
-        }}
-      />
+      <MdCircle size={4} />
       {s.label}
     </span>
   );
@@ -154,7 +154,6 @@ function FileInput({ label, accept = "image/*", onChange, currentUrl, hint }) {
               borderRadius: 8,
               objectFit: "cover",
               flexShrink: 0,
-              border: "1px solid var(--border)",
             }}
           />
         ) : (
@@ -449,10 +448,7 @@ function ProfileCard({ profile, onEdit }) {
                 {profile.businessName}
               </span>
               {profile.isApproved && (
-                <MdVerified
-                  size={15}
-                  style={{ color: "#16a34a", flexShrink: 0 }}
-                />
+                <MdVerified size={15} style={{ color: "#16a34a" }} />
               )}
             </div>
             <span
@@ -591,260 +587,58 @@ function ProfileCard({ profile, onEdit }) {
   );
 }
 
-/* ── Ingredient Search ────────────────────────────────────── */
-function IngredientSearch({
-  value,
-  onChange,
-  placeholder = "Search ingredient…",
-}) {
-  const [query, setQuery] = useState(value?.name || "");
-  const [results, setResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [open, setOpen] = useState(false);
-  const debRef = useRef(null);
-  const wrapRef = useRef(null);
+/* ── Inline Price editor (inside drawer) ─────────────────── */
+function InlinePrice({ ingredientId, stateId }) {
+  const [price, setPrice] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const fn = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", fn);
-    return () => document.removeEventListener("mousedown", fn);
-  }, []);
-
-  const search = (q) => {
-    if (!q.trim()) {
-      setResults([]);
+  const fetchMyPrice = () => {
+    if (!ingredientId) {
+      setLoading(false);
       return;
     }
-    clearTimeout(debRef.current);
-    debRef.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const r = await api.get(
-          `/library/ingredient?returnPrep=true&search=${encodeURIComponent(q)}&limit=8`,
-        );
-        const d = r.data.data;
-        setResults([...(d?.ingredient || []), ...(d?.preps || [])]);
-      } catch {
-        setResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 300);
+    setLoading(true);
+    api
+      .get("/library/ingredient/supplier/my-prices", {
+        params: { ingredientId },
+      })
+      .then((r) => {
+        const list = r.data?.data?.data || [];
+        const entry = list.find((p) => p.ingredientId === ingredientId);
+        const p = entry?.price != null ? Number(entry.price) : null;
+        setPrice(p);
+        if (p != null) setVal(String(p));
+      })
+      .catch(() => setPrice(null))
+      .finally(() => setLoading(false));
   };
 
-  return (
-    <div ref={wrapRef} style={{ position: "relative" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          height: 40,
-          padding: "0 12px",
-          background: "var(--bg-hover)",
-          border: "1px solid var(--border)",
-          borderRadius: 10,
-        }}
-      >
-        {value?.image ? (
-          <img
-            src={value.image}
-            alt=""
-            style={{
-              width: 20,
-              height: 20,
-              borderRadius: 4,
-              objectFit: "cover",
-              flexShrink: 0,
-            }}
-          />
-        ) : (
-          <MdSearch
-            size={14}
-            style={{ color: "var(--text-muted)", flexShrink: 0 }}
-          />
-        )}
-        <input
-          style={{
-            flex: 1,
-            border: "none",
-            background: "transparent",
-            outline: "none",
-            fontSize: "0.82rem",
-            color: "var(--text-body)",
-            fontFamily: "inherit",
-          }}
-          placeholder={placeholder}
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-            search(e.target.value);
-          }}
-          onFocus={() => setOpen(true)}
-        />
-        {(query || value) && (
-          <button
-            onClick={() => {
-              onChange(null);
-              setQuery("");
-              setResults([]);
-            }}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--text-muted)",
-              display: "flex",
-              padding: 0,
-            }}
-          >
-            <MdClose size={12} />
-          </button>
-        )}
-      </div>
-      {open && query && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: 10,
-            zIndex: 60,
-            maxHeight: 180,
-            overflowY: "auto",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-          }}
-        >
-          {searching ? (
-            <div
-              style={{
-                padding: "10px 12px",
-                fontSize: "0.78rem",
-                color: "var(--text-muted)",
-              }}
-            >
-              Searching…
-            </div>
-          ) : results.length === 0 ? (
-            <div
-              style={{
-                padding: "10px 12px",
-                fontSize: "0.78rem",
-                color: "var(--text-muted)",
-              }}
-            >
-              No results
-            </div>
-          ) : (
-            results.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => {
-                  onChange(item);
-                  setQuery(item.name);
-                  setOpen(false);
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 12px",
-                  cursor: "pointer",
-                  borderBottom: "1px solid var(--border)",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "var(--bg-hover)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt=""
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 6,
-                      objectFit: "cover",
-                      flexShrink: 0,
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 6,
-                      background: "var(--bg-hover)",
-                      border: "1px solid var(--border)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <MdImage size={12} style={{ color: "var(--text-muted)" }} />
-                  </div>
-                )}
-                <div>
-                  <div
-                    style={{
-                      fontSize: "0.8rem",
-                      fontWeight: 700,
-                      color: "var(--text-body)",
-                    }}
-                  >
-                    {item.name}
-                  </div>
-                  {item.unit && (
-                    <div
-                      style={{
-                        fontSize: "0.66rem",
-                        color: "var(--text-muted)",
-                      }}
-                    >
-                      {item.unit}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Inline price editor ──────────────────────────────────── */
-function PriceEditor({ ingredient, stateId, currentPrice, onSaved }) {
-  const [price, setPrice] = useState(
-    currentPrice != null ? String(currentPrice) : "",
-  );
-  const [saving, setSaving] = useState(false);
-  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    fetchMyPrice();
+  }, [ingredientId]);
 
   const save = async () => {
-    if (!price || Number(price) < 0) return toast.error("Enter a valid price");
+    if (!val || isNaN(Number(val)) || Number(val) < 0)
+      return toast.error("Enter a valid price");
     setSaving(true);
     try {
-      await api.post("/library/ingredient/supplier-price", {
-        ingredientId: ingredient.id,
+      const res = await api.post("/library/ingredient/supplier-price", {
+        ingredientId,
         stateId,
-        price: Number(price),
+        price: Number(val),
       });
+      const saved =
+        res.data?.data?.price != null
+          ? Number(res.data.data.price)
+          : Number(val);
+      setPrice(saved);
+      setVal(String(saved));
+      setEditing(false);
       toast.success("Price saved");
-      setOpen(false);
-      onSaved?.(Number(price));
+      fetchMyPrice();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed");
     } finally {
@@ -852,198 +646,133 @@ function PriceEditor({ ingredient, stateId, currentPrice, onSaved }) {
     }
   };
 
-  if (!open) {
+  if (loading)
+    return (
+      <div className="page_loader_spinner" style={{ width: 12, height: 12 }} />
+    );
+
+  if (editing)
+    return (
+      <div
+        style={{ display: "flex", gap: 5, alignItems: "center" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ position: "relative" }}>
+          <span
+            style={{
+              position: "absolute",
+              left: 7,
+              top: "50%",
+              transform: "translateY(-50%)",
+              fontSize: "0.7rem",
+              color: "var(--text-muted)",
+              pointerEvents: "none",
+            }}
+          >
+            ₦
+          </span>
+          <input
+            className="modal-input"
+            type="number"
+            min="0"
+            autoFocus
+            style={{
+              paddingLeft: 20,
+              height: 28,
+              width: 90,
+              fontSize: "0.76rem",
+              marginBottom: 0,
+            }}
+            value={val}
+            onChange={(e) => setVal(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") save();
+              if (e.key === "Escape") setEditing(false);
+            }}
+          />
+        </div>
+        <button
+          className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+          style={{
+            height: 28,
+            padding: "0 10px",
+            fontSize: "0.7rem",
+            position: "relative",
+          }}
+          onClick={save}
+          disabled={saving}
+        >
+          <span className="btn_text">Save</span>
+          {saving && (
+            <span className="btn_loader" style={{ width: 10, height: 10 }} />
+          )}
+        </button>
+        <button
+          className="app_btn app_btn_cancel"
+          style={{ height: 28, padding: "0 8px", fontSize: "0.7rem" }}
+          onClick={() => setEditing(false)}
+        >
+          ✕
+        </button>
+      </div>
+    );
+
+  if (price != null)
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setEditing(true);
+        }}
         style={{
-          background: "none",
-          border: "none",
+          background: "rgba(34,197,94,0.08)",
+          border: "1px solid rgba(34,197,94,0.2)",
+          borderRadius: 6,
+          padding: "2px 8px",
           cursor: "pointer",
           fontFamily: "inherit",
           display: "inline-flex",
           alignItems: "center",
-          gap: 3,
-          padding: 0,
-          ...(currentPrice != null
-            ? { color: "#16a34a", fontSize: "0.72rem", fontWeight: 700 }
-            : { color: "var(--accent)", fontSize: "0.7rem", fontWeight: 700 }),
+          gap: 4,
+          fontSize: "0.72rem",
+          fontWeight: 700,
+          color: "#16a34a",
         }}
       >
-        <MdAttachMoney size={13} />
-        {currentPrice != null ? `₦${fmt(currentPrice)} · Edit` : "Set Price"}
+        <MdAttachMoney size={12} />₦{fmt(price)}
+        <MdEdit size={10} style={{ opacity: 0.6 }} />
       </button>
     );
-  }
 
   return (
-    <div
-      style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4 }}
-    >
-      <div style={{ position: "relative" }}>
-        <span
-          style={{
-            position: "absolute",
-            left: 8,
-            top: "50%",
-            transform: "translateY(-50%)",
-            fontSize: "0.75rem",
-            color: "var(--text-muted)",
-            pointerEvents: "none",
-          }}
-        >
-          ₦
-        </span>
-        <input
-          className="modal-input"
-          type="number"
-          min="0"
-          style={{
-            paddingLeft: 22,
-            height: 30,
-            fontSize: "0.78rem",
-            marginBottom: 0,
-            width: 110,
-          }}
-          placeholder="0.00"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-        />
-      </div>
-      <button
-        className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
-        style={{
-          height: 30,
-          padding: "0 12px",
-          fontSize: "0.72rem",
-          position: "relative",
-        }}
-        onClick={save}
-        disabled={saving}
-      >
-        <span className="btn_text">Save</span>
-        {saving && (
-          <span className="btn_loader" style={{ width: 11, height: 11 }} />
-        )}
-      </button>
-      <button
-        className="app_btn app_btn_cancel"
-        style={{ height: 30, padding: "0 10px", fontSize: "0.72rem" }}
-        onClick={() => setOpen(false)}
-      >
-        Cancel
-      </button>
-    </div>
-  );
-}
-
-/* ── Supply item with price ───────────────────────────────── */
-function SupplyItemRow({ item, stateId }) {
-  const [price, setPrice] = useState(null);
-  const [loadingP, setLoadingP] = useState(false);
-
-  useEffect(() => {
-    if (!item.ingredient?.id || !stateId) return;
-    setLoadingP(true);
-    api
-      .get("/library/ingredient/supplier-price", {
-        params: { ingredientId: item.ingredient.id, stateId },
-      })
-      .then((r) => {
-        const d = r.data.data;
-        const p =
-          d?.price ?? d?.amount ?? (Array.isArray(d) ? d[0]?.price : null);
-        setPrice(p != null ? Number(p) : null);
-      })
-      .catch(() => setPrice(null))
-      .finally(() => setLoadingP(false));
-  }, [item.ingredient?.id, stateId]);
-
-  const ing = item.ingredient;
-
-  return (
-    <div
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setEditing(true);
+      }}
       style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 5,
-        padding: "8px 10px",
-        background: "var(--bg-hover)",
-        border: "1px solid var(--border)",
-        borderRadius: 9,
-        marginBottom: 6,
+        background: "rgba(239,68,68,0.06)",
+        border: "1px solid rgba(239,68,68,0.15)",
+        borderRadius: 6,
+        padding: "2px 8px",
+        cursor: "pointer",
+        fontFamily: "inherit",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        fontSize: "0.7rem",
+        fontWeight: 700,
+        color: "#ef4444",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {ing?.image ? (
-          <img
-            src={ing.image}
-            alt=""
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              objectFit: "cover",
-              flexShrink: 0,
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              background: "var(--bg-card)",
-              border: "1px solid var(--border)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <MdImage size={12} style={{ color: "var(--text-muted)" }} />
-          </div>
-        )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: "0.78rem",
-              fontWeight: 700,
-              color: "var(--text-body)",
-            }}
-          >
-            {ing?.name || "Item"}
-          </div>
-          <div style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>
-            Requested: {item.quantity?.toLocaleString()}
-            {ing?.unit || ""}
-            {item.suppliedQuantity != null &&
-              ` · Supplied: ${item.suppliedQuantity.toLocaleString()}${ing?.unit || ""}`}
-          </div>
-        </div>
-        <div style={{ flexShrink: 0, textAlign: "right" }}>
-          {loadingP ? (
-            <div
-              className="page_loader_spinner"
-              style={{ width: 12, height: 12 }}
-            />
-          ) : (
-            <PriceEditor
-              ingredient={ing || { id: item.ingredientId }}
-              stateId={stateId}
-              currentPrice={price}
-              onSaved={(p) => setPrice(p)}
-            />
-          )}
-        </div>
-      </div>
-    </div>
+      <MdAttachMoney size={12} />
+      No price — Set
+    </button>
   );
 }
 
 /* ── Review Panel ─────────────────────────────────────────── */
-function ReviewPanel({ req, profile, onDone, onCancel }) {
-  // One qty entry per supply item, keyed by item.id
+function ReviewPanel({ req, onDone, onCancel }) {
   const [qtys, setQtys] = useState(() =>
     Object.fromEntries(
       (req.items || []).map((it) => [it.id, it.quantity?.toString() || ""]),
@@ -1051,8 +780,6 @@ function ReviewPanel({ req, profile, onDone, onCancel }) {
   );
   const [cannotSupply, setCannotSupply] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  const setQty = (id, val) => setQtys((prev) => ({ ...prev, [id]: val }));
 
   const submit = async () => {
     if (!cannotSupply) {
@@ -1063,10 +790,9 @@ function ReviewPanel({ req, profile, onDone, onCancel }) {
     }
     setSubmitting(true);
     try {
-      // One PATCH to the supply request id, items array uses ingredientId + suppliedQuantity
       await api.patch(`/icart/supply/${req.id}/review`, {
         items: (req.items || []).map((it) => ({
-          itemId: it.id,
+          id: it.id,
           suppliedQuantity: cannotSupply ? 0 : Number(qtys[it.id] || 0),
         })),
       });
@@ -1084,12 +810,12 @@ function ReviewPanel({ req, profile, onDone, onCancel }) {
   return (
     <div
       style={{
-        marginTop: 12,
-        paddingTop: 12,
+        marginTop: 16,
+        paddingTop: 16,
         borderTop: "1px solid var(--border)",
         display: "flex",
         flexDirection: "column",
-        gap: 12,
+        gap: 10,
       }}
     >
       <div
@@ -1126,7 +852,6 @@ function ReviewPanel({ req, profile, onDone, onCancel }) {
           {cannotSupply ? "✕ Can't supply" : "Can't supply?"}
         </button>
       </div>
-
       {cannotSupply ? (
         <div
           style={{
@@ -1143,13 +868,20 @@ function ReviewPanel({ req, profile, onDone, onCancel }) {
         </div>
       ) : (
         (req.items || []).map((it) => (
-          <div key={it.id}>
+          <div
+            key={it.id}
+            style={{
+              background: "var(--bg-hover)",
+              borderRadius: 10,
+              padding: "10px 12px",
+            }}
+          >
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                marginBottom: 6,
+                marginBottom: 8,
               }}
             >
               {it.ingredient?.image ? (
@@ -1157,8 +889,8 @@ function ReviewPanel({ req, profile, onDone, onCancel }) {
                   src={it.ingredient.image}
                   alt=""
                   style={{
-                    width: 26,
-                    height: 26,
+                    width: 28,
+                    height: 28,
                     borderRadius: 6,
                     objectFit: "cover",
                     flexShrink: 0,
@@ -1167,11 +899,10 @@ function ReviewPanel({ req, profile, onDone, onCancel }) {
               ) : (
                 <div
                   style={{
-                    width: 26,
-                    height: 26,
+                    width: 28,
+                    height: 28,
                     borderRadius: 6,
-                    background: "var(--bg-hover)",
-                    border: "1px solid var(--border)",
+                    background: "var(--bg-card)",
                     flexShrink: 0,
                   }}
                 />
@@ -1198,14 +929,16 @@ function ReviewPanel({ req, profile, onDone, onCancel }) {
               className="modal-input"
               type="number"
               min="0"
+              style={{ marginBottom: 0 }}
               placeholder={`Qty to supply (of ${it.quantity?.toLocaleString()}${it.ingredient?.unit || ""})`}
               value={qtys[it.id] || ""}
-              onChange={(e) => setQty(it.id, e.target.value)}
+              onChange={(e) =>
+                setQtys((p) => ({ ...p, [it.id]: e.target.value }))
+              }
             />
           </div>
         ))
       )}
-
       <div style={{ display: "flex", gap: 8 }}>
         <button
           className="app_btn app_btn_cancel"
@@ -1232,16 +965,29 @@ function ReviewPanel({ req, profile, onDone, onCancel }) {
   );
 }
 
-/* ── Supply Card ──────────────────────────────────────────── */
-function SupplyCard({ req, profile, onRefresh }) {
-  const [expanded, setExpanded] = useState(false);
+/* ── Request Drawer ───────────────────────────────────────── */
+function RequestDrawer({ req, profile, onClose, onRefresh }) {
   const [reviewing, setReviewing] = useState(false);
   const [shipping, setShipping] = useState(false);
+  const [itemsOpen, setItemsOpen] = useState(true);
+  if (!req) return null;
+
   const s = getS(req.status);
-  const cartSerial =
-    req.cart?.serialNumber ||
-    `#${(req.cartId || "").slice(0, 8).toUpperCase()}`;
   const loc = req.cart?.location;
+  const mapsUrl =
+    loc?.latitude && loc?.longitude
+      ? `https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`
+      : loc?.address
+        ? `https://www.google.com/maps/search/${encodeURIComponent([loc.address, loc.city].filter(Boolean).join(", "))}`
+        : null;
+
+  const copyMaps = () => {
+    if (!mapsUrl) return;
+    navigator.clipboard
+      .writeText(mapsUrl)
+      .then(() => toast.success("Maps link copied!"))
+      .catch(() => toast.error("Copy failed"));
+  };
 
   const ship = async () => {
     setShipping(true);
@@ -1249,6 +995,7 @@ function SupplyCard({ req, profile, onRefresh }) {
       await api.post(`/icart/supply/${req.id}/ship`);
       toast.success("Marked as shipped");
       onRefresh();
+      onClose();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed");
     } finally {
@@ -1257,325 +1004,829 @@ function SupplyCard({ req, profile, onRefresh }) {
   };
 
   return (
-    <div
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        borderRadius: 14,
-        overflow: "hidden",
-        marginBottom: 8,
-      }}
+    <Drawer
+      isOpen={!!req}
+      onClose={onClose}
+      title={`#${req.id.slice(0, 8).toUpperCase()}`}
+      description={req.cart?.serialNumber || ""}
+      width={480}
     >
-      <div style={{ height: 3, background: s.color }} />
-      <div style={{ padding: "14px 16px" }}>
-        {/* Header */}
+      {/* Status + date */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 16,
+        }}
+      >
+        <Chip status={req.status} />
+        <span
+          style={{
+            fontSize: "0.72rem",
+            color: "var(--text-muted)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          <MdCalendarToday size={11} />
+          {fmtDate(req.createdAt)}
+        </span>
+        {req.totalAmount > 0 && (
+          <span
+            style={{
+              marginLeft: "auto",
+              fontSize: "0.82rem",
+              fontWeight: 800,
+              color: "var(--accent)",
+            }}
+          >
+            ₦{Number(req.totalAmount).toLocaleString()}
+          </span>
+        )}
+      </div>
+
+      {/* Location */}
+      {loc && (
         <div
           style={{
             display: "flex",
             alignItems: "flex-start",
-            gap: 10,
-            marginBottom: 10,
+            gap: 8,
+            padding: "10px 12px",
+            background: "var(--bg-hover)",
+            borderRadius: 10,
+            marginBottom: 16,
           }}
         >
+          <MdOutlineLocationOn
+            size={15}
+            style={{ color: "#3b82f6", flexShrink: 0, marginTop: 1 }}
+          />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-                flexWrap: "wrap",
-                marginBottom: 3,
+                fontSize: "0.8rem",
+                fontWeight: 700,
+                color: "var(--text-body)",
               }}
             >
-              <span
-                style={{
-                  fontSize: "0.8rem",
-                  fontWeight: 800,
-                  color: "var(--text-heading)",
-                  fontFamily: "monospace",
-                }}
-              >
-                #{req.id.slice(0, 8).toUpperCase()}
-              </span>
-              <Chip status={req.status} />
+              {loc.name}
             </div>
-            <div
-              style={{
-                fontSize: "0.71rem",
-                color: "var(--text-muted)",
-                display: "flex",
-                gap: 6,
-                flexWrap: "wrap",
-                alignItems: "center",
-              }}
-            >
-              <span style={{ fontFamily: "monospace", fontWeight: 600 }}>
-                🛒 {cartSerial}
-              </span>
-              <span style={{ opacity: 0.4 }}>·</span>
-              <span
-                style={{ display: "inline-flex", alignItems: "center", gap: 2 }}
-              >
-                <MdCalendarToday size={10} />
-                {fmtDate(req.createdAt)}
-              </span>
-            </div>
-
-            {/* iCart physical location */}
-            {loc && (
+            {(loc.address || loc.city) && (
               <div
                 style={{
-                  marginTop: 6,
-                  display: "inline-flex",
-                  alignItems: "flex-start",
-                  gap: 5,
-                  padding: "5px 9px",
-                  background: "rgba(59,130,246,0.07)",
-                  border: "1px solid rgba(59,130,246,0.2)",
-                  borderRadius: 8,
+                  fontSize: "0.7rem",
+                  color: "var(--text-muted)",
+                  marginTop: 2,
                 }}
               >
-                <MdOutlineLocationOn
-                  size={13}
-                  style={{ color: "#3b82f6", flexShrink: 0, marginTop: 1 }}
-                />
-                <div>
-                  <div
-                    style={{
-                      fontSize: "0.72rem",
-                      fontWeight: 700,
-                      color: "#3b82f6",
-                    }}
-                  >
-                    {loc.name}
-                  </div>
-                  {(loc.address || loc.city) && (
-                    <div
-                      style={{
-                        fontSize: "0.64rem",
-                        color: "var(--text-muted)",
-                      }}
-                    >
-                      {[loc.address, loc.city, loc.country]
-                        .filter(Boolean)
-                        .join(", ")}
-                    </div>
-                  )}
-                </div>
+                {[loc.address, loc.city, loc.country]
+                  .filter(Boolean)
+                  .join(", ")}
               </div>
             )}
           </div>
-          <button
-            onClick={() => {
-              setExpanded((v) => !v);
-              if (reviewing) setReviewing(false);
-            }}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 7,
-              background: "var(--bg-hover)",
-              border: "1px solid var(--border)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--text-muted)",
-              flexShrink: 0,
-            }}
-          >
-            {expanded ? <MdExpandLess size={14} /> : <MdExpandMore size={14} />}
-          </button>
+          {mapsUrl && (
+            <div style={{ display: "flex", gap: 4 }}>
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                title="Open in Maps"
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 7,
+                  background: "rgba(59,130,246,0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#3b82f6",
+                  textDecoration: "none",
+                  flexShrink: 0,
+                }}
+              >
+                <MdMap size={14} />
+              </a>
+              <button
+                onClick={copyMaps}
+                title="Copy link"
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 7,
+                  background: "rgba(59,130,246,0.1)",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#3b82f6",
+                  flexShrink: 0,
+                }}
+              >
+                <MdContentCopy size={13} />
+              </button>
+            </div>
+          )}
         </div>
+      )}
 
-        {/* Items with prices */}
-        {req.items?.length > 0 && (
-          <div style={{ marginBottom: 12 }}>
-            {req.items.map((item, i) => (
-              <SupplyItemRow
-                key={item.id || i}
-                item={item}
-                stateId={profile?.state?.id}
-              />
-            ))}
+      {/* Requester */}
+      {req.requester && (
+        <div style={{ marginBottom: 16 }}>
+          <div className="drawer_section_title" style={{ marginBottom: 8 }}>
+            Requester
           </div>
-        )}
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}
+          >
+            {[
+              { label: "Name", value: req.requester?.fullName },
+              { label: "Phone", value: req.requester?.phone },
+              { label: "Email", value: req.requester?.email },
+            ]
+              .filter((r) => r.value)
+              .map((r) => (
+                <div
+                  key={r.label}
+                  style={{
+                    background: "var(--bg-hover)",
+                    borderRadius: 9,
+                    padding: "8px 11px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.6rem",
+                      fontWeight: 700,
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      marginBottom: 2,
+                    }}
+                  >
+                    {r.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.76rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {r.value}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
-        {/* Actions */}
+      {/* Ingredients — collapsible */}
+      <div style={{ marginBottom: 16 }}>
+        <button
+          onClick={() => setItemsOpen((v) => !v)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "0 0 10px",
+            fontFamily: "inherit",
+            width: "100%",
+          }}
+        >
+          <span
+            className="drawer_section_title"
+            style={{ margin: 0, flex: 1, textAlign: "left" }}
+          >
+            Ingredients ({req.items?.length || 0})
+          </span>
+          {itemsOpen ? (
+            <MdExpandLess size={15} style={{ color: "var(--text-muted)" }} />
+          ) : (
+            <MdExpandMore size={15} style={{ color: "var(--text-muted)" }} />
+          )}
+        </button>
+        {itemsOpen &&
+          (req.items || []).map((it, i) => {
+            const ing = it.ingredient;
+            return (
+              <div
+                key={it.id || i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "10px 0",
+                  borderTop: "1px solid var(--border)",
+                }}
+              >
+                {ing?.image ? (
+                  <img
+                    src={ing.image}
+                    alt=""
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      objectFit: "cover",
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      background: "var(--bg-hover)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdOutlineInventory2
+                      size={15}
+                      style={{ color: "var(--text-muted)" }}
+                    />
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                    }}
+                  >
+                    {ing?.name || "Item"}
+                  </div>
+                  <div
+                    style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}
+                  >
+                    {it.quantity?.toLocaleString()}
+                    {ing?.unit || ""}
+                    {it.suppliedQuantity != null &&
+                      ` · ✓ Supplied: ${it.suppliedQuantity.toLocaleString()}${ing?.unit || ""}`}
+                  </div>
+                </div>
+                <InlinePrice
+                  ingredientId={ing?.id || it.ingredientId}
+                  stateId={profile?.state?.id}
+                />
+              </div>
+            );
+          })}
+      </div>
+
+      {/* Actions */}
+      <div
+        style={{
+          paddingTop: 16,
+          borderTop: "1px solid var(--border)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
         {req.status === "PENDING" && !reviewing && (
           <button
             className="app_btn app_btn_confirm"
             style={{
-              height: 36,
-              padding: "0 16px",
-              fontSize: "0.78rem",
+              height: 40,
               display: "inline-flex",
               alignItems: "center",
-              gap: 5,
+              justifyContent: "center",
+              gap: 6,
             }}
             onClick={() => setReviewing(true)}
           >
-            <MdCheck size={13} /> Review & Accept
+            <MdCheck size={15} /> Review & Accept
           </button>
         )}
         {req.status === "ACCEPTED" && (
           <button
             className={`app_btn app_btn_confirm${shipping ? " btn_loading" : ""}`}
             style={{
-              height: 36,
-              padding: "0 16px",
-              fontSize: "0.78rem",
+              height: 40,
               position: "relative",
               display: "inline-flex",
               alignItems: "center",
-              gap: 5,
+              justifyContent: "center",
+              gap: 6,
             }}
             onClick={ship}
             disabled={shipping}
           >
             <span className="btn_text">
-              <MdLocalShipping size={13} /> Mark as Shipped
+              <MdLocalShipping size={15} /> Mark as Shipped
             </span>
             {shipping && (
-              <span className="btn_loader" style={{ width: 12, height: 12 }} />
+              <span className="btn_loader" style={{ width: 14, height: 14 }} />
             )}
           </button>
         )}
         {req.status === "SHIPPED" && (
           <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "6px 12px",
-              background: "rgba(168,85,247,0.08)",
-              border: "1px solid rgba(168,85,247,0.2)",
-              borderRadius: 8,
-              fontSize: "0.74rem",
+              padding: "10px 14px",
+              background: "rgba(168,85,247,0.07)",
+              borderRadius: 10,
+              fontSize: "0.78rem",
               color: "#a855f7",
               fontWeight: 600,
+              textAlign: "center",
             }}
           >
-            📦 Awaiting confirmation from operator / cart owner
+            📦 Awaiting delivery confirmation from operator
           </div>
         )}
         {req.status === "DELIVERED" && (
           <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "6px 12px",
-              background: "rgba(34,197,94,0.08)",
-              border: "1px solid rgba(34,197,94,0.2)",
-              borderRadius: 8,
-              fontSize: "0.74rem",
+              padding: "10px 14px",
+              background: "rgba(34,197,94,0.07)",
+              borderRadius: 10,
+              fontSize: "0.78rem",
               color: "#16a34a",
               fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
             }}
           >
-            <MdCheck size={13} /> Delivered
+            <MdCheck size={15} /> Delivered
           </div>
         )}
 
         {reviewing && (
           <ReviewPanel
             req={req}
-            profile={profile}
             onDone={() => {
               setReviewing(false);
               onRefresh();
+              onClose();
             }}
             onCancel={() => setReviewing(false)}
           />
         )}
+      </div>
+    </Drawer>
+  );
+}
 
-        {/* Expanded */}
-        {expanded && !reviewing && (
-          <div
-            style={{
-              marginTop: 12,
-              paddingTop: 12,
-              borderTop: "1px solid var(--border)",
-            }}
-          >
-            <div
+/* ── Minimal Request Card (iCart style) ──────────────────── */
+function RequestCard({ req, onClick }) {
+  const s = getS(req.status);
+  const loc = req.cart?.location;
+  const itemCount = req.items?.length || 0;
+  const firstIng = req.items?.[0]?.ingredient;
+
+  return (
+    <div
+      className="icart_item_card"
+      style={{ cursor: "pointer" }}
+      onClick={onClick}
+    >
+      {/* Top: icon + status */}
+      <div className="icart_item_top">
+        <div className="icart_item_icon">
+          {firstIng?.image ? (
+            <img
+              src={firstIng.image}
+              alt=""
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 7,
+                width: 22,
+                height: 22,
+                borderRadius: 5,
+                objectFit: "cover",
+              }}
+            />
+          ) : (
+            <PiTruck size={16} />
+          )}
+        </div>
+        <Chip status={req.status} small />
+      </div>
+
+      {/* Request ID */}
+      <div className="icart_item_serial" style={{ fontFamily: "monospace" }}>
+        #{req.id.slice(0, 8).toUpperCase()}
+      </div>
+
+      {/* Meta rows */}
+      <div className="icart_item_meta">
+        <div className="icart_meta_row">
+          <span className="icart_meta_key">Cart</span>
+          <span
+            className="icart_meta_val"
+            style={{ fontFamily: "monospace", fontSize: "0.72rem" }}
+          >
+            {req.cart?.serialNumber ||
+              req.cartId?.slice(0, 8).toUpperCase() ||
+              "—"}
+          </span>
+        </div>
+        <div className="icart_meta_row">
+          <span className="icart_meta_key">Items</span>
+          <span className="icart_meta_val">
+            {itemCount > 0 ? (
+              `${itemCount} ingredient${itemCount !== 1 ? "s" : ""}`
+            ) : (
+              <span className="icart_meta_muted">None</span>
+            )}
+          </span>
+        </div>
+        <div className="icart_meta_row">
+          <span className="icart_meta_key">Location</span>
+          <span className="icart_meta_val">
+            {loc?.name ? (
+              <span className="icart_location_val">
+                <MdOutlineLocationOn size={11} />
+                {loc.name}
+              </span>
+            ) : (
+              <span className="icart_meta_muted">Not set</span>
+            )}
+          </span>
+        </div>
+        <div className="icart_meta_row">
+          <span className="icart_meta_key">Date</span>
+          <span className="icart_meta_val">{fmtDate(req.createdAt)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Requests Tab ─────────────────────────────────────────── */
+function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
+  const [filter, setFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selected, setSelected] = useState(null);
+
+  const filtered = requests.filter((r) => {
+    if (filter !== "ALL" && r.status !== filter) return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      if (
+        !r.cart?.serialNumber?.toLowerCase().includes(q) &&
+        !r.items?.some((it) =>
+          it.ingredient?.name?.toLowerCase().includes(q),
+        ) &&
+        !r.requester?.fullName?.toLowerCase().includes(q)
+      )
+        return false;
+    }
+    if (dateFrom && new Date(r.createdAt) < new Date(dateFrom)) return false;
+    if (dateTo && new Date(r.createdAt) > new Date(dateTo + "T23:59:59"))
+      return false;
+    return true;
+  });
+
+  const hasActiveFilters =
+    filter !== "ALL" || search.trim() || dateFrom || dateTo;
+
+  return (
+    <div>
+      {/* Status pills + controls */}
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          flexWrap: "wrap",
+          alignItems: "center",
+          marginBottom: 10,
+        }}
+      >
+        {["ALL", ...Object.keys(STATUS)].map((k) => {
+          const count =
+            k === "ALL"
+              ? requests.length
+              : requests.filter((r) => r.status === k).length;
+          if (k !== "ALL" && count === 0) return null;
+          const ps = k !== "ALL" ? getS(k) : null;
+          return (
+            <button
+              key={k}
+              className={`icart_sub_nav_btn ${filter === k ? "icart_sub_nav_active" : ""}`}
+              style={
+                filter === k && ps
+                  ? {
+                      color: ps.color,
+                      borderColor: ps.border,
+                      background: ps.bg,
+                    }
+                  : {}
+              }
+              onClick={() => setFilter(k)}
+            >
+              {k === "ALL" ? "All" : STATUS[k].label}
+              <span
+                style={{
+                  marginLeft: 4,
+                  fontSize: "0.61rem",
+                  fontWeight: 800,
+                  opacity: 0.75,
+                }}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          style={{
+            marginLeft: "auto",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            height: 30,
+            padding: "0 12px",
+            borderRadius: 8,
+            border: `1px solid ${showFilters || hasActiveFilters ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+            background:
+              showFilters || hasActiveFilters
+                ? "var(--bg-active)"
+                : "var(--bg-hover)",
+            color:
+              showFilters || hasActiveFilters
+                ? "var(--accent)"
+                : "var(--text-muted)",
+            fontSize: "0.74rem",
+            fontWeight: 700,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          <MdFilterList size={14} />
+          {hasActiveFilters ? "Filters ●" : "Filters"}
+        </button>
+        <button
+          onClick={onRefresh}
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+            background: "var(--bg-hover)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--text-muted)",
+            flexShrink: 0,
+          }}
+        >
+          <MdRefresh size={14} />
+        </button>
+      </div>
+
+      {/* Filters panel */}
+      {showFilters && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr auto auto",
+            gap: 8,
+            padding: "12px 14px",
+            background: "var(--bg-hover)",
+            borderRadius: 12,
+            marginBottom: 14,
+          }}
+        >
+          <div style={{ position: "relative" }}>
+            <MdSearch
+              size={14}
+              style={{
+                position: "absolute",
+                left: 10,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)",
+                pointerEvents: "none",
+              }}
+            />
+            <input
+              className="modal-input"
+              style={{ paddingLeft: 30, marginBottom: 0, height: 36 }}
+              placeholder="Search cart, ingredient, requester…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                style={{
+                  position: "absolute",
+                  right: 8,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--text-muted)",
+                  display: "flex",
+                }}
+              >
+                <MdClose size={13} />
+              </button>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <label
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--text-muted)",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
               }}
             >
-              {[
-                { label: "Requester", value: req.requester?.fullName },
-                { label: "Phone", value: req.requester?.phone },
-                {
-                  label: "Supplied Qty",
-                  value:
-                    req.suppliedQuantity != null
-                      ? req.suppliedQuantity.toLocaleString()
-                      : null,
-                },
-                {
-                  label: "Updated",
-                  value:
-                    req.updatedAt !== req.createdAt
-                      ? fmtDate(req.updatedAt)
-                      : null,
-                },
-              ]
-                .filter((r) => r.value)
-                .map((r) => (
-                  <div
-                    key={r.label}
-                    style={{
-                      background: "var(--bg-hover)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 8,
-                      padding: "8px 10px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: "0.6rem",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                        marginBottom: 2,
-                      }}
-                    >
-                      {r.label}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "0.78rem",
-                        fontWeight: 700,
-                        color: "var(--text-body)",
-                      }}
-                    >
-                      {r.value}
-                    </div>
-                  </div>
-                ))}
-            </div>
+              From
+            </label>
+            <input
+              type="date"
+              className="modal-input"
+              style={{ marginBottom: 0, height: 36, width: 140 }}
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
           </div>
-        )}
-      </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <label
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--text-muted)",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+              }}
+            >
+              To
+            </label>
+            <input
+              type="date"
+              className="modal-input"
+              style={{ marginBottom: 0, height: 36, width: 140 }}
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
+          {hasActiveFilters && (
+            <button
+              onClick={() => {
+                setSearch("");
+                setDateFrom("");
+                setDateTo("");
+                setFilter("ALL");
+              }}
+              style={{
+                gridColumn: "1 / -1",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--accent)",
+                fontSize: "0.74rem",
+                fontWeight: 700,
+                fontFamily: "inherit",
+                textAlign: "left",
+                padding: 0,
+              }}
+            >
+              Clear all filters
+            </button>
+          )}
+        </div>
+      )}
+
+      {reqLoading ? (
+        <div className="drawer_loading">
+          <div className="page_loader_spinner" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="icart_empty_state" style={{ padding: "40px 0" }}>
+          <PiTruck size={28} style={{ opacity: 0.25 }} />
+          <p className="icart_empty_title">
+            {requests.length === 0
+              ? "No supply requests yet"
+              : "No requests match filters"}
+          </p>
+          <p className="icart_empty_sub">
+            {requests.length === 0
+              ? "Once approved, requests from iCart operators will appear here."
+              : "Try adjusting your filters."}
+          </p>
+        </div>
+      ) : (
+        <div className="icart_grid">
+          {filtered.map((req) => (
+            <RequestCard
+              key={req.id}
+              req={req}
+              onClick={() => setSelected(req)}
+            />
+          ))}
+        </div>
+      )}
+
+      <RequestDrawer
+        req={selected}
+        profile={profile}
+        onClose={() => setSelected(null)}
+        onRefresh={() => {
+          onRefresh();
+          setSelected(null);
+        }}
+      />
     </div>
   );
 }
 
 /* ── Prices Tab ───────────────────────────────────────────── */
 function PricesTab({ profile }) {
+  const [prices, setPrices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const LIMIT = 20;
+
   const [ingredient, setIngredient] = useState(null);
+  const [ingSearch, setIngSearch] = useState("");
+  const [ingResults, setIngResults] = useState([]);
+  const [ingSearching, setIngSearching] = useState(false);
+  const [ingOpen, setIngOpen] = useState(false);
   const [price, setPrice] = useState("");
   const [saving, setSaving] = useState(false);
-  const [savedList, setSavedList] = useState([]); // local session list
+  const debRef = useRef(null);
+  const wrapRef = useRef(null);
+
+  const fetchPrices = useCallback(
+    async (pg = page, q = search) => {
+      setLoading(true);
+      try {
+        const params = { page: pg, limit: LIMIT };
+        if (q.trim()) params.search = q.trim();
+        if (profile?.state?.id) params.stateId = profile.state.id;
+        const r = await api.get("/library/ingredient/supplier/my-prices", {
+          params,
+        });
+        const d = r.data.data;
+        setPrices(d?.data || []);
+        setTotal(d?.total || 0);
+        setTotalPages(d?.totalPages || 1);
+      } catch {
+        toast.error("Failed to load prices");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [page, search, profile?.state?.id],
+  );
+
+  useEffect(() => {
+    fetchPrices();
+  }, [fetchPrices]);
+
+  const searchIngredients = (q) => {
+    if (!q.trim()) {
+      setIngResults([]);
+      return;
+    }
+    clearTimeout(debRef.current);
+    debRef.current = setTimeout(async () => {
+      setIngSearching(true);
+      try {
+        const r = await api.get(
+          `/library/ingredient?search=${encodeURIComponent(q)}&limit=8`,
+        );
+        const d = r.data.data;
+        setIngResults(Array.isArray(d) ? d : d?.ingredient || []);
+      } catch {
+        setIngResults([]);
+      } finally {
+        setIngSearching(false);
+      }
+    }, 300);
+  };
 
   const save = async () => {
-    if (!ingredient)
-      return toast.error("Search and select an ingredient first");
+    if (!ingredient) return toast.error("Select an ingredient first");
     if (!price || Number(price) < 0) return toast.error("Enter a valid price");
     if (!profile?.state?.id) return toast.error("No state on your profile");
     setSaving(true);
@@ -1586,19 +1837,11 @@ function PricesTab({ profile }) {
         price: Number(price),
       });
       toast.success(`Price set for ${ingredient.name}`);
-      setSavedList((prev) => {
-        const exists = prev.findIndex((p) => p.ingredient.id === ingredient.id);
-        const entry = {
-          ingredient,
-          price: Number(price),
-          stateId: profile.state.id,
-        };
-        return exists >= 0
-          ? prev.map((p, i) => (i === exists ? entry : p))
-          : [entry, ...prev];
-      });
       setIngredient(null);
+      setIngSearch("");
       setPrice("");
+      setIngResults([]);
+      fetchPrices(1, search);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed");
     } finally {
@@ -1608,28 +1851,7 @@ function PricesTab({ profile }) {
 
   return (
     <div>
-      {/* State context */}
-      {profile?.state?.name && (
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "5px 11px",
-            background: "var(--bg-hover)",
-            border: "1px solid var(--border)",
-            borderRadius: 8,
-            fontSize: "0.74rem",
-            color: "var(--text-muted)",
-            fontWeight: 600,
-            marginBottom: 16,
-          }}
-        >
-          <MdOutlineLocationOn size={13} /> Prices for {profile.state.name}
-        </div>
-      )}
-
-      {/* Search + price form */}
+      {/* Set price form */}
       <div
         style={{
           background: "var(--bg-card)",
@@ -1641,267 +1863,503 @@ function PricesTab({ profile }) {
       >
         <div
           style={{
-            fontSize: "0.78rem",
+            fontSize: "0.82rem",
             fontWeight: 800,
             color: "var(--text-heading)",
-            marginBottom: 12,
+            marginBottom: 14,
           }}
         >
-          Set Ingredient Price
+          Set / Update Ingredient Price
         </div>
-        <div className="form-field">
-          <label className="modal-label">Ingredient *</label>
-          <IngredientSearch
-            value={ingredient}
-            onChange={setIngredient}
-            placeholder="Search ingredient or prep item…"
-          />
-        </div>
-        {ingredient && (
-          <div
-            style={{
-              marginBottom: 12,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "8px 11px",
-              background: "var(--bg-active)",
-              border: "1px solid rgba(203,108,220,0.2)",
-              borderRadius: 9,
-            }}
-          >
-            {ingredient.image ? (
-              <img
-                src={ingredient.image}
-                alt=""
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 6,
-                  objectFit: "cover",
-                  flexShrink: 0,
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 6,
-                  background: "var(--bg-card)",
-                  border: "1px solid var(--border)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <MdImage size={12} style={{ color: "var(--text-muted)" }} />
-              </div>
-            )}
-            <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  fontSize: "0.8rem",
-                  fontWeight: 700,
-                  color: "var(--text-heading)",
-                }}
-              >
-                {ingredient.name}
-              </div>
-              {ingredient.unit && (
-                <div
-                  style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}
-                >
-                  per {ingredient.unit}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        <div className="form-field" style={{ marginBottom: 12 }}>
-          <label className="modal-label">Your Price (₦) *</label>
-          <div style={{ position: "relative" }}>
-            <span
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr auto auto",
+            gap: 8,
+            alignItems: "end",
+          }}
+        >
+          <div ref={wrapRef} style={{ position: "relative" }}>
+            <label className="modal-label">Ingredient</label>
+            <div
               style={{
-                position: "absolute",
-                left: 10,
-                top: "50%",
-                transform: "translateY(-50%)",
-                fontSize: "0.82rem",
-                color: "var(--text-muted)",
-                fontWeight: 600,
-                pointerEvents: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                height: 40,
+                padding: "0 10px",
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                borderRadius: 9,
               }}
             >
-              ₦
-            </span>
-            <input
-              className="modal-input"
-              type="number"
-              min="0"
-              style={{ paddingLeft: 24 }}
-              placeholder="0.00"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-            />
+              {ingredient?.image ? (
+                <img
+                  src={ingredient.image}
+                  alt=""
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 4,
+                    objectFit: "cover",
+                    flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <MdSearch
+                  size={14}
+                  style={{ color: "var(--text-muted)", flexShrink: 0 }}
+                />
+              )}
+              <input
+                style={{
+                  flex: 1,
+                  border: "none",
+                  background: "transparent",
+                  outline: "none",
+                  fontSize: "0.82rem",
+                  color: "var(--text-body)",
+                  fontFamily: "inherit",
+                }}
+                placeholder="Search ingredient…"
+                value={ingSearch}
+                onChange={(e) => {
+                  setIngSearch(e.target.value);
+                  setIngredient(null);
+                  setIngOpen(true);
+                  searchIngredients(e.target.value);
+                }}
+                onFocus={() => setIngOpen(true)}
+              />
+              {(ingSearch || ingredient) && (
+                <button
+                  onClick={() => {
+                    setIngredient(null);
+                    setIngSearch("");
+                    setIngResults([]);
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--text-muted)",
+                    display: "flex",
+                    padding: 0,
+                  }}
+                >
+                  <MdClose size={12} />
+                </button>
+              )}
+            </div>
+            {ingOpen && ingSearch && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 4px)",
+                  left: 0,
+                  right: 0,
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 10,
+                  zIndex: 60,
+                  maxHeight: 180,
+                  overflowY: "auto",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                }}
+              >
+                {ingSearching ? (
+                  <div
+                    style={{
+                      padding: "10px 12px",
+                      fontSize: "0.78rem",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    Searching…
+                  </div>
+                ) : ingResults.length === 0 ? (
+                  <div
+                    style={{
+                      padding: "10px 12px",
+                      fontSize: "0.78rem",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    No results
+                  </div>
+                ) : (
+                  ingResults.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => {
+                        setIngredient(item);
+                        setIngSearch(item.name);
+                        setIngOpen(false);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "8px 12px",
+                        cursor: "pointer",
+                        borderBottom: "1px solid var(--border)",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background = "var(--bg-hover)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
+                    >
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt=""
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 5,
+                            objectFit: "cover",
+                            flexShrink: 0,
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 5,
+                            background: "var(--bg-hover)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <MdImage
+                            size={11}
+                            style={{ color: "var(--text-muted)" }}
+                          />
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          color: "var(--text-body)",
+                        }}
+                      >
+                        {item.name}
+                      </div>
+                      {item.unit && (
+                        <div
+                          style={{
+                            fontSize: "0.66rem",
+                            color: "var(--text-muted)",
+                            marginLeft: "auto",
+                          }}
+                        >
+                          {item.unit}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
+          <div>
+            <label className="modal-label">Price (₦)</label>
+            <div style={{ position: "relative" }}>
+              <span
+                style={{
+                  position: "absolute",
+                  left: 9,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  fontSize: "0.78rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 600,
+                  pointerEvents: "none",
+                }}
+              >
+                ₦
+              </span>
+              <input
+                className="modal-input"
+                type="number"
+                min="0"
+                style={{
+                  paddingLeft: 22,
+                  height: 40,
+                  width: 120,
+                  marginBottom: 0,
+                }}
+                placeholder="0.00"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && save()}
+              />
+            </div>
+          </div>
+          <button
+            className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+            style={{
+              height: 40,
+              padding: "0 18px",
+              position: "relative",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              flexShrink: 0,
+            }}
+            onClick={save}
+            disabled={saving || !ingredient}
+          >
+            <span className="btn_text">
+              <MdOutlinePriceChange size={14} /> Save
+            </span>
+            {saving && (
+              <span className="btn_loader" style={{ width: 13, height: 13 }} />
+            )}
+          </button>
+        </div>
+        {profile?.state?.name && (
+          <div
+            style={{
+              marginTop: 10,
+              fontSize: "0.7rem",
+              color: "var(--text-muted)",
+              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <MdOutlineLocationOn size={12} />
+            Prices for {profile.state.name}
+          </div>
+        )}
+      </div>
+
+      {/* Search */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <div style={{ position: "relative", flex: 1 }}>
+          <MdSearch
+            size={14}
+            style={{
+              position: "absolute",
+              left: 10,
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "var(--text-muted)",
+              pointerEvents: "none",
+            }}
+          />
+          <input
+            className="modal-input"
+            style={{ paddingLeft: 30, marginBottom: 0, height: 36 }}
+            placeholder="Search my prices…"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            onKeyDown={(e) => e.key === "Enter" && fetchPrices(1, search)}
+          />
+          {search && (
+            <button
+              onClick={() => {
+                setSearch("");
+                setPage(1);
+                fetchPrices(1, "");
+              }}
+              style={{
+                position: "absolute",
+                right: 8,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--text-muted)",
+                display: "flex",
+              }}
+            >
+              <MdClose size={13} />
+            </button>
+          )}
         </div>
         <button
-          className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+          onClick={() => fetchPrices(page, search)}
           style={{
-            height: 40,
-            padding: "0 20px",
-            position: "relative",
-            display: "inline-flex",
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+            background: "var(--bg-hover)",
+            cursor: "pointer",
+            display: "flex",
             alignItems: "center",
-            gap: 6,
+            justifyContent: "center",
+            color: "var(--text-muted)",
+            flexShrink: 0,
           }}
-          onClick={save}
-          disabled={saving || !ingredient}
         >
-          <span className="btn_text">
-            <MdOutlinePriceChange size={15} /> Save Price
-          </span>
-          {saving && (
-            <span className="btn_loader" style={{ width: 13, height: 13 }} />
-          )}
+          <MdRefresh size={14} />
         </button>
       </div>
 
-      {/* Session saved list */}
-      {savedList.length > 0 && (
-        <div>
+      {loading ? (
+        <div className="drawer_loading">
+          <div className="page_loader_spinner" />
+        </div>
+      ) : prices.length === 0 ? (
+        <div className="icart_empty_state" style={{ padding: "40px 0" }}>
+          <MdOutlinePriceChange size={28} style={{ opacity: 0.25 }} />
+          <p className="icart_empty_title">No prices set yet</p>
+          <p className="icart_empty_sub">
+            Use the form above to add ingredient prices.
+          </p>
+        </div>
+      ) : (
+        <>
           <div
             style={{
-              fontSize: "0.7rem",
-              fontWeight: 700,
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              marginBottom: 10,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+              gap: 10,
+              marginBottom: 14,
             }}
           >
-            Prices Set This Session
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {savedList.map(({ ingredient: ing, price: p }) => (
-              <div
-                key={ing.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "9px 12px",
-                  background: "var(--bg-card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 11,
-                }}
-              >
-                {ing.image ? (
-                  <img
-                    src={ing.image}
-                    alt=""
-                    style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: 7,
-                      objectFit: "cover",
-                      flexShrink: 0,
-                    }}
-                  />
-                ) : (
+            {prices.map((p) => {
+              const ing = p.ingredient;
+              return (
+                <div
+                  key={p.id}
+                  className="icart_item_card"
+                  style={{ padding: "14px 14px 12px" }}
+                >
                   <div
                     style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: 7,
-                      background: "var(--bg-hover)",
-                      border: "1px solid var(--border)",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
+                      gap: 8,
+                      marginBottom: 10,
                     }}
                   >
-                    <MdImage size={13} style={{ color: "var(--text-muted)" }} />
-                  </div>
-                )}
-                <div style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      fontSize: "0.8rem",
-                      fontWeight: 700,
-                      color: "var(--text-body)",
-                    }}
-                  >
-                    {ing.name}
-                  </div>
-                  {ing.unit && (
-                    <div
-                      style={{
-                        fontSize: "0.64rem",
-                        color: "var(--text-muted)",
-                      }}
-                    >
-                      per {ing.unit}
+                    {ing?.image ? (
+                      <img
+                        src={ing.image}
+                        alt=""
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          objectFit: "cover",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          background: "var(--bg-hover)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <MdImage
+                          size={15}
+                          style={{ color: "var(--text-muted)" }}
+                        />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
+                          color: "var(--text-body)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {ing?.name || "Item"}
+                      </div>
+                      {ing?.unit && (
+                        <div
+                          style={{
+                            fontSize: "0.65rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          per {ing.unit}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div style={{ textAlign: "right" }}>
+                  </div>
                   <div
                     style={{
-                      fontSize: "0.85rem",
+                      fontSize: "1rem",
                       fontWeight: 900,
                       color: "#16a34a",
                     }}
                   >
-                    ₦{fmt(p)}
+                    ₦{fmt(p.price)}
                   </div>
-                  <button
-                    onClick={() => {
-                      setIngredient(ing);
-                      setPrice(String(p));
-                    }}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "var(--accent)",
-                      fontSize: "0.66rem",
-                      fontWeight: 700,
-                      fontFamily: "inherit",
-                      padding: 0,
-                    }}
-                  >
-                    Edit
-                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </div>
-      )}
-
-      {savedList.length === 0 && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "36px 24px",
-            color: "var(--text-muted)",
-          }}
-        >
-          <MdOutlinePriceChange
-            size={28}
-            style={{ opacity: 0.25, marginBottom: 8 }}
-          />
-          <p style={{ margin: 0, fontSize: "0.82rem" }}>
-            Search for ingredients above to set your prices.
-          </p>
-          <p style={{ margin: "4px 0 0", fontSize: "0.74rem" }}>
-            Prices help the platform match supply requests to your business.
-          </p>
-        </div>
+          {totalPages > 1 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+            >
+              <button
+                className="app_btn app_btn_cancel"
+                style={{ height: 32, padding: "0 14px", fontSize: "0.76rem" }}
+                onClick={() => {
+                  setPage((p) => p - 1);
+                  fetchPrices(page - 1, search);
+                }}
+                disabled={page <= 1}
+              >
+                ‹ Prev
+              </button>
+              <span
+                style={{
+                  fontSize: "0.78rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 600,
+                }}
+              >
+                {page} / {totalPages} · {total} total
+              </span>
+              <button
+                className="app_btn app_btn_cancel"
+                style={{ height: 32, padding: "0 14px", fontSize: "0.76rem" }}
+                onClick={() => {
+                  setPage((p) => p + 1);
+                  fetchPrices(page + 1, search);
+                }}
+                disabled={page >= totalPages}
+              >
+                Next ›
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -1914,8 +2372,7 @@ export default function SupplierHome() {
   const [editing, setEditing] = useState(false);
   const [requests, setRequests] = useState([]);
   const [reqLoading, setReqLoading] = useState(false);
-  const [filter, setFilter] = useState("ALL");
-  const [tab, setTab] = useState("requests"); // "requests" | "prices"
+  const [tab, setTab] = useState("requests");
 
   const fetchProfile = async () => {
     try {
@@ -1944,8 +2401,6 @@ export default function SupplierHome() {
     fetchReqs();
   }, []);
 
-  const filtered =
-    filter === "ALL" ? requests : requests.filter((r) => r.status === filter);
   const pending = requests.filter((r) => r.status === "PENDING").length;
 
   if (loading)
@@ -1959,7 +2414,6 @@ export default function SupplierHome() {
 
   return (
     <div className="page_wrapper">
-      {/* Header */}
       <div className="icart_page_header">
         <div>
           <div
@@ -1970,27 +2424,9 @@ export default function SupplierHome() {
               marginBottom: 3,
             }}
           >
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: "var(--bg-active)",
-                border: "1px solid rgba(203,108,220,0.2)",
-                color: "var(--accent)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <PiTruck size={15} />
-            </div>
             <h2 className="page_title_big m-0">Supplier</h2>
           </div>
-          <p
-            className="welcome_message"
-            style={{ marginBottom: 0, paddingLeft: 41 }}
-          >
+          <p className="welcome_message" style={{ marginBottom: 0 }}>
             Manage your business and fulfil supply requests
           </p>
         </div>
@@ -2023,7 +2459,6 @@ export default function SupplierHome() {
         )}
       </div>
 
-      {/* Profile */}
       {!profile || editing ? (
         <ProfileForm
           existing={editing ? profile : null}
@@ -2037,10 +2472,8 @@ export default function SupplierHome() {
         <ProfileCard profile={profile} onEdit={() => setEditing(true)} />
       )}
 
-      {/* Tabs (only shown when profile exists) */}
       {profile && (
         <>
-          {/* Tab switcher */}
           <div className="icart_sub_nav" style={{ marginBottom: 20 }}>
             <button
               className={`icart_sub_nav_btn ${tab === "requests" ? "icart_sub_nav_active" : ""}`}
@@ -2067,90 +2500,14 @@ export default function SupplierHome() {
               My Prices
             </button>
           </div>
-
-          {/* Requests tab */}
           {tab === "requests" && (
-            <>
-              {requests.length > 0 && (
-                <div className="icart_sub_nav" style={{ marginBottom: 14 }}>
-                  {["ALL", ...Object.keys(STATUS)].map((k) => {
-                    const count =
-                      k === "ALL"
-                        ? requests.length
-                        : requests.filter((r) => r.status === k).length;
-                    if (k !== "ALL" && count === 0) return null;
-                    const ps = k !== "ALL" ? getS(k) : null;
-                    return (
-                      <button
-                        key={k}
-                        className={`icart_sub_nav_btn ${filter === k ? "icart_sub_nav_active" : ""}`}
-                        style={
-                          filter === k && ps
-                            ? {
-                                color: ps.color,
-                                borderColor: ps.border,
-                                background: ps.bg,
-                              }
-                            : {}
-                        }
-                        onClick={() => setFilter(k)}
-                      >
-                        {k === "ALL" ? "All" : STATUS[k].label}
-                        {count > 0 && (
-                          <span
-                            style={{
-                              marginLeft: 4,
-                              fontSize: "0.61rem",
-                              fontWeight: 800,
-                              opacity: 0.75,
-                            }}
-                          >
-                            {count}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {reqLoading ? (
-                <div className="drawer_loading">
-                  <div className="page_loader_spinner" />
-                </div>
-              ) : filtered.length === 0 ? (
-                <div
-                  className="icart_empty_state"
-                  style={{ padding: "40px 0" }}
-                >
-                  <MdLocalShipping size={28} style={{ opacity: 0.25 }} />
-                  <p className="icart_empty_title">
-                    {requests.length === 0
-                      ? "No supply requests yet"
-                      : `No ${filter.toLowerCase()} requests`}
-                  </p>
-                  <p className="icart_empty_sub">
-                    {requests.length === 0
-                      ? "Once approved, requests from iCart operators will appear here."
-                      : "Try a different filter."}
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  {filtered.map((req) => (
-                    <SupplyCard
-                      key={req.id}
-                      req={req}
-                      profile={profile}
-                      onRefresh={fetchReqs}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
+            <RequestsTab
+              requests={requests}
+              reqLoading={reqLoading}
+              profile={profile}
+              onRefresh={fetchReqs}
+            />
           )}
-
-          {/* Prices tab */}
           {tab === "prices" && <PricesTab profile={profile} />}
         </>
       )}
