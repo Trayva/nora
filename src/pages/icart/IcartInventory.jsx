@@ -1563,13 +1563,16 @@ function InventoryItemRow({ item, onRefresh }) {
 /* ── Supply Request Row ─────────────────────────────────────── */
 function SupplyRequestRow({ req }) {
   const [expanded, setExpanded] = useState(false);
-  const ingredientName =
-    req.ingredient?.name || req.ingredientId || "Ingredient";
+  const items = req.items || [];
   const supplierName =
-    req.supplier?.user?.name ||
-    req.supplier?.businessName ||
-    req.supplierId ||
-    "Supplier";
+    req.supplier?.businessName || req.supplier?.user?.name || "Supplier";
+  const firstNames = items
+    .slice(0, 2)
+    .map((it) => it.ingredient?.name || "Item")
+    .join(", ");
+  const title = firstNames || `#${req.id.slice(0, 8).toUpperCase()}`;
+  const fmt = (n) =>
+    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
 
   return (
     <div className="icart_task_card">
@@ -1582,11 +1585,22 @@ function SupplyRequestRow({ req }) {
             <MdLocalShipping size={14} />
           </div>
           <div>
-            <div className="icart_task_name">{ingredientName}</div>
+            <div className="icart_task_name">
+              {title}
+              {items.length > 2 ? ` +${items.length - 2} more` : ""}
+            </div>
             <div className="icart_task_meta">
-              <span>from {supplierName}</span>
+              <span>{supplierName}</span>
               <span className="contract_row_dot">·</span>
-              <span>Qty: {req.quantity}</span>
+              <span>
+                {items.length} ingredient{items.length !== 1 ? "s" : ""}
+              </span>
+              {req.totalAmount > 0 && (
+                <>
+                  <span className="contract_row_dot">·</span>
+                  <span>₦{fmt(req.totalAmount)}</span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1601,16 +1615,125 @@ function SupplyRequestRow({ req }) {
       </div>
       {expanded && (
         <div className="icart_task_expanded">
-          <div className="icart_task_data">
-            {req.suppliedQuantity != null && (
+          {/* Ingredient breakdown */}
+          {items.map((it) => {
+            const ing = it.ingredient;
+            return (
+              <div
+                key={it.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  padding: "7px 0",
+                  borderBottom: "1px solid var(--border)",
+                }}
+              >
+                {ing?.image ? (
+                  <img
+                    src={ing.image}
+                    alt=""
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      objectFit: "cover",
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: "var(--bg-hover)",
+                      border: "1px solid var(--border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdInventory2
+                      size={13}
+                      style={{ color: "var(--text-muted)" }}
+                    />
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                    }}
+                  >
+                    {ing?.name || "Item"}
+                  </div>
+                  <div
+                    style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
+                  >
+                    Requested: {it.quantity?.toLocaleString()}
+                    {ing?.unit || ""}
+                    {it.suppliedQuantity != null &&
+                      ` · Supplied: ${it.suppliedQuantity.toLocaleString()}${ing?.unit || ""}`}
+                  </div>
+                </div>
+                {it.priceAtTime > 0 && (
+                  <div
+                    style={{
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      color: "var(--text-heading)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    ₦{fmt(it.priceAtTime)}/{ing?.unit || "unit"}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {/* Meta */}
+          <div className="icart_task_data" style={{ marginTop: 8 }}>
+            {req.invoice && (
               <div className="icart_task_data_row">
-                <span className="icart_meta_key">Supplied Qty</span>
-                <span className="icart_meta_val">{req.suppliedQuantity}</span>
+                <span className="icart_meta_key">Invoice</span>
+                <span
+                  className="icart_meta_val"
+                  style={{ display: "flex", alignItems: "center", gap: 5 }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.62rem",
+                      fontWeight: 800,
+                      padding: "1px 7px",
+                      borderRadius: 999,
+                      background:
+                        req.invoice.status === "PAID"
+                          ? "rgba(34,197,94,0.1)"
+                          : "rgba(234,179,8,0.1)",
+                      color:
+                        req.invoice.status === "PAID" ? "#16a34a" : "#ca8a04",
+                      border: `1px solid ${req.invoice.status === "PAID" ? "rgba(34,197,94,0.25)" : "rgba(234,179,8,0.25)"}`,
+                    }}
+                  >
+                    {req.invoice.status}
+                  </span>
+                  ₦{fmt(req.invoice.total)}
+                </span>
+              </div>
+            )}
+            {req.requester?.fullName && (
+              <div className="icart_task_data_row">
+                <span className="icart_meta_key">Requester</span>
+                <span className="icart_meta_val">{req.requester.fullName}</span>
               </div>
             )}
             {req.createdAt && (
               <div className="icart_task_data_row">
-                <span className="icart_meta_key">Requested</span>
+                <span className="icart_meta_key">Date</span>
                 <span className="icart_meta_val">
                   {new Date(req.createdAt).toLocaleDateString("en-GB", {
                     day: "2-digit",
@@ -1651,11 +1774,9 @@ export default function IcartInventory({ cart }) {
     setLoading(true);
     try {
       const res = await api.get(`/icart/supply?cartId=${cart.id}`);
-      const all = res.data.data?.items || res.data.data || [];
-      setSupplyRequests(
-        // all.filter ? all.filter((r) => !r.cartId || r.cartId === cart.id) : all,
-        all,
-      );
+      const d = res.data.data;
+      const all = d?.requests || d?.items || (Array.isArray(d) ? d : []);
+      setSupplyRequests(all);
     } catch {
       toast.error("Failed to load supply requests");
     } finally {
