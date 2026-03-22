@@ -16,14 +16,11 @@ import {
   MdExpandLess,
   MdImage,
   MdCalendarToday,
-  MdFilterList,
 } from "react-icons/md";
 import api from "../../api/axios";
 
-/* ── helpers ──────────────────────────────────────────────── */
 const fmt = (n) =>
   Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
-
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
@@ -31,7 +28,6 @@ const fmtDate = (d) =>
         month: "short",
       })
     : "—";
-
 const fmtChartDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
@@ -55,6 +51,11 @@ const pmColors = {
     bg: "rgba(168,85,247,0.1)",
     color: "#a855f7",
     border: "rgba(168,85,247,0.2)",
+  },
+  ONLINE: {
+    bg: "rgba(203,108,220,0.1)",
+    color: "var(--accent)",
+    border: "rgba(203,108,220,0.25)",
   },
   OTHER: {
     bg: "rgba(107,114,128,0.1)",
@@ -85,7 +86,6 @@ function PaymentBadge({ method }) {
   );
 }
 
-/* ── Custom tooltip ───────────────────────────────────────── */
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
@@ -153,10 +153,8 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
-/* ── Sale Row ─────────────────────────────────────────────── */
 function SaleRow({ sale }) {
   const [expanded, setExpanded] = useState(false);
-
   return (
     <div
       style={{
@@ -320,7 +318,6 @@ function SaleRow({ sale }) {
   );
 }
 
-/* ── Date range presets ───────────────────────────────────── */
 const PRESETS = [
   { label: "7d", days: 7 },
   { label: "30d", days: 30 },
@@ -328,17 +325,12 @@ const PRESETS = [
   { label: "All", days: null },
 ];
 
-function toISODate(d) {
-  return d.toISOString().split("T")[0];
-}
+const toISODate = (d) => d.toISOString().split("T")[0];
 
-/* ── Main Component ───────────────────────────────────────── */
 export default function IcartSales({ cart }) {
   const [sales, setSales] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Date range state
   const [preset, setPreset] = useState("30d");
   const [from, setFrom] = useState(() => {
     const d = new Date();
@@ -365,11 +357,12 @@ export default function IcartSales({ cart }) {
   };
 
   const buildQuery = () => {
-    const params = [];
+    // Always include cartId so analytics is scoped to this cart
+    const params = [`cartId=${cart.id}`];
     if (from)
       params.push(`startDate=${encodeURIComponent(from + "T00:00:00.000Z")}`);
     if (to) params.push(`endDate=${encodeURIComponent(to + "T23:59:59.999Z")}`);
-    return params.length ? `?${params.join("&")}` : "";
+    return `?${params.join("&")}`;
   };
 
   const fetchData = () => {
@@ -382,10 +375,8 @@ export default function IcartSales({ cart }) {
       .then(([salesRes, analyticsRes]) => {
         if (salesRes.status === "fulfilled") {
           const d = salesRes.value.data.data;
-          const all = Array.isArray(d) ? d : d?.items || [];
-          setSales(
-            all.filter((s) => s.cartId === cart.id || s.cart?.id === cart.id),
-          );
+          // Server filters by cartId — no client-side filter needed
+          setSales(Array.isArray(d) ? d : d?.items || []);
         }
         if (analyticsRes.status === "fulfilled") {
           setAnalytics(analyticsRes.value.data.data);
@@ -406,8 +397,7 @@ export default function IcartSales({ cart }) {
     profit: Math.round(d.profit),
   }));
 
-  // Payment breakdown
-  const pmBreakdown = ["CASH", "POS", "TRANSFER", "OTHER"]
+  const pmBreakdown = ["CASH", "POS", "TRANSFER", "ONLINE", "OTHER"]
     .map((m) => ({
       method: m,
       count: sales.filter((s) => s.paymentMethod === m).length,
@@ -419,9 +409,8 @@ export default function IcartSales({ cart }) {
 
   return (
     <div className="icart_tab_content">
-      {/* ── Date range filter ── */}
+      {/* Date range filter */}
       <div style={{ marginBottom: 16 }}>
-        {/* Preset buttons */}
         <div
           style={{
             display: "flex",
@@ -491,8 +480,6 @@ export default function IcartSales({ cart }) {
             />
           )}
         </div>
-
-        {/* Custom date inputs */}
         {showCustom && (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <div className="form-field" style={{ marginBottom: 0, flex: 1 }}>
@@ -523,7 +510,7 @@ export default function IcartSales({ cart }) {
         )}
       </div>
 
-      {/* ── Summary cards — all 6 metrics ── */}
+      {/* Summary cards */}
       {totals && (
         <div
           style={{
@@ -535,10 +522,14 @@ export default function IcartSales({ cart }) {
         >
           {[
             { label: "Total Revenue", value: totals.totalSales, accent: true },
-            { label: "Total Profit", value: totals.totalProfit, accent: false },
             {
               label: "Cost of Sales",
               value: totals.totalCostOfSales,
+              accent: false,
+            },
+            {
+              label: "Vendor Profit",
+              value: totals.vendorProfit,
               accent: false,
             },
             { label: "Owner Profit", value: totals.ownerProfit, accent: false },
@@ -584,7 +575,7 @@ export default function IcartSales({ cart }) {
         </div>
       )}
 
-      {/* ── Chart ── */}
+      {/* Chart */}
       {chartData.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div
@@ -607,7 +598,6 @@ export default function IcartSales({ cart }) {
             >
               Sales Trend
             </span>
-            {/* Legend */}
             <div
               style={{
                 marginLeft: "auto",
@@ -646,7 +636,6 @@ export default function IcartSales({ cart }) {
               ))}
             </div>
           </div>
-
           <ResponsiveContainer width="100%" height={160}>
             <AreaChart
               data={chartData}
@@ -724,7 +713,7 @@ export default function IcartSales({ cart }) {
         </div>
       )}
 
-      {/* ── Payment breakdown ── */}
+      {/* Payment breakdown */}
       {pmBreakdown.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div
@@ -794,14 +783,13 @@ export default function IcartSales({ cart }) {
         </div>
       )}
 
-      {/* ── Sales list ── */}
+      {/* Sales list */}
       <div className="drawer_section_title" style={{ marginBottom: 10 }}>
         Transactions
         <span className="icart_section_count" style={{ marginLeft: 8 }}>
           {sales.length}
         </span>
       </div>
-
       {sales.length === 0 ? (
         <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
           <MdPointOfSale size={24} style={{ opacity: 0.3 }} />

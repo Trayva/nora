@@ -13,12 +13,12 @@ import {
   MdCircle,
   MdArrowForward,
   MdOutlineTrendingUp,
-  MdOutlineHub,
 } from "react-icons/md";
 import { LuPlus } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import Drawer from "../../components/Drawer";
 import api from "../../api/axios";
+import { StatusBadge, getS } from "./adminUtils_";
 import AdminSalesFormula from "./AdminSalesFormula";
 import AdminRentalSettings from "./AdminRentalSettings";
 import AdminContractSettings from "./AdminContractSettings";
@@ -28,7 +28,6 @@ import AdminApplications from "./AdminApplications";
 import AdminOperators from "./AdminOperators";
 import AdminVendorDetail from "./AdminVendorDetail";
 import AdminIcarts from "./AdminIcarts";
-import { getS, StatusBadge } from "./adminUtils_";
 
 const fmtDate = (d) =>
   d
@@ -94,7 +93,6 @@ export default function AdminDashboard() {
     operators: 0,
     icarts: 0,
     suppliers: 0,
-    aggregators: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -128,30 +126,16 @@ export default function AdminDashboard() {
   });
   const [savingLocation, setSavingLocation] = useState(false);
 
-  // Aggregator state
-  const [showAggForm, setShowAggForm] = useState(false);
-  const [aggForm, setAggForm] = useState({ userId: "" });
-  const [savingAgg, setSavingAgg] = useState(false);
-  const [userSearch, setUserSearch] = useState("");
-  const [userResults, setUserResults] = useState([]);
-  const [userSearching, setUserSearching] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showAssignForm, setShowAssignForm] = useState(null); // aggregator id
-  const [assignCartId, setAssignCartId] = useState("");
-  const [assigningCart, setAssigningCart] = useState(false);
-  const [icartList, setIcartList] = useState([]);
-
   const fetchStats = async () => {
     setStatsLoading(true);
     try {
-      const [usersR, vendorsR, operatorsR, icartsR, suppliersR, aggregatorsR] =
+      const [usersR, vendorsR, operatorsR, icartsR, suppliersR] =
         await Promise.allSettled([
           api.get("/account"),
           api.get("/vendor/profile"),
           api.get("/icart/operator/hirable"),
           api.get("/icart"),
           api.get("/supplier"),
-          api.get("/icart/aggregator"),
         ]);
       const count = (r) => {
         if (r.status !== "fulfilled") return 0;
@@ -166,7 +150,6 @@ export default function AdminDashboard() {
           "users",
           "icarts",
           "states",
-          "aggregators",
         ].find((k) => Array.isArray(d[k]));
         if (k) return d[k].length;
         if (Array.isArray(d)) return d.length;
@@ -178,7 +161,6 @@ export default function AdminDashboard() {
         operators: count(operatorsR),
         icarts: count(icartsR),
         suppliers: count(suppliersR),
-        aggregators: count(aggregatorsR),
       });
     } catch {
       /* silent */
@@ -250,11 +232,6 @@ export default function AdminDashboard() {
       title: "Locations",
       description: "States and regions",
     },
-    aggregators: {
-      url: "/icart/aggregator",
-      title: "Aggregators",
-      description: "All iCart aggregators",
-    },
   };
 
   const openDrawer = async (key) => {
@@ -291,7 +268,6 @@ export default function AdminDashboard() {
           "users",
           "icarts",
           "states",
-          "aggregators",
           "data",
         ].find((k) => Array.isArray(d?.[k]));
         if (namedKey) return d[namedKey];
@@ -337,102 +313,6 @@ export default function AdminDashboard() {
       toast.error(err.response?.data?.message || "Failed to unlock");
     } finally {
       setEntityApproving(null);
-    }
-  };
-
-  // Fetch icarts for assign dropdown (lazy)
-  const fetchIcartList = async () => {
-    try {
-      const r = await api.get("/icart");
-      const d = r.data.data;
-      const list = Array.isArray(d) ? d : d?.items || d?.icarts || [];
-      setIcartList(list);
-    } catch {
-      /* silent */
-    }
-  };
-
-  const searchUsers = async (q) => {
-    setUserSearch(q);
-    if (!q.trim()) {
-      setUserResults([]);
-      return;
-    }
-    setUserSearching(true);
-    try {
-      const r = await api.get("/account", { params: { search: q } });
-      const d = r.data.data;
-      const users = Array.isArray(d) ? d : d?.users || d?.items || [];
-      setUserResults(users.slice(0, 8));
-    } catch {
-      /* silent */
-    } finally {
-      setUserSearching(false);
-    }
-  };
-
-  const handleCreateAggregator = async () => {
-    if (!selectedUser) return toast.error("Select a user first");
-    setSavingAgg(true);
-    try {
-      await api.post("/icart/aggregator/create", { userId: selectedUser.id });
-      toast.success("Aggregator created");
-      setShowAggForm(false);
-      setAggForm({ userId: "" });
-      setSelectedUser(null);
-      setUserSearch("");
-      setUserResults([]);
-      openDrawer("aggregators");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed");
-    } finally {
-      setSavingAgg(false);
-    }
-  };
-
-  const handleAssignCart = async (aggregatorId) => {
-    if (!assignCartId.trim())
-      return toast.error("Enter an iCart serial number");
-    setAssigningCart(true);
-    try {
-      // Resolve serial number to cart ID
-      const searchRes = await api.get("/icart", {
-        params: { search: assignCartId.trim() },
-      });
-      const d = searchRes.data.data;
-      const list = Array.isArray(d) ? d : d?.items || d?.icarts || [];
-      const cart = list.find(
-        (c) =>
-          c.serialNumber?.toLowerCase() === assignCartId.trim().toLowerCase(),
-      );
-      if (!cart) {
-        toast.error("iCart not found — check the serial number");
-        setAssigningCart(false);
-        return;
-      }
-      await api.post("/icart/aggregator/assign-cart", {
-        aggregatorId,
-        cartId: cart.id,
-      });
-      toast.success("Cart assigned");
-      setShowAssignForm(null);
-      setAssignCartId("");
-      openDrawer("aggregators");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed");
-    } finally {
-      setAssigningCart(false);
-    }
-  };
-
-  const handleUnassignCart = async (cartId) => {
-    if (!window.confirm("Unassign this cart?")) return;
-    try {
-      await api.post("/icart/aggregator/unassign-cart", { cartId });
-      toast.success("Cart unassigned");
-      openDrawer("aggregators");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed");
     }
   };
 
@@ -494,12 +374,6 @@ export default function AdminDashboard() {
       label: "Suppliers",
       icon: MdOutlineLocalShipping,
       color: "#8b5cf6",
-    },
-    {
-      key: "aggregators",
-      label: "Aggregators",
-      icon: MdOutlineHub,
-      color: "#06b6d4",
     },
   ];
 
@@ -736,12 +610,6 @@ export default function AdminDashboard() {
               label: "Locations",
               icon: MdOutlineLocationOn,
               color: "#16a34a",
-            },
-            {
-              key: "aggregators",
-              label: "Aggregators",
-              icon: MdOutlineHub,
-              color: "#06b6d4",
             },
           ].map(({ key, label, icon: Icon, color }) => (
             <button
@@ -1091,285 +959,6 @@ export default function AdminDashboard() {
         width={500}
       >
         {/* Location create form */}
-        {/* Aggregator create form */}
-        {drawer === "aggregators" && (
-          <div style={{ marginBottom: 16 }}>
-            {showAggForm ? (
-              <div className="admin_form_card">
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 12,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "0.82rem",
-                      fontWeight: 700,
-                      color: "var(--text-heading)",
-                    }}
-                  >
-                    Create Aggregator
-                  </span>
-                  <button
-                    className="biz_icon_btn"
-                    onClick={() => setShowAggForm(false)}
-                  >
-                    <MdClose size={13} />
-                  </button>
-                </div>
-                <div className="form-field" style={{ marginBottom: 10 }}>
-                  <label className="modal-label">Search User *</label>
-                  {selectedUser ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "8px 10px",
-                        background: "rgba(6,182,212,0.08)",
-                        border: "1px solid rgba(6,182,212,0.25)",
-                        borderRadius: 9,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 7,
-                          background: "rgba(6,182,212,0.15)",
-                          color: "#06b6d4",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: 800,
-                          fontSize: "0.82rem",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {(selectedUser.fullName || selectedUser.email || "U")
-                          .charAt(0)
-                          .toUpperCase()}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: "0.8rem",
-                            fontWeight: 700,
-                            color: "var(--text-heading)",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {selectedUser.fullName || "User"}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "0.68rem",
-                            color: "var(--text-muted)",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {selectedUser.email}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setSelectedUser(null);
-                          setUserSearch("");
-                          setUserResults([]);
-                        }}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: "var(--text-muted)",
-                          padding: 0,
-                          display: "flex",
-                        }}
-                      >
-                        <MdClose size={14} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ position: "relative" }}>
-                      <input
-                        className="modal-input"
-                        placeholder="Type name or email to search…"
-                        value={userSearch}
-                        onChange={(e) => searchUsers(e.target.value)}
-                        autoComplete="off"
-                      />
-                      {userSearching && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            right: 10,
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                          }}
-                        >
-                          <div
-                            className="page_loader_spinner"
-                            style={{ width: 14, height: 14 }}
-                          />
-                        </div>
-                      )}
-                      {userResults.length > 0 && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "calc(100% + 4px)",
-                            left: 0,
-                            right: 0,
-                            zIndex: 50,
-                            background: "var(--bg-card)",
-                            border: "1px solid var(--border)",
-                            borderRadius: 10,
-                            overflow: "hidden",
-                            boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
-                          }}
-                        >
-                          {userResults.map((u) => (
-                            <div
-                              key={u.id}
-                              onClick={() => {
-                                setSelectedUser(u);
-                                setUserSearch("");
-                                setUserResults([]);
-                              }}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 10,
-                                padding: "9px 12px",
-                                cursor: "pointer",
-                                borderBottom: "1px solid var(--border)",
-                                transition: "background 0.1s",
-                              }}
-                              onMouseEnter={(e) =>
-                                (e.currentTarget.style.background =
-                                  "var(--bg-hover)")
-                              }
-                              onMouseLeave={(e) =>
-                                (e.currentTarget.style.background =
-                                  "transparent")
-                              }
-                            >
-                              <div
-                                style={{
-                                  width: 28,
-                                  height: 28,
-                                  borderRadius: 7,
-                                  background: "var(--bg-active)",
-                                  border: "1px solid rgba(203,108,220,0.2)",
-                                  color: "var(--accent)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontWeight: 800,
-                                  fontSize: "0.75rem",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {(u.fullName || u.email || "U")
-                                  .charAt(0)
-                                  .toUpperCase()}
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div
-                                  style={{
-                                    fontSize: "0.78rem",
-                                    fontWeight: 700,
-                                    color: "var(--text-heading)",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {u.fullName || "—"}
-                                </div>
-                                <div
-                                  style={{
-                                    fontSize: "0.68rem",
-                                    color: "var(--text-muted)",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {u.email}
-                                </div>
-                              </div>
-                              {u.roles?.length > 0 && (
-                                <span
-                                  style={{
-                                    fontSize: "0.6rem",
-                                    fontWeight: 700,
-                                    padding: "1px 6px",
-                                    borderRadius: 999,
-                                    background: "var(--bg-hover)",
-                                    border: "1px solid var(--border)",
-                                    color: "var(--text-muted)",
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  {u.roles[0]?.role || u.roles[0]}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    justifyContent: "flex-end",
-                  }}
-                >
-                  <button
-                    className="app_btn app_btn_cancel"
-                    style={{ height: 34 }}
-                    onClick={() => setShowAggForm(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className={`app_btn app_btn_confirm${savingAgg ? " btn_loading" : ""}`}
-                    style={{ height: 34, minWidth: 80, position: "relative" }}
-                    onClick={handleCreateAggregator}
-                    disabled={savingAgg}
-                  >
-                    <span className="btn_text">Create</span>
-                    {savingAgg && (
-                      <span
-                        className="btn_loader"
-                        style={{ width: 12, height: 12 }}
-                      />
-                    )}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                className="app_btn app_btn_confirm biz_add_btn"
-                style={{ marginBottom: 12 }}
-                onClick={() => setShowAggForm(true)}
-              >
-                <LuPlus size={13} /> New Aggregator
-              </button>
-            )}
-          </div>
-        )}
 
         {drawer === "locations" && (
           <div style={{ marginBottom: 16 }}>
@@ -1501,181 +1090,7 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <div className="admin_drawer_list">
-            {drawerItems.map((item) => {
-              if (drawer === "aggregators") {
-                const name =
-                  item.user?.fullName ||
-                  item.user?.name ||
-                  item.businessName ||
-                  item.userId?.slice(0, 8);
-                const email = item.user?.email || "";
-                // API doesn't return carts on aggregator — cross-reference from icartList
-                const carts = icartList.filter(
-                  (c) => c.aggregatorId === item.id,
-                );
-                const initials = (name || "A").charAt(0).toUpperCase();
-                return (
-                  <div key={item.id}>
-                    <div
-                      className="admin_drawer_row"
-                      style={{
-                        flexDirection: "column",
-                        alignItems: "stretch",
-                        gap: 8,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                        }}
-                      >
-                        <div
-                          className="admin_drawer_avatar"
-                          style={{
-                            background: "rgba(6,182,212,0.12)",
-                            color: "#06b6d4",
-                            border: "1px solid rgba(6,182,212,0.2)",
-                          }}
-                        >
-                          {initials}
-                        </div>
-                        <div className="admin_drawer_info">
-                          <div className="admin_drawer_name">
-                            {name || "Aggregator"}
-                          </div>
-                          {email && (
-                            <div className="admin_drawer_sub">{email}</div>
-                          )}
-                        </div>
-                        <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
-                          <span className="admin_meta_chip">
-                            {carts.length} cart{carts.length !== 1 ? "s" : ""}
-                          </span>
-                          <button
-                            className="app_btn app_btn_confirm biz_add_btn"
-                            style={{ height: 28 }}
-                            onClick={() => {
-                              setShowAssignForm(
-                                showAssignForm === item.id ? null : item.id,
-                              );
-                              setAssignCartId("");
-                            }}
-                          >
-                            <LuPlus size={12} /> Assign
-                          </button>
-                        </div>
-                      </div>
-                      {/* Assigned carts */}
-                      {carts.length > 0 && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 5,
-                            paddingLeft: 46,
-                          }}
-                        >
-                          {carts.map((c) => (
-                            <div
-                              key={c.id || c}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                                padding: "3px 9px",
-                                background: "var(--bg-card)",
-                                border: "1px solid var(--border)",
-                                borderRadius: 999,
-                                fontSize: "0.7rem",
-                                fontWeight: 700,
-                                color: "var(--text-body)",
-                                fontFamily: "monospace",
-                              }}
-                            >
-                              {c.serialNumber ||
-                                c.id?.slice(0, 8).toUpperCase() ||
-                                c}
-                              <button
-                                onClick={() => handleUnassignCart(c.id || c)}
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  color: "#ef4444",
-                                  padding: 0,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  lineHeight: 1,
-                                }}
-                              >
-                                <MdClose size={11} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {/* Assign cart inline form */}
-                      {showAssignForm === item.id && (
-                        <div
-                          style={{
-                            paddingLeft: 46,
-                            display: "flex",
-                            gap: 8,
-                            alignItems: "center",
-                          }}
-                        >
-                          <input
-                            className="modal-input"
-                            style={{
-                              flex: 1,
-                              height: 34,
-                              marginBottom: 0,
-                              fontFamily: "monospace",
-                            }}
-                            placeholder="Enter iCart serial number…"
-                            value={assignCartId}
-                            onChange={(e) => setAssignCartId(e.target.value)}
-                          />
-                          <button
-                            className={`app_btn app_btn_confirm${assigningCart ? " btn_loading" : ""}`}
-                            style={{
-                              height: 34,
-                              padding: "0 14px",
-                              position: "relative",
-                              flexShrink: 0,
-                            }}
-                            onClick={() => handleAssignCart(item.id)}
-                            disabled={assigningCart || !assignCartId}
-                          >
-                            <span className="btn_text">Assign</span>
-                            {assigningCart && (
-                              <span
-                                className="btn_loader"
-                                style={{ width: 12, height: 12 }}
-                              />
-                            )}
-                          </button>
-                          <button
-                            className="app_btn app_btn_cancel"
-                            style={{
-                              height: 34,
-                              padding: "0 10px",
-                              flexShrink: 0,
-                            }}
-                            onClick={() => setShowAssignForm(null)}
-                          >
-                            <MdClose size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-              return renderEntityRow(item);
-            })}
+            {drawerItems.map((item) => {})}
           </div>
         )}
       </Drawer>

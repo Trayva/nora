@@ -114,6 +114,7 @@ function OperatorDetail({ operator, onClose, onApprove }) {
 
   const buildQ = () => {
     const ps = [`operatorId=${operator.userId}`];
+    if (operator.cartId) ps.push(`cartId=${operator.cartId}`);
     if (from)
       ps.push(`startDate=${encodeURIComponent(from + "T00:00:00.000Z")}`);
     if (to) ps.push(`endDate=${encodeURIComponent(to + "T23:59:59.999Z")}`);
