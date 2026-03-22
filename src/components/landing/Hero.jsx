@@ -23,7 +23,7 @@ function Hero() {
             <button
               className="app_btn app_btn_confirm"
               style={{ height: 50, padding: "0 28px", fontSize: "0.9375rem" }}
-              onClick={() => navigate("/app")}
+              onClick={() => navigate("/auth/register?role=CUSTOMER")}
             >
               Get Started Now!
             </button>
