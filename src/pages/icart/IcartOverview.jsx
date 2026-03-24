@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import {
   MdWifi,
@@ -16,11 +16,12 @@ import {
   MdExpandLess,
   MdImage,
   MdRestaurantMenu,
+  MdVideocam,
+  MdClose,
 } from "react-icons/md";
 import api from "../../api/axios";
 
 const LOCATION_TYPES = ["ACTIVE", "POTENTIAL", "INACTIVE", "RESTRICTED"];
-
 const BLANK_LOCATION = {
   name: "",
   address: "",
@@ -63,14 +64,400 @@ function InfoRow({ label, value }) {
   );
 }
 
-/* ── Location Form ───────────────────────────────────────────── */
+/* ── Live Stream Modal ─────────────────────────────────────── */
+function LiveStreamModal({ onClose }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1200,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(0,0,0,0.65)",
+          backdropFilter: "blur(3px)",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          width: "min(520px, 92vw)",
+          background: "var(--bg-card)",
+          borderRadius: 18,
+          overflow: "hidden",
+          boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--border)",
+          }}
+        >
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: "rgba(239,68,68,0.1)",
+              border: "1px solid rgba(239,68,68,0.2)",
+              color: "#ef4444",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <MdVideocam size={16} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                fontSize: "0.9rem",
+                fontWeight: 800,
+                color: "var(--text-heading)",
+              }}
+            >
+              Live Stream
+            </div>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+              Kitchen camera feed
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 7,
+              background: "var(--bg-hover)",
+              border: "1px solid var(--border)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--text-muted)",
+            }}
+          >
+            <MdClose size={15} />
+          </button>
+        </div>
+        {/* Video placeholder */}
+        <div
+          style={{
+            position: "relative",
+            background: "#0a0a0a",
+            aspectRatio: "16/9",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+          }}
+        >
+          {/* Scanline effect */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundImage:
+                "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.015) 2px, rgba(255,255,255,0.015) 4px)",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: "50%",
+              background: "rgba(239,68,68,0.1)",
+              border: "2px solid rgba(239,68,68,0.3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <MdVideocam size={28} style={{ color: "rgba(239,68,68,0.6)" }} />
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                fontSize: "0.88rem",
+                fontWeight: 700,
+                color: "rgba(255,255,255,0.7)",
+                marginBottom: 4,
+              }}
+            >
+              No Feed Available
+            </div>
+            <div
+              style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}
+            >
+              Live stream will appear here when the camera is connected
+            </div>
+          </div>
+          {/* Red recording dot */}
+          <div
+            style={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              padding: "4px 8px",
+              background: "rgba(0,0,0,0.5)",
+              borderRadius: 6,
+            }}
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: "#ef4444",
+                opacity: 0.5,
+              }}
+            />
+            <span
+              style={{
+                fontSize: "0.65rem",
+                color: "rgba(255,255,255,0.5)",
+                fontWeight: 700,
+                letterSpacing: "0.05em",
+              }}
+            >
+              OFFLINE
+            </span>
+          </div>
+        </div>
+        <div
+          style={{
+            padding: "12px 20px",
+            fontSize: "0.74rem",
+            color: "var(--text-muted)",
+            textAlign: "center",
+          }}
+        >
+          Camera integration coming soon
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Location Form ─────────────────────────────────────────── */
+/* ── Map Picker ──────────────────────────────────────────────── */
+function MapPicker({ lat, lng, onPick }) {
+  const mapRef = useRef(null);
+  const leafletRef = useRef(null);
+  const markerRef = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+
+  // Default center: Abuja, Nigeria
+  const DEFAULT_LAT = 9.0765;
+  const DEFAULT_LNG = 7.3986;
+  const initLat = lat && !isNaN(Number(lat)) ? Number(lat) : DEFAULT_LAT;
+  const initLng = lng && !isNaN(Number(lng)) ? Number(lng) : DEFAULT_LNG;
+
+  useEffect(() => {
+    // Load Leaflet CSS
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    // Load Leaflet JS
+    const loadLeaflet = () => {
+      if (window.L) {
+        initMap();
+        return;
+      }
+      if (document.getElementById("leaflet-js")) {
+        // already loading — wait
+        const wait = setInterval(() => {
+          if (window.L) {
+            clearInterval(wait);
+            initMap();
+          }
+        }, 100);
+        return;
+      }
+      const script = document.createElement("script");
+      script.id = "leaflet-js";
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = initMap;
+      script.onerror = () => setLoadError(true);
+      document.head.appendChild(script);
+    };
+
+    const initMap = () => {
+      if (!mapRef.current || leafletRef.current) return;
+      const L = window.L;
+      const map = L.map(mapRef.current).setView([initLat, initLng], 14);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors",
+        maxZoom: 19,
+      }).addTo(map);
+
+      // Custom accent-colored marker
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="width:22px;height:22px;background:#cb6cdc;border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(203,108,220,0.5)"></div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 22],
+      });
+
+      const marker = L.marker([initLat, initLng], {
+        icon,
+        draggable: true,
+      }).addTo(map);
+      markerRef.current = marker;
+      leafletRef.current = map;
+
+      // Click map → move marker
+      map.on("click", (e) => {
+        const { lat, lng } = e.latlng;
+        marker.setLatLng([lat, lng]);
+        onPick(lat, lng);
+      });
+
+      // Drag marker
+      marker.on("dragend", (e) => {
+        const { lat, lng } = e.target.getLatLng();
+        onPick(lat, lng);
+      });
+
+      setMapReady(true);
+    };
+
+    loadLeaflet();
+
+    return () => {
+      if (leafletRef.current) {
+        leafletRef.current.remove();
+        leafletRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Keep marker in sync when lat/lng are typed manually
+  useEffect(() => {
+    if (!markerRef.current || !leafletRef.current) return;
+    const newLat = Number(lat);
+    const newLng = Number(lng);
+    if (!isNaN(newLat) && !isNaN(newLng) && newLat !== 0 && newLng !== 0) {
+      markerRef.current.setLatLng([newLat, newLng]);
+      leafletRef.current.setView(
+        [newLat, newLng],
+        leafletRef.current.getZoom(),
+      );
+    }
+  }, [lat, lng]);
+
+  if (loadError)
+    return (
+      <div
+        style={{
+          height: 220,
+          background: "var(--bg-hover)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 8,
+          color: "var(--text-muted)",
+          fontSize: "0.8rem",
+        }}
+      >
+        <MdLocationOn size={24} style={{ opacity: 0.3 }} />
+        Map failed to load — enter coordinates manually
+      </div>
+    );
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        borderRadius: 12,
+        overflow: "hidden",
+        border: "1px solid var(--border)",
+      }}
+    >
+      <div
+        ref={mapRef}
+        style={{ height: 240, width: "100%", background: "var(--bg-hover)" }}
+      />
+      {!mapReady && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "var(--bg-hover)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            fontSize: "0.78rem",
+            color: "var(--text-muted)",
+          }}
+        >
+          <div
+            className="page_loader_spinner"
+            style={{ width: 18, height: 18 }}
+          />{" "}
+          Loading map…
+        </div>
+      )}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 8,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "rgba(0,0,0,0.55)",
+          backdropFilter: "blur(4px)",
+          borderRadius: 6,
+          padding: "4px 10px",
+          fontSize: "0.65rem",
+          color: "rgba(255,255,255,0.85)",
+          pointerEvents: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Click map or drag pin to set location
+      </div>
+    </div>
+  );
+}
+
 function LocationForm({ cartId, onSaved, onCancel }) {
   const [form, setForm] = useState(BLANK_LOCATION);
   const [saving, setSaving] = useState(false);
   const [states, setStates] = useState([]);
   const [statesLoading, setStatesLoading] = useState(true);
+  const [detectingGPS, setDetectingGPS] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
-  // Fetch states on mount
   useEffect(() => {
     api
       .get("/config/state")
@@ -80,8 +467,6 @@ function LocationForm({ cartId, onSaved, onCancel }) {
   }, []);
 
   const set = (key, val) => setForm((p) => ({ ...p, [key]: val }));
-
-  // When a state is selected, auto-fill country and stateName from the state object
   const handleStateChange = (stateId) => {
     const selected = states.find((s) => s.id === stateId);
     setForm((p) => ({
@@ -89,6 +474,43 @@ function LocationForm({ cartId, onSaved, onCancel }) {
       _selectedStateId: stateId,
       stateName: selected?.name || p.stateName,
       country: selected?.country || p.country,
+    }));
+  };
+
+  const detectGPS = () => {
+    if (!navigator.geolocation)
+      return toast.error("Geolocation not supported in this browser");
+    setDetectingGPS(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setForm((p) => ({
+          ...p,
+          latitude: latitude.toFixed(6),
+          longitude: longitude.toFixed(6),
+        }));
+        setShowMap(true);
+        toast.success("Location detected!");
+        setDetectingGPS(false);
+      },
+      (err) => {
+        setDetectingGPS(false);
+        const msgs = {
+          1: "Location permission denied",
+          2: "Location unavailable",
+          3: "Location request timed out",
+        };
+        toast.error(msgs[err.code] || "Failed to detect location");
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
+  const handleMapPick = (lat, lng) => {
+    setForm((p) => ({
+      ...p,
+      latitude: lat.toFixed(6),
+      longitude: lng.toFixed(6),
     }));
   };
 
@@ -109,7 +531,6 @@ function LocationForm({ cartId, onSaved, onCancel }) {
     if (isNaN(form.latitude) || isNaN(form.longitude))
       return toast.error("Latitude and longitude must be valid numbers");
     if (!form._selectedStateId) return toast.error("Please select a state");
-
     setSaving(true);
     try {
       const locRes = await api.post("/icart/location", {
@@ -124,12 +545,9 @@ function LocationForm({ cartId, onSaved, onCancel }) {
         locationIdType: form.locationIdType,
         notes: form.notes.trim() || undefined,
       });
-
       const locationId = locRes.data.data?.id;
       if (!locationId) throw new Error("No location ID returned");
-
       await api.post(`/icart/${cartId}/change-location`, { locationId });
-
       toast.success("Location created and assigned");
       onSaved(locRes.data.data);
     } catch (err) {
@@ -198,26 +616,169 @@ function LocationForm({ cartId, onSaved, onCancel }) {
             ))}
           </select>
         </div>
-        <div className="form-field">
-          <label className="modal-label">Latitude *</label>
-          <input
-            className="modal-input"
-            type="number"
-            placeholder="e.g. 9.0765"
-            value={form.latitude}
-            onChange={(e) => set("latitude", e.target.value)}
-          />
+
+        {/* Coordinates section */}
+        <div className="form-field" style={{ gridColumn: "1 / -1" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 8,
+            }}
+          >
+            <label className="modal-label" style={{ margin: 0 }}>
+              Coordinates *
+            </label>
+            <div style={{ display: "flex", gap: 6 }}>
+              {/* Detect GPS */}
+              <button
+                onClick={detectGPS}
+                disabled={detectingGPS}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  height: 28,
+                  padding: "0 10px",
+                  borderRadius: 7,
+                  border: "1px solid rgba(59,130,246,0.3)",
+                  background: "rgba(59,130,246,0.06)",
+                  color: "#3b82f6",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {detectingGPS ? (
+                  <>
+                    <div
+                      className="page_loader_spinner"
+                      style={{
+                        width: 11,
+                        height: 11,
+                        borderColor: "#3b82f6",
+                        borderTopColor: "transparent",
+                      }}
+                    />{" "}
+                    Detecting…
+                  </>
+                ) : (
+                  <>
+                    <MdLocationOn size={13} /> Detect Location
+                  </>
+                )}
+              </button>
+              {/* Toggle map */}
+              <button
+                onClick={() => setShowMap((v) => !v)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  height: 28,
+                  padding: "0 10px",
+                  borderRadius: 7,
+                  border: `1px solid ${showMap ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                  background: showMap ? "var(--bg-active)" : "var(--bg-hover)",
+                  color: showMap ? "var(--accent)" : "var(--text-muted)",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                🗺 {showMap ? "Hide Map" : "Pick on Map"}
+              </button>
+            </div>
+          </div>
+
+          {/* Map */}
+          {showMap && (
+            <div style={{ marginBottom: 10 }}>
+              <MapPicker
+                lat={form.latitude}
+                lng={form.longitude}
+                onPick={handleMapPick}
+              />
+            </div>
+          )}
+
+          {/* Lat/Lng manual inputs */}
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+          >
+            <div>
+              <label className="modal-label" style={{ fontSize: "0.65rem" }}>
+                Latitude
+              </label>
+              <input
+                className="modal-input"
+                type="number"
+                step="any"
+                placeholder="e.g. 9.0765"
+                value={form.latitude}
+                onChange={(e) => {
+                  set("latitude", e.target.value);
+                }}
+                style={{ marginBottom: 0 }}
+              />
+            </div>
+            <div>
+              <label className="modal-label" style={{ fontSize: "0.65rem" }}>
+                Longitude
+              </label>
+              <input
+                className="modal-input"
+                type="number"
+                step="any"
+                placeholder="e.g. 7.3986"
+                value={form.longitude}
+                onChange={(e) => {
+                  set("longitude", e.target.value);
+                }}
+                style={{ marginBottom: 0 }}
+              />
+            </div>
+          </div>
+          {form.latitude &&
+            form.longitude &&
+            !isNaN(Number(form.latitude)) &&
+            !isNaN(Number(form.longitude)) && (
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: "0.68rem",
+                  color: "var(--text-muted)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <MdLocationOn size={12} style={{ color: "var(--accent)" }} />
+                {Number(form.latitude).toFixed(4)},{" "}
+                {Number(form.longitude).toFixed(4)}
+                <a
+                  href={`https://www.google.com/maps?q=${form.latitude},${form.longitude}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    marginLeft: 4,
+                    color: "var(--accent)",
+                    fontSize: "0.65rem",
+                    fontWeight: 700,
+                    textDecoration: "none",
+                  }}
+                >
+                  Verify on Google Maps ↗
+                </a>
+              </div>
+            )}
         </div>
-        <div className="form-field">
-          <label className="modal-label">Longitude *</label>
-          <input
-            className="modal-input"
-            type="number"
-            placeholder="e.g. 7.3986"
-            value={form.longitude}
-            onChange={(e) => set("longitude", e.target.value)}
-          />
-        </div>
+
         <div className="form-field">
           <label className="modal-label">Location Type *</label>
           <select
@@ -242,7 +803,6 @@ function LocationForm({ cartId, onSaved, onCancel }) {
           />
         </div>
       </div>
-
       <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
         <button
           className={`app_btn app_btn_confirm ${saving ? "btn_loading" : ""}`}
@@ -262,6 +822,459 @@ function LocationForm({ cartId, onSaved, onCancel }) {
         >
           Cancel
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Public Concept Detail Modal ──────────────────────────── */
+function ConceptDetailModal({ concept, onClose }) {
+  const [tab, setTab] = useState("menu");
+  const items = concept.menuItems || [];
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1200,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(3px)",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          width: "min(560px, 95vw)",
+          maxHeight: "85vh",
+          background: "var(--bg-card)",
+          borderRadius: 18,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
+        }}
+      >
+        {/* Banner */}
+        {concept.banner ? (
+          <div style={{ position: "relative", height: 120, flexShrink: 0 }}>
+            <img
+              src={concept.banner}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.6))",
+              }}
+            />
+            <button
+              onClick={onClose}
+              style={{
+                position: "absolute",
+                top: 10,
+                right: 10,
+                width: 30,
+                height: 30,
+                borderRadius: 7,
+                background: "rgba(0,0,0,0.4)",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+              }}
+            >
+              <MdClose size={15} />
+            </button>
+            <div style={{ position: "absolute", bottom: 12, left: 16 }}>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 900,
+                  color: "#fff",
+                  marginBottom: 2,
+                }}
+              >
+                {concept.name}
+              </div>
+              {concept.vendor?.businessName && (
+                <div
+                  style={{
+                    fontSize: "0.72rem",
+                    color: "rgba(255,255,255,0.75)",
+                    fontWeight: 600,
+                  }}
+                >
+                  {concept.vendor.businessName}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "16px 20px",
+              borderBottom: "1px solid var(--border)",
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 9,
+                background: "var(--bg-active)",
+                border: "1px solid rgba(203,108,220,0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--accent)",
+                flexShrink: 0,
+              }}
+            >
+              <MdStorefront size={16} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: "0.95rem",
+                  fontWeight: 800,
+                  color: "var(--text-heading)",
+                }}
+              >
+                {concept.name}
+              </div>
+              {concept.vendor?.businessName && (
+                <div
+                  style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}
+                >
+                  {concept.vendor.businessName}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 7,
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--text-muted)",
+              }}
+            >
+              <MdClose size={15} />
+            </button>
+          </div>
+        )}
+
+        {/* Meta chips */}
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            flexWrap: "wrap",
+            padding: "10px 16px 0",
+            flexShrink: 0,
+          }}
+        >
+          {concept.status && (
+            <span
+              style={{
+                fontSize: "0.62rem",
+                fontWeight: 800,
+                padding: "2px 8px",
+                borderRadius: 999,
+                background:
+                  concept.status === "APPROVED"
+                    ? "rgba(34,197,94,0.1)"
+                    : "rgba(234,179,8,0.1)",
+                color: concept.status === "APPROVED" ? "#16a34a" : "#ca8a04",
+                border: `1px solid ${concept.status === "APPROVED" ? "rgba(34,197,94,0.25)" : "rgba(234,179,8,0.25)"}`,
+              }}
+            >
+              {concept.status}
+            </span>
+          )}
+          {concept.origin && (
+            <span
+              style={{
+                fontSize: "0.68rem",
+                color: "var(--text-muted)",
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                borderRadius: 999,
+                padding: "2px 8px",
+              }}
+            >
+              🌍 {concept.origin}
+            </span>
+          )}
+          {concept.serveTo && (
+            <span
+              style={{
+                fontSize: "0.68rem",
+                color: "var(--text-muted)",
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                borderRadius: 999,
+                padding: "2px 8px",
+              }}
+            >
+              👥 {concept.serveTo}
+            </span>
+          )}
+          <span
+            style={{
+              fontSize: "0.68rem",
+              color: "var(--text-muted)",
+              background: "var(--bg-hover)",
+              border: "1px solid var(--border)",
+              borderRadius: 999,
+              padding: "2px 8px",
+            }}
+          >
+            {items.length} item{items.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        {concept.description && (
+          <p
+            style={{
+              margin: "8px 16px 0",
+              fontSize: "0.78rem",
+              color: "var(--text-muted)",
+              lineHeight: 1.55,
+              flexShrink: 0,
+            }}
+          >
+            {concept.description}
+          </p>
+        )}
+
+        {/* Tab bar */}
+        <div
+          style={{
+            display: "flex",
+            borderBottom: "1px solid var(--border)",
+            margin: "10px 0 0",
+            flexShrink: 0,
+          }}
+        >
+          {["menu"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              style={{
+                padding: "10px 18px",
+                background: "transparent",
+                border: "none",
+                borderBottom: `2px solid ${tab === t ? "var(--accent)" : "transparent"}`,
+                color: tab === t ? "var(--accent)" : "var(--text-muted)",
+                fontSize: "0.78rem",
+                fontWeight: tab === t ? 700 : 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                textTransform: "capitalize",
+              }}
+            >
+              Menu Items ({items.length})
+            </button>
+          ))}
+        </div>
+
+        {/* Scrollable content */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "12px 16px 16px" }}>
+          {items.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "32px 0",
+                color: "var(--text-muted)",
+                fontSize: "0.82rem",
+              }}
+            >
+              No menu items
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {items.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "10px 12px",
+                    background: "var(--bg-hover)",
+                    borderRadius: 11,
+                  }}
+                >
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 9,
+                        objectFit: "cover",
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 9,
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <MdImage
+                        size={17}
+                        style={{ color: "var(--text-muted)" }}
+                      />
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "0.85rem",
+                        fontWeight: 700,
+                        color: "var(--text-body)",
+                      }}
+                    >
+                      {item.name}
+                    </div>
+                    {item.description && (
+                      <div
+                        style={{
+                          fontSize: "0.72rem",
+                          color: "var(--text-muted)",
+                          marginTop: 1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {item.description}
+                      </div>
+                    )}
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 6,
+                        marginTop: 3,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {item.ticketTime > 0 && (
+                        <span
+                          style={{
+                            fontSize: "0.65rem",
+                            color: "var(--text-muted)",
+                            background: "var(--bg-card)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 4,
+                            padding: "1px 6px",
+                          }}
+                        >
+                          ⏱ {item.ticketTime}min
+                        </span>
+                      )}
+                      {item.tutorialVideo && (
+                        <span
+                          style={{
+                            fontSize: "0.65rem",
+                            color: "#ef4444",
+                            background: "rgba(239,68,68,0.08)",
+                            border: "1px solid rgba(239,68,68,0.2)",
+                            borderRadius: 4,
+                            padding: "1px 6px",
+                          }}
+                        >
+                          ▶ Video
+                        </span>
+                      )}
+                      {item.variants?.length > 0 && (
+                        <span
+                          style={{
+                            fontSize: "0.65rem",
+                            color: "var(--accent)",
+                            background: "var(--bg-active)",
+                            border: "1px solid rgba(203,108,220,0.2)",
+                            borderRadius: 4,
+                            padding: "1px 6px",
+                          }}
+                        >
+                          {item.variants.length} variant
+                          {item.variants.length !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {item.extras?.length > 0 && (
+                        <span
+                          style={{
+                            fontSize: "0.65rem",
+                            color: "#3b82f6",
+                            background: "rgba(59,130,246,0.08)",
+                            border: "1px solid rgba(59,130,246,0.2)",
+                            borderRadius: 4,
+                            padding: "1px 6px",
+                          }}
+                        >
+                          {item.extras.length} extra
+                          {item.extras.length !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    {item.sellingPrice > 0 && (
+                      <div
+                        style={{
+                          fontSize: "0.88rem",
+                          fontWeight: 800,
+                          color: "var(--text-heading)",
+                        }}
+                      >
+                        ₦{Number(item.sellingPrice).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -302,7 +1315,6 @@ function ConceptCard({ concept, cartId, onConceptClick, onMarkupUpdated }) {
         overflow: "hidden",
       }}
     >
-      {/* Header row */}
       <div
         style={{
           display: "flex",
@@ -344,7 +1356,7 @@ function ConceptCard({ concept, cartId, onConceptClick, onMarkupUpdated }) {
           ))}
       </div>
 
-      {/* Action row — markup editor + overview CTA */}
+      {/* Action row */}
       <div
         style={{
           display: "flex",
@@ -462,7 +1474,6 @@ function ConceptCard({ concept, cartId, onConceptClick, onMarkupUpdated }) {
                 ? `${concept.markup}% markup`
                 : "Set markup"}
             </button>
-
             {onConceptClick && (
               <button
                 onClick={() => onConceptClick(concept)}
@@ -513,7 +1524,6 @@ function ConceptCard({ concept, cartId, onConceptClick, onMarkupUpdated }) {
                 background: "var(--bg-hover)",
               }}
             >
-              {/* Image */}
               {item.image ? (
                 <img
                   src={item.image}
@@ -543,8 +1553,6 @@ function ConceptCard({ concept, cartId, onConceptClick, onMarkupUpdated }) {
                   <MdImage size={15} style={{ color: "var(--text-muted)" }} />
                 </div>
               )}
-
-              {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
@@ -570,8 +1578,6 @@ function ConceptCard({ concept, cartId, onConceptClick, onMarkupUpdated }) {
                   </div>
                 )}
               </div>
-
-              {/* Price + ticket time */}
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 {item.sellingPrice != null && (
                   <div
@@ -617,8 +1623,9 @@ export default function IcartOverview({
   const [radius, setRadius] = useState(cart.serviceRadius || "");
   const [savingRadius, setSavingRadius] = useState(false);
   const [showLocationForm, setShowLocationForm] = useState(false);
+  const [showLiveStream, setShowLiveStream] = useState(false);
   const [showConceptForm, setShowConceptForm] = useState(false);
-  const [conceptSource, setConceptSource] = useState("mine"); // "mine" | "public"
+  const [conceptSource, setConceptSource] = useState("mine");
   const [myConcepts, setMyConcepts] = useState([]);
   const [publicConcepts, setPublicConcepts] = useState([]);
   const [publicSearch, setPublicSearch] = useState("");
@@ -629,6 +1636,7 @@ export default function IcartOverview({
   const [selectedConceptId, setSelectedConceptId] = useState("");
   const [markup, setMarkup] = useState("");
   const [addingConcept, setAddingConcept] = useState(false);
+  const [detailConcept, setDetailConcept] = useState(null); // for public concept detail modal
 
   const openConceptForm = async () => {
     setShowConceptForm(true);
@@ -641,7 +1649,7 @@ export default function IcartOverview({
       const d = res.data.data;
       setMyConcepts(Array.isArray(d) ? d : d?.concepts || d?.items || []);
     } catch {
-      toast.error("Failed to load concepts");
+      console.log("Failed to load concepts");
     } finally {
       setConceptsLoading(false);
     }
@@ -674,7 +1682,6 @@ export default function IcartOverview({
     setPublicPage(1);
     fetchPublicConcepts("", 1);
   };
-
   const switchToMine = () => {
     setConceptSource("mine");
     setSelectedConceptId("");
@@ -756,7 +1763,6 @@ export default function IcartOverview({
     setShowLocationForm(false);
     onUpdate({ ...cart, location: newLocation });
   };
-
   const formatDate = (d) =>
     d
       ? new Date(d).toLocaleDateString("en-GB", {
@@ -768,8 +1774,8 @@ export default function IcartOverview({
 
   return (
     <div className="icart_tab_content">
-      {/* Cart Controls */}
-      <div className="drawer_section_title">Cart Controls</div>
+      {/* ── Kitchen Controls ── */}
+      <div className="drawer_section_title">Kitchen Controls</div>
       <div className="icart_toggles_block">
         <ToggleRow
           icon={cart.isOnline ? <MdWifi size={15} /> : <MdWifiOff size={15} />}
@@ -780,14 +1786,40 @@ export default function IcartOverview({
         />
         <ToggleRow
           icon={cart.isLocked ? <MdLock size={15} /> : <MdLockOpen size={15} />}
-          label="Cart Lock"
+          label="Kitchen Lock"
           value={cart.isLocked}
           loading={togglingLock}
           onToggle={handleToggleLock}
         />
+        {/* Live Stream row */}
+        <div
+          className="icart_toggle_row"
+          style={{ cursor: "pointer" }}
+          onClick={() => setShowLiveStream(true)}
+        >
+          <div className="icart_toggle_left">
+            <span className="profile_phone_date_icon">
+              <MdVideocam size={15} />
+            </span>
+            <span className="icart_toggle_label">Live Stream</span>
+          </div>
+          <span
+            style={{
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              padding: "3px 9px",
+              borderRadius: 999,
+              background: "rgba(107,114,128,0.1)",
+              color: "#6b7280",
+              border: "1px solid rgba(107,114,128,0.2)",
+            }}
+          >
+            View
+          </span>
+        </div>
       </div>
 
-      {/* Service Radius */}
+      {/* ── Service Radius ── */}
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
         Service Radius
       </div>
@@ -857,29 +1889,17 @@ export default function IcartOverview({
         </div>
       </div>
 
-      {/* Cart Info */}
+      {/* ── Kitchen Info ── */}
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
-        Cart Info
+        Kitchen Info
       </div>
       <div className="icart_item_meta" style={{ marginBottom: 0 }}>
         <InfoRow label="Serial Number" value={cart.serialNumber} />
         <InfoRow label="Status" value={cart.status} />
-        <InfoRow
-          label="Vendor"
-          value={cart.vendor?.businessName || cart.vendor?.name}
-        />
         <InfoRow label="Owner" value={cart.owner?.name || cart.owner?.email} />
-        <InfoRow
-          label="Contract Start"
-          value={formatDate(cart.contractStartDate)}
-        />
-        <InfoRow
-          label="Contract End"
-          value={formatDate(cart.contractEndDate)}
-        />
       </div>
 
-      {/* Location */}
+      {/* ── Location ── */}
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
         <span>Location</span>
         <button
@@ -931,7 +1951,7 @@ export default function IcartOverview({
         </div>
       )}
 
-      {/* Concepts */}
+      {/* ── Active Concepts ── */}
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
         <span>Active Concepts</span>
         <button
@@ -947,7 +1967,6 @@ export default function IcartOverview({
 
       {showConceptForm && (
         <div className="icart_concept_form">
-          {/* Source toggle */}
           <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
             <button
               onClick={switchToMine}
@@ -997,7 +2016,6 @@ export default function IcartOverview({
             </button>
           </div>
 
-          {/* List */}
           {conceptsLoading ? (
             <div
               style={{
@@ -1024,7 +2042,6 @@ export default function IcartOverview({
             </div>
           ) : (
             <>
-              {/* Search — only for public */}
               {conceptSource === "public" && (
                 <div style={{ position: "relative", marginBottom: 10 }}>
                   <input
@@ -1187,22 +2204,57 @@ export default function IcartOverview({
                               )}
                             </div>
                           </div>
-                          {isSelected && (
-                            <div
-                              style={{
-                                width: 20,
-                                height: 20,
-                                borderRadius: "50%",
-                                background: "var(--accent)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0,
-                              }}
-                            >
-                              <MdVerified size={12} style={{ color: "#fff" }} />
-                            </div>
-                          )}
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 4,
+                              alignItems: "flex-end",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {isSelected && (
+                              <div
+                                style={{
+                                  width: 20,
+                                  height: 20,
+                                  borderRadius: "50%",
+                                  background: "var(--accent)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <MdVerified
+                                  size={12}
+                                  style={{ color: "#fff" }}
+                                />
+                              </div>
+                            )}
+                            {/* View details button for public concepts */}
+                            {conceptSource === "public" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDetailConcept(c);
+                                }}
+                                style={{
+                                  fontSize: "0.6rem",
+                                  fontWeight: 700,
+                                  padding: "2px 7px",
+                                  borderRadius: 5,
+                                  background: "var(--bg-hover)",
+                                  border: "1px solid var(--border)",
+                                  color: "var(--text-muted)",
+                                  cursor: "pointer",
+                                  fontFamily: "inherit",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                Details
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     },
@@ -1210,7 +2262,6 @@ export default function IcartOverview({
                 </div>
               </div>
 
-              {/* Pagination — public only */}
               {conceptSource === "public" && publicTotal > PUBLIC_LIMIT && (
                 <div
                   style={{
@@ -1314,15 +2365,14 @@ export default function IcartOverview({
               concept={c}
               cartId={cart.id}
               onConceptClick={onConceptClick}
-              onMarkupUpdated={(conceptId, markup) => {
-                // Optimistically update local cart state
+              onMarkupUpdated={(conceptId, markup) =>
                 onUpdate({
                   ...cart,
                   concepts: cart.concepts.map((cc) =>
                     cc.id === conceptId ? { ...cc, markup } : cc,
                   ),
-                });
-              }}
+                })
+              }
             />
           ))}
         </div>
@@ -1350,7 +2400,6 @@ export default function IcartOverview({
               op.user?.fullName ||
               op.user?.email ||
               `Operator #${op.id.slice(0, 6).toUpperCase()}`;
-            const initial = name[0].toUpperCase();
             return (
               <div
                 key={op.id}
@@ -1364,15 +2413,12 @@ export default function IcartOverview({
                   borderRadius: 12,
                 }}
               >
-                {/* Avatar */}
                 <div
                   className="icart_operator_avatar"
                   style={{ flexShrink: 0 }}
                 >
-                  {initial}
+                  {name[0].toUpperCase()}
                 </div>
-
-                {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{ display: "flex", alignItems: "center", gap: 6 }}
@@ -1400,8 +2446,6 @@ export default function IcartOverview({
                     )}
                   </div>
                 </div>
-
-                {/* Status chip */}
                 <span
                   style={{
                     fontSize: "0.65rem",
@@ -1433,6 +2477,17 @@ export default function IcartOverview({
           <MdPerson size={18} style={{ opacity: 0.3 }} />
           <span>No operators assigned</span>
         </div>
+      )}
+
+      {/* ── Modals ── */}
+      {showLiveStream && (
+        <LiveStreamModal onClose={() => setShowLiveStream(false)} />
+      )}
+      {detailConcept && (
+        <ConceptDetailModal
+          concept={detailConcept}
+          onClose={() => setDetailConcept(null)}
+        />
       )}
     </div>
   );
