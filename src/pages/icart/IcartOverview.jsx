@@ -66,6 +66,39 @@ function InfoRow({ label, value }) {
 
 /* ── Live Stream Modal ─────────────────────────────────────── */
 function LiveStreamModal({ onClose }) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef(null);
+
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      try {
+        await containerRef.current?.requestFullscreen();
+        setIsFullscreen(true);
+      } catch {
+        /* browser may deny */
+      }
+    } else {
+      await document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  // Sync state when user presses Escape to exit fullscreen
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  // Close modal on Escape (only when not fullscreen — browser handles Escape in fullscreen)
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "Escape" && !document.fullscreenElement) onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   return (
     <div
       style={{
@@ -87,14 +120,23 @@ function LiveStreamModal({ onClose }) {
         }}
       />
       <div
+        ref={containerRef}
         style={{
           position: "relative",
           zIndex: 1,
-          width: "min(520px, 92vw)",
+          width: "min(720px, 92vw)",
           background: "var(--bg-card)",
-          borderRadius: 18,
+          borderRadius: isFullscreen ? 0 : 18,
           overflow: "hidden",
           boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
+          ...(isFullscreen
+            ? {
+                width: "100vw",
+                height: "100vh",
+                display: "flex",
+                flexDirection: "column",
+              }
+            : {}),
         }}
       >
         {/* Header */}
@@ -105,6 +147,7 @@ function LiveStreamModal({ onClose }) {
             gap: 10,
             padding: "16px 20px",
             borderBottom: "1px solid var(--border)",
+            flexShrink: 0,
           }}
         >
           <div
@@ -136,6 +179,27 @@ function LiveStreamModal({ onClose }) {
               Kitchen camera feed
             </div>
           </div>
+          {/* Fullscreen toggle */}
+          <button
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 7,
+              background: "var(--bg-hover)",
+              border: "1px solid var(--border)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--text-muted)",
+              marginRight: 4,
+              fontSize: "0.9rem",
+            }}
+          >
+            {isFullscreen ? "⤡" : "⤢"}
+          </button>
           <button
             onClick={onClose}
             style={{
@@ -154,12 +218,13 @@ function LiveStreamModal({ onClose }) {
             <MdClose size={15} />
           </button>
         </div>
+
         {/* Video placeholder */}
         <div
           style={{
             position: "relative",
             background: "#0a0a0a",
-            aspectRatio: "16/9",
+            ...(isFullscreen ? { flex: 1 } : { aspectRatio: "16/9" }),
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -167,7 +232,7 @@ function LiveStreamModal({ onClose }) {
             gap: 12,
           }}
         >
-          {/* Scanline effect */}
+          {/* Scanlines */}
           <div
             style={{
               position: "absolute",
@@ -208,7 +273,7 @@ function LiveStreamModal({ onClose }) {
               Live stream will appear here when the camera is connected
             </div>
           </div>
-          {/* Red recording dot */}
+          {/* Status badge */}
           <div
             style={{
               position: "absolute",
@@ -242,13 +307,39 @@ function LiveStreamModal({ onClose }) {
               OFFLINE
             </span>
           </div>
+          {/* Fullscreen hint */}
+          {!isFullscreen && (
+            <button
+              onClick={toggleFullscreen}
+              style={{
+                position: "absolute",
+                bottom: 10,
+                right: 10,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "4px 10px",
+                background: "rgba(0,0,0,0.5)",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+                color: "rgba(255,255,255,0.6)",
+                fontSize: "0.65rem",
+                fontWeight: 700,
+              }}
+            >
+              ⤢ Fullscreen
+            </button>
+          )}
         </div>
+
         <div
           style={{
             padding: "12px 20px",
             fontSize: "0.74rem",
             color: "var(--text-muted)",
             textAlign: "center",
+            flexShrink: 0,
           }}
         >
           Camera integration coming soon
@@ -828,7 +919,7 @@ function LocationForm({ cartId, onSaved, onCancel }) {
 }
 
 /* ── Public Concept Detail Modal ──────────────────────────── */
-function ConceptDetailModal({ concept, onClose }) {
+function PublicConceptDetailModal({ concept, onClose }) {
   const [tab, setTab] = useState("menu");
   const items = concept.menuItems || [];
 
@@ -1636,7 +1727,6 @@ export default function IcartOverview({
   const [selectedConceptId, setSelectedConceptId] = useState("");
   const [markup, setMarkup] = useState("");
   const [addingConcept, setAddingConcept] = useState(false);
-  const [detailConcept, setDetailConcept] = useState(null); // for public concept detail modal
 
   const openConceptForm = async () => {
     setShowConceptForm(true);
@@ -2231,27 +2321,27 @@ export default function IcartOverview({
                                 />
                               </div>
                             )}
-                            {/* View details button for public concepts */}
-                            {conceptSource === "public" && (
+                            {/* View overview — same as active concepts */}
+                            {conceptSource === "public" && onConceptClick && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setDetailConcept(c);
+                                  onConceptClick(c);
                                 }}
                                 style={{
                                   fontSize: "0.6rem",
                                   fontWeight: 700,
                                   padding: "2px 7px",
                                   borderRadius: 5,
-                                  background: "var(--bg-hover)",
-                                  border: "1px solid var(--border)",
-                                  color: "var(--text-muted)",
+                                  background: "var(--bg-active)",
+                                  border: "1px solid rgba(203,108,220,0.2)",
+                                  color: "var(--accent)",
                                   cursor: "pointer",
                                   fontFamily: "inherit",
                                   whiteSpace: "nowrap",
                                 }}
                               >
-                                Details
+                                Overview
                               </button>
                             )}
                           </div>
@@ -2482,12 +2572,6 @@ export default function IcartOverview({
       {/* ── Modals ── */}
       {showLiveStream && (
         <LiveStreamModal onClose={() => setShowLiveStream(false)} />
-      )}
-      {detailConcept && (
-        <ConceptDetailModal
-          concept={detailConcept}
-          onClose={() => setDetailConcept(null)}
-        />
       )}
     </div>
   );

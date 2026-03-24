@@ -18,7 +18,7 @@ import { LuPlus } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import Drawer from "../../components/Drawer";
 import api from "../../api/axios";
-import { StatusBadge, getS } from "./adminUtils_";
+import { CountrySelect, StatusBadge, getS } from "./adminUtils_";
 import AdminSalesFormula from "./AdminSalesFormula";
 import AdminRentalSettings from "./AdminRentalSettings";
 import AdminContractSettings from "./AdminContractSettings";
@@ -1090,7 +1090,7 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <div className="admin_drawer_list">
-            {drawerItems.map((item) => {})}
+            {drawerItems.map((item) => renderEntityRow(item))}{" "}
           </div>
         )}
       </Drawer>

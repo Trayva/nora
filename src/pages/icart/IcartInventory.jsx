@@ -13,19 +13,13 @@ import {
   MdExpandLess,
   MdImage,
   MdRemoveCircleOutline,
+  MdCheck,
 } from "react-icons/md";
 import api from "../../api/axios";
 
-/* ─────────────────────────────────────────────────────────────
-   IMPORTANT: Replace these with the correct search endpoints.
-   Expected response shape: { data: { items: [...] } } or { data: [...] }
-   Each item should have: { id, name, image?, unit? }
-   ───────────────────────────────────────────────────────────── */
 const SEARCH_INGREDIENT_URL = (q) =>
   `/library/ingredient?returnPrep=true&search=${encodeURIComponent(q)}&limit=8`;
 
-// Parse library response: { data: { ingredient: [...], preps: [...] } }
-// Returns both merged, each tagged with _type for payload dispatch
 function parseLibraryResults(data) {
   const ingredients = (data?.ingredient || []).map((i) => ({
     ...i,
@@ -1561,8 +1555,9 @@ function InventoryItemRow({ item, onRefresh }) {
 }
 
 /* ── Supply Request Row ─────────────────────────────────────── */
-function SupplyRequestRow({ req }) {
+function SupplyRequestRow({ req, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
+  const [receiving, setReceiving] = useState(false);
   const items = req.items || [];
   const supplierName =
     req.supplier?.businessName || req.supplier?.user?.name || "Supplier";
@@ -1570,6 +1565,20 @@ function SupplyRequestRow({ req }) {
     .slice(0, 2)
     .map((it) => it.ingredient?.name || "Item")
     .join(", ");
+
+  const handleReceive = async (e) => {
+    e.stopPropagation();
+    setReceiving(true);
+    try {
+      await api.post(`/icart/supply/${req.id}/receive`);
+      toast.success("Supply marked as received");
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to mark as received");
+    } finally {
+      setReceiving(false);
+    }
+  };
   const title = firstNames || `#${req.id.slice(0, 8).toUpperCase()}`;
   const fmt = (n) =>
     Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
@@ -1606,6 +1615,33 @@ function SupplyRequestRow({ req }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <StatusPill status={req.status} />
+          {req.status === "SHIPPED" && (
+            <button
+              className={`app_btn app_btn_confirm${receiving ? " btn_loading" : ""}`}
+              style={{
+                height: 28,
+                padding: "0 10px",
+                fontSize: "0.72rem",
+                position: "relative",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                flexShrink: 0,
+              }}
+              onClick={handleReceive}
+              disabled={receiving}
+            >
+              <span className="btn_text">
+                <MdCheck size={13} /> Received
+              </span>
+              {receiving && (
+                <span
+                  className="btn_loader"
+                  style={{ width: 11, height: 11 }}
+                />
+              )}
+            </button>
+          )}
           {expanded ? (
             <MdExpandLess size={16} style={{ color: "var(--text-muted)" }} />
           ) : (
@@ -1910,7 +1946,11 @@ export default function IcartInventory({ cart }) {
         ) : (
           <div className="icart_tasks_list">
             {supplyRequests.map((req) => (
-              <SupplyRequestRow key={req.id} req={req} />
+              <SupplyRequestRow
+                key={req.id}
+                req={req}
+                onRefresh={fetchSupply}
+              />
             ))}
           </div>
         )

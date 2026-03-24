@@ -773,6 +773,7 @@ function JobOfferCard({ offer, onAction }) {
                 border: "1px solid var(--border)",
                 borderRadius: 9,
                 marginBottom: 14,
+                marginTop:14
               }}
             >
               <MdNotes
