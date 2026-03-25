@@ -1389,8 +1389,54 @@ export function MenuTab({ concepts }) {
    ════════════════════════════════════════════════════════════ */
 
 /* ── Video Player / Placeholder ─────────────────────────────── */
+function getEmbedUrl(src) {
+  if (!src) return null;
+  // Vimeo: https://vimeo.com/123456789 → https://player.vimeo.com/video/123456789
+  const vimeoMatch = src.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch)
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=0&title=0&byline=0&portrait=0`;
+  // YouTube: various formats → embed
+  const ytMatch = src.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+  );
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  // Direct video file (mp4, webm, mov, etc.)
+  if (/\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(src)) return null; // handled by <video>
+  // Unknown — try as direct
+  return null;
+}
+
 function VideoBlock({ src, label }) {
   if (src) {
+    const embedUrl = getEmbedUrl(src);
+    if (embedUrl) {
+      return (
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            aspectRatio: "16/9",
+            borderRadius: 12,
+            overflow: "hidden",
+            background: "#000",
+          }}
+        >
+          <iframe
+            src={embedUrl}
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              border: "none",
+            }}
+            title="Tutorial video"
+          />
+        </div>
+      );
+    }
     return (
       <video
         src={src}
