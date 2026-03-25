@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../../../api/axios";
@@ -1382,17 +1382,845 @@ export function MenuTab({ concepts }) {
 
 /* ════════════════════════════════════════════════════════════
    TAB: E-LEARNING
+   Full drop-in replacement for the existing ELearningTab block
+   in OperatorCartPage.jsx. Replace everything from the comment
+   "TAB: E-LEARNING" down through the closing brace of
+   export function ELearningTab with this entire block.
    ════════════════════════════════════════════════════════════ */
+
+/* ── Video Player / Placeholder ─────────────────────────────── */
+function VideoBlock({ src, label }) {
+  if (src) {
+    return (
+      <video
+        src={src}
+        controls
+        playsInline
+        style={{
+          width: "100%",
+          borderRadius: 12,
+          background: "#000",
+          maxHeight: 240,
+          display: "block",
+        }}
+      />
+    );
+  }
+  return (
+    <div
+      style={{
+        width: "100%",
+        aspectRatio: "16/9",
+        background: "linear-gradient(135deg,#0f0f0f 0%,#1a1a1a 100%)",
+        borderRadius: 12,
+        border: "1px solid rgba(255,255,255,0.06)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Scanlines */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          backgroundImage:
+            "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.012) 3px,rgba(255,255,255,0.012) 6px)",
+        }}
+      />
+      <div
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: "50%",
+          background: "rgba(203,108,220,0.1)",
+          border: "1.5px solid rgba(203,108,220,0.25)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <MdPlayCircle size={26} style={{ color: "rgba(203,108,220,0.5)" }} />
+      </div>
+      <div style={{ textAlign: "center", zIndex: 1 }}>
+        <div
+          style={{
+            fontSize: "0.75rem",
+            fontWeight: 700,
+            color: "rgba(255,255,255,0.45)",
+          }}
+        >
+          No video available
+        </div>
+        {label && (
+          <div
+            style={{
+              fontSize: "0.65rem",
+              color: "rgba(255,255,255,0.25)",
+              marginTop: 2,
+            }}
+          >
+            {label}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Recipe Step ─────────────────────────────────────────────── */
+function LearnRecipeStep({ step, index }) {
+  const ing = step.ingredient || step.prepItem;
+  const typeColor =
+    step.type === "variant"
+      ? {
+          bg: "rgba(203,108,220,0.1)",
+          color: "var(--accent)",
+          border: "rgba(203,108,220,0.25)",
+        }
+      : step.type === "prep"
+        ? {
+            bg: "rgba(59,130,246,0.1)",
+            color: "#3b82f6",
+            border: "rgba(59,130,246,0.25)",
+          }
+        : {
+            bg: "rgba(34,197,94,0.1)",
+            color: "#16a34a",
+            border: "rgba(34,197,94,0.25)",
+          };
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 12,
+        padding: "10px 0",
+        borderBottom: "1px solid var(--border)",
+        alignItems: "flex-start",
+      }}
+    >
+      <div
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: "50%",
+          background: "var(--bg-active)",
+          border: "1px solid rgba(203,108,220,0.3)",
+          color: "var(--accent)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "0.65rem",
+          fontWeight: 900,
+          flexShrink: 0,
+          marginTop: 2,
+        }}
+      >
+        {index + 1}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {ing && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: step.instruction ? 4 : 0,
+            }}
+          >
+            {ing.image ? (
+              <img
+                src={ing.image}
+                alt={ing.name}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  objectFit: "cover",
+                  flexShrink: 0,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <MdImage size={12} style={{ color: "var(--text-muted)" }} />
+              </div>
+            )}
+            <div>
+              <span
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-body)",
+                }}
+              >
+                {ing.name}
+              </span>
+              <span
+                style={{
+                  fontSize: "0.62rem",
+                  fontWeight: 700,
+                  padding: "1px 5px",
+                  borderRadius: 4,
+                  background: typeColor.bg,
+                  color: typeColor.color,
+                  border: `1px solid ${typeColor.border}`,
+                  marginLeft: 6,
+                }}
+              >
+                {step.type}
+              </span>
+              {step.quantity != null && (
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    color: "var(--accent)",
+                    fontWeight: 700,
+                    marginLeft: 6,
+                  }}
+                >
+                  {step.quantity}
+                  {ing.unit}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+        {step.instruction && (
+          <p
+            style={{
+              margin: 0,
+              fontSize: "0.78rem",
+              color: "var(--text-muted)",
+              lineHeight: 1.55,
+              paddingLeft: ing ? 36 : 0,
+            }}
+          >
+            {step.instruction}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Menu Item Card ──────────────────────────────────────────── */
+function LearnMenuItemCard({ baseItem }) {
+  const [activeVariant, setActiveVariant] = useState(
+    baseItem.variants.length > 0 ? 0 : null,
+  );
+  const [section, setSection] = useState("recipe");
+  const currentRecipe =
+    activeVariant !== null
+      ? baseItem.variants[activeVariant].recipe
+      : baseItem.recipe;
+  const hasExtras = baseItem.extras.length > 0;
+
+  return (
+    <div
+      style={{
+        background: "var(--bg-card)",
+        border: "1px solid var(--border)",
+        borderRadius: 16,
+        overflow: "hidden",
+        marginBottom: 16,
+      }}
+    >
+      {/* Hero */}
+      <div style={{ position: "relative" }}>
+        {baseItem.image ? (
+          <img
+            src={baseItem.image}
+            alt={baseItem.name}
+            style={{
+              width: "100%",
+              height: 150,
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              height: 80,
+              background: "var(--bg-hover)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <MdImage
+              size={24}
+              style={{ color: "var(--text-muted)", opacity: 0.3 }}
+            />
+          </div>
+        )}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.72) 100%)",
+          }}
+        />
+        <div style={{ position: "absolute", bottom: 10, left: 14, right: 14 }}>
+          <div
+            style={{
+              fontSize: "0.97rem",
+              fontWeight: 900,
+              color: "#fff",
+              marginBottom: 4,
+            }}
+          >
+            {baseItem.name}
+          </div>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            {baseItem.ticketTime > 0 && (
+              <span
+                style={{
+                  fontSize: "0.6rem",
+                  fontWeight: 700,
+                  padding: "2px 7px",
+                  borderRadius: 5,
+                  background: "rgba(0,0,0,0.5)",
+                  color: "rgba(255,255,255,0.8)",
+                  backdropFilter: "blur(4px)",
+                }}
+              >
+                ⏱ {baseItem.ticketTime}min
+              </span>
+            )}
+            {baseItem.tutorialVideo && (
+              <span
+                style={{
+                  fontSize: "0.6rem",
+                  fontWeight: 700,
+                  padding: "2px 7px",
+                  borderRadius: 5,
+                  background: "rgba(239,68,68,0.7)",
+                  color: "#fff",
+                }}
+              >
+                ▶ Tutorial
+              </span>
+            )}
+            {baseItem.variants.length > 1 && (
+              <span
+                style={{
+                  fontSize: "0.6rem",
+                  fontWeight: 700,
+                  padding: "2px 7px",
+                  borderRadius: 5,
+                  background: "rgba(203,108,220,0.6)",
+                  color: "#fff",
+                }}
+              >
+                {baseItem.variants.length} variants
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: "14px 16px" }}>
+        {baseItem.description && (
+          <p
+            style={{
+              margin: "0 0 14px",
+              fontSize: "0.78rem",
+              color: "var(--text-muted)",
+              lineHeight: 1.6,
+            }}
+          >
+            {baseItem.description}
+          </p>
+        )}
+
+        {/* Tutorial video */}
+        <div style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              fontSize: "0.62rem",
+              fontWeight: 900,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--accent)",
+              marginBottom: 8,
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
+            <span
+              style={{
+                width: 3,
+                height: 11,
+                borderRadius: 2,
+                background: "var(--accent)",
+                display: "inline-block",
+              }}
+            />
+            Tutorial Video
+          </div>
+          <VideoBlock
+            src={baseItem.tutorialVideo}
+            label="Cooking tutorial not yet uploaded"
+          />
+        </div>
+
+        {/* Variant selector */}
+        {baseItem.variants.length > 1 && (
+          <div style={{ marginBottom: 14 }}>
+            <div
+              style={{
+                fontSize: "0.62rem",
+                fontWeight: 900,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--text-muted)",
+                marginBottom: 8,
+              }}
+            >
+              Variants
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {baseItem.variants.map((v, i) => (
+                <button
+                  key={v.variantId}
+                  onClick={() => setActiveVariant(i)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 8,
+                    border: `1px solid ${activeVariant === i ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                    background:
+                      activeVariant === i
+                        ? "var(--bg-active)"
+                        : "var(--bg-hover)",
+                    color:
+                      activeVariant === i
+                        ? "var(--accent)"
+                        : "var(--text-muted)",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {v.variantName}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recipe / Extras toggle */}
+        {hasExtras && (
+          <div
+            style={{
+              display: "flex",
+              gap: 0,
+              marginBottom: 14,
+              background: "var(--bg-hover)",
+              borderRadius: 9,
+              padding: 3,
+              border: "1px solid var(--border)",
+            }}
+          >
+            {["recipe", "extras"].map((s) => (
+              <button
+                key={s}
+                onClick={() => setSection(s)}
+                style={{
+                  flex: 1,
+                  padding: "6px 0",
+                  borderRadius: 7,
+                  border: "none",
+                  background: section === s ? "var(--bg-card)" : "transparent",
+                  color: section === s ? "var(--accent)" : "var(--text-muted)",
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  boxShadow:
+                    section === s ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+                }}
+              >
+                {s === "recipe"
+                  ? `Recipe (${currentRecipe?.length || 0})`
+                  : `Extras (${baseItem.extras.length})`}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Recipe steps */}
+        {section === "recipe" && (
+          <div>
+            <div
+              style={{
+                fontSize: "0.62rem",
+                fontWeight: 900,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--text-muted)",
+                marginBottom: 8,
+              }}
+            >
+              {activeVariant !== null
+                ? `${baseItem.variants[activeVariant].variantName} Recipe`
+                : "Recipe Steps"}
+            </div>
+            {!currentRecipe?.length ? (
+              <div
+                style={{
+                  padding: "14px 0",
+                  fontSize: "0.78rem",
+                  color: "var(--text-muted)",
+                  textAlign: "center",
+                }}
+              >
+                No recipe steps defined
+              </div>
+            ) : (
+              currentRecipe.map((step, i) => (
+                <LearnRecipeStep key={step.id || i} step={step} index={i} />
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Extras */}
+        {section === "extras" && hasExtras && (
+          <div>
+            <div
+              style={{
+                fontSize: "0.62rem",
+                fontWeight: 900,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--text-muted)",
+                marginBottom: 8,
+              }}
+            >
+              Add-ons & Extras
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {baseItem.extras.map((ex, i) => (
+                <div
+                  key={ex.id || i}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "9px 12px",
+                    background: "var(--bg-hover)",
+                    borderRadius: 10,
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: "rgba(203,108,220,0.1)",
+                      border: "1px solid rgba(203,108,220,0.2)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdRestaurantMenu
+                      size={13}
+                      style={{ color: "var(--accent)" }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        color: "var(--text-body)",
+                      }}
+                    >
+                      {ex.prepItem?.name || ex.name || "Extra"}
+                    </div>
+                    {ex.prepItem?.unit && (
+                      <div
+                        style={{
+                          fontSize: "0.66rem",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        {ex.prepItem.unit}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Prep Item Card ──────────────────────────────────────────── */
+function LearnPrepItemCard({ prep }) {
+  const [open, setOpen] = useState(false);
+  const usedInDishes = [...new Set((prep.usedIn || []).map((u) => u.menuItem))];
+
+  return (
+    <div
+      style={{
+        background: "var(--bg-card)",
+        border: "1px solid var(--border)",
+        borderRadius: 14,
+        overflow: "hidden",
+        marginBottom: 10,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: "12px 14px",
+          cursor: "pointer",
+        }}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <div
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 9,
+            background:
+              "linear-gradient(135deg,rgba(203,108,220,0.15),rgba(203,108,220,0.05))",
+            border: "1px solid rgba(203,108,220,0.2)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <MdSchool size={16} style={{ color: "var(--accent)" }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: "0.88rem",
+              fontWeight: 800,
+              color: "var(--text-heading)",
+            }}
+          >
+            {prep.name}
+          </div>
+          <div className="icart_task_meta">
+            <span>{prep.unit}</span>
+            {prep.recipe?.length > 0 && (
+              <>
+                <span className="contract_row_dot">·</span>
+                <span>
+                  {prep.recipe.length} step{prep.recipe.length !== 1 ? "s" : ""}
+                </span>
+              </>
+            )}
+            {usedInDishes.length > 0 && (
+              <>
+                <span className="contract_row_dot">·</span>
+                <span>
+                  used in {usedInDishes.length} dish
+                  {usedInDishes.length !== 1 ? "es" : ""}
+                </span>
+              </>
+            )}
+            {prep.tutorialVideo && (
+              <>
+                <span className="contract_row_dot">·</span>
+                <span style={{ color: "#ef4444" }}>▶ video</span>
+              </>
+            )}
+          </div>
+        </div>
+        {open ? (
+          <MdExpandLess
+            size={16}
+            style={{ color: "var(--text-muted)", flexShrink: 0 }}
+          />
+        ) : (
+          <MdExpandMore
+            size={16}
+            style={{ color: "var(--text-muted)", flexShrink: 0 }}
+          />
+        )}
+      </div>
+
+      {open && (
+        <div
+          style={{
+            padding: "0 14px 14px",
+            borderTop: "1px solid var(--border)",
+          }}
+        >
+          {usedInDishes.length > 0 && (
+            <div style={{ paddingTop: 12, marginBottom: 14 }}>
+              <div
+                style={{
+                  fontSize: "0.62rem",
+                  fontWeight: 900,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--text-muted)",
+                  marginBottom: 8,
+                }}
+              >
+                Used In
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {usedInDishes.map((d) => (
+                  <span
+                    key={d}
+                    style={{
+                      fontSize: "0.68rem",
+                      fontWeight: 700,
+                      padding: "3px 9px",
+                      borderRadius: 999,
+                      background: "var(--bg-hover)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    {d}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <div style={{ marginBottom: prep.recipe?.length > 0 ? 14 : 0 }}>
+            <div
+              style={{
+                fontSize: "0.62rem",
+                fontWeight: 900,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--accent)",
+                marginBottom: 8,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <span
+                style={{
+                  width: 3,
+                  height: 11,
+                  borderRadius: 2,
+                  background: "var(--accent)",
+                  display: "inline-block",
+                }}
+              />
+              Tutorial Video
+            </div>
+            <VideoBlock
+              src={prep.tutorialVideo}
+              label="Prep tutorial not yet uploaded"
+            />
+          </div>
+          {prep.recipe?.length > 0 && (
+            <div>
+              <div
+                style={{
+                  fontSize: "0.62rem",
+                  fontWeight: 900,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--text-muted)",
+                  marginBottom: 8,
+                }}
+              >
+                Preparation Steps
+              </div>
+              {prep.recipe.map((step, i) => (
+                <LearnRecipeStep key={step.id || i} step={step} index={i} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Main ELearningTab ───────────────────────────────────────── */
 export function ELearningTab({ concepts }) {
-  const [selected, setSelected] = useState(null); // conceptId
+  const [selected, setSelected] = useState(null);
   const [summary, setSummary] = useState(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
-  const [activeItem, setActiveItem] = useState(null); // menuItemId expanded
+  const [learnSection, setLearnSection] = useState("menu"); // "menu" | "prep"
+
+  // Deduplicate menuItems by base id, group variants together
+  const deduplicatedItems = useMemo(() => {
+    if (!summary?.menuItems) return [];
+    const map = new Map();
+    for (const item of summary.menuItems) {
+      if (!map.has(item.id)) {
+        map.set(item.id, {
+          id: item.id,
+          // Strip "(Standard)" / "(Premium)" suffix from display name
+          name: item.name.replace(/\s*\([^)]+\)\s*$/, "").trim(),
+          image: item.image,
+          description: item.description,
+          ticketTime: item.ticketTime,
+          tutorialVideo: item.tutorialVideo,
+          extras: item.extras || [],
+          variants: [],
+          recipe: item.recipe || [],
+        });
+      }
+      if (item.variantId) {
+        const base = map.get(item.id);
+        const exists = base.variants.find(
+          (v) => v.variantId === item.variantId,
+        );
+        if (!exists) {
+          base.variants.push({
+            variantId: item.variantId,
+            variantName:
+              item.variant?.name ||
+              item.name.match(/\(([^)]+)\)/)?.[1] ||
+              "Default",
+            recipe: item.recipe || [],
+          });
+        }
+      }
+    }
+    return Array.from(map.values());
+  }, [summary]);
 
   const loadSummary = async (conceptId) => {
     setSelected(conceptId);
-    setActiveItem(null);
     setSummary(null);
+    setLearnSection("menu");
     setLoadingSummary(true);
     try {
       const res = await api.get(`/vendor/menu/concept/${conceptId}/summary`);
@@ -1404,6 +2232,11 @@ export function ELearningTab({ concepts }) {
     }
   };
 
+  // Auto-load when there's only one concept
+  useEffect(() => {
+    if (concepts?.length === 1 && !selected) loadSummary(concepts[0].id);
+  }, [concepts]);
+
   if (!concepts?.length)
     return (
       <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
@@ -1412,9 +2245,11 @@ export function ELearningTab({ concepts }) {
       </div>
     );
 
+  const prepItems = summary?.prepItems || [];
+
   return (
     <div>
-      {/* Concept selector */}
+      {/* Concept selector — multi only */}
       {concepts.length > 1 && (
         <div
           style={{
@@ -1430,7 +2265,7 @@ export function ELearningTab({ concepts }) {
               onClick={() => loadSummary(c.id)}
               style={{
                 padding: "7px 16px",
-                border: "1px solid var(--border)",
+                border: `1px solid ${selected === c.id ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
                 borderRadius: 999,
                 cursor: "pointer",
                 fontFamily: "inherit",
@@ -1438,8 +2273,6 @@ export function ELearningTab({ concepts }) {
                   selected === c.id ? "var(--bg-active)" : "var(--bg-hover)",
                 color:
                   selected === c.id ? "var(--accent)" : "var(--text-muted)",
-                borderColor:
-                  selected === c.id ? "rgba(203,108,220,0.4)" : "var(--border)",
                 fontWeight: 700,
                 fontSize: "0.8rem",
               }}
@@ -1450,597 +2283,275 @@ export function ELearningTab({ concepts }) {
         </div>
       )}
 
-      {/* Auto-load single concept */}
-      {concepts.length === 1 &&
-        !selected &&
-        (() => {
-          loadSummary(concepts[0].id);
-          return null;
-        })()}
-
       {loadingSummary && (
         <div className="drawer_loading">
           <div className="page_loader_spinner" />
         </div>
       )}
 
-      {summary && (
+      {summary && !loadingSummary && (
         <div>
           {/* Concept hero */}
           {summary.concept?.banner && (
-            <img
-              src={summary.concept.banner}
-              alt={summary.concept.name}
-              style={{
-                width: "100%",
-                height: 160,
-                objectFit: "cover",
-                borderRadius: 14,
-                marginBottom: 16,
-              }}
-            />
-          )}
-          <div style={{ marginBottom: 20 }}>
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                marginBottom: 8,
+                position: "relative",
+                borderRadius: 14,
+                overflow: "hidden",
+                marginBottom: 16,
               }}
             >
-              {summary.vendor?.brandLogo && (
-                <img
-                  src={summary.vendor.brandLogo}
-                  alt=""
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    objectFit: "cover",
-                  }}
-                />
-              )}
-              <div>
+              <img
+                src={summary.concept.banner}
+                alt={summary.concept.name}
+                style={{
+                  width: "100%",
+                  height: 160,
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "linear-gradient(to bottom,transparent 30%,rgba(0,0,0,0.7) 100%)",
+                }}
+              />
+              <div style={{ position: "absolute", bottom: 14, left: 16 }}>
                 <div
                   style={{
-                    fontSize: "1.05rem",
-                    fontWeight: 800,
-                    color: "var(--text-heading)",
+                    fontSize: "1.1rem",
+                    fontWeight: 900,
+                    color: "#fff",
+                    marginBottom: 2,
                   }}
                 >
                   {summary.concept.name}
                 </div>
                 <div
-                  style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}
+                  style={{
+                    fontSize: "0.72rem",
+                    color: "rgba(255,255,255,0.7)",
+                  }}
                 >
                   {summary.vendor?.businessName}
+                  {summary.vendor?.brandTagline
+                    ? ` · ${summary.vendor.brandTagline}`
+                    : ""}
                 </div>
               </div>
             </div>
-            {summary.concept.description && (
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "var(--text-body)",
-                  lineHeight: 1.6,
-                  margin: "0 0 8px",
-                }}
-              >
-                {summary.concept.description}
-              </p>
-            )}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {summary.concept.origin && (
-                <span
-                  style={{
-                    fontSize: "0.72rem",
-                    fontWeight: 600,
-                    padding: "3px 10px",
-                    borderRadius: 999,
-                    background: "var(--bg-hover)",
-                    border: "1px solid var(--border)",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  🌍 {summary.concept.origin}
-                </span>
-              )}
-              {summary.concept.serveTo && (
-                <span
-                  style={{
-                    fontSize: "0.72rem",
-                    fontWeight: 600,
-                    padding: "3px 10px",
-                    borderRadius: 999,
-                    background: "var(--bg-hover)",
-                    border: "1px solid var(--border)",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  👥 {summary.concept.serveTo}
-                </span>
-              )}
-            </div>
-          </div>
+          )}
 
-          {/* Stats */}
+          {/* Stats bar */}
+          {summary.stats && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3,1fr)",
+                gap: 8,
+                marginBottom: 16,
+              }}
+            >
+              {[
+                {
+                  label: "Menu Items",
+                  value: deduplicatedItems.length,
+                  icon: "🍽",
+                },
+                {
+                  label: "Prep Items",
+                  value: summary.stats.totalUniquePrepItems,
+                  icon: "🥣",
+                },
+                {
+                  label: "Ingredients",
+                  value: summary.stats.totalUniqueIngredients,
+                  icon: "🌿",
+                },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  style={{
+                    background: "var(--bg-hover)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 10,
+                    padding: "10px 12px",
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "1.25rem",
+                      fontWeight: 900,
+                      color: "var(--accent)",
+                    }}
+                  >
+                    {s.icon} {s.value}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.68rem",
+                      color: "var(--text-muted)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {s.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Description + meta chips */}
+          {(summary.concept?.description ||
+            summary.concept?.origin ||
+            summary.concept?.serveTo) && (
+            <div style={{ marginBottom: 16 }}>
+              {summary.concept.description && (
+                <p
+                  style={{
+                    margin: "0 0 8px",
+                    fontSize: "0.82rem",
+                    color: "var(--text-body)",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {summary.concept.description}
+                </p>
+              )}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {summary.concept.origin && (
+                  <span
+                    style={{
+                      fontSize: "0.72rem",
+                      fontWeight: 600,
+                      padding: "3px 10px",
+                      borderRadius: 999,
+                      background: "var(--bg-hover)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    🌍 {summary.concept.origin}
+                  </span>
+                )}
+                {summary.concept.serveTo && (
+                  <span
+                    style={{
+                      fontSize: "0.72rem",
+                      fontWeight: 600,
+                      padding: "3px 10px",
+                      borderRadius: 999,
+                      background: "var(--bg-hover)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    👥 {summary.concept.serveTo}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Section nav: Menu Items / Prep Items */}
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 8,
-              marginBottom: 20,
+              display: "flex",
+              gap: 0,
+              marginBottom: 18,
+              background: "var(--bg-hover)",
+              borderRadius: 11,
+              padding: 4,
+              border: "1px solid var(--border)",
             }}
           >
             {[
-              { label: "Menu Items", value: summary.stats?.totalMenuItems },
               {
-                label: "Ingredients",
-                value: summary.stats?.totalUniqueIngredients,
+                key: "menu",
+                label: "Menu Items",
+                count: deduplicatedItems.length,
               },
-              {
-                label: "Prep Items",
-                value: summary.stats?.totalUniquePrepItems,
-              },
+              { key: "prep", label: "Prep Items", count: prepItems.length },
             ].map((s) => (
-              <div
-                key={s.label}
+              <button
+                key={s.key}
+                onClick={() => setLearnSection(s.key)}
                 style={{
-                  background: "var(--bg-hover)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 10,
-                  padding: "10px 12px",
-                  textAlign: "center",
+                  flex: 1,
+                  padding: "9px 0",
+                  borderRadius: 8,
+                  border: "none",
+                  background:
+                    learnSection === s.key ? "var(--bg-card)" : "transparent",
+                  color:
+                    learnSection === s.key
+                      ? "var(--accent)"
+                      : "var(--text-muted)",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  boxShadow:
+                    learnSection === s.key
+                      ? "0 1px 6px rgba(0,0,0,0.1)"
+                      : "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 7,
                 }}
               >
-                <div
+                {s.label}
+                <span
                   style={{
-                    fontSize: "1.4rem",
-                    fontWeight: 900,
-                    color: "var(--accent)",
+                    fontSize: "0.65rem",
+                    fontWeight: 800,
+                    padding: "1px 6px",
+                    borderRadius: 999,
+                    background:
+                      learnSection === s.key
+                        ? "var(--accent)"
+                        : "var(--bg-hover)",
+                    color:
+                      learnSection === s.key ? "#fff" : "var(--text-muted)",
+                    border: `1px solid ${learnSection === s.key ? "transparent" : "var(--border)"}`,
                   }}
                 >
-                  {s.value}
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.7rem",
-                    color: "var(--text-muted)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {s.label}
-                </div>
-              </div>
+                  {s.count}
+                </span>
+              </button>
             ))}
           </div>
 
-          {/* Menu items with recipes */}
-          <div className="drawer_section_title" style={{ marginBottom: 12 }}>
-            Menu Items & Recipes
-          </div>
-          {summary.menuItems?.map((item) => {
-            const isActive = activeItem === item.id;
-            return (
-              <div
-                key={item.id}
-                style={{
-                  background: "var(--bg-card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  marginBottom: 12,
-                }}
-              >
-                {/* Item header */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "14px 16px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => setActiveItem(isActive ? null : item.id)}
-                >
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 10,
-                        objectFit: "cover",
-                        flexShrink: 0,
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 10,
-                        background: "var(--bg-hover)",
-                        border: "1px solid var(--border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <MdImage
-                        size={20}
-                        style={{ color: "var(--text-muted)" }}
-                      />
-                    </div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: "0.9rem",
-                        fontWeight: 800,
-                        color: "var(--text-heading)",
-                      }}
-                    >
-                      {item.name}
-                    </div>
-                    {item.description && (
-                      <div
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
-                          marginTop: 1,
-                        }}
-                      >
-                        {item.description}
-                      </div>
-                    )}
-                    <div className="icart_task_meta" style={{ marginTop: 4 }}>
-                      <span>{item.recipe?.length || 0} recipe steps</span>
-                      {item.ticketTime > 0 && (
-                        <>
-                          <span className="contract_row_dot">·</span>
-                          <span>⏱ {item.ticketTime} min</span>
-                        </>
-                      )}
-                      {item.tutorialVideo && (
-                        <>
-                          <span className="contract_row_dot">·</span>
-                          <span style={{ color: "#ef4444" }}>▶ Video</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  {isActive ? (
-                    <MdExpandLess
-                      size={18}
-                      style={{ color: "var(--text-muted)" }}
-                    />
-                  ) : (
-                    <MdExpandMore
-                      size={18}
-                      style={{ color: "var(--text-muted)" }}
-                    />
-                  )}
-                </div>
-
-                {isActive && (
-                  <div
-                    style={{
-                      borderTop: "1px solid var(--border)",
-                      background: "var(--bg-hover)",
-                    }}
-                  >
-                    {/* Tutorial video */}
-                    {item.tutorialVideo && (
-                      <div
-                        style={{
-                          padding: "14px 16px",
-                          borderBottom: "1px solid var(--border)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "0.75rem",
-                            fontWeight: 700,
-                            color: "var(--text-muted)",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em",
-                            marginBottom: 10,
-                          }}
-                        >
-                          Tutorial Video
-                        </div>
-                        <video
-                          src={item.tutorialVideo}
-                          controls
-                          style={{
-                            width: "100%",
-                            borderRadius: 10,
-                            maxHeight: 220,
-                            background: "#000",
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {/* Recipe steps */}
-                    {item.recipe?.length > 0 && (
-                      <div style={{ padding: "14px 16px" }}>
-                        <div
-                          style={{
-                            fontSize: "0.75rem",
-                            fontWeight: 700,
-                            color: "var(--text-muted)",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em",
-                            marginBottom: 12,
-                          }}
-                        >
-                          Recipe
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 10,
-                          }}
-                        >
-                          {item.recipe.map((step, si) => {
-                            const ing = step.ingredient || step.prepItem;
-                            return (
-                              <div
-                                key={step.id || si}
-                                style={{
-                                  display: "flex",
-                                  gap: 12,
-                                  alignItems: "flex-start",
-                                }}
-                              >
-                                {/* Step number */}
-                                <div
-                                  style={{
-                                    width: 26,
-                                    height: 26,
-                                    borderRadius: "50%",
-                                    background: "var(--bg-active)",
-                                    border: "1px solid rgba(203,108,220,0.3)",
-                                    color: "var(--accent)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontSize: "0.72rem",
-                                    fontWeight: 800,
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  {si + 1}
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  {/* Ingredient */}
-                                  {ing && (
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 8,
-                                        marginBottom: 4,
-                                      }}
-                                    >
-                                      {ing.image ? (
-                                        <img
-                                          src={ing.image}
-                                          alt={ing.name}
-                                          style={{
-                                            width: 28,
-                                            height: 28,
-                                            borderRadius: 6,
-                                            objectFit: "cover",
-                                            flexShrink: 0,
-                                          }}
-                                        />
-                                      ) : (
-                                        <div
-                                          style={{
-                                            width: 28,
-                                            height: 28,
-                                            borderRadius: 6,
-                                            background: "var(--bg-card)",
-                                            border: "1px solid var(--border)",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            flexShrink: 0,
-                                          }}
-                                        >
-                                          <MdImage
-                                            size={12}
-                                            style={{
-                                              color: "var(--text-muted)",
-                                            }}
-                                          />
-                                        </div>
-                                      )}
-                                      <div>
-                                        <span
-                                          style={{
-                                            fontSize: "0.82rem",
-                                            fontWeight: 700,
-                                            color: "var(--text-body)",
-                                          }}
-                                        >
-                                          {ing.name}
-                                        </span>
-                                        <span
-                                          style={{
-                                            fontSize: "0.72rem",
-                                            color: "var(--accent)",
-                                            fontWeight: 700,
-                                            marginLeft: 6,
-                                          }}
-                                        >
-                                          {step.quantity}
-                                          {ing.unit}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )}
-                                  {/* Instruction */}
-                                  {step.instruction && (
-                                    <p
-                                      style={{
-                                        margin: 0,
-                                        fontSize: "0.8rem",
-                                        color: "var(--text-muted)",
-                                        lineHeight: 1.5,
-                                      }}
-                                    >
-                                      {step.instruction}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Extras */}
-                    {item.extras?.length > 0 && (
-                      <div style={{ padding: "0 16px 14px" }}>
-                        <div
-                          style={{
-                            fontSize: "0.75rem",
-                            fontWeight: 700,
-                            color: "var(--text-muted)",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em",
-                            marginBottom: 8,
-                          }}
-                        >
-                          Extras / Add-ons
-                        </div>
-                        {item.extras.map((ex, ei) => (
-                          <div
-                            key={ei}
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              padding: "6px 0",
-                              borderBottom: "1px solid var(--border)",
-                              fontSize: "0.8rem",
-                            }}
-                          >
-                            <span
-                              style={{
-                                color: "var(--text-body)",
-                                fontWeight: 600,
-                              }}
-                            >
-                              {ex.name}
-                            </span>
-                            <span
-                              style={{
-                                color: "var(--accent)",
-                                fontWeight: 700,
-                              }}
-                            >
-                              ₦{Number(ex.price || 0).toLocaleString()}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+          {/* Menu Items */}
+          {learnSection === "menu" &&
+            (deduplicatedItems.length === 0 ? (
+              <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
+                <MdMenuBook size={24} style={{ opacity: 0.3 }} />
+                <span>No menu items</span>
               </div>
-            );
-          })}
+            ) : (
+              deduplicatedItems.map((item) => (
+                <LearnMenuItemCard key={item.id} baseItem={item} />
+              ))
+            ))}
 
-          {/* Ingredients overview */}
-          {summary.ingredients?.length > 0 && (
-            <>
-              <div
-                className="drawer_section_title"
-                style={{ marginBottom: 10, marginTop: 20 }}
-              >
-                All Ingredients
+          {/* Prep Items */}
+          {learnSection === "prep" &&
+            (prepItems.length === 0 ? (
+              <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
+                <MdSchool size={24} style={{ opacity: 0.3 }} />
+                <span>No prep items</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {summary.ingredients.map((ing) => (
-                  <div
-                    key={ing.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "9px 12px",
-                      background: "var(--bg-card)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 10,
-                    }}
-                  >
-                    {ing.image ? (
-                      <img
-                        src={ing.image}
-                        alt={ing.name}
-                        style={{
-                          width: 30,
-                          height: 30,
-                          borderRadius: 7,
-                          objectFit: "cover",
-                          flexShrink: 0,
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 30,
-                          height: 30,
-                          borderRadius: 7,
-                          background: "var(--bg-hover)",
-                          border: "1px solid var(--border)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <MdImage
-                          size={13}
-                          style={{ color: "var(--text-muted)" }}
-                        />
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: "0.82rem",
-                          fontWeight: 700,
-                          color: "var(--text-body)",
-                        }}
-                      >
-                        {ing.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        Total: {ing.totalQuantity}
-                        {ing.unit} · Used in:{" "}
-                        {ing.usedIn?.map((u) => u.menuItem).join(", ")}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+            ) : (
+              prepItems.map((prep) => (
+                <LearnPrepItemCard key={prep.id} prep={prep} />
+              ))
+            ))}
         </div>
       )}
     </div>

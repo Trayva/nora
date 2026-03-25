@@ -18,8 +18,10 @@ import {
   MdRestaurantMenu,
   MdVideocam,
   MdClose,
+  MdDeleteOutline,
 } from "react-icons/md";
 import api from "../../api/axios";
+import Modal from "../../components/Modal";
 
 const LOCATION_TYPES = ["ACTIVE", "POTENTIAL", "INACTIVE", "RESTRICTED"];
 const BLANK_LOCATION = {
@@ -124,7 +126,7 @@ function LiveStreamModal({ onClose }) {
         style={{
           position: "relative",
           zIndex: 1,
-          width: "min(720px, 92vw)",
+          width: "min(520px, 92vw)",
           background: "var(--bg-card)",
           borderRadius: isFullscreen ? 0 : 18,
           overflow: "hidden",
@@ -1372,12 +1374,34 @@ function PublicConceptDetailModal({ concept, onClose }) {
 }
 
 /* ── Concept Card ───────────────────────────────────────────── */
-function ConceptCard({ concept, cartId, onConceptClick, onMarkupUpdated }) {
+function ConceptCard({
+  concept,
+  cartId,
+  onConceptClick,
+  onMarkupUpdated,
+  onDrop,
+}) {
   const [expanded, setExpanded] = useState(false);
   const [editingMarkup, setEditingMarkup] = useState(false);
   const [markupVal, setMarkupVal] = useState(concept.markup?.toString() || "");
   const [savingMarkup, setSavingMarkup] = useState(false);
+  const [confirmDrop, setConfirmDrop] = useState(false);
+  const [dropping, setDropping] = useState(false);
   const menuItems = concept.menuItems || [];
+
+  const handleDrop = async () => {
+    setDropping(true);
+    try {
+      await api.post(`/icart/${cartId}/concepts/drop`, { id: concept.id });
+      toast.success(`${concept.name} removed`);
+      setConfirmDrop(false);
+      if (onDrop) onDrop();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove concept");
+    } finally {
+      setDropping(false);
+    }
+  };
 
   const saveMarkup = async () => {
     const val = Number(markupVal);
@@ -1593,9 +1617,77 @@ function ConceptCard({ concept, cartId, onConceptClick, onMarkupUpdated }) {
                 View Overview
               </button>
             )}
+            {onDrop && (
+              <button
+                onClick={() => setConfirmDrop(true)}
+                title="Remove concept"
+                style={{
+                  width: 32,
+                  height: 32,
+                  flexShrink: 0,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 8,
+                  border: "1px solid rgba(239,68,68,0.25)",
+                  background: "rgba(239,68,68,0.06)",
+                  color: "#ef4444",
+                  cursor: "pointer",
+                  transition: "all 0.12s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(239,68,68,0.12)";
+                  e.currentTarget.style.borderColor = "rgba(239,68,68,0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(239,68,68,0.06)";
+                  e.currentTarget.style.borderColor = "rgba(239,68,68,0.25)";
+                }}
+              >
+                <MdDeleteOutline size={15} />
+              </button>
+            )}
           </>
         )}
       </div>
+
+      {/* Drop confirmation modal */}
+      <Modal
+        isOpen={confirmDrop}
+        onClose={() => setConfirmDrop(false)}
+        title="Remove Concept"
+        description={`Are you sure you want to remove "${concept.name}" from this iCart? It will no longer be served from this location.`}
+      >
+        <div className="modal-body">
+          <div className="modal-footer">
+            <button
+              className="app_btn app_btn_cancel"
+              type="button"
+              onClick={() => setConfirmDrop(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className={`app_btn app_btn_confirm ${dropping ? "btn_loading" : ""}`}
+              style={{
+                background: "#ef4444",
+                position: "relative",
+                minWidth: 110,
+              }}
+              onClick={handleDrop}
+              disabled={dropping}
+            >
+              <span className="btn_text">Remove</span>
+              {dropping && (
+                <span
+                  className="btn_loader"
+                  style={{ width: 14, height: 14 }}
+                />
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Menu items */}
       {expanded && menuItems.length > 0 && (
@@ -2463,6 +2555,7 @@ export default function IcartOverview({
                   ),
                 })
               }
+              onDrop={onRefresh}
             />
           ))}
         </div>
