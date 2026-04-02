@@ -4,7 +4,7 @@ import img from "../../assets/who.png"; // Placeholder or use a specific one if 
 function OwnerBenefits() {
   const benefits = [
     "Access to established food brands",
-    "Fully set up, ready-to-deploy kiosks",
+    "Ready-to-deploy modular sized kiosks",
     "Integrated supply chain and logistics",
     "Digital tools to manage daily operations",
     "Performance insights powered by AI",
@@ -28,10 +28,10 @@ function OwnerBenefits() {
             <h4 style={{ color: "var(--text-heading)", marginBottom: "1rem" }}>What You Get:</h4>
             <ul style={{ listStyle: "none", padding: 0 }}>
               {benefits.map((benefit, index) => (
-                <li key={index} style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  gap: "10px", 
+                <li key={index} style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
                   marginBottom: "0.8rem",
                   color: "var(--text-body)",
                   fontSize: "0.95rem"
