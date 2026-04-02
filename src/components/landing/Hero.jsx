@@ -11,42 +11,38 @@ function Hero() {
         {/* Left */}
         <div className="hero-left">
           <h2 className="hero-heading">
-            Nora Smart Kitchen <br />
-            Built for Growth
+            Scale Food Brands. <br />
+            Empower New Owners.
           </h2>
           <p className="hero-paragraph">
-            Complete smart kitchen ecosystem with management platform,
-            surveillance, supply chain integration, and operator training.
-            Deploy in days, not months.
+            Nora AI is the platform where food brands expand through structured
+            franchising — enabling individuals to own and operate QSR outlets
+            using standardized infrastructure and digital control.
           </p>
           <div className="hero-btns">
             <button
               className="app_btn app_btn_confirm"
               style={{ height: 50, padding: "0 28px", fontSize: "0.9375rem" }}
-              onClick={() => navigate("/auth/register?role=CUSTOMER")}
+              onClick={() => navigate("/auth/register?role=VENDOR")}
             >
-              Get Started Now!
+              Partner as a Brand
             </button>
             <button
               className="app_btn app_btn_cancel"
               style={{ height: 50, padding: "0 28px", fontSize: "0.9375rem" }}
+              onClick={() => navigate("/auth/register?role=CUSTOMER")}
             >
-              Learn More
+              Own a Franchise
             </button>
           </div>
         </div>
 
         {/* Right */}
         <div className="hero-right">
-          {/* <div className="hero-blob" /> */}
-          {/* <div className="hero-img-float">
-            <img src={img} alt="Nora Smart Kitchen" />
-          </div> */}
-
           <div className="hero-img-wrapper">
             <div className="hero-bg-blobs"></div>
             <div className="hero-glass">
-              <img src={img} alt="" />
+              <img src={img} alt="Nora Smart Kitchen" />
             </div>
           </div>
         </div>

@@ -1,11 +1,15 @@
-// import Contact from "../../components/landing/Contact";
 import Contact from "../../components/landing/Contact";
 import Hero from "../../components/landing/Hero";
 import Love from "../../components/landing/Love";
 import PublicConceptsSection from "../../components/landing/PublicConceptsSection";
-import Trayva from "../../components/landing/Trayva";
 import WhoWeAre from "../../components/landing/WhoWeAre";
-import ShopLanding from "./ShopLanding";
+import BrandBenefits from "../../components/landing/BrandBenefits";
+import OwnerBenefits from "../../components/landing/OwnerBenefits";
+import ProductEcosystem from "../../components/landing/ProductEcosystem";
+import How from "../../components/landing/How";
+import Why from "../../components/landing/Why";
+import Vision from "../../components/landing/Vision";
+import FinalCTA from "../../components/landing/FinalCTA";
 
 function Home(props) {
   return (
@@ -19,10 +23,15 @@ function Home(props) {
       >
         <Hero />
         <WhoWeAre />
-        <Trayva />
-        <ShopLanding/>
-        <PublicConceptsSection />
-        <Love />
+        <BrandBenefits />
+        <OwnerBenefits />
+        <ProductEcosystem />
+        <How />
+        <Why />
+        <Vision />
+        {/* <PublicConceptsSection /> */}
+        {/* <Love /> */}
+        {/* <FinalCTA /> */}
         <Contact />
       </section>
     </>
