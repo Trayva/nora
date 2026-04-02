@@ -18,7 +18,6 @@ import {
   MdRestaurantMenu,
   MdVideocam,
   MdClose,
-  MdDeleteOutline,
 } from "react-icons/md";
 import api from "../../api/axios";
 import Modal from "../../components/Modal";
@@ -920,765 +919,1681 @@ function LocationForm({ cartId, onSaved, onCancel }) {
   );
 }
 
-/* ── Public Concept Detail Modal ──────────────────────────── */
-function PublicConceptDetailModal({ concept, onClose }) {
-  const [tab, setTab] = useState("menu");
-  const items = concept.menuItems || [];
+/* ── Vendor & Menu Section ──────────────────────────────────── */
+const MAX_MENU_ITEMS = 5;
+const VENDOR_PAGE_SIZE = 6;
+const MENU_PAGE_SIZE = 8;
 
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1200,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        onClick={onClose}
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(3px)",
-        }}
-      />
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          width: "min(560px, 95vw)",
-          maxHeight: "85vh",
-          background: "var(--bg-card)",
-          borderRadius: 18,
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
-        }}
-      >
-        {/* Banner */}
-        {concept.banner ? (
-          <div style={{ position: "relative", height: 120, flexShrink: 0 }}>
-            <img
-              src={concept.banner}
-              alt=""
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
+// Common country list for the terms country picker
+const COUNTRIES = [
+  "Afghanistan",
+  "Albania",
+  "Algeria",
+  "Angola",
+  "Argentina",
+  "Australia",
+  "Austria",
+  "Bangladesh",
+  "Belgium",
+  "Bolivia",
+  "Brazil",
+  "Cameroon",
+  "Canada",
+  "Chile",
+  "China",
+  "Colombia",
+  "Congo",
+  "Côte d'Ivoire",
+  "Croatia",
+  "Czech Republic",
+  "Denmark",
+  "Ecuador",
+  "Egypt",
+  "Ethiopia",
+  "Finland",
+  "France",
+  "Germany",
+  "Ghana",
+  "Greece",
+  "Guatemala",
+  "Honduras",
+  "Hungary",
+  "India",
+  "Indonesia",
+  "Iran",
+  "Iraq",
+  "Ireland",
+  "Israel",
+  "Italy",
+  "Jamaica",
+  "Japan",
+  "Jordan",
+  "Kazakhstan",
+  "Kenya",
+  "Kuwait",
+  "Lebanon",
+  "Libya",
+  "Malaysia",
+  "Mexico",
+  "Morocco",
+  "Mozambique",
+  "Myanmar",
+  "Nepal",
+  "Netherlands",
+  "New Zealand",
+  "Nicaragua",
+  "Niger",
+  "Nigeria",
+  "Norway",
+  "Pakistan",
+  "Panama",
+  "Peru",
+  "Philippines",
+  "Poland",
+  "Portugal",
+  "Romania",
+  "Russia",
+  "Saudi Arabia",
+  "Senegal",
+  "Sierra Leone",
+  "Somalia",
+  "South Africa",
+  "South Korea",
+  "Spain",
+  "Sri Lanka",
+  "Sudan",
+  "Sweden",
+  "Switzerland",
+  "Syria",
+  "Tanzania",
+  "Thailand",
+  "Tunisia",
+  "Turkey",
+  "Uganda",
+  "Ukraine",
+  "United Arab Emirates",
+  "United Kingdom",
+  "United States",
+  "Uruguay",
+  "Venezuela",
+  "Vietnam",
+  "Yemen",
+  "Zambia",
+  "Zimbabwe",
+];
+
+function VendorMenuSection({ cart, onUpdate, onRefresh }) {
+  // ── State ──
+  const [phase, setPhase] = useState("idle"); // idle | picking-vendor | terms | vendor-detail
+  const [vendors, setVendors] = useState([]);
+  const [vendorsLoading, setVendorsLoading] = useState(false);
+  const [vendorPage, setVendorPage] = useState(1);
+  const [vendorSearch, setVendorSearch] = useState("");
+  const [selectedVendor, setSelectedVendor] = useState(null);
+  const [termsCountry, setTermsCountry] = useState(
+    cart.location?.country || "",
+  );
+  const [termsData, setTermsData] = useState(null);
+  const [termsLoading, setTermsLoading] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [savingVendor, setSavingVendor] = useState(false);
+  const [vendorMenuItems, setVendorMenuItems] = useState([]);
+  const [menuLoading, setMenuLoading] = useState(false);
+  const [menuPage, setMenuPage] = useState(1);
+  const [menuSearch, setMenuSearch] = useState("");
+  const [cartMenuItems, setCartMenuItems] = useState(cart.menuItems || []);
+  const [pendingAdd, setPendingAdd] = useState([]);
+  const [markupValues, setMarkupValues] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(null);
+  const [removing, setRemoving] = useState(false);
+
+  const assignedVendor = cart.vendor;
+
+  // ── Fetch vendors ──
+  const fetchVendors = async () => {
+    setVendorsLoading(true);
+    try {
+      const res = await api.get("/vendor/profile");
+      const d = res.data.data;
+      setVendors(Array.isArray(d) ? d : d?.vendors || []);
+    } catch {
+      toast.error("Failed to load vendors");
+    } finally {
+      setVendorsLoading(false);
+    }
+  };
+
+  // ── Fetch terms ──
+  const fetchTerms = async (country) => {
+    if (!country) return;
+    setTermsLoading(true);
+    setTermsData(null);
+    setTermsAccepted(false);
+    try {
+      const res = await api.get(
+        `/icartVendorApplication/settings/country/${encodeURIComponent(country)}`,
+      );
+      setTermsData(res.data.data);
+    } catch {
+      toast.error("No settings found for this country");
+    } finally {
+      setTermsLoading(false);
+    }
+  };
+
+  // (terms are fetched manually via the Load button)
+
+  // ── Fetch vendor menu ──
+  const fetchVendorMenu = async (vendorId) => {
+    setMenuLoading(true);
+    setVendorMenuItems([]);
+    setMenuPage(1);
+    setMenuSearch("");
+    try {
+      const res = await api.get(
+        `/vendor/menu?vendorId=${vendorId}&page=1&limit=100`,
+      );
+      const d = res.data.data;
+      setVendorMenuItems(Array.isArray(d) ? d : d?.items || d?.menuItems || []);
+    } catch {
+      toast.error("Failed to load menu items");
+    } finally {
+      setMenuLoading(false);
+    }
+  };
+
+  // ── Set vendor ──
+  const handleSetVendor = async () => {
+    if (!selectedVendor) return;
+    setSavingVendor(true);
+    try {
+      await api.post(`/icart/${cart.id}/change-vendor`, {
+        vendorId: selectedVendor.id,
+        country: termsData?.country || cart.location?.country,
+      });
+      toast.success(`${selectedVendor.businessName} set as vendor`);
+      onUpdate({ ...cart, vendor: selectedVendor });
+      setPhase("vendor-detail");
+      fetchVendorMenu(selectedVendor.id);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to set vendor");
+    } finally {
+      setSavingVendor(false);
+    }
+  };
+
+  // ── Open vendor detail ──
+  const openVendorDetail = () => {
+    setPhase("vendor-detail");
+    // Use assignedVendor.id if available, else derive from cart menu items
+    const vendorId = assignedVendor?.id || cartMenuItems[0]?.vendorId;
+    if (vendorId) fetchVendorMenu(vendorId);
+    setCartMenuItems(cart.menuItems || []);
+    setPendingAdd([]);
+    setMarkupValues({});
+  };
+
+  // ── Toggle pending menu item ──
+  const togglePendingAdd = (item) => {
+    const alreadyAdded = isAdded(item.id);
+    if (alreadyAdded) return;
+    setPendingAdd((prev) => {
+      const exists = prev.find((p) => p.id === item.id);
+      if (exists) return prev.filter((p) => p.id !== item.id);
+      if (cartMenuItems.length + prev.length >= MAX_MENU_ITEMS) {
+        toast.error(`Maximum ${MAX_MENU_ITEMS} menu items allowed`);
+        return prev;
+      }
+      return [...prev, { id: item.id, markup: 0 }];
+    });
+    setMarkupValues((prev) => ({ ...prev, [item.id]: prev[item.id] ?? "0" }));
+  };
+
+  const isPending = (id) => pendingAdd.some((p) => p.id === id);
+  const isAdded = (id) =>
+    cartMenuItems.some((m) => m.id === id || m.menuItemId === id);
+  const totalSelected = cartMenuItems.length + pendingAdd.length;
+
+  // ── Save additions ──
+  const handleSaveAdditions = async () => {
+    if (!pendingAdd.length) return;
+    setSaving(true);
+    try {
+      const items = pendingAdd.map((p) => ({
+        id: p.id,
+        markup: Number(markupValues[p.id] || 0),
+      }));
+      await api.post(`/icart/${cart.id}/menu-items`, { items });
+      toast.success(
+        `${items.length} item${items.length !== 1 ? "s" : ""} added`,
+      );
+      setPendingAdd([]);
+      setMarkupValues({});
+      const refreshed = await api.get(`/icart/${cart.id}`);
+      const updated = refreshed.data.data;
+      setCartMenuItems(updated.menuItems || []);
+      onUpdate(updated);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to add items");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Remove item ──
+  const handleRemove = async () => {
+    if (!confirmRemove) return;
+    setRemoving(true);
+    try {
+      const removeId = confirmRemove.id || confirmRemove.menuItemId;
+      await api.delete(`/icart/${cart.id}/menu-items`, {
+        data: { ids: [removeId] },
+      });
+      toast.success("Item removed");
+      setConfirmRemove(null);
+      setCartMenuItems((prev) =>
+        prev.filter(
+          (m) => m.id !== confirmRemove.id && m.menuItemId !== confirmRemove.id,
+        ),
+      );
+      onRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove item");
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  const fmt = (n) =>
+    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+
+  // ── Filtered + paginated vendors ──
+  const filteredVendors = vendors.filter(
+    (v) =>
+      !vendorSearch ||
+      v.businessName?.toLowerCase().includes(vendorSearch.toLowerCase()) ||
+      v.email?.toLowerCase().includes(vendorSearch.toLowerCase()),
+  );
+  const vendorTotalPages =
+    Math.ceil(filteredVendors.length / VENDOR_PAGE_SIZE) || 1;
+  const pagedVendors = filteredVendors.slice(
+    (vendorPage - 1) * VENDOR_PAGE_SIZE,
+    vendorPage * VENDOR_PAGE_SIZE,
+  );
+
+  // ── Filtered + paginated menu items ──
+  const filteredMenu = vendorMenuItems.filter(
+    (m) =>
+      !menuSearch || m.name?.toLowerCase().includes(menuSearch.toLowerCase()),
+  );
+  const menuTotalPages = Math.ceil(filteredMenu.length / MENU_PAGE_SIZE) || 1;
+  const pagedMenu = filteredMenu.slice(
+    (menuPage - 1) * MENU_PAGE_SIZE,
+    menuPage * MENU_PAGE_SIZE,
+  );
+
+  // ── Section header ──
+  const sectionHeader = (
+    <div className="drawer_section_title" style={{ marginTop: 20 }}>
+      <span>Vendor & Menu</span>
+      {assignedVendor && phase === "idle" && (
+        <button
+          className="icart_icon_action_btn"
+          style={{ marginLeft: "auto" }}
+          onClick={() => {
+            setPhase("picking-vendor");
+            fetchVendors();
+            setVendorSearch("");
+            setVendorPage(1);
+          }}
+        >
+          <MdEdit size={14} />
+        </button>
+      )}
+    </div>
+  );
+
+  // ─────────────────────────────────────────────────────────────
+  // PHASE: idle — no vendor
+  // ─────────────────────────────────────────────────────────────
+  if (!assignedVendor && phase === "idle") {
+    const hasMenuItems = cart.menuItems?.length > 0;
+    return (
+      <>
+        {sectionHeader}
+        {/* If menu items exist despite no vendor, show them */}
+        {hasMenuItems ? (
+          <div style={{ marginBottom: 10 }}>
             <div
               style={{
-                position: "absolute",
-                inset: 0,
-                background:
-                  "linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.6))",
-              }}
-            />
-            <button
-              onClick={onClose}
-              style={{
-                position: "absolute",
-                top: 10,
-                right: 10,
-                width: 30,
-                height: 30,
-                borderRadius: 7,
-                background: "rgba(0,0,0,0.4)",
-                border: "none",
-                cursor: "pointer",
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                borderRadius: 10,
+                padding: "10px 13px",
+                marginBottom: 10,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
+                gap: 10,
               }}
             >
-              <MdClose size={15} />
-            </button>
-            <div style={{ position: "absolute", bottom: 12, left: 16 }}>
-              <div
+              <MdStorefront
+                size={15}
+                style={{ color: "var(--text-muted)", flexShrink: 0 }}
+              />
+              <span
                 style={{
-                  fontSize: "1rem",
-                  fontWeight: 900,
-                  color: "#fff",
-                  marginBottom: 2,
+                  fontSize: "0.78rem",
+                  color: "var(--text-muted)",
+                  flex: 1,
                 }}
               >
-                {concept.name}
-              </div>
-              {concept.vendor?.businessName && (
-                <div
-                  style={{
-                    fontSize: "0.72rem",
-                    color: "rgba(255,255,255,0.75)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {concept.vendor.businessName}
-                </div>
-              )}
+                No vendor profile linked
+              </span>
+              <button
+                className="app_btn app_btn_confirm"
+                style={{
+                  height: 30,
+                  padding: "0 12px",
+                  fontSize: "0.74rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  flexShrink: 0,
+                }}
+                onClick={openVendorDetail}
+              >
+                <MdRestaurantMenu size={13} /> View Menu
+              </button>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                {cart.menuItems.length} item
+                {cart.menuItems.length !== 1 ? "s" : ""} active
+              </span>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                ·
+              </span>
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  color: "var(--accent)",
+                }}
+              >
+                {MAX_MENU_ITEMS - cart.menuItems.length} slot
+                {MAX_MENU_ITEMS - cart.menuItems.length !== 1 ? "s" : ""} left
+              </span>
             </div>
           </div>
         ) : (
           <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              padding: "16px 20px",
-              borderBottom: "1px solid var(--border)",
-              flexShrink: 0,
-            }}
+            className="icart_empty_inline"
+            style={{ flexDirection: "column", gap: 10, padding: "20px 0" }}
           >
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 9,
-                background: "var(--bg-active)",
-                border: "1px solid rgba(203,108,220,0.2)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--accent)",
-                flexShrink: 0,
-              }}
-            >
-              <MdStorefront size={16} />
-            </div>
+            <MdStorefront size={24} style={{ opacity: 0.3 }} />
+            <span>No vendor selected</span>
+          </div>
+        )}
+        <button
+          className="app_btn app_btn_confirm"
+          style={{
+            height: 36,
+            padding: "0 18px",
+            fontSize: "0.82rem",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            width: "100%",
+          }}
+          onClick={() => {
+            setPhase("picking-vendor");
+            fetchVendors();
+            setVendorSearch("");
+            setVendorPage(1);
+          }}
+        >
+          <MdAdd size={15} />{" "}
+          {assignedVendor || hasMenuItems ? "Change Vendor" : "Select Vendor"}
+        </button>
+      </>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PHASE: idle — vendor exists
+  // ─────────────────────────────────────────────────────────────
+  if (assignedVendor && phase === "idle") {
+    return (
+      <>
+        {sectionHeader}
+        <div
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: 12,
+            padding: "12px 14px",
+            marginBottom: 10,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {assignedVendor.branding?.logo || assignedVendor.brandLogo ? (
+              <img
+                src={assignedVendor.branding?.logo || assignedVendor.brandLogo}
+                alt=""
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 9,
+                  objectFit: "cover",
+                  flexShrink: 0,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 9,
+                  background: "var(--bg-active)",
+                  border: "1px solid rgba(203,108,220,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <MdStorefront size={16} style={{ color: "var(--accent)" }} />
+              </div>
+            )}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
-                  fontSize: "0.95rem",
+                  fontSize: "0.9rem",
                   fontWeight: 800,
                   color: "var(--text-heading)",
                 }}
               >
-                {concept.name}
+                {assignedVendor.businessName || assignedVendor.name}
               </div>
-              {concept.vendor?.businessName && (
+              {(assignedVendor.branding?.tagline ||
+                assignedVendor.brandTagline) && (
                 <div
                   style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}
                 >
-                  {concept.vendor.businessName}
+                  {assignedVendor.branding?.tagline ||
+                    assignedVendor.brandTagline}
                 </div>
               )}
             </div>
             <button
-              onClick={onClose}
+              className="app_btn app_btn_confirm"
               style={{
-                width: 30,
-                height: 30,
-                borderRadius: 7,
-                background: "var(--bg-hover)",
-                border: "1px solid var(--border)",
-                cursor: "pointer",
-                display: "flex",
+                height: 32,
+                padding: "0 14px",
+                fontSize: "0.76rem",
+                display: "inline-flex",
                 alignItems: "center",
-                justifyContent: "center",
-                color: "var(--text-muted)",
+                gap: 5,
+                flexShrink: 0,
               }}
+              onClick={openVendorDetail}
             >
-              <MdClose size={15} />
+              <MdRestaurantMenu size={13} /> Menu
             </button>
           </div>
+        </div>
+        {cart.menuItems?.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+              {cart.menuItems.length} item
+              {cart.menuItems.length !== 1 ? "s" : ""} active
+            </span>
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+              ·
+            </span>
+            <span
+              style={{
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                color: "var(--accent)",
+              }}
+            >
+              {MAX_MENU_ITEMS - cart.menuItems.length} slot
+              {MAX_MENU_ITEMS - cart.menuItems.length !== 1 ? "s" : ""} left
+            </span>
+          </div>
         )}
+      </>
+    );
+  }
 
-        {/* Meta chips */}
+  // ─────────────────────────────────────────────────────────────
+  // PHASE: picking-vendor
+  // ─────────────────────────────────────────────────────────────
+  if (phase === "picking-vendor") {
+    return (
+      <>
+        {sectionHeader}
         <div
           style={{
             display: "flex",
-            gap: 6,
-            flexWrap: "wrap",
-            padding: "10px 16px 0",
-            flexShrink: 0,
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 12,
           }}
         >
-          {concept.status && (
-            <span
-              style={{
-                fontSize: "0.62rem",
-                fontWeight: 800,
-                padding: "2px 8px",
-                borderRadius: 999,
-                background:
-                  concept.status === "APPROVED"
-                    ? "rgba(34,197,94,0.1)"
-                    : "rgba(234,179,8,0.1)",
-                color: concept.status === "APPROVED" ? "#16a34a" : "#ca8a04",
-                border: `1px solid ${concept.status === "APPROVED" ? "rgba(34,197,94,0.25)" : "rgba(234,179,8,0.25)"}`,
-              }}
-            >
-              {concept.status}
-            </span>
-          )}
-          {concept.origin && (
-            <span
-              style={{
-                fontSize: "0.68rem",
-                color: "var(--text-muted)",
-                background: "var(--bg-hover)",
-                border: "1px solid var(--border)",
-                borderRadius: 999,
-                padding: "2px 8px",
-              }}
-            >
-              🌍 {concept.origin}
-            </span>
-          )}
-          {concept.serveTo && (
-            <span
-              style={{
-                fontSize: "0.68rem",
-                color: "var(--text-muted)",
-                background: "var(--bg-hover)",
-                border: "1px solid var(--border)",
-                borderRadius: 999,
-                padding: "2px 8px",
-              }}
-            >
-              👥 {concept.serveTo}
-            </span>
-          )}
-          <span
+          <button
+            onClick={() => setPhase("idle")}
             style={{
-              fontSize: "0.68rem",
+              background: "none",
+              border: "none",
               color: "var(--text-muted)",
-              background: "var(--bg-hover)",
-              border: "1px solid var(--border)",
-              borderRadius: 999,
-              padding: "2px 8px",
+              cursor: "pointer",
+              fontSize: "0.78rem",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: 0,
+              fontFamily: "inherit",
             }}
           >
-            {items.length} item{items.length !== 1 ? "s" : ""}
+            ← Back
+          </button>
+          <span
+            style={{
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              color: "var(--text-heading)",
+            }}
+          >
+            Choose a Vendor
           </span>
         </div>
 
-        {concept.description && (
-          <p
-            style={{
-              margin: "8px 16px 0",
-              fontSize: "0.78rem",
-              color: "var(--text-muted)",
-              lineHeight: 1.55,
-              flexShrink: 0,
-            }}
-          >
-            {concept.description}
-          </p>
+        {/* Search */}
+        <input
+          className="modal-input"
+          placeholder="Search vendors…"
+          value={vendorSearch}
+          onChange={(e) => {
+            setVendorSearch(e.target.value);
+            setVendorPage(1);
+          }}
+          style={{ marginBottom: 10 }}
+        />
+
+        {vendorsLoading ? (
+          <div className="drawer_loading">
+            <div className="page_loader_spinner" />
+          </div>
+        ) : (
+          <>
+            {/* Fixed-height scrollable list */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                minHeight: 0,
+              }}
+            >
+              {pagedVendors.length === 0 ? (
+                <div className="icart_empty_inline">
+                  <MdStorefront size={18} style={{ opacity: 0.3 }} />
+                  <span>No vendors found</span>
+                </div>
+              ) : (
+                pagedVendors.map((v) => {
+                  const isSel = selectedVendor?.id === v.id;
+                  return (
+                    <div
+                      key={v.id}
+                      onClick={() => setSelectedVendor(isSel ? null : v)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "10px 12px",
+                        background: isSel
+                          ? "var(--bg-active)"
+                          : "var(--bg-hover)",
+                        border: `1px solid ${isSel ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                        borderRadius: 11,
+                        cursor: "pointer",
+                        transition: "all 0.12s",
+                      }}
+                    >
+                      {v.branding?.logo ? (
+                        <img
+                          src={v.branding.logo}
+                          alt=""
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 8,
+                            objectFit: "cover",
+                            flexShrink: 0,
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 8,
+                            background: "var(--bg-card)",
+                            border: "1px solid var(--border)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <MdStorefront
+                            size={14}
+                            style={{ color: "var(--text-muted)" }}
+                          />
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: "0.84rem",
+                            fontWeight: 700,
+                            color: isSel ? "var(--accent)" : "var(--text-body)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {v.businessName}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.68rem",
+                            color: "var(--text-muted)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {v.email}
+                          {v.branding?.tagline
+                            ? ` · ${v.branding.tagline}`
+                            : ""}
+                        </div>
+                      </div>
+                      {isSel && (
+                        <MdVerified
+                          size={16}
+                          style={{ color: "var(--accent)", flexShrink: 0 }}
+                        />
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Pagination */}
+            {vendorTotalPages > 1 && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  marginTop: 10,
+                }}
+              >
+                <button
+                  className="biz_icon_btn"
+                  onClick={() => setVendorPage((p) => Math.max(1, p - 1))}
+                  disabled={vendorPage <= 1}
+                  style={{ width: 28, height: 28 }}
+                >
+                  ‹
+                </button>
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    color: "var(--text-muted)",
+                    fontWeight: 600,
+                  }}
+                >
+                  {vendorPage} / {vendorTotalPages}
+                </span>
+                <button
+                  className="biz_icon_btn"
+                  onClick={() =>
+                    setVendorPage((p) => Math.min(vendorTotalPages, p + 1))
+                  }
+                  disabled={vendorPage >= vendorTotalPages}
+                  style={{ width: 28, height: 28 }}
+                >
+                  ›
+                </button>
+              </div>
+            )}
+          </>
         )}
 
-        {/* Tab bar */}
+        {selectedVendor && (
+          <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
+            <button
+              className="app_btn app_btn_cancel"
+              style={{ flex: 1, height: 38 }}
+              onClick={() => {
+                setSelectedVendor(null);
+                setPhase("idle");
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className="app_btn app_btn_confirm"
+              style={{
+                flex: 2,
+                height: 38,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+              onClick={() => {
+                setPhase("terms");
+              }}
+            >
+              Next: Review Terms →
+            </button>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PHASE: terms
+  // ─────────────────────────────────────────────────────────────
+  if (phase === "terms") {
+    return (
+      <>
+        {sectionHeader}
         <div
           style={{
             display: "flex",
-            borderBottom: "1px solid var(--border)",
-            margin: "10px 0 0",
-            flexShrink: 0,
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 12,
           }}
         >
-          {["menu"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              style={{
-                padding: "10px 18px",
-                background: "transparent",
-                border: "none",
-                borderBottom: `2px solid ${tab === t ? "var(--accent)" : "transparent"}`,
-                color: tab === t ? "var(--accent)" : "var(--text-muted)",
-                fontSize: "0.78rem",
-                fontWeight: tab === t ? 700 : 600,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                textTransform: "capitalize",
-              }}
-            >
-              Menu Items ({items.length})
-            </button>
-          ))}
+          <button
+            onClick={() => setPhase("picking-vendor")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--text-muted)",
+              cursor: "pointer",
+              fontSize: "0.78rem",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: 0,
+              fontFamily: "inherit",
+            }}
+          >
+            ← Back
+          </button>
+          <span
+            style={{
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              color: "var(--text-heading)",
+            }}
+          >
+            Terms & Payments
+          </span>
         </div>
 
-        {/* Scrollable content */}
-        <div style={{ overflowY: "auto", flex: 1, padding: "12px 16px 16px" }}>
-          {items.length === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "32px 0",
-                color: "var(--text-muted)",
-                fontSize: "0.82rem",
-              }}
-            >
-              No menu items
+        {/* Country — locked to cart's location country */}
+        <div className="form-field" style={{ marginBottom: 12 }}>
+          <label className="modal-label">Country</label>
+          {cart.location?.country ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div
+                className="modal-input"
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  color: "var(--text-body)",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                }}
+              >
+                <MdLocationOn
+                  size={15}
+                  style={{ color: "var(--accent)", flexShrink: 0 }}
+                />
+                {cart.location.country}
+              </div>
+              <button
+                className={`app_btn app_btn_confirm ${termsLoading ? "btn_loading" : ""}`}
+                style={{
+                  height: 42,
+                  padding: "0 14px",
+                  fontSize: "0.78rem",
+                  position: "relative",
+                  flexShrink: 0,
+                }}
+                onClick={() => fetchTerms(cart.location.country)}
+                disabled={termsLoading}
+              >
+                <span className="btn_text">Load Terms</span>
+                {termsLoading && (
+                  <span
+                    className="btn_loader"
+                    style={{ width: 13, height: 13 }}
+                  />
+                )}
+              </button>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {items.map((item, idx) => (
+            <div style={{ display: "flex", gap: 8 }}>
+              <select
+                className="modal-input"
+                style={{ flex: 1 }}
+                value={termsCountry}
+                onChange={(e) => {
+                  setTermsCountry(e.target.value);
+                  setTermsData(null);
+                  setTermsAccepted(false);
+                }}
+              >
+                <option value="">Choose a country…</option>
+                {COUNTRIES.map((ctry) => (
+                  <option key={ctry} value={ctry}>
+                    {ctry}
+                  </option>
+                ))}
+              </select>
+              <button
+                className={`app_btn app_btn_confirm ${termsLoading ? "btn_loading" : ""}`}
+                style={{
+                  height: 42,
+                  padding: "0 14px",
+                  fontSize: "0.78rem",
+                  position: "relative",
+                  flexShrink: 0,
+                }}
+                onClick={() => fetchTerms(termsCountry)}
+                disabled={termsLoading || !termsCountry}
+              >
+                <span className="btn_text">Load Terms</span>
+                {termsLoading && (
+                  <span
+                    className="btn_loader"
+                    style={{ width: 13, height: 13 }}
+                  />
+                )}
+              </button>
+            </div>
+          )}
+          <div
+            style={{
+              fontSize: "0.68rem",
+              color: "var(--text-muted)",
+              marginTop: 5,
+            }}
+          >
+            Terms are based on the iCart's location country. Make sure settings
+            exist for this country in the admin panel.
+          </div>
+        </div>
+
+        {termsLoading && (
+          <div className="drawer_loading">
+            <div className="page_loader_spinner" />
+          </div>
+        )}
+
+        {!termsLoading && !termsData && (
+          <div className="icart_empty_inline" style={{ padding: "14px 0" }}>
+            <span>
+              {cart.location?.country
+                ? `Click "Load Terms" to view terms for ${cart.location.country}`
+                : "Select a country and load terms"}
+            </span>
+          </div>
+        )}
+
+        {termsData && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Payment schedule */}
+            {termsData.payments?.length > 0 && (
+              <div
+                style={{
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 11,
+                  padding: "12px 14px",
+                }}
+              >
                 <div
-                  key={item.id || idx}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "10px 12px",
-                    background: "var(--bg-hover)",
-                    borderRadius: 11,
+                    fontSize: "0.62rem",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "var(--text-muted)",
+                    marginBottom: 10,
                   }}
                 >
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 9,
-                        objectFit: "cover",
-                        flexShrink: 0,
-                      }}
-                    />
-                  ) : (
+                  Payment Schedule
+                </div>
+                {termsData.payments.map((p, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      paddingBottom: i < termsData.payments.length - 1 ? 8 : 0,
+                      marginBottom: i < termsData.payments.length - 1 ? 8 : 0,
+                      borderBottom:
+                        i < termsData.payments.length - 1
+                          ? "1px solid var(--border)"
+                          : "none",
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
+                          color: "var(--text-body)",
+                          marginBottom: 2,
+                        }}
+                      >
+                        {p.title}
+                      </div>
+                      {p.description && (
+                        <div
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          {p.description}
+                        </div>
+                      )}
+                      <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
+                        {p.recurring && (
+                          <span
+                            style={{
+                              fontSize: "0.62rem",
+                              fontWeight: 700,
+                              padding: "1px 6px",
+                              borderRadius: 4,
+                              background: "rgba(59,130,246,0.1)",
+                              color: "#3b82f6",
+                              border: "1px solid rgba(59,130,246,0.25)",
+                            }}
+                          >
+                            Recurring
+                          </span>
+                        )}
+                        {p.refundable && (
+                          <span
+                            style={{
+                              fontSize: "0.62rem",
+                              fontWeight: 700,
+                              padding: "1px 6px",
+                              borderRadius: 4,
+                              background: "rgba(34,197,94,0.1)",
+                              color: "#16a34a",
+                              border: "1px solid rgba(34,197,94,0.25)",
+                            }}
+                          >
+                            Refundable
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <div
                       style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 9,
-                        background: "var(--bg-card)",
-                        border: "1px solid var(--border)",
+                        fontSize: "0.95rem",
+                        fontWeight: 900,
+                        color: "var(--accent)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {termsData.currency?.toUpperCase()} {fmt(p.amount)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Terms text */}
+            {termsData.terms && (
+              <div
+                style={{
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 11,
+                  padding: "12px 14px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.62rem",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "var(--text-muted)",
+                    marginBottom: 8,
+                  }}
+                >
+                  Terms & Conditions
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.78rem",
+                    color: "var(--text-body)",
+                    lineHeight: 1.65,
+                    maxHeight: 160,
+                    overflowY: "auto",
+                    paddingRight: 4,
+                  }}
+                >
+                  {termsData.terms}
+                </div>
+              </div>
+            )}
+
+            {/* Accept */}
+            <button
+              onClick={() => setTermsAccepted((v) => !v)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                background: termsAccepted
+                  ? "var(--bg-active)"
+                  : "var(--bg-hover)",
+                border: `1px solid ${termsAccepted ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                borderRadius: 10,
+                padding: "10px 13px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "all 0.12s",
+              }}
+            >
+              <div
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 6,
+                  border: `2px solid ${termsAccepted ? "var(--accent)" : "var(--border)"}`,
+                  background: termsAccepted ? "var(--accent)" : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  transition: "all 0.12s",
+                }}
+              >
+                {termsAccepted && (
+                  <MdVerified size={12} style={{ color: "#fff" }} />
+                )}
+              </div>
+              <span
+                style={{
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  color: termsAccepted ? "var(--accent)" : "var(--text-muted)",
+                  textAlign: "left",
+                }}
+              >
+                I have read and agree to the terms for {termsData.country}
+              </span>
+            </button>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                className="app_btn app_btn_cancel"
+                style={{ flex: 1, height: 40 }}
+                onClick={() => setPhase("picking-vendor")}
+              >
+                Back
+              </button>
+              <button
+                className={`app_btn app_btn_confirm ${savingVendor ? "btn_loading" : ""}`}
+                style={{
+                  flex: 2,
+                  height: 40,
+                  position: "relative",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
+                onClick={() => {
+                  if (!termsAccepted) {
+                    toast.error(
+                      "Please read and accept the terms before continuing",
+                    );
+                    return;
+                  }
+                  handleSetVendor();
+                }}
+                disabled={savingVendor}
+              >
+                <span className="btn_text">
+                  <MdStorefront size={14} /> Confirm —{" "}
+                  {selectedVendor?.businessName}
+                </span>
+                {savingVendor && (
+                  <span
+                    className="btn_loader"
+                    style={{ width: 14, height: 14 }}
+                  />
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PHASE: vendor-detail
+  // ─────────────────────────────────────────────────────────────
+  if (phase === "vendor-detail") {
+    const activeVendor = assignedVendor || selectedVendor;
+    const vendorLabel =
+      activeVendor?.businessName ||
+      cartMenuItems[0]?.vendorId?.slice(0, 8).toUpperCase() ||
+      "Vendor";
+    const atLimit = totalSelected >= MAX_MENU_ITEMS;
+
+    return (
+      <>
+        {sectionHeader}
+        {/* Header bar */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 14,
+          }}
+        >
+          <button
+            onClick={() => {
+              setPhase("idle");
+              setPendingAdd([]);
+              setMarkupValues({});
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--text-muted)",
+              cursor: "pointer",
+              fontSize: "0.78rem",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: 0,
+              fontFamily: "inherit",
+            }}
+          >
+            ← Back
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: "0.88rem",
+                fontWeight: 800,
+                color: "var(--text-heading)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {vendorLabel}
+            </div>
+          </div>
+          <div
+            style={{
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              padding: "3px 9px",
+              borderRadius: 999,
+              background: atLimit ? "rgba(239,68,68,0.1)" : "var(--bg-active)",
+              color: atLimit ? "#ef4444" : "var(--accent)",
+              border: `1px solid ${atLimit ? "rgba(239,68,68,0.25)" : "rgba(203,108,220,0.25)"}`,
+              flexShrink: 0,
+            }}
+          >
+            {totalSelected}/{MAX_MENU_ITEMS}
+          </div>
+        </div>
+
+        {/* Active items */}
+        {cartMenuItems.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div
+              style={{
+                fontSize: "0.62rem",
+                fontWeight: 900,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--text-muted)",
+                marginBottom: 8,
+              }}
+            >
+              Active Items
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {cartMenuItems.map((item) => {
+                const name = item.name || item.menuItem?.name || "Item";
+                const img = item.image || item.menuItem?.image;
+                const price =
+                  item.sellingPrice || item.menuItem?.sellingPrice || 0;
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "9px 12px",
+                      background: "var(--bg-hover)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 10,
+                    }}
+                  >
+                    {img ? (
+                      <img
+                        src={img}
+                        alt=""
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 7,
+                          objectFit: "cover",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 7,
+                          background: "var(--bg-card)",
+                          border: "1px solid var(--border)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <MdRestaurantMenu
+                          size={13}
+                          style={{ color: "var(--text-muted)" }}
+                        />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
+                          color: "var(--text-body)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {name}
+                      </div>
+                      {price > 0 && (
+                        <div
+                          style={{
+                            fontSize: "0.68rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          ₦{fmt(price)}
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "0.62rem",
+                        fontWeight: 700,
+                        padding: "2px 7px",
+                        borderRadius: 999,
+                        background: "rgba(34,197,94,0.1)",
+                        color: "#16a34a",
+                        border: "1px solid rgba(34,197,94,0.25)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      Active
+                    </span>
+                    <button
+                      onClick={() => setConfirmRemove(item)}
+                      title="Remove"
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 7,
+                        background: "rgba(239,68,68,0.06)",
+                        border: "1px solid rgba(239,68,68,0.2)",
+                        color: "#ef4444",
+                        cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         flexShrink: 0,
                       }}
                     >
-                      <MdImage
-                        size={17}
-                        style={{ color: "var(--text-muted)" }}
-                      />
-                    </div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: "0.85rem",
-                        fontWeight: 700,
-                        color: "var(--text-body)",
-                      }}
-                    >
-                      {item.name}
-                    </div>
-                    {item.description && (
-                      <div
-                        style={{
-                          fontSize: "0.72rem",
-                          color: "var(--text-muted)",
-                          marginTop: 1,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {item.description}
-                      </div>
-                    )}
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 6,
-                        marginTop: 3,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      {item.ticketTime > 0 && (
-                        <span
-                          style={{
-                            fontSize: "0.65rem",
-                            color: "var(--text-muted)",
-                            background: "var(--bg-card)",
-                            border: "1px solid var(--border)",
-                            borderRadius: 4,
-                            padding: "1px 6px",
-                          }}
-                        >
-                          ⏱ {item.ticketTime}min
-                        </span>
-                      )}
-                      {item.tutorialVideo && (
-                        <span
-                          style={{
-                            fontSize: "0.65rem",
-                            color: "#ef4444",
-                            background: "rgba(239,68,68,0.08)",
-                            border: "1px solid rgba(239,68,68,0.2)",
-                            borderRadius: 4,
-                            padding: "1px 6px",
-                          }}
-                        >
-                          ▶ Video
-                        </span>
-                      )}
-                      {item.variants?.length > 0 && (
-                        <span
-                          style={{
-                            fontSize: "0.65rem",
-                            color: "var(--accent)",
-                            background: "var(--bg-active)",
-                            border: "1px solid rgba(203,108,220,0.2)",
-                            borderRadius: 4,
-                            padding: "1px 6px",
-                          }}
-                        >
-                          {item.variants.length} variant
-                          {item.variants.length !== 1 ? "s" : ""}
-                        </span>
-                      )}
-                      {item.extras?.length > 0 && (
-                        <span
-                          style={{
-                            fontSize: "0.65rem",
-                            color: "#3b82f6",
-                            background: "rgba(59,130,246,0.08)",
-                            border: "1px solid rgba(59,130,246,0.2)",
-                            borderRadius: 4,
-                            padding: "1px 6px",
-                          }}
-                        >
-                          {item.extras.length} extra
-                          {item.extras.length !== 1 ? "s" : ""}
-                        </span>
-                      )}
-                    </div>
+                      <MdClose size={13} />
+                    </button>
                   </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    {item.sellingPrice > 0 && (
-                      <div
-                        style={{
-                          fontSize: "0.88rem",
-                          fontWeight: 800,
-                          color: "var(--text-heading)",
-                        }}
-                      >
-                        ₦{Number(item.sellingPrice).toLocaleString()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Concept Card ───────────────────────────────────────────── */
-function ConceptCard({
-  concept,
-  cartId,
-  onConceptClick,
-  onMarkupUpdated,
-  onDrop,
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const [editingMarkup, setEditingMarkup] = useState(false);
-  const [markupVal, setMarkupVal] = useState(concept.markup?.toString() || "");
-  const [savingMarkup, setSavingMarkup] = useState(false);
-  const [confirmDrop, setConfirmDrop] = useState(false);
-  const [dropping, setDropping] = useState(false);
-  const menuItems = concept.menuItems || [];
-
-  const handleDrop = async () => {
-    setDropping(true);
-    try {
-      await api.post(`/icart/${cartId}/concepts/drop`, { id: concept.id });
-      toast.success(`${concept.name} removed`);
-      setConfirmDrop(false);
-      if (onDrop) onDrop();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to remove concept");
-    } finally {
-      setDropping(false);
-    }
-  };
-
-  const saveMarkup = async () => {
-    const val = Number(markupVal);
-    if (isNaN(val) || val < 0) return toast.error("Enter a valid markup %");
-    setSavingMarkup(true);
-    try {
-      await api.patch(`/icart/${cartId}/concepts/${concept.id}/markup`, {
-        markup: val,
-      });
-      toast.success("Markup updated");
-      setEditingMarkup(false);
-      if (onMarkupUpdated) onMarkupUpdated(concept.id, val);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to update markup");
-    } finally {
-      setSavingMarkup(false);
-    }
-  };
-
-  return (
-    <div
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        borderRadius: 12,
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "12px 14px",
-          cursor: menuItems.length > 0 ? "pointer" : "default",
-        }}
-        onClick={() => menuItems.length > 0 && setExpanded((v) => !v)}
-      >
-        <div className="icart_concept_icon">
-          <MdStorefront size={14} />
-        </div>
-        <div className="icart_concept_info" style={{ flex: 1, minWidth: 0 }}>
-          <div className="icart_concept_name">{concept.name || "Concept"}</div>
-          <div className="icart_task_meta">
-            {concept.status && <span>{concept.status}</span>}
-            {menuItems.length > 0 && (
-              <>
-                <span className="contract_row_dot">·</span>
-                <span>
-                  {menuItems.length} item{menuItems.length !== 1 ? "s" : ""}
-                </span>
-              </>
-            )}
           </div>
-        </div>
-        {menuItems.length > 0 &&
-          (expanded ? (
-            <MdExpandLess
-              size={16}
-              style={{ color: "var(--text-muted)", flexShrink: 0 }}
-            />
-          ) : (
-            <MdExpandMore
-              size={16}
-              style={{ color: "var(--text-muted)", flexShrink: 0 }}
-            />
-          ))}
-      </div>
+        )}
 
-      {/* Action row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "8px 14px 12px",
-          borderTop: "1px solid var(--border)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {editingMarkup ? (
-          <div
-            style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}
-          >
-            <div style={{ position: "relative", flex: 1 }}>
-              <input
-                className="modal-input"
-                type="number"
-                min="0"
-                style={{
-                  marginBottom: 0,
-                  height: 32,
-                  paddingRight: 24,
-                  fontSize: "0.8rem",
-                }}
-                placeholder="e.g. 30"
-                value={markupVal}
-                onChange={(e) => setMarkupVal(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && saveMarkup()}
-                autoFocus
-              />
-              <span
-                style={{
-                  position: "absolute",
-                  right: 9,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  fontSize: "0.72rem",
-                  color: "var(--text-muted)",
-                  pointerEvents: "none",
-                  fontWeight: 700,
-                }}
-              >
-                %
-              </span>
-            </div>
-            <button
-              className={`app_btn app_btn_confirm${savingMarkup ? " btn_loading" : ""}`}
-              style={{
-                height: 32,
-                padding: "0 12px",
-                fontSize: "0.74rem",
-                position: "relative",
-                flexShrink: 0,
-              }}
-              onClick={saveMarkup}
-              disabled={savingMarkup}
-            >
-              <span className="btn_text">Save</span>
-              {savingMarkup && (
-                <span
-                  className="btn_loader"
-                  style={{ width: 11, height: 11 }}
-                />
-              )}
-            </button>
-            <button
-              className="app_btn app_btn_cancel"
-              style={{
-                height: 32,
-                padding: "0 10px",
-                fontSize: "0.74rem",
-                flexShrink: 0,
-              }}
-              onClick={() => {
-                setEditingMarkup(false);
-                setMarkupVal(concept.markup?.toString() || "");
-              }}
-            >
-              ✕
-            </button>
+        {/* Add from vendor menu */}
+        <div
+          style={{
+            fontSize: "0.62rem",
+            fontWeight: 900,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "var(--text-muted)",
+            marginBottom: 8,
+          }}
+        >
+          Vendor Menu{" "}
+          {atLimit && <span style={{ color: "#ef4444" }}>— Limit reached</span>}
+        </div>
+
+        {/* Menu search */}
+        {vendorMenuItems.length > MENU_PAGE_SIZE && (
+          <input
+            className="modal-input"
+            placeholder="Search menu…"
+            value={menuSearch}
+            onChange={(e) => {
+              setMenuSearch(e.target.value);
+              setMenuPage(1);
+            }}
+            style={{ marginBottom: 8 }}
+          />
+        )}
+
+        {menuLoading ? (
+          <div className="drawer_loading">
+            <div className="page_loader_spinner" />
+          </div>
+        ) : vendorMenuItems.length === 0 ? (
+          <div className="icart_empty_inline">
+            <MdRestaurantMenu size={18} style={{ opacity: 0.3 }} />
+            <span>No menu items from this vendor</span>
           </div>
         ) : (
           <>
-            <button
-              onClick={() => setEditingMarkup(true)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                background: "none",
-                border: "1px dashed var(--border)",
-                borderRadius: 7,
-                padding: "4px 10px",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                fontSize: "0.72rem",
-                fontWeight: 700,
-                color:
-                  concept.markup != null
-                    ? "var(--accent)"
-                    : "var(--text-muted)",
-                flex: 1,
-                transition: "border-color 0.15s",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.borderColor = "rgba(203,108,220,0.5)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.borderColor = "var(--border)")
-              }
-            >
-              <MdEdit size={12} />
-              {concept.markup != null
-                ? `${concept.markup}% markup`
-                : "Set markup"}
-            </button>
-            {onConceptClick && (
-              <button
-                onClick={() => onConceptClick(concept)}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {pagedMenu.map((item) => {
+                const added = isAdded(item.id);
+                const pending = isPending(item.id);
+                const disabled = !pending && !added && atLimit;
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      background: added
+                        ? "var(--bg-hover)"
+                        : pending
+                          ? "var(--bg-active)"
+                          : "var(--bg-hover)",
+                      border: `1px solid ${pending ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                      borderRadius: 10,
+                      overflow: "hidden",
+                      opacity: disabled ? 0.45 : 1,
+                      transition: "all 0.12s",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "9px 12px",
+                      }}
+                    >
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt=""
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 7,
+                            objectFit: "cover",
+                            flexShrink: 0,
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 7,
+                            background: "var(--bg-card)",
+                            border: "1px solid var(--border)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <MdRestaurantMenu
+                            size={13}
+                            style={{ color: "var(--text-muted)" }}
+                          />
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: "0.82rem",
+                            fontWeight: 700,
+                            color: pending
+                              ? "var(--accent)"
+                              : "var(--text-body)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                        {item.sellingPrice > 0 && (
+                          <div
+                            style={{
+                              fontSize: "0.68rem",
+                              color: "var(--text-muted)",
+                            }}
+                          >
+                            ₦{fmt(item.sellingPrice)}
+                          </div>
+                        )}
+                      </div>
+                      {added ? (
+                        <span
+                          style={{
+                            fontSize: "0.62rem",
+                            fontWeight: 700,
+                            padding: "2px 7px",
+                            borderRadius: 999,
+                            background: "rgba(34,197,94,0.1)",
+                            color: "#16a34a",
+                            border: "1px solid rgba(34,197,94,0.25)",
+                            flexShrink: 0,
+                          }}
+                        >
+                          Added
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => !disabled && togglePendingAdd(item)}
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 7,
+                            background: pending
+                              ? "var(--accent)"
+                              : "var(--bg-card)",
+                            border: `1px solid ${pending ? "var(--accent)" : "var(--border)"}`,
+                            color: pending ? "#fff" : "var(--text-muted)",
+                            cursor: disabled ? "not-allowed" : "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {pending ? (
+                            <MdClose size={13} />
+                          ) : (
+                            <MdAdd size={14} />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    {pending && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "0 12px 9px",
+                        }}
+                      >
+                        <label
+                          style={{
+                            fontSize: "0.66rem",
+                            color: "var(--text-muted)",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Markup %
+                        </label>
+                        <input
+                          className="modal-input"
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={markupValues[item.id] ?? "0"}
+                          onChange={(e) =>
+                            setMarkupValues((prev) => ({
+                              ...prev,
+                              [item.id]: e.target.value,
+                            }))
+                          }
+                          style={{
+                            height: 30,
+                            fontSize: "0.78rem",
+                            marginBottom: 0,
+                            flex: 1,
+                            maxWidth: 100,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Menu pagination */}
+            {menuTotalPages > 1 && (
+              <div
                 style={{
-                  height: 32,
-                  padding: "0 14px",
-                  fontSize: "0.74rem",
-                  fontWeight: 800,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  flexShrink: 0,
-                  background: "var(--accent)",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  boxShadow: "0 2px 8px rgba(203,108,220,0.35)",
-                  transition: "opacity 0.15s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-              >
-                <MdRestaurantMenu size={13} />
-                View Overview
-              </button>
-            )}
-            {onDrop && (
-              <button
-                onClick={() => setConfirmDrop(true)}
-                title="Remove concept"
-                style={{
-                  width: 32,
-                  height: 32,
-                  flexShrink: 0,
-                  display: "inline-flex",
+                  display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: 8,
-                  border: "1px solid rgba(239,68,68,0.25)",
-                  background: "rgba(239,68,68,0.06)",
-                  color: "#ef4444",
-                  cursor: "pointer",
-                  transition: "all 0.12s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(239,68,68,0.12)";
-                  e.currentTarget.style.borderColor = "rgba(239,68,68,0.4)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "rgba(239,68,68,0.06)";
-                  e.currentTarget.style.borderColor = "rgba(239,68,68,0.25)";
+                  gap: 8,
+                  marginTop: 10,
                 }}
               >
-                <MdDeleteOutline size={15} />
-              </button>
+                <button
+                  className="biz_icon_btn"
+                  onClick={() => setMenuPage((p) => Math.max(1, p - 1))}
+                  disabled={menuPage <= 1}
+                  style={{ width: 28, height: 28 }}
+                >
+                  ‹
+                </button>
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    color: "var(--text-muted)",
+                    fontWeight: 600,
+                  }}
+                >
+                  {menuPage} / {menuTotalPages}
+                </span>
+                <button
+                  className="biz_icon_btn"
+                  onClick={() =>
+                    setMenuPage((p) => Math.min(menuTotalPages, p + 1))
+                  }
+                  disabled={menuPage >= menuTotalPages}
+                  style={{ width: 28, height: 28 }}
+                >
+                  ›
+                </button>
+              </div>
             )}
           </>
         )}
-      </div>
 
-      {/* Drop confirmation modal */}
-      <Modal
-        isOpen={confirmDrop}
-        onClose={() => setConfirmDrop(false)}
-        title="Remove Concept"
-        description={`Are you sure you want to remove "${concept.name}" from this iCart? It will no longer be served from this location.`}
-      >
-        <div className="modal-body">
-          <div className="modal-footer">
+        {/* Save */}
+        {pendingAdd.length > 0 && (
+          <div style={{ marginTop: 14 }}>
             <button
-              className="app_btn app_btn_cancel"
-              type="button"
-              onClick={() => setConfirmDrop(false)}
-            >
-              Cancel
-            </button>
-            <button
-              className={`app_btn app_btn_confirm ${dropping ? "btn_loading" : ""}`}
+              className={`app_btn app_btn_confirm ${saving ? "btn_loading" : ""}`}
               style={{
-                background: "#ef4444",
+                width: "100%",
+                height: 40,
                 position: "relative",
-                minWidth: 110,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
               }}
-              onClick={handleDrop}
-              disabled={dropping}
+              onClick={handleSaveAdditions}
+              disabled={saving}
             >
-              <span className="btn_text">Remove</span>
-              {dropping && (
+              <span className="btn_text">
+                Add {pendingAdd.length} Item{pendingAdd.length !== 1 ? "s" : ""}{" "}
+                to iCart
+              </span>
+              {saving && (
                 <span
                   className="btn_loader"
                   style={{ width: 14, height: 14 }}
@@ -1686,120 +2601,54 @@ function ConceptCard({
               )}
             </button>
           </div>
-        </div>
-      </Modal>
+        )}
 
-      {/* Menu items */}
-      {expanded && menuItems.length > 0 && (
-        <div style={{ borderTop: "1px solid var(--border)" }}>
-          {menuItems.map((item, idx) => (
-            <div
-              key={item.id || idx}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "10px 14px",
-                borderBottom:
-                  idx < menuItems.length - 1
-                    ? "1px solid var(--border)"
-                    : "none",
-                background: "var(--bg-hover)",
-              }}
-            >
-              {item.image ? (
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 8,
-                    objectFit: "cover",
-                    flexShrink: 0,
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 8,
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <MdImage size={15} style={{ color: "var(--text-muted)" }} />
-                </div>
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
-                    color: "var(--text-body)",
-                  }}
-                >
-                  {item.name}
-                </div>
-                {item.description && (
-                  <div
-                    style={{
-                      fontSize: "0.72rem",
-                      color: "var(--text-muted)",
-                      marginTop: 1,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {item.description}
-                  </div>
+        {/* Remove confirmation modal */}
+        <Modal
+          isOpen={!!confirmRemove}
+          onClose={() => setConfirmRemove(null)}
+          title="Remove Menu Item"
+          description={`Remove "${confirmRemove?.name || confirmRemove?.menuItem?.name}" from this iCart?`}
+        >
+          <div className="modal-body">
+            <div className="modal-footer">
+              <button
+                className="app_btn app_btn_cancel"
+                type="button"
+                onClick={() => setConfirmRemove(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className={`app_btn app_btn_confirm ${removing ? "btn_loading" : ""}`}
+                style={{
+                  background: "#ef4444",
+                  position: "relative",
+                  minWidth: 110,
+                }}
+                onClick={handleRemove}
+                disabled={removing}
+              >
+                <span className="btn_text">Remove</span>
+                {removing && (
+                  <span
+                    className="btn_loader"
+                    style={{ width: 14, height: 14 }}
+                  />
                 )}
-              </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                {item.sellingPrice != null && (
-                  <div
-                    style={{
-                      fontSize: "0.85rem",
-                      fontWeight: 800,
-                      color: "var(--text-heading)",
-                    }}
-                  >
-                    ₦{Number(item.sellingPrice).toLocaleString()}
-                  </div>
-                )}
-                {item.ticketTime > 0 && (
-                  <div
-                    style={{
-                      fontSize: "0.68rem",
-                      color: "var(--text-muted)",
-                      marginTop: 1,
-                    }}
-                  >
-                    {item.ticketTime} min
-                  </div>
-                )}
-              </div>
+              </button>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+          </div>
+        </Modal>
+      </>
+    );
+  }
+
+  return null;
 }
 
 /* ── Main Component ─────────────────────────────────────────── */
-export default function IcartOverview({
-  cart,
-  onUpdate,
-  onRefresh,
-  onConceptClick,
-}) {
+export default function IcartOverview({ cart, onUpdate, onRefresh }) {
   const [togglingOnline, setTogglingOnline] = useState(false);
   const [togglingLock, setTogglingLock] = useState(false);
   const [editingRadius, setEditingRadius] = useState(false);
@@ -1807,69 +2656,6 @@ export default function IcartOverview({
   const [savingRadius, setSavingRadius] = useState(false);
   const [showLocationForm, setShowLocationForm] = useState(false);
   const [showLiveStream, setShowLiveStream] = useState(false);
-  const [showConceptForm, setShowConceptForm] = useState(false);
-  const [conceptSource, setConceptSource] = useState("mine");
-  const [myConcepts, setMyConcepts] = useState([]);
-  const [publicConcepts, setPublicConcepts] = useState([]);
-  const [publicSearch, setPublicSearch] = useState("");
-  const [publicPage, setPublicPage] = useState(1);
-  const [publicTotal, setPublicTotal] = useState(0);
-  const PUBLIC_LIMIT = 10;
-  const [conceptsLoading, setConceptsLoading] = useState(false);
-  const [selectedConceptId, setSelectedConceptId] = useState("");
-  const [markup, setMarkup] = useState("");
-  const [addingConcept, setAddingConcept] = useState(false);
-
-  const openConceptForm = async () => {
-    setShowConceptForm(true);
-    setConceptSource("mine");
-    setSelectedConceptId("");
-    if (myConcepts.length > 0) return;
-    setConceptsLoading(true);
-    try {
-      const res = await api.get("/vendor/concept");
-      const d = res.data.data;
-      setMyConcepts(Array.isArray(d) ? d : d?.concepts || d?.items || []);
-    } catch {
-      console.log("Failed to load concepts");
-    } finally {
-      setConceptsLoading(false);
-    }
-  };
-
-  const fetchPublicConcepts = async (
-    search = publicSearch,
-    page = publicPage,
-  ) => {
-    setConceptsLoading(true);
-    try {
-      const params = { page, limit: PUBLIC_LIMIT };
-      if (search.trim()) params.search = search.trim();
-      const res = await api.get("/vendor/concept/public-rental", { params });
-      const d = res.data.data;
-      const list = Array.isArray(d) ? d : d?.items || d?.concepts || [];
-      setPublicConcepts(list);
-      setPublicTotal(d?.total || list.length);
-    } catch {
-      toast.error("Failed to load public concepts");
-    } finally {
-      setConceptsLoading(false);
-    }
-  };
-
-  const switchToPublic = () => {
-    setConceptSource("public");
-    setSelectedConceptId("");
-    setPublicSearch("");
-    setPublicPage(1);
-    fetchPublicConcepts("", 1);
-  };
-  const switchToMine = () => {
-    setConceptSource("mine");
-    setSelectedConceptId("");
-    setPublicSearch("");
-    setPublicPage(1);
-  };
 
   const handleToggleOnline = async () => {
     setTogglingOnline(true);
@@ -2133,440 +2919,12 @@ export default function IcartOverview({
         </div>
       )}
 
-      {/* ── Active Concepts ── */}
-      <div className="drawer_section_title" style={{ marginTop: 20 }}>
-        <span>Active Concepts</span>
-        <button
-          className="icart_icon_action_btn"
-          style={{ marginLeft: "auto" }}
-          onClick={() =>
-            showConceptForm ? setShowConceptForm(false) : openConceptForm()
-          }
-        >
-          <MdAdd size={15} />
-        </button>
-      </div>
-
-      {showConceptForm && (
-        <div className="icart_concept_form">
-          <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-            <button
-              onClick={switchToMine}
-              style={{
-                flex: 1,
-                height: 32,
-                borderRadius: 8,
-                border: `1px solid ${conceptSource === "mine" ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                background:
-                  conceptSource === "mine"
-                    ? "var(--bg-active)"
-                    : "var(--bg-hover)",
-                color:
-                  conceptSource === "mine"
-                    ? "var(--accent)"
-                    : "var(--text-muted)",
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              My Concepts
-            </button>
-            <button
-              onClick={switchToPublic}
-              style={{
-                flex: 1,
-                height: 32,
-                borderRadius: 8,
-                border: `1px solid ${conceptSource === "public" ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                background:
-                  conceptSource === "public"
-                    ? "var(--bg-active)"
-                    : "var(--bg-hover)",
-                color:
-                  conceptSource === "public"
-                    ? "var(--accent)"
-                    : "var(--text-muted)",
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              Public Concepts
-            </button>
-          </div>
-
-          {conceptsLoading ? (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "20px 0",
-              }}
-            >
-              <div
-                className="page_loader_spinner"
-                style={{ width: 20, height: 20 }}
-              />
-            </div>
-          ) : (conceptSource === "mine" ? myConcepts : publicConcepts)
-              .length === 0 ? (
-            <div className="icart_empty_inline">
-              <MdStorefront size={18} style={{ opacity: 0.3 }} />
-              <span>
-                {conceptSource === "mine"
-                  ? "No concepts on your account"
-                  : "No public concepts available"}
-              </span>
-            </div>
-          ) : (
-            <>
-              {conceptSource === "public" && (
-                <div style={{ position: "relative", marginBottom: 10 }}>
-                  <input
-                    className="modal-input"
-                    style={{ marginBottom: 0, paddingRight: 32 }}
-                    placeholder="Search public concepts…"
-                    value={publicSearch}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setPublicSearch(v);
-                      setPublicPage(1);
-                      setSelectedConceptId("");
-                      fetchPublicConcepts(v, 1);
-                    }}
-                  />
-                  {conceptsLoading && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        right: 10,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                      }}
-                    >
-                      <div
-                        className="page_loader_spinner"
-                        style={{ width: 14, height: 14 }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="form-field">
-                <label className="modal-label">
-                  {conceptSource === "mine" ? "My Concept" : "Public Concept"} *
-                </label>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 6,
-                    maxHeight: 240,
-                    overflowY: "auto",
-                    paddingRight: 2,
-                  }}
-                >
-                  {(conceptSource === "mine" ? myConcepts : publicConcepts).map(
-                    (c) => {
-                      const isSelected = selectedConceptId === c.id;
-                      return (
-                        <div
-                          key={c.id}
-                          onClick={() => setSelectedConceptId(c.id)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            padding: "10px 12px",
-                            background: isSelected
-                              ? "var(--bg-active)"
-                              : "var(--bg-hover)",
-                            border: `1px solid ${isSelected ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                            borderRadius: 10,
-                            cursor: "pointer",
-                            transition: "all 0.12s",
-                          }}
-                        >
-                          {c.banner ? (
-                            <img
-                              src={c.banner}
-                              alt=""
-                              style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: 8,
-                                objectFit: "cover",
-                                flexShrink: 0,
-                              }}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: 8,
-                                background: "var(--bg-card)",
-                                border: "1px solid var(--border)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0,
-                              }}
-                            >
-                              <MdStorefront
-                                size={16}
-                                style={{ color: "var(--text-muted)" }}
-                              />
-                            </div>
-                          )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div
-                              style={{
-                                fontSize: "0.82rem",
-                                fontWeight: 700,
-                                color: isSelected
-                                  ? "var(--accent)"
-                                  : "var(--text-body)",
-                                marginBottom: 2,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {c.name}
-                            </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: 5,
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              {c.vendor?.businessName && (
-                                <span
-                                  style={{
-                                    fontSize: "0.62rem",
-                                    fontWeight: 700,
-                                    padding: "1px 6px",
-                                    borderRadius: 999,
-                                    background: "rgba(203,108,220,0.1)",
-                                    color: "var(--accent)",
-                                    border: "1px solid rgba(203,108,220,0.2)",
-                                  }}
-                                >
-                                  {c.vendor.businessName}
-                                </span>
-                              )}
-                              {c.menuItems?.length > 0 && (
-                                <span
-                                  style={{
-                                    fontSize: "0.62rem",
-                                    color: "var(--text-muted)",
-                                  }}
-                                >
-                                  {c.menuItems.length} item
-                                  {c.menuItems.length !== 1 ? "s" : ""}
-                                </span>
-                              )}
-                              {c.status && (
-                                <span
-                                  style={{
-                                    fontSize: "0.62rem",
-                                    color: "#16a34a",
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {c.status}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div
-                            style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 4,
-                              alignItems: "flex-end",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {isSelected && (
-                              <div
-                                style={{
-                                  width: 20,
-                                  height: 20,
-                                  borderRadius: "50%",
-                                  background: "var(--accent)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <MdVerified
-                                  size={12}
-                                  style={{ color: "#fff" }}
-                                />
-                              </div>
-                            )}
-                            {/* View overview — same as active concepts */}
-                            {conceptSource === "public" && onConceptClick && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onConceptClick(c);
-                                }}
-                                style={{
-                                  fontSize: "0.6rem",
-                                  fontWeight: 700,
-                                  padding: "2px 7px",
-                                  borderRadius: 5,
-                                  background: "var(--bg-active)",
-                                  border: "1px solid rgba(203,108,220,0.2)",
-                                  color: "var(--accent)",
-                                  cursor: "pointer",
-                                  fontFamily: "inherit",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                Overview
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    },
-                  )}
-                </div>
-              </div>
-
-              {conceptSource === "public" && publicTotal > PUBLIC_LIMIT && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 8,
-                    marginBottom: 8,
-                  }}
-                >
-                  <button
-                    className="biz_icon_btn"
-                    onClick={() => {
-                      const p = publicPage - 1;
-                      setPublicPage(p);
-                      setSelectedConceptId("");
-                      fetchPublicConcepts(publicSearch, p);
-                    }}
-                    disabled={publicPage <= 1 || conceptsLoading}
-                    style={{ width: 28, height: 28 }}
-                  >
-                    ‹
-                  </button>
-                  <span
-                    style={{
-                      fontSize: "0.72rem",
-                      color: "var(--text-muted)",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {publicPage} / {Math.ceil(publicTotal / PUBLIC_LIMIT)}
-                  </span>
-                  <button
-                    className="biz_icon_btn"
-                    onClick={() => {
-                      const p = publicPage + 1;
-                      setPublicPage(p);
-                      setSelectedConceptId("");
-                      fetchPublicConcepts(publicSearch, p);
-                    }}
-                    disabled={
-                      publicPage >= Math.ceil(publicTotal / PUBLIC_LIMIT) ||
-                      conceptsLoading
-                    }
-                    style={{ width: 28, height: 28 }}
-                  >
-                    ›
-                  </button>
-                </div>
-              )}
-
-              <div className="form-field">
-                <label className="modal-label">Markup (%)</label>
-                <input
-                  className="modal-input"
-                  type="number"
-                  placeholder="e.g. 10"
-                  value={markup}
-                  onChange={(e) => setMarkup(e.target.value)}
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                <button
-                  className={`app_btn app_btn_confirm ${addingConcept ? "btn_loading" : ""}`}
-                  style={{ flex: 1, height: 38 }}
-                  onClick={handleAddConcept}
-                  disabled={addingConcept || !selectedConceptId}
-                >
-                  <span className="btn_text">Add Concept</span>
-                  {addingConcept && (
-                    <span
-                      className="btn_loader"
-                      style={{ width: 14, height: 14 }}
-                    />
-                  )}
-                </button>
-                <button
-                  className="app_btn app_btn_cancel"
-                  style={{ flex: 1, height: 38 }}
-                  onClick={() => {
-                    setShowConceptForm(false);
-                    setSelectedConceptId("");
-                    setMarkup("");
-                    setConceptSource("mine");
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {cart.concepts?.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {cart.concepts.map((c, i) => (
-            <ConceptCard
-              key={c.id || i}
-              concept={c}
-              cartId={cart.id}
-              onConceptClick={onConceptClick}
-              onMarkupUpdated={(conceptId, markup) =>
-                onUpdate({
-                  ...cart,
-                  concepts: cart.concepts.map((cc) =>
-                    cc.id === conceptId ? { ...cc, markup } : cc,
-                  ),
-                })
-              }
-              onDrop={onRefresh}
-            />
-          ))}
-        </div>
-      ) : (
-        !showConceptForm && (
-          <div className="icart_empty_inline">
-            <MdStorefront size={18} style={{ opacity: 0.3 }} />
-            <span>No concepts attached</span>
-          </div>
-        )
-      )}
+      {/* ── Vendor & Menu ── */}
+      <VendorMenuSection
+        cart={cart}
+        onUpdate={onUpdate}
+        onRefresh={onRefresh}
+      />
 
       {/* ── Operators ── */}
       <div className="drawer_section_title" style={{ marginTop: 24 }}>

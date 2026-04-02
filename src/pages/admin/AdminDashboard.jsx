@@ -20,7 +20,7 @@ import Drawer from "../../components/Drawer";
 import api from "../../api/axios";
 import { CountrySelect, StatusBadge, getS } from "./adminUtils_";
 import AdminSalesFormula from "./AdminSalesFormula";
-import AdminRentalSettings from "./AdminRentalSettings";
+import AdminVendorApplicationSettings from "./AdminVendorApplicationSettings";
 import AdminContractSettings from "./AdminContractSettings";
 import AdminSalesAnalytics from "./AdminSalesAnalytics";
 import AdminUsers from "./AdminUsers";
@@ -932,7 +932,8 @@ export default function AdminDashboard() {
         </div>
         <div className="admin_two_col" style={{ marginBottom: 16 }}>
           <AdminSalesFormula />
-          <AdminRentalSettings />
+          <AdminVendorApplicationSettings />
+
         </div>
         <AdminContractSettings />
       </div>

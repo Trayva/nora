@@ -8,23 +8,20 @@ import IcartWorkforce from "./IcartWorkforce";
 import IcartInventory from "./IcartInventory";
 import IcartSales from "./IcartSales";
 import IcartOrders from "./IcartOrders";
-import ConceptOverviewDrawer from "../app/Business/ConceptOverviewDrawer";
-// import ConceptOverviewDrawer from "../Business/ConceptOverviewDrawer";
 
 const TABS = [
-  { key: "overview",   label: "Overview" },
-  { key: "tasks",      label: "Tasks" },
-  { key: "workforce",  label: "Workforce" },
-  { key: "inventory",  label: "Inventory" },
-  { key: "sales",      label: "Sales" },
-  { key: "orders",     label: "Orders" },
+  { key: "overview", label: "Overview" },
+  { key: "tasks", label: "Tasks" },
+  { key: "workforce", label: "Workforce" },
+  { key: "inventory", label: "Inventory" },
+  { key: "sales", label: "Sales" },
+  { key: "orders", label: "Orders" },
 ];
 
 export default function IcartDrawer({ cartId, onClose, onUpdate }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [overviewConcept, setOverviewConcept] = useState(null);
 
   const fetchCart = async () => {
     if (!cartId) return;
@@ -51,11 +48,6 @@ export default function IcartDrawer({ cartId, onClose, onUpdate }) {
   const handleCartUpdate = (updatedCart) => {
     setCart(updatedCart);
     if (onUpdate) onUpdate(updatedCart);
-  };
-
-  // When a concept is clicked — open ConceptOverviewDrawer inline
-  const handleConceptClick = (concept) => {
-    setOverviewConcept(concept);
   };
 
   return (
@@ -92,22 +84,18 @@ export default function IcartDrawer({ cartId, onClose, onUpdate }) {
                 cart={cart}
                 onUpdate={handleCartUpdate}
                 onRefresh={fetchCart}
-                onConceptClick={handleConceptClick}
               />
             )}
-            {activeTab === "tasks"     && <IcartTasks cart={cart} />}
-            {activeTab === "workforce" && <IcartWorkforce cart={cart} onRefresh={fetchCart} />}
+            {activeTab === "tasks" && <IcartTasks cart={cart} />}
+            {activeTab === "workforce" && (
+              <IcartWorkforce cart={cart} onRefresh={fetchCart} />
+            )}
             {activeTab === "inventory" && <IcartInventory cart={cart} />}
-            {activeTab === "sales"     && <IcartSales cart={cart} />}
-            {activeTab === "orders"    && <IcartOrders cartId={cart.id} />}
+            {activeTab === "sales" && <IcartSales cart={cart} />}
+            {activeTab === "orders" && <IcartOrders cartId={cart.id} />}
           </>
         )}
       </Drawer>
-
-      <ConceptOverviewDrawer
-        concept={overviewConcept}
-        onClose={() => setOverviewConcept(null)}
-      />
     </>
   );
 }
