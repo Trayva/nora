@@ -43,15 +43,20 @@ function Footer() {
       <section className="footer-cta" id="solutions">
         <div className="footer-cta-inner">
           <h1 className="footer-cta-heading">
-            Ready to Transform Your Operations?
+            Ready to Scale or Own?
           </h1>
           <p className="footer-cta-sub">
-            Join industry leaders using nora to streamline operations, reduce
-            costs, and scale confidently.
+            Whether you're a food brand looking to expand or an individual ready to
+            own a QSR outlet, Nora AI provides the platform to make it happen.
           </p>
-          <button className="footer-cta-btn" onClick={() => scrollTo("how")}>
-            Explore Solutions
-          </button>
+          <div className="d-flex gap-10 mobile-column">
+            <button className="footer-cta-btn" onClick={() => scrollTo("how")}>
+              Partner as a Brand
+            </button>
+            <button className="footer-cta-btn" onClick={() => scrollTo("how")}>
+              Own a Franchise
+            </button>
+          </div>
         </div>
       </section>
 

@@ -4,48 +4,43 @@ function WhoWeAre() {
   return (
     <section className="whoweare-section">
       <div className="whoweare-inner">
-
         {/* Left */}
         <div className="whoweare-left">
-          <h2 className="whoweare-heading">Who we are</h2>
+          <h2 className="whoweare-heading">What We Do</h2>
           <p className="whoweare-sub">
-            Empowering business owners to scale smarter
+            Nora AI is a franchise enablement platform built to simplify and
+            scale food business expansion.
           </p>
           <p className="whoweare-body">
-            NORA is a technology-driven food infrastructure company reimagining
-            how meals are created, delivered, and experienced. We build smart,
-            delivery-focused mini kitchens that empower food entrepreneurs,
-            streamline operations, and bring high-quality meals closer to every
-            customer.
+            We connect established food brands with a new generation of
+            operators and investors, providing the infrastructure, systems, and
+            oversight required to run efficient, standardized QSR outlets.
           </p>
           <p className="whoweare-body">
-            We're solving today's biggest food-service challenges — high startup
-            costs, limited delivery reach, and overwhelming demand for
-            personalization — while engineering the future of "Prompt-to-Plate,"
-            where anyone can request any meal and have it prepared autonomously
-            through AI and robotics.
+            Our approach removes the traditional barriers to franchising —
+            making expansion faster for brands and ownership accessible to more
+            people.
           </p>
-          <div className="whoweare-btns">
+          {/* <div className="whoweare-btns">
             <button
               className="app_btn app_btn_confirm"
               style={{ height: 50, padding: "0 28px", fontSize: "0.9375rem" }}
             >
-              Launch Your Concept
+              Partner as a Brand
             </button>
             <button
               className="app_btn app_btn_cancel"
               style={{ height: 50, padding: "0 28px", fontSize: "0.9375rem" }}
             >
-              Learn More
+              Own a Franchise
             </button>
-          </div>
+          </div> */}
         </div>
 
         {/* Right */}
         <div className="whoweare-right">
-          <img src={img} alt="Who we are" className="whoweare-img" />
+          <img src={img} alt="What we do" className="whoweare-img" />
         </div>
-
       </div>
     </section>
   );

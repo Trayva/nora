@@ -721,7 +721,6 @@ function ConceptSection({ concept, cartItems, onOpenModal }) {
   const activeCount = items.filter((m) =>
     Object.values(cartItems).some((e) => e.item.id === m.id),
   ).length;
-
   return (
     <div style={{ marginBottom: 24 }}>
       <div
@@ -735,9 +734,9 @@ function ConceptSection({ concept, cartItems, onOpenModal }) {
           padding: "10px 0",
         }}
       >
-        {concept.banner ? (
+        {concept?.vendor?.brandLogo ? (
           <img
-            src={concept.banner}
+            src={concept.vendor.brandLogo}
             alt=""
             style={{
               width: 40,
@@ -776,7 +775,7 @@ function ConceptSection({ concept, cartItems, onOpenModal }) {
                 color: "var(--text-heading)",
               }}
             >
-              {concept.name}
+              {concept?.vendor?.businessName}
             </span>
             {activeCount > 0 && (
               <span
@@ -1515,7 +1514,8 @@ export default function ShopPage() {
       .get("/icart/shop/nearby", { params: { lat, lng } })
       .then((r) => {
         const d = r.data.data;
-        setConcepts(Array.isArray(d) ? d : d?.concepts || []);
+        console.log(r)
+        setConcepts(Array.isArray(d) ? d : d?.carts || []);
       })
       .catch(() => toast.error("Failed to load nearby carts"))
       .finally(() => setLoading(false));
@@ -1538,12 +1538,12 @@ export default function ShopPage() {
 
   const filtered = search.trim()
     ? concepts.filter(
-        (c) =>
-          c.name.toLowerCase().includes(search.toLowerCase()) ||
-          c.menu?.some((m) =>
-            m.name.toLowerCase().includes(search.toLowerCase()),
-          ),
-      )
+      (c) =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.menu?.some((m) =>
+          m.name.toLowerCase().includes(search.toLowerCase()),
+        ),
+    )
     : concepts;
 
   const totalItems = Object.values(cartItems).reduce((s, e) => s + e.qty, 0);

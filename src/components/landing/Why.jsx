@@ -1,81 +1,72 @@
-import icons from "../../assets/icons";
+import React from "react";
 
-const features = [
+const reasons = [
   {
-    color: "info",
-    title: "Save Time",
-    description:
-      "No more driving around looking for parking. Reserve in advance and go straight to your spot.",
-    icon: icons.clock,
+    title: "Speed",
+    description: "Launch multiple outlets in months, not years.",
+    icon: "⚡",
   },
   {
-    color: "success",
-    title: "Guaranteed Spot",
-    description:
-      "Your reserved spot is secured with smart locks. No one else can take it.",
-    icon: icons.shield,
+    title: "Efficiency",
+    description: "Eliminate heavy capital expenditure on infrastructure.",
+    icon: "💎",
   },
   {
-    color: "success-2",
-    title: "Easy to Use",
-    description:
-      "Simple app interface. Find, reserve, and pay for parking in just a few taps.",
-
-    icon: icons.phone,
+    title: "Control",
+    description: "Maintain brand consistency across all locations.",
+    icon: "🎮",
   },
   {
-    color: "warn",
-    title: "Best Locations",
-    description:
-      "Premium parking spots in malls, business districts, and popular destinations across UAE.",
-
-    icon: icons.marker,
+    title: "Access",
+    description: "Open up franchise ownership to a wider audience.",
+    icon: "🔓",
+  },
+  {
+    title: "Scalability",
+    description: "Build a distributed network of high-performing outlets.",
+    icon: "🚀",
   },
 ];
 
-function Why(props) {
+function Why() {
   return (
-    <div id="why">
-      <div className="responsive-container justify-center align-center d-flex flex-column">
-        <h1 className="text-center text-black fs-36">Why Choose Parkvation?</h1>
-        <br />
-        <p className="text-center text-dark-grey">
-          Join thousands of UAE drivers who have made parking stress-free with
-          Parkvation.
+    <section className="whoweare-section" style={{ backgroundColor: "var(--bg-hover)" }}>
+      <div className="whoweare-inner" style={{ display: "block", textAlign: "center" }}>
+        <h2 className="whoweare-heading" style={{ marginBottom: "1rem" }}>Why Nora AI</h2>
+        <p className="whoweare-sub" style={{ margin: "0 auto 4rem auto", maxWidth: "700px" }}>
+          The advantages of scaling through our franchise enablement platform
         </p>
-        <br />
-        <br />
-        <div className="d-flex gap-20 flex-wrap">
-          {features.map((_, idx) => (
-            <div
-              style={{ borderRadius: 2 }}
-              key={idx}
-              className="flex-1 card stat-card"
-            >
-              <div
-                style={{
-                  width: 50,
-                  height: 50,
-                  marginBottom: 20,
-                  padding: 0,
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-                className={`d-flex justify-center align-center status ${_.color}-light`}
-              >
-                {_.icon}
+
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+          gap: "1.5rem" 
+        }}>
+          {reasons.map((reason, idx) => (
+            <div key={idx} style={{ 
+              padding: "2rem", 
+              borderRadius: "20px", 
+              background: "var(--bg-card)", 
+              border: "1px solid var(--border)",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "1rem"
+            }}>
+              <div style={{ 
+                fontSize: "2.5rem",
+                marginBottom: "0.5rem"
+              }}>
+                {reason.icon}
               </div>
-              <h2 className="text-black text-centerr fs-18">{_.title}</h2>
-              <br />
-              <p className="text-dark-grey f-300 text-centerr">
-                {_.description}
-              </p>
+              <h3 style={{ color: "var(--text-heading)", fontSize: "1.2rem", fontWeight: "700" }}>{reason.title}</h3>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", lineHeight: "1.5" }}>{reason.description}</p>
             </div>
           ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
