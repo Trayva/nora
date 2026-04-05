@@ -85,6 +85,21 @@ function StatusChip({ status }) {
       color: "#16a34a",
       border: "rgba(34,197,94,0.25)",
     },
+    RECEIVED: {
+      bg: "rgba(34,197,94,0.1)",
+      color: "#16a34a",
+      border: "rgba(34,197,94,0.25)",
+    },
+    SHIPPED: {
+      bg: "rgba(168,85,247,0.1)",
+      color: "#a855f7",
+      border: "rgba(168,85,247,0.25)",
+    },
+    SUPPLIER_REVIEWED: {
+      bg: "rgba(59,130,246,0.1)",
+      color: "#3b82f6",
+      border: "rgba(59,130,246,0.25)",
+    },
   };
   const s = colors[status] || colors.PENDING;
   return (
@@ -239,7 +254,6 @@ function TaskCard({ task, onRefresh }) {
           <MdExpandMore size={16} style={{ color: "var(--text-muted)" }} />
         )}
       </div>
-
       {expanded && (
         <div
           style={{
@@ -364,32 +378,474 @@ function getUnitOptions(baseUnit) {
   if (!baseUnit) return ["g", "kg", "ml", "L"];
   const u = baseUnit.toLowerCase();
   if (u === "g" || u === "kg") return ["g", "kg"];
-  if (u === "ml" || u === "l") return ["ml", "L"];
+  if (u === "ml" || u === "l" || u === "liter") return ["ml", "L"];
   return ["unit"];
 }
 
-function getDefaultUnit(baseUnit) {
-  if (!baseUnit) return "g";
-  const u = baseUnit.toLowerCase();
-  if (u === "g" || u === "kg") return "g";
-  if (u === "ml" || u === "l") return "ml";
-  return "unit";
+/* ── Supply Request Row (expanded, iCart-style) ─────────────── */
+function SupplyRequestRow({ req }) {
+  const [expanded, setExpanded] = useState(false);
+  const fmt = (n) =>
+    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+  const fmtQty = (q, unit) => {
+    if (!unit) return q?.toLocaleString() || "—";
+    const u = unit.toLowerCase();
+    if ((u === "g" || u === "kg") && q >= 1000)
+      return `${(q / 1000).toLocaleString()} kg`;
+    if ((u === "ml" || u === "l" || u === "liter") && q >= 1000)
+      return `${(q / 1000).toLocaleString()} L`;
+    return `${q?.toLocaleString() || "—"} ${unit}`;
+  };
+
+  const statusColors = {
+    PENDING: {
+      bg: "rgba(234,179,8,0.1)",
+      color: "#ca8a04",
+      border: "rgba(234,179,8,0.25)",
+    },
+    SUPPLIER_REVIEWED: {
+      bg: "rgba(59,130,246,0.1)",
+      color: "#3b82f6",
+      border: "rgba(59,130,246,0.25)",
+    },
+    SHIPPED: {
+      bg: "rgba(168,85,247,0.1)",
+      color: "#a855f7",
+      border: "rgba(168,85,247,0.25)",
+    },
+    RECEIVED: {
+      bg: "rgba(34,197,94,0.1)",
+      color: "#16a34a",
+      border: "rgba(34,197,94,0.25)",
+    },
+    CANCELLED: {
+      bg: "rgba(239,68,68,0.1)",
+      color: "#ef4444",
+      border: "rgba(239,68,68,0.25)",
+    },
+  };
+  const sc = statusColors[req.status] || statusColors.PENDING;
+  const invoiceSc =
+    req.invoice?.status === "PAID"
+      ? {
+          bg: "rgba(34,197,94,0.1)",
+          color: "#16a34a",
+          border: "rgba(34,197,94,0.25)",
+        }
+      : {
+          bg: "rgba(234,179,8,0.1)",
+          color: "#ca8a04",
+          border: "rgba(234,179,8,0.25)",
+        };
+
+  return (
+    <div
+      style={{
+        background: "var(--bg-card)",
+        border: "1px solid var(--border)",
+        borderRadius: 14,
+        overflow: "hidden",
+        marginBottom: 10,
+      }}
+    >
+      {/* Header row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: "13px 14px",
+          cursor: "pointer",
+        }}
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <div className="icart_task_icon">
+          <MdLocalShipping size={14} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="icart_task_name">
+            {req.supplier?.businessName || "Supply Request"}
+          </div>
+          <div className="icart_task_meta">
+            <span>
+              {req.items?.length || 0} ingredient
+              {req.items?.length !== 1 ? "s" : ""}
+            </span>
+            <span className="contract_row_dot">·</span>
+            <span>{fmtDate(req.createdAt)}</span>
+            {req.totalAmount > 0 && (
+              <>
+                <span className="contract_row_dot">·</span>
+                <span style={{ color: "var(--accent)", fontWeight: 700 }}>
+                  ₦{fmt(req.totalAmount)}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <span
+          style={{
+            fontSize: "0.65rem",
+            fontWeight: 800,
+            padding: "3px 9px",
+            borderRadius: 999,
+            background: sc.bg,
+            color: sc.color,
+            border: `1px solid ${sc.border}`,
+            flexShrink: 0,
+          }}
+        >
+          {req.status}
+        </span>
+        {expanded ? (
+          <MdExpandLess
+            size={16}
+            style={{ color: "var(--text-muted)", flexShrink: 0 }}
+          />
+        ) : (
+          <MdExpandMore
+            size={16}
+            style={{ color: "var(--text-muted)", flexShrink: 0 }}
+          />
+        )}
+      </div>
+
+      {expanded && (
+        <div style={{ borderTop: "1px solid var(--border)" }}>
+          {/* Meta info chips */}
+          <div
+            style={{
+              padding: "12px 14px",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              borderBottom: "1px solid var(--border)",
+            }}
+          >
+            {req.supplier && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "5px 10px",
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                }}
+              >
+                <MdLocalShipping
+                  size={13}
+                  style={{ color: "var(--text-muted)" }}
+                />
+                <div>
+                  <div
+                    style={{
+                      fontSize: "0.65rem",
+                      color: "var(--text-muted)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Supplier
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                    }}
+                  >
+                    {req.supplier.businessName}
+                  </div>
+                </div>
+              </div>
+            )}
+            {req.requester && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "5px 10px",
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                }}
+              >
+                {req.requester.image ? (
+                  <img
+                    src={req.requester.image}
+                    alt=""
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: "50%",
+                      background: "var(--bg-active)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "0.62rem",
+                        fontWeight: 900,
+                        color: "var(--accent)",
+                      }}
+                    >
+                      {req.requester.fullName?.[0]?.toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <div
+                    style={{
+                      fontSize: "0.65rem",
+                      color: "var(--text-muted)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Requested by
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                    }}
+                  >
+                    {req.requester.fullName}
+                  </div>
+                </div>
+              </div>
+            )}
+            {req.invoice && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "5px 10px",
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: "0.65rem",
+                      color: "var(--text-muted)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Invoice
+                  </div>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 5 }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        color: "var(--text-body)",
+                      }}
+                    >
+                      ₦{fmt(req.invoice.total)}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.62rem",
+                        fontWeight: 700,
+                        padding: "1px 6px",
+                        borderRadius: 4,
+                        background: invoiceSc.bg,
+                        color: invoiceSc.color,
+                        border: `1px solid ${invoiceSc.border}`,
+                      }}
+                    >
+                      {req.invoice.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Ingredients list */}
+          <div style={{ padding: "10px 14px 14px" }}>
+            <div
+              style={{
+                fontSize: "0.62rem",
+                fontWeight: 900,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--text-muted)",
+                marginBottom: 8,
+              }}
+            >
+              Items
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {req.items?.map((item) => {
+                const ing = item.ingredient;
+                const supplied =
+                  item.suppliedQuantity != null &&
+                  item.suppliedQuantity !== item.quantity;
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "9px 12px",
+                      background: "var(--bg-hover)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 10,
+                    }}
+                  >
+                    {ing?.image ? (
+                      <img
+                        src={ing.image}
+                        alt={ing.name}
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 7,
+                          objectFit: "cover",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 7,
+                          background: "var(--bg-card)",
+                          border: "1px solid var(--border)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <MdInventory2
+                          size={14}
+                          style={{ color: "var(--text-muted)" }}
+                        />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
+                          color: "var(--text-body)",
+                        }}
+                      >
+                        {ing?.name || "Ingredient"}
+                      </div>
+                      <div className="icart_task_meta">
+                        <span>Ordered: {fmtQty(item.quantity, ing?.unit)}</span>
+                        {supplied && (
+                          <>
+                            <span className="contract_row_dot">·</span>
+                            <span style={{ color: "#16a34a" }}>
+                              Supplied:{" "}
+                              {fmtQty(item.suppliedQuantity, ing?.unit)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {item.priceAtTime > 0 && (
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div
+                          style={{
+                            fontSize: "0.68rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          @ ₦{fmt(item.priceAtTime)}/{ing?.unit || "unit"}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.82rem",
+                            fontWeight: 800,
+                            color: "var(--text-heading)",
+                          }}
+                        >
+                          ₦{fmt(item.priceAtTime * item.quantity)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {req.totalAmount > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: 10,
+                  paddingTop: 10,
+                  borderTop: "1px solid var(--border)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  Total
+                </span>
+                <span
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 900,
+                    color: "var(--accent)",
+                  }}
+                >
+                  ₦{fmt(req.totalAmount)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function InventoryTab({ cartId }) {
-  const [view, setView] = useState("stock"); // stock | supply | history
+  const [view, setView] = useState("stock");
   const [inventory, setInventory] = useState([]);
   const [supply, setSupply] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [usageItem, setUsageItem] = useState(null); // item being recorded
+  const [usageItem, setUsageItem] = useState(null);
   const [usageQty, setUsageQty] = useState("");
   const [usageUnit, setUsageUnit] = useState("g");
   const [usageReason, setUsageReason] = useState("Usage");
   const [usageNotes, setUsageNotes] = useState("");
   const [saving, setSaving] = useState(false);
-
-  // Supply request state
   const [showSupplyForm, setShowSupplyForm] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
   const [supplierId, setSupplierId] = useState("");
@@ -522,9 +978,8 @@ export function InventoryTab({ cartId }) {
         { query: "", ingredient: null, quantity: "", unit: "g" },
       ]);
       setSupplierId("");
-      // Always switch to supply tab and re-fetch
       setView("supply");
-      setTimeout(() => fetchSupply(), 100); // ensure state update completes first
+      setTimeout(() => fetchSupply(), 100);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed");
     } finally {
@@ -534,7 +989,6 @@ export function InventoryTab({ cartId }) {
 
   return (
     <div>
-      {/* Sub-nav */}
       <div className="icart_sub_nav" style={{ marginBottom: 16 }}>
         {[
           { key: "stock", label: "Stock", icon: <MdInventory2 size={13} /> },
@@ -694,7 +1148,6 @@ export function InventoryTab({ cartId }) {
                       <MdRemoveCircleOutline size={14} />
                     </button>
                   </div>
-
                   {isActive && (
                     <div
                       style={{
@@ -897,7 +1350,6 @@ export function InventoryTab({ cartId }) {
                       </button>
                     )}
                   </div>
-                  {/* Search */}
                   <div style={{ position: "relative" }}>
                     <div className="icart_search_wrap" style={{ height: 40 }}>
                       <MdSearch
@@ -1110,50 +1562,10 @@ export function InventoryTab({ cartId }) {
               <span>No supply requests</span>
             </div>
           ) : (
-            supply.map((req) => (
-              <div
-                key={req.id}
-                style={{
-                  background: "var(--bg-card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 12,
-                  padding: "12px 14px",
-                  marginBottom: 8,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                }}
-              >
-                <div className="icart_task_icon">
-                  <MdLocalShipping size={14} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="icart_task_name">
-                    {req.items?.length > 0
-                      ? req.items
-                          .map((it) => it.ingredient?.name || "Item")
-                          .join(", ")
-                      : "Supply Request"}
-                  </div>
-                  <div className="icart_task_meta">
-                    {req.items?.length > 0 && (
-                      <span>
-                        {req.items.length} ingredient
-                        {req.items.length !== 1 ? "s" : ""}
-                      </span>
-                    )}
-                    {req.supplier?.businessName && (
-                      <> · {req.supplier.businessName}</>
-                    )}
-                  </div>
-                </div>
-                <StatusChip status={req.status} />
-              </div>
-            ))
+            supply.map((req) => <SupplyRequestRow key={req.id} req={req} />)
           )}
         </>
-      ) : // History
-      history.length === 0 ? (
+      ) : history.length === 0 ? (
         <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
           <MdHistory size={28} style={{ opacity: 0.3 }} />
           <span>No history yet</span>
@@ -1203,176 +1615,110 @@ export function InventoryTab({ cartId }) {
 }
 
 /* ════════════════════════════════════════════════════════════
-   TAB: MENU
+   TAB: MENU  (shows cart.menuItems directly)
    ════════════════════════════════════════════════════════════ */
-export function MenuTab({ concepts }) {
-  const [expanded, setExpanded] = useState({});
-  if (!concepts?.length)
+export function MenuTab({ menuItems }) {
+  if (!menuItems?.length)
     return (
       <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
         <MdMenuBook size={28} style={{ opacity: 0.3 }} />
-        <span>No concepts assigned</span>
+        <span>No menu items assigned</span>
       </div>
     );
 
   return (
-    <div>
-      {concepts.map((concept) => {
-        const isOpen = expanded[concept.id];
-        const items = concept.menuItems || [];
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {menuItems.map((item, idx) => {
+        const name = item.name || item.menuItem?.name || "Item";
+        const img = item.image || item.menuItem?.image;
+        const price = item.sellingPrice || item.menuItem?.sellingPrice || 0;
         return (
           <div
-            key={concept.id}
+            key={item.id || idx}
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "12px 14px",
               background: "var(--bg-card)",
               border: "1px solid var(--border)",
-              borderRadius: 14,
-              overflow: "hidden",
-              marginBottom: 10,
+              borderRadius: 12,
             }}
           >
-            {/* Concept header */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "14px 16px",
-                cursor: "pointer",
-              }}
-              onClick={() =>
-                setExpanded((p) => ({ ...p, [concept.id]: !p[concept.id] }))
-              }
-            >
-              <div className="icart_concept_icon">
-                <MdRestaurantMenu size={15} />
+            {img ? (
+              <img
+                src={img}
+                alt={name}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  objectFit: "cover",
+                  flexShrink: 0,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <MdImage size={18} style={{ color: "var(--text-muted)" }} />
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  color: "var(--text-body)",
+                }}
+              >
+                {name}
+              </div>
+              {item.description && (
                 <div
                   style={{
-                    fontSize: "0.9rem",
-                    fontWeight: 800,
-                    color: "var(--text-heading)",
+                    fontSize: "0.72rem",
+                    color: "var(--text-muted)",
+                    marginTop: 1,
                   }}
                 >
-                  {concept.name}
+                  {item.description}
                 </div>
-                <div className="icart_task_meta">
-                  <span>
-                    {items.length} item{items.length !== 1 ? "s" : ""}
-                  </span>
-                  {concept.status && (
-                    <>
-                      <span className="contract_row_dot">·</span>
-                      <StatusChip status={concept.status} />
-                    </>
-                  )}
+              )}
+              {item.ticketTime > 0 && (
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "var(--text-muted)",
+                    marginTop: 2,
+                  }}
+                >
+                  ⏱ {item.ticketTime} min
                 </div>
-              </div>
-              {isOpen ? (
-                <MdExpandLess
-                  size={18}
-                  style={{ color: "var(--text-muted)" }}
-                />
-              ) : (
-                <MdExpandMore
-                  size={18}
-                  style={{ color: "var(--text-muted)" }}
-                />
               )}
             </div>
-
-            {isOpen &&
-              items.map((item, idx) => (
-                <div
-                  key={item.id || idx}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "12px 16px",
-                    borderTop: "1px solid var(--border)",
-                    background: "var(--bg-hover)",
-                  }}
-                >
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 10,
-                        objectFit: "cover",
-                        flexShrink: 0,
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 10,
-                        background: "var(--bg-card)",
-                        border: "1px solid var(--border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <MdImage
-                        size={18}
-                        style={{ color: "var(--text-muted)" }}
-                      />
-                    </div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: "0.85rem",
-                        fontWeight: 700,
-                        color: "var(--text-body)",
-                      }}
-                    >
-                      {item.name}
-                    </div>
-                    {item.description && (
-                      <div
-                        style={{
-                          fontSize: "0.72rem",
-                          color: "var(--text-muted)",
-                          marginTop: 1,
-                        }}
-                      >
-                        {item.description}
-                      </div>
-                    )}
-                    {item.ticketTime > 0 && (
-                      <div
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "var(--text-muted)",
-                          marginTop: 2,
-                        }}
-                      >
-                        ⏱ {item.ticketTime} min prep
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div
-                      style={{
-                        fontSize: "0.9rem",
-                        fontWeight: 800,
-                        color: "var(--text-heading)",
-                      }}
-                    >
-                      ₦{Number(item.sellingPrice || 0).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-              ))}
+            {price > 0 && (
+              <div
+                style={{
+                  fontSize: "0.9rem",
+                  fontWeight: 800,
+                  color: "var(--text-heading)",
+                  flexShrink: 0,
+                }}
+              >
+                ₦{Number(price).toLocaleString()}
+              </div>
+            )}
           </div>
         );
       })}
@@ -1381,28 +1727,20 @@ export function MenuTab({ concepts }) {
 }
 
 /* ════════════════════════════════════════════════════════════
-   TAB: E-LEARNING
-   Full drop-in replacement for the existing ELearningTab block
-   in OperatorCartPage.jsx. Replace everything from the comment
-   "TAB: E-LEARNING" down through the closing brace of
-   export function ELearningTab with this entire block.
+   TAB: E-LEARNING  (menu-item based, uses /vendor/menu/:id/summary)
    ════════════════════════════════════════════════════════════ */
 
-/* ── Video Player / Placeholder ─────────────────────────────── */
+/* ── Video embed helper ──────────────────────────────────────── */
 function getEmbedUrl(src) {
   if (!src) return null;
-  // Vimeo: https://vimeo.com/123456789 → https://player.vimeo.com/video/123456789
   const vimeoMatch = src.match(/vimeo\.com\/(\d+)/);
   if (vimeoMatch)
     return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=0&title=0&byline=0&portrait=0`;
-  // YouTube: various formats → embed
   const ytMatch = src.match(
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
   );
   if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
-  // Direct video file (mp4, webm, mov, etc.)
-  if (/\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(src)) return null; // handled by <video>
-  // Unknown — try as direct
+  if (/\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(src)) return null;
   return null;
 }
 
@@ -1469,7 +1807,6 @@ function VideoBlock({ src, label }) {
         overflow: "hidden",
       }}
     >
-      {/* Scanlines */}
       <div
         style={{
           position: "absolute",
@@ -1666,375 +2003,10 @@ function LearnRecipeStep({ step, index }) {
   );
 }
 
-/* ── Menu Item Card ──────────────────────────────────────────── */
-function LearnMenuItemCard({ baseItem }) {
-  const [activeVariant, setActiveVariant] = useState(
-    baseItem.variants.length > 0 ? 0 : null,
-  );
-  const [section, setSection] = useState("recipe");
-  const currentRecipe =
-    activeVariant !== null
-      ? baseItem.variants[activeVariant].recipe
-      : baseItem.recipe;
-  const hasExtras = baseItem.extras.length > 0;
-
-  return (
-    <div
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        borderRadius: 16,
-        overflow: "hidden",
-        marginBottom: 16,
-      }}
-    >
-      {/* Hero */}
-      <div style={{ position: "relative" }}>
-        {baseItem.image ? (
-          <img
-            src={baseItem.image}
-            alt={baseItem.name}
-            style={{
-              width: "100%",
-              height: 150,
-              objectFit: "cover",
-              display: "block",
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: "100%",
-              height: 80,
-              background: "var(--bg-hover)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <MdImage
-              size={24}
-              style={{ color: "var(--text-muted)", opacity: 0.3 }}
-            />
-          </div>
-        )}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.72) 100%)",
-          }}
-        />
-        <div style={{ position: "absolute", bottom: 10, left: 14, right: 14 }}>
-          <div
-            style={{
-              fontSize: "0.97rem",
-              fontWeight: 900,
-              color: "#fff",
-              marginBottom: 4,
-            }}
-          >
-            {baseItem.name}
-          </div>
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-            {baseItem.ticketTime > 0 && (
-              <span
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  padding: "2px 7px",
-                  borderRadius: 5,
-                  background: "rgba(0,0,0,0.5)",
-                  color: "rgba(255,255,255,0.8)",
-                  backdropFilter: "blur(4px)",
-                }}
-              >
-                ⏱ {baseItem.ticketTime}min
-              </span>
-            )}
-            {baseItem.tutorialVideo && (
-              <span
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  padding: "2px 7px",
-                  borderRadius: 5,
-                  background: "rgba(239,68,68,0.7)",
-                  color: "#fff",
-                }}
-              >
-                ▶ Tutorial
-              </span>
-            )}
-            {baseItem.variants.length > 1 && (
-              <span
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  padding: "2px 7px",
-                  borderRadius: 5,
-                  background: "rgba(203,108,220,0.6)",
-                  color: "#fff",
-                }}
-              >
-                {baseItem.variants.length} variants
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ padding: "14px 16px" }}>
-        {baseItem.description && (
-          <p
-            style={{
-              margin: "0 0 14px",
-              fontSize: "0.78rem",
-              color: "var(--text-muted)",
-              lineHeight: 1.6,
-            }}
-          >
-            {baseItem.description}
-          </p>
-        )}
-
-        {/* Tutorial video */}
-        <div style={{ marginBottom: 16 }}>
-          <div
-            style={{
-              fontSize: "0.62rem",
-              fontWeight: 900,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: "var(--accent)",
-              marginBottom: 8,
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-            }}
-          >
-            <span
-              style={{
-                width: 3,
-                height: 11,
-                borderRadius: 2,
-                background: "var(--accent)",
-                display: "inline-block",
-              }}
-            />
-            Tutorial Video
-          </div>
-          <VideoBlock
-            src={baseItem.tutorialVideo}
-            label="Cooking tutorial not yet uploaded"
-          />
-        </div>
-
-        {/* Variant selector */}
-        {baseItem.variants.length > 1 && (
-          <div style={{ marginBottom: 14 }}>
-            <div
-              style={{
-                fontSize: "0.62rem",
-                fontWeight: 900,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "var(--text-muted)",
-                marginBottom: 8,
-              }}
-            >
-              Variants
-            </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {baseItem.variants.map((v, i) => (
-                <button
-                  key={v.variantId}
-                  onClick={() => setActiveVariant(i)}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: 8,
-                    border: `1px solid ${activeVariant === i ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                    background:
-                      activeVariant === i
-                        ? "var(--bg-active)"
-                        : "var(--bg-hover)",
-                    color:
-                      activeVariant === i
-                        ? "var(--accent)"
-                        : "var(--text-muted)",
-                    fontSize: "0.78rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  {v.variantName}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Recipe / Extras toggle */}
-        {hasExtras && (
-          <div
-            style={{
-              display: "flex",
-              gap: 0,
-              marginBottom: 14,
-              background: "var(--bg-hover)",
-              borderRadius: 9,
-              padding: 3,
-              border: "1px solid var(--border)",
-            }}
-          >
-            {["recipe", "extras"].map((s) => (
-              <button
-                key={s}
-                onClick={() => setSection(s)}
-                style={{
-                  flex: 1,
-                  padding: "6px 0",
-                  borderRadius: 7,
-                  border: "none",
-                  background: section === s ? "var(--bg-card)" : "transparent",
-                  color: section === s ? "var(--accent)" : "var(--text-muted)",
-                  fontSize: "0.74rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  boxShadow:
-                    section === s ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
-                }}
-              >
-                {s === "recipe"
-                  ? `Recipe (${currentRecipe?.length || 0})`
-                  : `Extras (${baseItem.extras.length})`}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Recipe steps */}
-        {section === "recipe" && (
-          <div>
-            <div
-              style={{
-                fontSize: "0.62rem",
-                fontWeight: 900,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "var(--text-muted)",
-                marginBottom: 8,
-              }}
-            >
-              {activeVariant !== null
-                ? `${baseItem.variants[activeVariant].variantName} Recipe`
-                : "Recipe Steps"}
-            </div>
-            {!currentRecipe?.length ? (
-              <div
-                style={{
-                  padding: "14px 0",
-                  fontSize: "0.78rem",
-                  color: "var(--text-muted)",
-                  textAlign: "center",
-                }}
-              >
-                No recipe steps defined
-              </div>
-            ) : (
-              currentRecipe.map((step, i) => (
-                <LearnRecipeStep key={step.id || i} step={step} index={i} />
-              ))
-            )}
-          </div>
-        )}
-
-        {/* Extras */}
-        {section === "extras" && hasExtras && (
-          <div>
-            <div
-              style={{
-                fontSize: "0.62rem",
-                fontWeight: 900,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "var(--text-muted)",
-                marginBottom: 8,
-              }}
-            >
-              Add-ons & Extras
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {baseItem.extras.map((ex, i) => (
-                <div
-                  key={ex.id || i}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "9px 12px",
-                    background: "var(--bg-hover)",
-                    borderRadius: 10,
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 6,
-                      background: "rgba(203,108,220,0.1)",
-                      border: "1px solid rgba(203,108,220,0.2)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <MdRestaurantMenu
-                      size={13}
-                      style={{ color: "var(--accent)" }}
-                    />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: "0.8rem",
-                        fontWeight: 700,
-                        color: "var(--text-body)",
-                      }}
-                    >
-                      {ex.prepItem?.name || ex.name || "Extra"}
-                    </div>
-                    {ex.prepItem?.unit && (
-                      <div
-                        style={{
-                          fontSize: "0.66rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        {ex.prepItem.unit}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ── Prep Item Card ──────────────────────────────────────────── */
 function LearnPrepItemCard({ prep }) {
   const [open, setOpen] = useState(false);
   const usedInDishes = [...new Set((prep.usedIn || []).map((u) => u.menuItem))];
-
   return (
     <div
       style={{
@@ -2120,7 +2092,6 @@ function LearnPrepItemCard({ prep }) {
           />
         )}
       </div>
-
       {open && (
         <div
           style={{
@@ -2217,397 +2188,468 @@ function LearnPrepItemCard({ prep }) {
   );
 }
 
-/* ── Main ELearningTab ───────────────────────────────────────── */
-export function ELearningTab({ concepts }) {
-  const [selected, setSelected] = useState(null);
-  const [summary, setSummary] = useState(null);
-  const [loadingSummary, setLoadingSummary] = useState(false);
-  const [learnSection, setLearnSection] = useState("menu"); // "menu" | "prep"
+/* ── Menu Item Summary View ──────────────────────────────────── */
+function MenuItemSummaryView({ summary }) {
+  const [learnSection, setLearnSection] = useState("recipe");
+  const [activeVariant, setActiveVariant] = useState(0);
 
-  // Deduplicate menuItems by base id, group variants together
-  const deduplicatedItems = useMemo(() => {
-    if (!summary?.menuItems) return [];
-    const map = new Map();
-    for (const item of summary.menuItems) {
-      if (!map.has(item.id)) {
-        map.set(item.id, {
-          id: item.id,
-          // Strip "(Standard)" / "(Premium)" suffix from display name
-          name: item.name.replace(/\s*\([^)]+\)\s*$/, "").trim(),
-          image: item.image,
-          description: item.description,
-          ticketTime: item.ticketTime,
-          tutorialVideo: item.tutorialVideo,
-          extras: item.extras || [],
-          variants: [],
-          recipe: item.recipe || [],
-        });
-      }
-      if (item.variantId) {
-        const base = map.get(item.id);
-        const exists = base.variants.find(
-          (v) => v.variantId === item.variantId,
-        );
-        if (!exists) {
-          base.variants.push({
-            variantId: item.variantId,
-            variantName:
-              item.variant?.name ||
-              item.name.match(/\(([^)]+)\)/)?.[1] ||
-              "Default",
-            recipe: item.recipe || [],
-          });
-        }
-      }
-    }
-    return Array.from(map.values());
-  }, [summary]);
+  const item = summary.menuItem || summary;
+  const recipe = summary.recipe || item.recipe || [];
+  const extras = summary.extras || item.extras || [];
+  const variants = summary.variants || item.variants || [];
+  const prepItems = summary.prepItems || [];
 
-  const loadSummary = async (conceptId) => {
-    setSelected(conceptId);
-    setSummary(null);
-    setLearnSection("menu");
-    setLoadingSummary(true);
-    try {
-      const res = await api.get(`/vendor/menu/concept/${conceptId}/summary`);
-      setSummary(res.data.data);
-    } catch {
-      toast.error("Failed to load concept summary");
-    } finally {
-      setLoadingSummary(false);
-    }
-  };
+  const currentRecipe =
+    variants.length > 0 ? variants[activeVariant]?.recipe || recipe : recipe;
 
-  // Auto-load when there's only one concept
-  useEffect(() => {
-    if (concepts?.length === 1 && !selected) loadSummary(concepts[0].id);
-  }, [concepts]);
-
-  if (!concepts?.length)
-    return (
-      <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
-        <MdSchool size={28} style={{ opacity: 0.3 }} />
-        <span>No concepts available</span>
-      </div>
-    );
-
-  const prepItems = summary?.prepItems || [];
+  const tabs = [
+    { key: "recipe", label: "Recipe", count: currentRecipe.length },
+    ...(extras.length > 0
+      ? [{ key: "extras", label: "Extras", count: extras.length }]
+      : []),
+    ...(prepItems.length > 0
+      ? [{ key: "prep", label: "Prep Items", count: prepItems.length }]
+      : []),
+  ];
 
   return (
     <div>
-      {/* Concept selector — multi only */}
-      {concepts.length > 1 && (
+      {item.image && (
         <div
           style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 8,
+            position: "relative",
+            borderRadius: 14,
+            overflow: "hidden",
             marginBottom: 16,
           }}
         >
-          {concepts.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => loadSummary(c.id)}
+          <img
+            src={item.image}
+            alt={item.name}
+            style={{
+              width: "100%",
+              height: 160,
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(to bottom,transparent 30%,rgba(0,0,0,0.72) 100%)",
+            }}
+          />
+          <div
+            style={{ position: "absolute", bottom: 12, left: 14, right: 14 }}
+          >
+            <div
               style={{
-                padding: "7px 16px",
-                border: `1px solid ${selected === c.id ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                borderRadius: 999,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                background:
-                  selected === c.id ? "var(--bg-active)" : "var(--bg-hover)",
-                color:
-                  selected === c.id ? "var(--accent)" : "var(--text-muted)",
-                fontWeight: 700,
-                fontSize: "0.8rem",
+                fontSize: "1.05rem",
+                fontWeight: 900,
+                color: "#fff",
+                marginBottom: 3,
               }}
             >
-              {c.name}
+              {item.name}
+            </div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              {item.ticketTime > 0 && (
+                <span
+                  style={{
+                    fontSize: "0.62rem",
+                    fontWeight: 700,
+                    padding: "2px 7px",
+                    borderRadius: 5,
+                    background: "rgba(0,0,0,0.5)",
+                    color: "rgba(255,255,255,0.85)",
+                  }}
+                >
+                  ⏱ {item.ticketTime}min
+                </span>
+              )}
+              {item.tutorialVideo && (
+                <span
+                  style={{
+                    fontSize: "0.62rem",
+                    fontWeight: 700,
+                    padding: "2px 7px",
+                    borderRadius: 5,
+                    background: "rgba(239,68,68,0.7)",
+                    color: "#fff",
+                  }}
+                >
+                  ▶ Tutorial
+                </span>
+              )}
+              {variants.length > 1 && (
+                <span
+                  style={{
+                    fontSize: "0.62rem",
+                    fontWeight: 700,
+                    padding: "2px 7px",
+                    borderRadius: 5,
+                    background: "rgba(203,108,220,0.6)",
+                    color: "#fff",
+                  }}
+                >
+                  {variants.length} variants
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {item.description && (
+        <p
+          style={{
+            fontSize: "0.82rem",
+            color: "var(--text-muted)",
+            lineHeight: 1.6,
+            margin: "0 0 14px",
+          }}
+        >
+          {item.description}
+        </p>
+      )}
+
+      {/* Tutorial video */}
+      <div style={{ marginBottom: 16 }}>
+        <div
+          style={{
+            fontSize: "0.62rem",
+            fontWeight: 900,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: "var(--accent)",
+            marginBottom: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+          }}
+        >
+          <span
+            style={{
+              width: 3,
+              height: 11,
+              borderRadius: 2,
+              background: "var(--accent)",
+              display: "inline-block",
+            }}
+          />
+          Tutorial Video
+        </div>
+        <VideoBlock
+          src={item.tutorialVideo}
+          label="Tutorial not yet uploaded"
+        />
+      </div>
+
+      {/* Variant selector */}
+      {variants.length > 1 && (
+        <div style={{ marginBottom: 14 }}>
+          <div
+            style={{
+              fontSize: "0.62rem",
+              fontWeight: 900,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: 8,
+            }}
+          >
+            Variants
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {variants.map((v, i) => (
+              <button
+                key={v.id || i}
+                onClick={() => setActiveVariant(i)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 8,
+                  border: `1px solid ${activeVariant === i ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                  background:
+                    activeVariant === i
+                      ? "var(--bg-active)"
+                      : "var(--bg-hover)",
+                  color:
+                    activeVariant === i ? "var(--accent)" : "var(--text-muted)",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {v.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Section tabs */}
+      {tabs.length > 1 && (
+        <div
+          style={{
+            display: "flex",
+            gap: 0,
+            marginBottom: 14,
+            background: "var(--bg-hover)",
+            borderRadius: 9,
+            padding: 3,
+            border: "1px solid var(--border)",
+          }}
+        >
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setLearnSection(t.key)}
+              style={{
+                flex: 1,
+                padding: "7px 0",
+                borderRadius: 7,
+                border: "none",
+                background:
+                  learnSection === t.key ? "var(--bg-card)" : "transparent",
+                color:
+                  learnSection === t.key
+                    ? "var(--accent)"
+                    : "var(--text-muted)",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                boxShadow:
+                  learnSection === t.key ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+              }}
+            >
+              {t.label} ({t.count})
             </button>
           ))}
         </div>
       )}
 
-      {loadingSummary && (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
+      {learnSection === "recipe" && (
+        <div>
+          <div
+            style={{
+              fontSize: "0.62rem",
+              fontWeight: 900,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: 8,
+            }}
+          >
+            {variants.length > 1
+              ? `${variants[activeVariant]?.name || ""} Recipe`
+              : "Recipe Steps"}
+          </div>
+          {!currentRecipe?.length ? (
+            <div
+              style={{
+                padding: "14px 0",
+                fontSize: "0.78rem",
+                color: "var(--text-muted)",
+                textAlign: "center",
+              }}
+            >
+              No recipe steps defined
+            </div>
+          ) : (
+            currentRecipe.map((step, i) => (
+              <LearnRecipeStep key={step.id || i} step={step} index={i} />
+            ))
+          )}
         </div>
       )}
 
-      {summary && !loadingSummary && (
+      {learnSection === "extras" && extras.length > 0 && (
         <div>
-          {/* Concept hero */}
-          {summary.concept?.banner && (
-            <div
-              style={{
-                position: "relative",
-                borderRadius: 14,
-                overflow: "hidden",
-                marginBottom: 16,
-              }}
-            >
-              <img
-                src={summary.concept.banner}
-                alt={summary.concept.name}
-                style={{
-                  width: "100%",
-                  height: 160,
-                  objectFit: "cover",
-                  display: "block",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background:
-                    "linear-gradient(to bottom,transparent 30%,rgba(0,0,0,0.7) 100%)",
-                }}
-              />
-              <div style={{ position: "absolute", bottom: 14, left: 16 }}>
-                <div
-                  style={{
-                    fontSize: "1.1rem",
-                    fontWeight: 900,
-                    color: "#fff",
-                    marginBottom: 2,
-                  }}
-                >
-                  {summary.concept.name}
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.72rem",
-                    color: "rgba(255,255,255,0.7)",
-                  }}
-                >
-                  {summary.vendor?.businessName}
-                  {summary.vendor?.brandTagline
-                    ? ` · ${summary.vendor.brandTagline}`
-                    : ""}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Stats bar */}
-          {summary.stats && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3,1fr)",
-                gap: 8,
-                marginBottom: 16,
-              }}
-            >
-              {[
-                {
-                  label: "Menu Items",
-                  value: deduplicatedItems.length,
-                  icon: "🍽",
-                },
-                {
-                  label: "Prep Items",
-                  value: summary.stats.totalUniquePrepItems,
-                  icon: "🥣",
-                },
-                {
-                  label: "Ingredients",
-                  value: summary.stats.totalUniqueIngredients,
-                  icon: "🌿",
-                },
-              ].map((s) => (
-                <div
-                  key={s.label}
-                  style={{
-                    background: "var(--bg-hover)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 10,
-                    padding: "10px 12px",
-                    textAlign: "center",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "1.25rem",
-                      fontWeight: 900,
-                      color: "var(--accent)",
-                    }}
-                  >
-                    {s.icon} {s.value}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.68rem",
-                      color: "var(--text-muted)",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {s.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Description + meta chips */}
-          {(summary.concept?.description ||
-            summary.concept?.origin ||
-            summary.concept?.serveTo) && (
-            <div style={{ marginBottom: 16 }}>
-              {summary.concept.description && (
-                <p
-                  style={{
-                    margin: "0 0 8px",
-                    fontSize: "0.82rem",
-                    color: "var(--text-body)",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {summary.concept.description}
-                </p>
-              )}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {summary.concept.origin && (
-                  <span
-                    style={{
-                      fontSize: "0.72rem",
-                      fontWeight: 600,
-                      padding: "3px 10px",
-                      borderRadius: 999,
-                      background: "var(--bg-hover)",
-                      border: "1px solid var(--border)",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    🌍 {summary.concept.origin}
-                  </span>
-                )}
-                {summary.concept.serveTo && (
-                  <span
-                    style={{
-                      fontSize: "0.72rem",
-                      fontWeight: 600,
-                      padding: "3px 10px",
-                      borderRadius: 999,
-                      background: "var(--bg-hover)",
-                      border: "1px solid var(--border)",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    👥 {summary.concept.serveTo}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Section nav: Menu Items / Prep Items */}
           <div
             style={{
-              display: "flex",
-              gap: 0,
-              marginBottom: 18,
-              background: "var(--bg-hover)",
-              borderRadius: 11,
-              padding: 4,
-              border: "1px solid var(--border)",
+              fontSize: "0.62rem",
+              fontWeight: 900,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: 8,
             }}
           >
-            {[
-              {
-                key: "menu",
-                label: "Menu Items",
-                count: deduplicatedItems.length,
-              },
-              { key: "prep", label: "Prep Items", count: prepItems.length },
-            ].map((s) => (
-              <button
-                key={s.key}
-                onClick={() => setLearnSection(s.key)}
+            Add-ons & Extras
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {extras.map((ex, i) => (
+              <div
+                key={ex.id || i}
                 style={{
-                  flex: 1,
-                  padding: "9px 0",
-                  borderRadius: 8,
-                  border: "none",
-                  background:
-                    learnSection === s.key ? "var(--bg-card)" : "transparent",
-                  color:
-                    learnSection === s.key
-                      ? "var(--accent)"
-                      : "var(--text-muted)",
-                  fontSize: "0.8rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  boxShadow:
-                    learnSection === s.key
-                      ? "0 1px 6px rgba(0,0,0,0.1)"
-                      : "none",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  gap: 7,
+                  gap: 10,
+                  padding: "9px 12px",
+                  background: "var(--bg-hover)",
+                  borderRadius: 10,
+                  border: "1px solid var(--border)",
                 }}
               >
-                {s.label}
-                <span
+                <div
                   style={{
-                    fontSize: "0.65rem",
-                    fontWeight: 800,
-                    padding: "1px 6px",
-                    borderRadius: 999,
-                    background:
-                      learnSection === s.key
-                        ? "var(--accent)"
-                        : "var(--bg-hover)",
-                    color:
-                      learnSection === s.key ? "#fff" : "var(--text-muted)",
-                    border: `1px solid ${learnSection === s.key ? "transparent" : "var(--border)"}`,
+                    width: 28,
+                    height: 28,
+                    borderRadius: 6,
+                    background: "rgba(203,108,220,0.1)",
+                    border: "1px solid rgba(203,108,220,0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  {s.count}
-                </span>
-              </button>
+                  <MdRestaurantMenu
+                    size={13}
+                    style={{ color: "var(--accent)" }}
+                  />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                    }}
+                  >
+                    {ex.prepItem?.name || ex.name || "Extra"}
+                  </div>
+                  {ex.prepItem?.unit && (
+                    <div
+                      style={{
+                        fontSize: "0.66rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      {ex.prepItem.unit}
+                    </div>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
+        </div>
+      )}
 
-          {/* Menu Items */}
-          {learnSection === "menu" &&
-            (deduplicatedItems.length === 0 ? (
-              <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
-                <MdMenuBook size={24} style={{ opacity: 0.3 }} />
-                <span>No menu items</span>
-              </div>
-            ) : (
-              deduplicatedItems.map((item) => (
-                <LearnMenuItemCard key={item.id} baseItem={item} />
-              ))
-            ))}
-
-          {/* Prep Items */}
-          {learnSection === "prep" &&
-            (prepItems.length === 0 ? (
-              <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
-                <MdSchool size={24} style={{ opacity: 0.3 }} />
-                <span>No prep items</span>
-              </div>
-            ) : (
-              prepItems.map((prep) => (
-                <LearnPrepItemCard key={prep.id} prep={prep} />
-              ))
-            ))}
+      {learnSection === "prep" && prepItems.length > 0 && (
+        <div>
+          {prepItems.map((prep) => (
+            <LearnPrepItemCard key={prep.id} prep={prep} />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
+/* ── Main ELearningTab (menu-item based) ─────────────────────── */
+export function ELearningTab({ menuItems }) {
+  const [selectedId, setSelectedId] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const loadSummary = async (menuItemId) => {
+    setSelectedId(menuItemId);
+    setSummary(null);
+    setLoading(true);
+    try {
+      const res = await api.get(`/vendor/menu/${menuItemId}/summary`);
+      setSummary(res.data.data);
+    } catch {
+      toast.error("Failed to load item summary");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto-select first item
+  useEffect(() => {
+    if (menuItems?.length > 0 && !selectedId) loadSummary(menuItems[0].id);
+  }, [menuItems]);
+
+  if (!menuItems?.length)
+    return (
+      <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+        <MdSchool size={28} style={{ opacity: 0.3 }} />
+        <span>No menu items available</span>
+      </div>
+    );
+
+  return (
+    <div>
+      {/* Item selector pills */}
+      {menuItems.length > 1 && (
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            marginBottom: 16,
+          }}
+        >
+          {menuItems.map((item) => {
+            const name = item.name || item.menuItem?.name || "Item";
+            const img = item.image || item.menuItem?.image;
+            const isSel = selectedId === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => loadSummary(item.id)}
+                style={{
+                  padding: "7px 14px",
+                  border: `1px solid ${isSel ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                  borderRadius: 999,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  background: isSel ? "var(--bg-active)" : "var(--bg-hover)",
+                  color: isSel ? "var(--accent)" : "var(--text-muted)",
+                  fontWeight: 700,
+                  fontSize: "0.8rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                }}
+              >
+                {img && (
+                  <img
+                    src={img}
+                    alt=""
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 4,
+                      objectFit: "cover",
+                    }}
+                  />
+                )}
+                {name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {loading && (
+        <div className="drawer_loading">
+          <div className="page_loader_spinner" />
+        </div>
+      )}
+      {summary && !loading && <MenuItemSummaryView summary={summary} />}
+    </div>
+  );
+}
+
 /* ════════════════════════════════════════════════════════════
-   TAB: SALES (record + history)
+   TAB: SALES  (menu-item based, no concepts)
    ════════════════════════════════════════════════════════════ */
-/* ── payment method badge colours ────────────────────────── */
 const pmColors = {
   CASH: {
     bg: "rgba(34,197,94,0.1)",
@@ -2653,7 +2695,7 @@ function PaymentBadge({ method }) {
   );
 }
 
-/* ── Record Sale Form — shop-style with variants & extras ─── */
+/* ── Item Customiser sheet ───────────────────────────────────── */
 function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
   const hasVariants = item.variants?.length > 0;
   const hasExtras = item.extras?.length > 0;
@@ -2691,6 +2733,9 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
     setSelectedExtras((p) =>
       p.includes(id) ? p.filter((e) => e !== id) : [...p, id],
     );
+  const fmt = (n) =>
+    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+  const totalPrice = price * qty;
 
   const confirm = () => {
     const variantObj =
@@ -2708,10 +2753,6 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
     });
     onClose();
   };
-
-  const totalPrice = price * qty;
-  const fmt = (n) =>
-    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
 
   return (
     <div
@@ -2766,7 +2807,6 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
           />
         </div>
         <div style={{ overflowY: "auto", flex: 1, padding: "0 20px 8px" }}>
-          {/* Item header */}
           <div
             style={{
               display: "flex",
@@ -2848,8 +2888,6 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
               </div>
             </div>
           </div>
-
-          {/* Variants */}
           {hasVariants && (
             <div style={{ marginBottom: 20 }}>
               <div
@@ -2945,8 +2983,6 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
               </div>
             </div>
           )}
-
-          {/* Extras */}
           {hasExtras && (
             <div style={{ marginBottom: 20 }}>
               <div
@@ -3049,8 +3085,6 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
             </div>
           )}
         </div>
-
-        {/* Sticky footer */}
         <div
           style={{
             padding: "14px 20px 28px",
@@ -3060,7 +3094,6 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Qty stepper */}
             <div
               style={{
                 display: "flex",
@@ -3159,48 +3192,14 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
   );
 }
 
-function RecordSaleForm({ cartId, concepts, onSaved }) {
-  const allItems = (concepts || []).flatMap((c) =>
-    (c.menuItems || []).map((item) => ({
-      ...item,
-      conceptName: c.name,
-      conceptId: c.id,
-    })),
-  );
+/* ── Record Sale Form  (menu-item based, no concepts) ────────── */
+function RecordSaleForm({ cartId, menuItems, onSaved }) {
   const fmt = (n) =>
     Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
-
-  // Cart: { key: { item, qty, variantId, extraIds, variantLabel, extrasLabels, unitPrice } }
   const [cart, setCart] = useState({});
-  const [customising, setCustomising] = useState(null); // item being customised
+  const [customising, setCustomising] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [saving, setSaving] = useState(false);
-  const [activeConceptId, setActiveConceptId] = useState(
-    allItems[0]?.conceptId || null,
-  );
-
-  const pmColors = {
-    CASH: {
-      bg: "rgba(34,197,94,0.1)",
-      color: "#16a34a",
-      border: "rgba(34,197,94,0.2)",
-    },
-    POS: {
-      bg: "rgba(59,130,246,0.1)",
-      color: "#3b82f6",
-      border: "rgba(59,130,246,0.2)",
-    },
-    TRANSFER: {
-      bg: "rgba(168,85,247,0.1)",
-      color: "#a855f7",
-      border: "rgba(168,85,247,0.2)",
-    },
-    OTHER: {
-      bg: "rgba(107,114,128,0.1)",
-      color: "#6b7280",
-      border: "rgba(107,114,128,0.2)",
-    },
-  };
 
   const addToCart = ({
     item,
@@ -3228,7 +3227,6 @@ function RecordSaleForm({ cartId, concepts, onSaved }) {
             unitPrice,
           },
     }));
-    // haptic-like toast
     toast.success(`${item.name} added`, { autoClose: 800 });
   };
 
@@ -3281,12 +3279,6 @@ function RecordSaleForm({ cartId, concepts, onSaved }) {
     }
   };
 
-  // Group concepts
-  const conceptGroups = (concepts || []).map((c) => ({
-    ...c,
-    items: c.menuItems || [],
-  }));
-
   return (
     <div
       style={{
@@ -3327,7 +3319,6 @@ function RecordSaleForm({ cartId, concepts, onSaved }) {
             Tap an item to customise and add
           </div>
         </div>
-        {/* Payment method */}
         <div style={{ display: "flex", gap: 5 }}>
           {["CASH", "POS", "TRANSFER", "OTHER"].map((m) => {
             const col = pmColors[m];
@@ -3357,179 +3348,130 @@ function RecordSaleForm({ cartId, concepts, onSaved }) {
         </div>
       </div>
 
-      {/* Concept tabs (if multiple) */}
-      {conceptGroups.length > 1 && (
-        <div
-          style={{
-            display: "flex",
-            overflowX: "auto",
-            scrollbarWidth: "none",
-            borderBottom: "1px solid var(--border)",
-            padding: "0 16px",
-          }}
-        >
-          {conceptGroups.map((c) => {
-            const active = activeConceptId === c.id;
-            return (
-              <button
-                key={c.id}
-                onClick={() => setActiveConceptId(c.id)}
-                style={{
-                  padding: "10px 14px",
-                  background: "transparent",
-                  border: "none",
-                  borderBottom: `2px solid ${active ? "var(--accent)" : "transparent"}`,
-                  color: active ? "var(--accent)" : "var(--text-muted)",
-                  fontSize: "0.78rem",
-                  fontWeight: active ? 700 : 500,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  fontFamily: "inherit",
-                  flexShrink: 0,
-                }}
-              >
-                {c.name}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {/* Menu items grid */}
       <div style={{ padding: "12px 16px", maxHeight: 320, overflowY: "auto" }}>
-        {conceptGroups
-          .filter((c) => conceptGroups.length === 1 || c.id === activeConceptId)
-          .map((c) => (
-            <div key={c.id}>
-              {conceptGroups.length === 1 && (
-                <div
+        {!menuItems || menuItems.length === 0 ? (
+          <div className="icart_empty_inline" style={{ padding: "24px 0" }}>
+            <MdRestaurantMenu size={22} style={{ opacity: 0.3 }} />
+            <span>No menu items</span>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+              gap: 8,
+            }}
+          >
+            {menuItems.map((item) => {
+              const name = item.name || item.menuItem?.name || "Item";
+              const img = item.image || item.menuItem?.image;
+              const price =
+                item.sellingPrice || item.menuItem?.sellingPrice || 0;
+              const inCart = Object.values(cart)
+                .filter((e) => e.item.id === item.id)
+                .reduce((s, e) => s + e.qty, 0);
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCustomising(item)}
                   style={{
-                    fontSize: "0.68rem",
-                    fontWeight: 800,
-                    color: "var(--text-muted)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    marginBottom: 8,
+                    background:
+                      inCart > 0 ? "var(--bg-active)" : "var(--bg-hover)",
+                    border: `1px solid ${inCart > 0 ? "rgba(203,108,220,0.35)" : "var(--border)"}`,
+                    borderRadius: 10,
+                    padding: "10px 10px 8px",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    textAlign: "left",
+                    transition: "all 0.15s",
+                    position: "relative",
                   }}
                 >
-                  {c.name}
-                </div>
-              )}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
-                  gap: 8,
-                  marginBottom: 12,
-                }}
-              >
-                {c.items.map((item) => {
-                  const inCart = Object.values(cart)
-                    .filter((e) => e.item.id === item.id)
-                    .reduce((s, e) => s + e.qty, 0);
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setCustomising(item)}
+                  {img ? (
+                    <img
+                      src={img}
+                      alt={name}
                       style={{
-                        background:
-                          inCart > 0 ? "var(--bg-active)" : "var(--bg-hover)",
-                        border: `1px solid ${inCart > 0 ? "rgba(203,108,220,0.35)" : "var(--border)"}`,
-                        borderRadius: 10,
-                        padding: "10px 10px 8px",
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        textAlign: "left",
-                        transition: "all 0.15s",
-                        position: "relative",
+                        width: "100%",
+                        height: 70,
+                        objectFit: "cover",
+                        borderRadius: 7,
+                        marginBottom: 7,
+                        display: "block",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: "100%",
+                        height: 70,
+                        borderRadius: 7,
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginBottom: 7,
                       }}
                     >
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          style={{
-                            width: "100%",
-                            height: 70,
-                            objectFit: "cover",
-                            borderRadius: 7,
-                            marginBottom: 7,
-                            display: "block",
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: "100%",
-                            height: 70,
-                            borderRadius: 7,
-                            background: "var(--bg-card)",
-                            border: "1px solid var(--border)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            marginBottom: 7,
-                          }}
-                        >
-                          <MdImage
-                            size={20}
-                            style={{ color: "var(--text-muted)", opacity: 0.4 }}
-                          />
-                        </div>
-                      )}
-                      <div
-                        style={{
-                          fontSize: "0.76rem",
-                          fontWeight: 700,
-                          color: "var(--text-body)",
-                          lineHeight: 1.3,
-                          marginBottom: 3,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {item.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.72rem",
-                          fontWeight: 800,
-                          color:
-                            inCart > 0 ? "var(--accent)" : "var(--text-muted)",
-                        }}
-                      >
-                        {item.sellingPrice > 0
-                          ? `₦${Number(item.sellingPrice).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`
-                          : "—"}
-                      </div>
-                      {inCart > 0 && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: 6,
-                            right: 6,
-                            width: 18,
-                            height: 18,
-                            borderRadius: "50%",
-                            background: "var(--accent)",
-                            color: "#fff",
-                            fontSize: "0.62rem",
-                            fontWeight: 900,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          {inCart}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+                      <MdImage
+                        size={20}
+                        style={{ color: "var(--text-muted)", opacity: 0.4 }}
+                      />
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      fontSize: "0.76rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                      lineHeight: 1.3,
+                      marginBottom: 3,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.72rem",
+                      fontWeight: 800,
+                      color: inCart > 0 ? "var(--accent)" : "var(--text-muted)",
+                    }}
+                  >
+                    {price > 0
+                      ? `₦${Number(price).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`
+                      : "—"}
+                  </div>
+                  {inCart > 0 && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 6,
+                        right: 6,
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        background: "var(--accent)",
+                        color: "#fff",
+                        fontSize: "0.62rem",
+                        fontWeight: 900,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {inCart}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Order summary */}
@@ -3714,8 +3656,6 @@ function RecordSaleForm({ cartId, concepts, onSaved }) {
               </div>
             ))}
           </div>
-
-          {/* Total + submit */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ flex: 1 }}>
               <div
@@ -3766,8 +3706,6 @@ function RecordSaleForm({ cartId, concepts, onSaved }) {
           </div>
         </div>
       )}
-
-      {/* Customiser sheet */}
       {customising && (
         <ItemCustomiser
           item={customising}
@@ -3783,7 +3721,6 @@ function RecordSaleForm({ cartId, concepts, onSaved }) {
 /* ── Sale Row ─────────────────────────────────────────────── */
 function SaleRow({ sale }) {
   const [expanded, setExpanded] = useState(false);
-
   return (
     <div
       style={{
@@ -3794,7 +3731,6 @@ function SaleRow({ sale }) {
         marginBottom: 8,
       }}
     >
-      {/* Main row */}
       <div
         style={{
           display: "flex",
@@ -3838,19 +3774,18 @@ function SaleRow({ sale }) {
             <span>{fmtDate(sale.createdAt)}</span>
           </div>
         </div>
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <div
-            style={{
-              fontSize: "0.95rem",
-              fontWeight: 900,
-              color: "var(--text-heading)",
-            }}
-          >
-            ₦
-            {Number(sale.totalAmount || 0).toLocaleString(undefined, {
-              maximumFractionDigits: 0,
-            })}
-          </div>
+        <div
+          style={{
+            fontSize: "0.95rem",
+            fontWeight: 900,
+            color: "var(--text-heading)",
+            textAlign: "right",
+          }}
+        >
+          ₦
+          {Number(sale.totalAmount || 0).toLocaleString(undefined, {
+            maximumFractionDigits: 0,
+          })}
         </div>
         {expanded ? (
           <MdExpandLess
@@ -3864,8 +3799,6 @@ function SaleRow({ sale }) {
           />
         )}
       </div>
-
-      {/* Expanded items */}
       {expanded && sale.items?.length > 0 && (
         <div
           style={{
@@ -3951,7 +3884,7 @@ function SaleRow({ sale }) {
   );
 }
 
-export function SalesTab({ cartId, concepts, isOperator = true }) {
+export function SalesTab({ cartId, menuItems, isOperator = true }) {
   const [sales, setSales] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -3967,12 +3900,10 @@ export function SalesTab({ cartId, concepts, isOperator = true }) {
       .then(([salesRes, analyticsRes]) => {
         if (salesRes.status === "fulfilled") {
           const d = salesRes.value.data.data;
-          // Server filters by cartId — no client-side filter needed
           setSales(Array.isArray(d) ? d : d?.items || []);
         }
-        if (analyticsRes.status === "fulfilled") {
+        if (analyticsRes.status === "fulfilled")
           setAnalytics(analyticsRes.value.data.data);
-        }
       })
       .finally(() => setLoading(false));
   };
@@ -3982,7 +3913,6 @@ export function SalesTab({ cartId, concepts, isOperator = true }) {
   }, [cartId]);
 
   const totalRevenue = sales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
-
   const chartData = (analytics?.chartData || []).map((d) => ({
     ...d,
     sales: Math.round(d.sales),
@@ -3999,7 +3929,6 @@ export function SalesTab({ cartId, concepts, isOperator = true }) {
 
   return (
     <div>
-      {/* Summary cards */}
       {analytics?.totals && (
         <div
           style={{
@@ -4055,8 +3984,6 @@ export function SalesTab({ cartId, concepts, isOperator = true }) {
           ))}
         </div>
       )}
-
-      {/* Chart */}
       {chartData.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div
@@ -4194,8 +4121,6 @@ export function SalesTab({ cartId, concepts, isOperator = true }) {
           </ResponsiveContainer>
         </div>
       )}
-
-      {/* Summary chips */}
       {sales.length > 0 && (
         <div className="icart_summary_row" style={{ marginBottom: 16 }}>
           <div className="icart_summary_chip">
@@ -4236,8 +4161,6 @@ export function SalesTab({ cartId, concepts, isOperator = true }) {
           })}
         </div>
       )}
-
-      {/* Record sale button — operator only */}
       {isOperator && (
         <div style={{ marginBottom: 14 }}>
           <button
@@ -4257,18 +4180,16 @@ export function SalesTab({ cartId, concepts, isOperator = true }) {
           </button>
         </div>
       )}
-
       {showForm && (
         <RecordSaleForm
           cartId={cartId}
-          concepts={concepts}
+          menuItems={menuItems}
           onSaved={() => {
             setShowForm(false);
             fetchSales();
           }}
         />
       )}
-
       {loading ? (
         <div className="drawer_loading">
           <div className="page_loader_spinner" />
@@ -4279,11 +4200,7 @@ export function SalesTab({ cartId, concepts, isOperator = true }) {
           <span>No sales recorded yet</span>
         </div>
       ) : (
-        <div>
-          {sales.map((sale) => (
-            <SaleRow key={sale.id} sale={sale} />
-          ))}
-        </div>
+        sales.map((sale) => <SaleRow key={sale.id} sale={sale} />)
       )}
     </div>
   );
@@ -4333,9 +4250,10 @@ export default function OperatorCartPage() {
       </div>
     );
 
+  const menuItems = cart.menuItems || [];
+
   return (
     <div className="page_wrapper">
-      {/* Back button */}
       <button
         onClick={() => navigate(-1)}
         style={{
@@ -4361,7 +4279,7 @@ export default function OperatorCartPage() {
         <MdArrowBack size={16} /> Back to Operator
       </button>
 
-      {/* Cart hero card */}
+      {/* Cart hero */}
       <div
         style={{
           background: "var(--bg-card)",
@@ -4372,7 +4290,6 @@ export default function OperatorCartPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-          {/* Cart icon */}
           <div
             style={{
               width: 46,
@@ -4411,7 +4328,6 @@ export default function OperatorCartPage() {
                 {cart.serialNumber}
               </span>
               <StatusChip status={cart.status} />
-              {/* Online indicator */}
               <span
                 style={{
                   display: "inline-flex",
@@ -4439,7 +4355,6 @@ export default function OperatorCartPage() {
                 {cart.isOnline ? "Online" : "Offline"}
               </span>
             </div>
-            {/* Location */}
             {cart.location && (
               <div
                 style={{
@@ -4457,9 +4372,7 @@ export default function OperatorCartPage() {
             )}
           </div>
         </div>
-
-        {/* Quick stats row */}
-        {cart.concepts?.length > 0 && (
+        {menuItems.length > 0 && (
           <div
             style={{
               display: "flex",
@@ -4472,8 +4385,7 @@ export default function OperatorCartPage() {
           >
             <div className="icart_summary_chip">
               <MdRestaurantMenu size={12} />
-              {cart.concepts.length} Concept
-              {cart.concepts.length !== 1 ? "s" : ""}
+              {menuItems.length} Menu Item{menuItems.length !== 1 ? "s" : ""}
             </div>
             {cart.operators?.length > 0 && (
               <div className="icart_summary_chip">
@@ -4530,11 +4442,11 @@ export default function OperatorCartPage() {
       {/* Tab content */}
       {activeTab === "tasks" && <TasksTab cartId={cartId} />}
       {activeTab === "inventory" && <InventoryTab cartId={cartId} />}
-      {activeTab === "menu" && <MenuTab concepts={cart.concepts} />}
-      {activeTab === "elearning" && <ELearningTab concepts={cart.concepts} />}
+      {activeTab === "menu" && <MenuTab menuItems={menuItems} />}
+      {activeTab === "elearning" && <ELearningTab menuItems={menuItems} />}
       {activeTab === "orders" && <IcartOrders cartId={cartId} />}
       {activeTab === "sales" && (
-        <SalesTab cartId={cartId} concepts={cart.concepts} isOperator={true} />
+        <SalesTab cartId={cartId} menuItems={menuItems} isOperator={true} />
       )}
     </div>
   );

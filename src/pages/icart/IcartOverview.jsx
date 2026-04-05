@@ -924,7 +924,6 @@ const MAX_MENU_ITEMS = 5;
 const VENDOR_PAGE_SIZE = 6;
 const MENU_PAGE_SIZE = 8;
 
-// Common country list for the terms country picker
 const COUNTRIES = [
   "Afghanistan",
   "Albania",
@@ -1022,26 +1021,341 @@ const COUNTRIES = [
   "Zimbabwe",
 ];
 
+/* ── Invoice Payment Modal ───────────────────────────────────── */
+function InvoicePayModal({ invoice, application, onPaid, onClose }) {
+  const [paying, setPaying] = useState(false);
+  const [wallet, setWallet] = useState(null);
+  const [walletLoading, setWalletLoading] = useState(true);
+  const fmt = (n) =>
+    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+
+  useEffect(() => {
+    api
+      .get("/finance/wallet")
+      .then((r) => setWallet(r.data.data))
+      .catch(() => {})
+      .finally(() => setWalletLoading(false));
+  }, []);
+
+  const handlePay = async () => {
+    setPaying(true);
+    try {
+      await api.get(
+        `/finance/invoice/${invoice.id}/pay?method=wallet&shouldRedirect=false`,
+      );
+      toast.success("Payment successful!");
+      onPaid();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Payment failed");
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const sufficient = wallet && wallet.balance >= invoice.total;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1300,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(3px)",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          width: "min(400px, 94vw)",
+          background: "var(--bg-card)",
+          borderRadius: 18,
+          overflow: "hidden",
+          boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
+        }}
+      >
+        {/* Header */}
+        <div style={{ padding: "20px 20px 0" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 4,
+            }}
+          >
+            <div
+              style={{
+                fontSize: "1rem",
+                fontWeight: 900,
+                color: "var(--text-heading)",
+              }}
+            >
+              Invoice
+            </div>
+            <span
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 800,
+                padding: "2px 8px",
+                borderRadius: 999,
+                background: "rgba(234,179,8,0.1)",
+                color: "#ca8a04",
+                border: "1px solid rgba(234,179,8,0.25)",
+              }}
+            >
+              {invoice.status}
+            </span>
+          </div>
+          <div
+            style={{
+              fontSize: "0.72rem",
+              color: "var(--text-muted)",
+              marginBottom: 16,
+            }}
+          >
+            {application?.vendor?.businessName} · {invoice.currency}
+          </div>
+
+          {/* Invoice items */}
+          <div
+            style={{
+              background: "var(--bg-hover)",
+              borderRadius: 10,
+              overflow: "hidden",
+              marginBottom: 14,
+            }}
+          >
+            {invoice.items?.map((item, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  padding: "10px 13px",
+                  borderBottom:
+                    i < invoice.items.length - 1
+                      ? "1px solid var(--border)"
+                      : "none",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                    }}
+                  >
+                    {item.title}
+                  </div>
+                  {item.description && (
+                    <div
+                      style={{
+                        fontSize: "0.70rem",
+                        color: "var(--text-muted)",
+                        marginTop: 1,
+                      }}
+                    >
+                      {item.description}
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div
+                    style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}
+                  >
+                    × {item.quantity}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.85rem",
+                      fontWeight: 800,
+                      color: "var(--text-heading)",
+                    }}
+                  >
+                    ₦{fmt(item.amount * item.quantity)}
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "11px 13px",
+                borderTop: "1px solid var(--border)",
+                background: "var(--bg-card)",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  color: "var(--text-muted)",
+                }}
+              >
+                Total
+              </span>
+              <span
+                style={{
+                  fontSize: "1.05rem",
+                  fontWeight: 900,
+                  color: "var(--accent)",
+                }}
+              >
+                ₦{fmt(invoice.total)}
+              </span>
+            </div>
+          </div>
+
+          {/* Wallet balance */}
+          <div
+            style={{
+              background: "var(--bg-hover)",
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              padding: "10px 13px",
+              marginBottom: 16,
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.68rem",
+                fontWeight: 700,
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                marginBottom: 4,
+              }}
+            >
+              Wallet Balance
+            </div>
+            {walletLoading ? (
+              <div
+                className="page_loader_spinner"
+                style={{ width: 16, height: 16 }}
+              />
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 900,
+                    color: sufficient ? "#16a34a" : "#ef4444",
+                  }}
+                >
+                  ₦{fmt(wallet?.balance || 0)}
+                </span>
+                {!sufficient && (
+                  <span
+                    style={{
+                      fontSize: "0.68rem",
+                      color: "#ef4444",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Insufficient balance
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "0 20px 20px", display: "flex", gap: 8 }}>
+          <button
+            className="app_btn app_btn_cancel"
+            style={{ flex: 1, height: 42 }}
+            onClick={onClose}
+            disabled={paying}
+          >
+            Later
+          </button>
+          <button
+            className={`app_btn app_btn_confirm${paying ? " btn_loading" : ""}`}
+            style={{
+              flex: 2,
+              height: 42,
+              position: "relative",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              opacity: !sufficient && !walletLoading ? 0.5 : 1,
+            }}
+            onClick={handlePay}
+            disabled={
+              paying || walletLoading || (!sufficient && wallet !== null)
+            }
+          >
+            <span className="btn_text">
+              Pay ₦{fmt(invoice.total)} from Wallet
+            </span>
+            {paying && (
+              <span className="btn_loader" style={{ width: 14, height: 14 }} />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── VendorMenuSection ───────────────────────────────────────── */
 function VendorMenuSection({ cart, onUpdate, onRefresh }) {
-  // ── State ──
-  const [phase, setPhase] = useState("idle"); // idle | picking-vendor | terms | vendor-detail
+  // phase: idle | picking-vendor | terms | vendor-detail
+  const [phase, setPhase] = useState("idle");
+
+  // vendor picking
   const [vendors, setVendors] = useState([]);
   const [vendorsLoading, setVendorsLoading] = useState(false);
   const [vendorPage, setVendorPage] = useState(1);
   const [vendorSearch, setVendorSearch] = useState("");
   const [selectedVendor, setSelectedVendor] = useState(null);
-  const [termsCountry, setTermsCountry] = useState(
-    cart.location?.country || "",
-  );
+
+  // browse-menu (preview only)
+  const [browseItems, setBrowseItems] = useState([]);
+  const [browseLoading, setBrowseLoading] = useState(false);
+  const [browsePage, setBrowsePage] = useState(1);
+  const [browseSearch, setBrowseSearch] = useState("");
+  const [showBrowseModal, setShowBrowseModal] = useState(false);
+
+  // terms
   const [termsData, setTermsData] = useState(null);
   const [termsLoading, setTermsLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [savingVendor, setSavingVendor] = useState(false);
+
+  // confirmation + invoice
+  const [confirming, setConfirming] = useState(false);
+  const [invoiceData, setInvoiceData] = useState(null); // { invoice, application }
+
+  // vendor-detail (manage existing menus)
+  const [cartMenuItems, setCartMenuItems] = useState(cart.menuItems || []);
   const [vendorMenuItems, setVendorMenuItems] = useState([]);
   const [menuLoading, setMenuLoading] = useState(false);
   const [menuPage, setMenuPage] = useState(1);
   const [menuSearch, setMenuSearch] = useState("");
-  const [cartMenuItems, setCartMenuItems] = useState(cart.menuItems || []);
   const [pendingAdd, setPendingAdd] = useState([]);
   const [markupValues, setMarkupValues] = useState({});
   const [saving, setSaving] = useState(false);
@@ -1049,6 +1363,8 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
   const [removing, setRemoving] = useState(false);
 
   const assignedVendor = cart.vendor;
+  const fmt = (n) =>
+    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
 
   // ── Fetch vendors ──
   const fetchVendors = async () => {
@@ -1064,7 +1380,27 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
     }
   };
 
-  // ── Fetch terms ──
+  // ── Fetch vendor menu for browsing (preview) ──
+  const fetchBrowseMenu = async (vendorId) => {
+    setBrowseLoading(true);
+    setBrowseItems([]);
+    setBrowsePage(1);
+    setBrowseSearch("");
+    try {
+      const res = await api.get(
+        `/vendor/menu?vendorId=${vendorId}&page=1&limit=100`,
+      );
+      const d = res.data.data;
+      setBrowseItems(Array.isArray(d) ? d : d?.items || d?.menuItems || []);
+      setShowBrowseModal(true);
+    } catch {
+      toast.error("Failed to load menu");
+    } finally {
+      setBrowseLoading(false);
+    }
+  };
+
+  // ── Fetch terms (auto, no button) ──
   const fetchTerms = async (country) => {
     if (!country) return;
     setTermsLoading(true);
@@ -1075,69 +1411,82 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
         `/icartVendorApplication/settings/country/${encodeURIComponent(country)}`,
       );
       setTermsData(res.data.data);
-    } catch {
-      toast.error("No settings found for this country");
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "No settings found for this country",
+      );
     } finally {
       setTermsLoading(false);
     }
   };
 
-  // (terms are fetched manually via the Load button)
-
-  // ── Fetch vendor menu ──
-  const fetchVendorMenu = async (vendorId) => {
-    setMenuLoading(true);
-    setVendorMenuItems([]);
-    setMenuPage(1);
-    setMenuSearch("");
-    try {
-      const res = await api.get(
-        `/vendor/menu?vendorId=${vendorId}&page=1&limit=100`,
-      );
-      const d = res.data.data;
-      setVendorMenuItems(Array.isArray(d) ? d : d?.items || d?.menuItems || []);
-    } catch {
-      toast.error("Failed to load menu items");
-    } finally {
-      setMenuLoading(false);
+  // Auto-load terms when entering terms phase
+  useEffect(() => {
+    if (phase === "terms") {
+      const country = cart.location?.country || "";
+      fetchTerms(country);
     }
-  };
+  }, [phase]);
 
-  // ── Set vendor ──
-  const handleSetVendor = async () => {
-    if (!selectedVendor) return;
-    setSavingVendor(true);
+  // ── Confirm vendor → get invoice ──
+  const handleConfirm = async () => {
+    if (!termsAccepted) {
+      toast.error("Please accept the terms to continue");
+      return;
+    }
+    setConfirming(true);
     try {
-      await api.post(`/icart/${cart.id}/change-vendor`, {
+      const res = await api.post(`/icart/${cart.id}/change-vendor`, {
         vendorId: selectedVendor.id,
-        country: termsData?.country || cart.location?.country,
+        country: cart.location?.country,
       });
-      toast.success(`${selectedVendor.businessName} set as vendor`);
+      const { application, invoice } = res.data.data;
+      setInvoiceData({ application, invoice });
+      // Update cart vendor optimistically
       onUpdate({ ...cart, vendor: selectedVendor });
-      setPhase("vendor-detail");
-      fetchVendorMenu(selectedVendor.id);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to set vendor");
     } finally {
-      setSavingVendor(false);
+      setConfirming(false);
     }
   };
 
-  // ── Open vendor detail ──
+  // ── After payment: reload cart ──
+  const handlePaid = () => {
+    setInvoiceData(null);
+    setPhase("idle");
+    onRefresh();
+    toast.success("Vendor confirmed! You can now manage your menu items.");
+  };
+
+  // ── Open manage-menus (vendor-detail) ──
   const openVendorDetail = () => {
     setPhase("vendor-detail");
-    // Use assignedVendor.id if available, else derive from cart menu items
-    const vendorId = assignedVendor?.id || cartMenuItems[0]?.vendorId;
-    if (vendorId) fetchVendorMenu(vendorId);
+    const vendorId = assignedVendor?.id || cart.menuItems?.[0]?.vendorId;
+    if (vendorId) {
+      setMenuLoading(true);
+      setVendorMenuItems([]);
+      setMenuPage(1);
+      setMenuSearch("");
+      api
+        .get(`/vendor/menu?vendorId=${vendorId}&page=1&limit=100`)
+        .then((r) => {
+          const d = r.data.data;
+          setVendorMenuItems(
+            Array.isArray(d) ? d : d?.items || d?.menuItems || [],
+          );
+        })
+        .catch(() => toast.error("Failed to load menu items"))
+        .finally(() => setMenuLoading(false));
+    }
     setCartMenuItems(cart.menuItems || []);
     setPendingAdd([]);
     setMarkupValues({});
   };
 
-  // ── Toggle pending menu item ──
+  // ── Add pending items ──
   const togglePendingAdd = (item) => {
-    const alreadyAdded = isAdded(item.id);
-    if (alreadyAdded) return;
+    if (isAdded(item.id)) return;
     setPendingAdd((prev) => {
       const exists = prev.find((p) => p.id === item.id);
       if (exists) return prev.filter((p) => p.id !== item.id);
@@ -1155,7 +1504,6 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
     cartMenuItems.some((m) => m.id === id || m.menuItemId === id);
   const totalSelected = cartMenuItems.length + pendingAdd.length;
 
-  // ── Save additions ──
   const handleSaveAdditions = async () => {
     if (!pendingAdd.length) return;
     setSaving(true);
@@ -1181,7 +1529,6 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
     }
   };
 
-  // ── Remove item ──
   const handleRemove = async () => {
     if (!confirmRemove) return;
     setRemoving(true);
@@ -1199,35 +1546,50 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
       );
       onRefresh();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to remove item");
+      toast.error(err.response?.data?.message || "Failed to remove");
     } finally {
       setRemoving(false);
     }
   };
 
-  const fmt = (n) =>
-    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
-
-  // ── Filtered + paginated vendors ──
+  // ── Paginated/filtered lists ──
   const filteredVendors = vendors.filter(
     (v) =>
       !vendorSearch ||
       v.businessName?.toLowerCase().includes(vendorSearch.toLowerCase()) ||
       v.email?.toLowerCase().includes(vendorSearch.toLowerCase()),
   );
-  const vendorTotalPages =
-    Math.ceil(filteredVendors.length / VENDOR_PAGE_SIZE) || 1;
+  const vendorTotalPages = Math.max(
+    1,
+    Math.ceil(filteredVendors.length / VENDOR_PAGE_SIZE),
+  );
   const pagedVendors = filteredVendors.slice(
     (vendorPage - 1) * VENDOR_PAGE_SIZE,
     vendorPage * VENDOR_PAGE_SIZE,
   );
 
-  // ── Filtered + paginated menu items ──
+  const filteredBrowse = browseItems.filter(
+    (m) =>
+      !browseSearch ||
+      m.name?.toLowerCase().includes(browseSearch.toLowerCase()),
+  );
+  const browseTotalPages = Math.max(
+    1,
+    Math.ceil(filteredBrowse.length / MENU_PAGE_SIZE),
+  );
+  const pagedBrowse = filteredBrowse.slice(
+    (browsePage - 1) * MENU_PAGE_SIZE,
+    browsePage * MENU_PAGE_SIZE,
+  );
+
   const filteredMenu = vendorMenuItems.filter(
     (m) =>
       !menuSearch || m.name?.toLowerCase().includes(menuSearch.toLowerCase()),
   );
-  const menuTotalPages = Math.ceil(filteredMenu.length / MENU_PAGE_SIZE) || 1;
+  const menuTotalPages = Math.max(
+    1,
+    Math.ceil(filteredMenu.length / MENU_PAGE_SIZE),
+  );
   const pagedMenu = filteredMenu.slice(
     (menuPage - 1) * MENU_PAGE_SIZE,
     menuPage * MENU_PAGE_SIZE,
@@ -1254,48 +1616,134 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
     </div>
   );
 
+  // ── Pagination bar ──
+  const Pagination = ({ page, total, setPage }) =>
+    total <= 1 ? null : (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          marginTop: 10,
+        }}
+      >
+        <button
+          className="biz_icon_btn"
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page <= 1}
+          style={{ width: 28, height: 28 }}
+        >
+          ‹
+        </button>
+        <span
+          style={{
+            fontSize: "0.72rem",
+            color: "var(--text-muted)",
+            fontWeight: 600,
+          }}
+        >
+          {page} / {total}
+        </span>
+        <button
+          className="biz_icon_btn"
+          onClick={() => setPage((p) => Math.min(total, p + 1))}
+          disabled={page >= total}
+          style={{ width: 28, height: 28 }}
+        >
+          ›
+        </button>
+      </div>
+    );
+
+  // Invoice modal — always rendered on top regardless of phase
+  if (invoiceData) {
+    return (
+      <InvoicePayModal
+        invoice={invoiceData.invoice}
+        application={invoiceData.application}
+        onPaid={handlePaid}
+        onClose={() => setInvoiceData(null)}
+      />
+    );
+  }
+
   // ─────────────────────────────────────────────────────────────
-  // PHASE: idle — no vendor
+  // PHASE: idle
   // ─────────────────────────────────────────────────────────────
-  if (!assignedVendor && phase === "idle") {
+  if (phase === "idle") {
     const hasMenuItems = cart.menuItems?.length > 0;
     return (
       <>
         {sectionHeader}
-        {/* If menu items exist despite no vendor, show them */}
-        {hasMenuItems ? (
-          <div style={{ marginBottom: 10 }}>
-            <div
-              style={{
-                background: "var(--bg-hover)",
-                border: "1px solid var(--border)",
-                borderRadius: 10,
-                padding: "10px 13px",
-                marginBottom: 10,
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <MdStorefront
-                size={15}
-                style={{ color: "var(--text-muted)", flexShrink: 0 }}
-              />
-              <span
-                style={{
-                  fontSize: "0.78rem",
-                  color: "var(--text-muted)",
-                  flex: 1,
-                }}
-              >
-                No vendor profile linked
-              </span>
+        {assignedVendor ? (
+          <div
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: "12px 14px",
+              marginBottom: 10,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {assignedVendor.branding?.logo || assignedVendor.brandLogo ? (
+                <img
+                  src={
+                    assignedVendor.branding?.logo || assignedVendor.brandLogo
+                  }
+                  alt=""
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 9,
+                    objectFit: "cover",
+                    flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 9,
+                    background: "var(--bg-active)",
+                    border: "1px solid rgba(203,108,220,0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <MdStorefront size={16} style={{ color: "var(--accent)" }} />
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: "0.9rem",
+                    fontWeight: 800,
+                    color: "var(--text-heading)",
+                  }}
+                >
+                  {assignedVendor.businessName || assignedVendor.name}
+                </div>
+                {(assignedVendor.branding?.tagline ||
+                  assignedVendor.brandTagline) && (
+                  <div
+                    style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}
+                  >
+                    {assignedVendor.branding?.tagline ||
+                      assignedVendor.brandTagline}
+                  </div>
+                )}
+              </div>
               <button
                 className="app_btn app_btn_confirm"
                 style={{
-                  height: 30,
-                  padding: "0 12px",
-                  fontSize: "0.74rem",
+                  height: 32,
+                  padding: "0 14px",
+                  fontSize: "0.76rem",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 5,
@@ -1303,135 +1751,42 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
                 }}
                 onClick={openVendorDetail}
               >
-                <MdRestaurantMenu size={13} /> View Menu
+                <MdRestaurantMenu size={13} /> Menu
               </button>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                {cart.menuItems.length} item
-                {cart.menuItems.length !== 1 ? "s" : ""} active
-              </span>
-              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                ·
-              </span>
-              <span
-                style={{
-                  fontSize: "0.72rem",
-                  fontWeight: 700,
-                  color: "var(--accent)",
-                }}
-              >
-                {MAX_MENU_ITEMS - cart.menuItems.length} slot
-                {MAX_MENU_ITEMS - cart.menuItems.length !== 1 ? "s" : ""} left
-              </span>
-            </div>
           </div>
-        ) : (
+        ) : hasMenuItems ? (
           <div
-            className="icart_empty_inline"
-            style={{ flexDirection: "column", gap: 10, padding: "20px 0" }}
+            style={{
+              background: "var(--bg-hover)",
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              padding: "10px 13px",
+              marginBottom: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}
           >
-            <MdStorefront size={24} style={{ opacity: 0.3 }} />
-            <span>No vendor selected</span>
-          </div>
-        )}
-        <button
-          className="app_btn app_btn_confirm"
-          style={{
-            height: 36,
-            padding: "0 18px",
-            fontSize: "0.82rem",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            width: "100%",
-          }}
-          onClick={() => {
-            setPhase("picking-vendor");
-            fetchVendors();
-            setVendorSearch("");
-            setVendorPage(1);
-          }}
-        >
-          <MdAdd size={15} />{" "}
-          {assignedVendor || hasMenuItems ? "Change Vendor" : "Select Vendor"}
-        </button>
-      </>
-    );
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // PHASE: idle — vendor exists
-  // ─────────────────────────────────────────────────────────────
-  if (assignedVendor && phase === "idle") {
-    return (
-      <>
-        {sectionHeader}
-        <div
-          style={{
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-            padding: "12px 14px",
-            marginBottom: 10,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {assignedVendor.branding?.logo || assignedVendor.brandLogo ? (
-              <img
-                src={assignedVendor.branding?.logo || assignedVendor.brandLogo}
-                alt=""
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 9,
-                  objectFit: "cover",
-                  flexShrink: 0,
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 9,
-                  background: "var(--bg-active)",
-                  border: "1px solid rgba(203,108,220,0.2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <MdStorefront size={16} style={{ color: "var(--accent)" }} />
-              </div>
-            )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: "0.9rem",
-                  fontWeight: 800,
-                  color: "var(--text-heading)",
-                }}
-              >
-                {assignedVendor.businessName || assignedVendor.name}
-              </div>
-              {(assignedVendor.branding?.tagline ||
-                assignedVendor.brandTagline) && (
-                <div
-                  style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}
-                >
-                  {assignedVendor.branding?.tagline ||
-                    assignedVendor.brandTagline}
-                </div>
-              )}
-            </div>
+            <MdStorefront
+              size={15}
+              style={{ color: "var(--text-muted)", flexShrink: 0 }}
+            />
+            <span
+              style={{
+                fontSize: "0.78rem",
+                color: "var(--text-muted)",
+                flex: 1,
+              }}
+            >
+              No vendor profile linked
+            </span>
             <button
               className="app_btn app_btn_confirm"
               style={{
-                height: 32,
-                padding: "0 14px",
-                fontSize: "0.76rem",
+                height: 30,
+                padding: "0 12px",
+                fontSize: "0.74rem",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 5,
@@ -1439,12 +1794,28 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
               }}
               onClick={openVendorDetail}
             >
-              <MdRestaurantMenu size={13} /> Menu
+              <MdRestaurantMenu size={13} /> Manage
             </button>
           </div>
-        </div>
-        {cart.menuItems?.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        ) : (
+          <div
+            className="icart_empty_inline"
+            style={{ flexDirection: "column", gap: 10, padding: "16px 0" }}
+          >
+            <MdStorefront size={24} style={{ opacity: 0.3 }} />
+            <span>No vendor selected</span>
+          </div>
+        )}
+
+        {hasMenuItems && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: 10,
+            }}
+          >
             <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
               {cart.menuItems.length} item
               {cart.menuItems.length !== 1 ? "s" : ""} active
@@ -1464,6 +1835,27 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
             </span>
           </div>
         )}
+
+        <button
+          className="app_btn app_btn_confirm"
+          style={{
+            height: 36,
+            padding: "0 18px",
+            fontSize: "0.82rem",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+          onClick={() => {
+            setPhase("picking-vendor");
+            fetchVendors();
+            setVendorSearch("");
+            setVendorPage(1);
+          }}
+        >
+          <MdAdd size={15} />{" "}
+          {assignedVendor || hasMenuItems ? "Change Vendor" : "Select Vendor"}
+        </button>
       </>
     );
   }
@@ -1511,7 +1903,6 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
           </span>
         </div>
 
-        {/* Search */}
         <input
           className="modal-input"
           placeholder="Search vendors…"
@@ -1529,15 +1920,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
           </div>
         ) : (
           <>
-            {/* Fixed-height scrollable list */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-                minHeight: 0,
-              }}
-            >
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {pagedVendors.length === 0 ? (
                 <div className="icart_empty_inline">
                   <MdStorefront size={18} style={{ opacity: 0.3 }} />
@@ -1635,78 +2018,321 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
                 })
               )}
             </div>
-
-            {/* Pagination */}
-            {vendorTotalPages > 1 && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  marginTop: 10,
-                }}
-              >
-                <button
-                  className="biz_icon_btn"
-                  onClick={() => setVendorPage((p) => Math.max(1, p - 1))}
-                  disabled={vendorPage <= 1}
-                  style={{ width: 28, height: 28 }}
-                >
-                  ‹
-                </button>
-                <span
-                  style={{
-                    fontSize: "0.72rem",
-                    color: "var(--text-muted)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {vendorPage} / {vendorTotalPages}
-                </span>
-                <button
-                  className="biz_icon_btn"
-                  onClick={() =>
-                    setVendorPage((p) => Math.min(vendorTotalPages, p + 1))
-                  }
-                  disabled={vendorPage >= vendorTotalPages}
-                  style={{ width: 28, height: 28 }}
-                >
-                  ›
-                </button>
-              </div>
-            )}
+            <Pagination
+              page={vendorPage}
+              total={vendorTotalPages}
+              setPage={setVendorPage}
+            />
           </>
         )}
 
         {selectedVendor && (
-          <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
-            <button
-              className="app_btn app_btn_cancel"
-              style={{ flex: 1, height: 38 }}
-              onClick={() => {
-                setSelectedVendor(null);
-                setPhase("idle");
-              }}
-            >
-              Cancel
-            </button>
+          <div style={{ marginTop: 14 }}>
             <button
               className="app_btn app_btn_confirm"
               style={{
-                flex: 2,
+                width: "100%",
                 height: 38,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 6,
               }}
-              onClick={() => {
-                setPhase("terms");
+              onClick={() => fetchBrowseMenu(selectedVendor.id)}
+            >
+              {browseLoading ? (
+                <>
+                  <span
+                    className="btn_loader"
+                    style={{ width: 14, height: 14 }}
+                  />{" "}
+                  Loading menu…
+                </>
+              ) : (
+                <>
+                  <MdRestaurantMenu size={14} /> View{" "}
+                  {selectedVendor.businessName} Menu
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Browse menu modal — shown on top of vendor list */}
+        {showBrowseModal && selectedVendor && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 1300,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              onClick={() => setShowBrowseModal(false)}
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(0,0,0,0.6)",
+                backdropFilter: "blur(3px)",
+              }}
+            />
+            <div
+              style={{
+                position: "relative",
+                zIndex: 1,
+                width: "min(440px, 95vw)",
+                maxHeight: "80vh",
+                background: "var(--bg-card)",
+                borderRadius: 18,
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
               }}
             >
-              Next: Review Terms →
-            </button>
+              {/* Modal header */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "16px 18px",
+                  borderBottom: "1px solid var(--border)",
+                  flexShrink: 0,
+                }}
+              >
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: "var(--bg-active)",
+                    border: "1px solid rgba(203,108,220,0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <MdRestaurantMenu
+                    size={15}
+                    style={{ color: "var(--accent)" }}
+                  />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: "0.9rem",
+                      fontWeight: 800,
+                      color: "var(--text-heading)",
+                    }}
+                  >
+                    {selectedVendor.businessName}
+                  </div>
+                  <div
+                    style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}
+                  >
+                    {browseItems.length} item
+                    {browseItems.length !== 1 ? "s" : ""} · preview only
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowBrowseModal(false)}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 7,
+                    background: "var(--bg-hover)",
+                    border: "1px solid var(--border)",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--text-muted)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <MdClose size={14} />
+                </button>
+              </div>
+
+              {/* Search */}
+              {browseItems.length > MENU_PAGE_SIZE && (
+                <div style={{ padding: "10px 18px 0", flexShrink: 0 }}>
+                  <input
+                    className="modal-input"
+                    placeholder="Search menu…"
+                    value={browseSearch}
+                    onChange={(e) => {
+                      setBrowseSearch(e.target.value);
+                      setBrowsePage(1);
+                    }}
+                    style={{ marginBottom: 0 }}
+                  />
+                </div>
+              )}
+
+              {/* Items list */}
+              <div style={{ overflowY: "auto", flex: 1, padding: "10px 18px" }}>
+                {browseLoading ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      padding: "24px 0",
+                    }}
+                  >
+                    <div className="page_loader_spinner" />
+                  </div>
+                ) : pagedBrowse.length === 0 ? (
+                  <div className="icart_empty_inline">
+                    <MdRestaurantMenu size={18} style={{ opacity: 0.3 }} />
+                    <span>No items found</span>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      {pagedBrowse.map((item) => (
+                        <div
+                          key={item.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "9px 12px",
+                            background: "var(--bg-hover)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 10,
+                          }}
+                        >
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt=""
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 8,
+                                objectFit: "cover",
+                                flexShrink: 0,
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 8,
+                                background: "var(--bg-card)",
+                                border: "1px solid var(--border)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                              }}
+                            >
+                              <MdRestaurantMenu
+                                size={14}
+                                style={{ color: "var(--text-muted)" }}
+                              />
+                            </div>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontSize: "0.83rem",
+                                fontWeight: 700,
+                                color: "var(--text-body)",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {item.name}
+                            </div>
+                            {item.description && (
+                              <div
+                                style={{
+                                  fontSize: "0.68rem",
+                                  color: "var(--text-muted)",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {item.description}
+                              </div>
+                            )}
+                          </div>
+                          {item.sellingPrice > 0 && (
+                            <div
+                              style={{
+                                fontSize: "0.78rem",
+                                fontWeight: 800,
+                                color: "var(--text-heading)",
+                                flexShrink: 0,
+                              }}
+                            >
+                              ₦{fmt(item.sellingPrice)}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <Pagination
+                      page={browsePage}
+                      total={browseTotalPages}
+                      setPage={setBrowsePage}
+                    />
+                  </>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "12px 18px",
+                  borderTop: "1px solid var(--border)",
+                  display: "flex",
+                  gap: 8,
+                  flexShrink: 0,
+                }}
+              >
+                <button
+                  className="app_btn app_btn_cancel"
+                  style={{ flex: 1, height: 40 }}
+                  onClick={() => setShowBrowseModal(false)}
+                >
+                  Back
+                </button>
+                <button
+                  className="app_btn app_btn_confirm"
+                  style={{
+                    flex: 2,
+                    height: 40,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                  onClick={() => {
+                    setShowBrowseModal(false);
+                    setPhase("terms");
+                  }}
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </>
@@ -1717,6 +2343,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
   // PHASE: terms
   // ─────────────────────────────────────────────────────────────
   if (phase === "terms") {
+    const country = cart.location?.country || "";
     return (
       <>
         {sectionHeader}
@@ -1729,7 +2356,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
           }}
         >
           <button
-            onClick={() => setPhase("picking-vendor")}
+            onClick={() => setPhase("browse-menu")}
             style={{
               background: "none",
               border: "none",
@@ -1756,101 +2383,32 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
           </span>
         </div>
 
-        {/* Country — locked to cart's location country */}
-        <div className="form-field" style={{ marginBottom: 12 }}>
-          <label className="modal-label">Country</label>
-          {cart.location?.country ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div
-                className="modal-input"
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  color: "var(--text-body)",
-                  fontWeight: 600,
-                  fontSize: "0.85rem",
-                }}
-              >
-                <MdLocationOn
-                  size={15}
-                  style={{ color: "var(--accent)", flexShrink: 0 }}
-                />
-                {cart.location.country}
-              </div>
-              <button
-                className={`app_btn app_btn_confirm ${termsLoading ? "btn_loading" : ""}`}
-                style={{
-                  height: 42,
-                  padding: "0 14px",
-                  fontSize: "0.78rem",
-                  position: "relative",
-                  flexShrink: 0,
-                }}
-                onClick={() => fetchTerms(cart.location.country)}
-                disabled={termsLoading}
-              >
-                <span className="btn_text">Load Terms</span>
-                {termsLoading && (
-                  <span
-                    className="btn_loader"
-                    style={{ width: 13, height: 13 }}
-                  />
-                )}
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: "flex", gap: 8 }}>
-              <select
-                className="modal-input"
-                style={{ flex: 1 }}
-                value={termsCountry}
-                onChange={(e) => {
-                  setTermsCountry(e.target.value);
-                  setTermsData(null);
-                  setTermsAccepted(false);
-                }}
-              >
-                <option value="">Choose a country…</option>
-                {COUNTRIES.map((ctry) => (
-                  <option key={ctry} value={ctry}>
-                    {ctry}
-                  </option>
-                ))}
-              </select>
-              <button
-                className={`app_btn app_btn_confirm ${termsLoading ? "btn_loading" : ""}`}
-                style={{
-                  height: 42,
-                  padding: "0 14px",
-                  fontSize: "0.78rem",
-                  position: "relative",
-                  flexShrink: 0,
-                }}
-                onClick={() => fetchTerms(termsCountry)}
-                disabled={termsLoading || !termsCountry}
-              >
-                <span className="btn_text">Load Terms</span>
-                {termsLoading && (
-                  <span
-                    className="btn_loader"
-                    style={{ width: 13, height: 13 }}
-                  />
-                )}
-              </button>
-            </div>
-          )}
-          <div
+        {/* Country indicator */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 12,
+            padding: "8px 12px",
+            background: "var(--bg-hover)",
+            border: "1px solid var(--border)",
+            borderRadius: 9,
+          }}
+        >
+          <MdLocationOn
+            size={14}
+            style={{ color: "var(--accent)", flexShrink: 0 }}
+          />
+          <span
             style={{
-              fontSize: "0.68rem",
-              color: "var(--text-muted)",
-              marginTop: 5,
+              fontSize: "0.78rem",
+              color: "var(--text-body)",
+              fontWeight: 600,
             }}
           >
-            Terms are based on the iCart's location country. Make sure settings
-            exist for this country in the admin panel.
-          </div>
+            {country || "No location set on this iCart"}
+          </span>
         </div>
 
         {termsLoading && (
@@ -1860,18 +2418,26 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
         )}
 
         {!termsLoading && !termsData && (
-          <div className="icart_empty_inline" style={{ padding: "14px 0" }}>
-            <span>
-              {cart.location?.country
-                ? `Click "Load Terms" to view terms for ${cart.location.country}`
-                : "Select a country and load terms"}
+          <div
+            className="icart_empty_inline"
+            style={{ flexDirection: "column", gap: 8, padding: "16px 0" }}
+          >
+            <span
+              style={{
+                fontSize: "0.8rem",
+                color: "var(--text-muted)",
+                textAlign: "center",
+              }}
+            >
+              {country
+                ? `No vendor settings found for ${country}. An admin needs to add settings for this country.`
+                : "Set a location on this iCart first to load terms."}
             </span>
           </div>
         )}
 
         {termsData && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {/* Payment schedule */}
             {termsData.payments?.length > 0 && (
               <div
                 style={{
@@ -1970,14 +2536,13 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
                         flexShrink: 0,
                       }}
                     >
-                      {termsData.currency?.toUpperCase()} {fmt(p.amount)}
+                      {termsData.currency} {fmt(p.amount)}
                     </div>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Terms text */}
             {termsData.terms && (
               <div
                 style={{
@@ -2014,89 +2579,91 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
               </div>
             )}
 
-            {/* Accept */}
+            {/* Accept checkbox — prominent */}
             <button
               onClick={() => setTermsAccepted((v) => !v)}
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
+                gap: 12,
                 background: termsAccepted
                   ? "var(--bg-active)"
                   : "var(--bg-hover)",
-                border: `1px solid ${termsAccepted ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                borderRadius: 10,
-                padding: "10px 13px",
+                border: `2px solid ${termsAccepted ? "var(--accent)" : "var(--border)"}`,
+                borderRadius: 12,
+                padding: "12px 14px",
                 cursor: "pointer",
                 fontFamily: "inherit",
-                transition: "all 0.12s",
+                transition: "all 0.15s",
               }}
             >
               <div
                 style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 6,
+                  width: 22,
+                  height: 22,
+                  borderRadius: 7,
                   border: `2px solid ${termsAccepted ? "var(--accent)" : "var(--border)"}`,
                   background: termsAccepted ? "var(--accent)" : "transparent",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
-                  transition: "all 0.12s",
+                  transition: "all 0.15s",
                 }}
               >
                 {termsAccepted && (
-                  <MdVerified size={12} style={{ color: "#fff" }} />
+                  <MdVerified size={14} style={{ color: "#fff" }} />
                 )}
               </div>
-              <span
-                style={{
-                  fontSize: "0.8rem",
-                  fontWeight: 700,
-                  color: termsAccepted ? "var(--accent)" : "var(--text-muted)",
-                  textAlign: "left",
-                }}
-              >
-                I have read and agree to the terms for {termsData.country}
-              </span>
+              <div style={{ flex: 1, textAlign: "left" }}>
+                <div
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: termsAccepted ? "var(--accent)" : "var(--text-body)",
+                  }}
+                >
+                  I agree to the terms and conditions
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.68rem",
+                    color: "var(--text-muted)",
+                    marginTop: 2,
+                  }}
+                >
+                  For {termsData.country} · {termsData.currency}
+                </div>
+              </div>
             </button>
 
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 className="app_btn app_btn_cancel"
-                style={{ flex: 1, height: 40 }}
+                style={{ flex: 1, height: 42 }}
                 onClick={() => setPhase("picking-vendor")}
+                disabled={confirming}
               >
                 Back
               </button>
               <button
-                className={`app_btn app_btn_confirm ${savingVendor ? "btn_loading" : ""}`}
+                className={`app_btn app_btn_confirm${confirming ? " btn_loading" : ""}`}
                 style={{
                   flex: 2,
-                  height: 40,
+                  height: 42,
                   position: "relative",
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 6,
                 }}
-                onClick={() => {
-                  if (!termsAccepted) {
-                    toast.error(
-                      "Please read and accept the terms before continuing",
-                    );
-                    return;
-                  }
-                  handleSetVendor();
-                }}
-                disabled={savingVendor}
+                onClick={handleConfirm}
+                disabled={confirming}
               >
                 <span className="btn_text">
-                  <MdStorefront size={14} /> Confirm —{" "}
-                  {selectedVendor?.businessName}
+                  Confirm — {selectedVendor?.businessName}
                 </span>
-                {savingVendor && (
+                {confirming && (
                   <span
                     className="btn_loader"
                     style={{ width: 14, height: 14 }}
@@ -2111,20 +2678,18 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // PHASE: vendor-detail
+  // PHASE: vendor-detail (manage menus)
   // ─────────────────────────────────────────────────────────────
   if (phase === "vendor-detail") {
-    const activeVendor = assignedVendor || selectedVendor;
-    const vendorLabel =
-      activeVendor?.businessName ||
-      cartMenuItems[0]?.vendorId?.slice(0, 8).toUpperCase() ||
+    const activeVendorName =
+      assignedVendor?.businessName ||
+      (cartMenuItems[0] && "Vendor") ||
       "Vendor";
     const atLimit = totalSelected >= MAX_MENU_ITEMS;
 
     return (
       <>
         {sectionHeader}
-        {/* Header bar */}
         <div
           style={{
             display: "flex",
@@ -2165,7 +2730,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
                 whiteSpace: "nowrap",
               }}
             >
-              {vendorLabel}
+              {activeVendorName}
             </div>
           </div>
           <div
@@ -2325,11 +2890,10 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
             marginBottom: 8,
           }}
         >
-          Vendor Menu{" "}
+          Add from Vendor{" "}
           {atLimit && <span style={{ color: "#ef4444" }}>— Limit reached</span>}
         </div>
 
-        {/* Menu search */}
         {vendorMenuItems.length > MENU_PAGE_SIZE && (
           <input
             className="modal-input"
@@ -2350,7 +2914,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
         ) : vendorMenuItems.length === 0 ? (
           <div className="icart_empty_inline">
             <MdRestaurantMenu size={18} style={{ opacity: 0.3 }} />
-            <span>No menu items from this vendor</span>
+            <span>No menu items available</span>
           </div>
         ) : (
           <>
@@ -2363,11 +2927,9 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
                   <div
                     key={item.id}
                     style={{
-                      background: added
-                        ? "var(--bg-hover)"
-                        : pending
-                          ? "var(--bg-active)"
-                          : "var(--bg-hover)",
+                      background: pending
+                        ? "var(--bg-active)"
+                        : "var(--bg-hover)",
                       border: `1px solid ${pending ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
                       borderRadius: 10,
                       overflow: "hidden",
@@ -2528,55 +3090,18 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
                 );
               })}
             </div>
-
-            {/* Menu pagination */}
-            {menuTotalPages > 1 && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  marginTop: 10,
-                }}
-              >
-                <button
-                  className="biz_icon_btn"
-                  onClick={() => setMenuPage((p) => Math.max(1, p - 1))}
-                  disabled={menuPage <= 1}
-                  style={{ width: 28, height: 28 }}
-                >
-                  ‹
-                </button>
-                <span
-                  style={{
-                    fontSize: "0.72rem",
-                    color: "var(--text-muted)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {menuPage} / {menuTotalPages}
-                </span>
-                <button
-                  className="biz_icon_btn"
-                  onClick={() =>
-                    setMenuPage((p) => Math.min(menuTotalPages, p + 1))
-                  }
-                  disabled={menuPage >= menuTotalPages}
-                  style={{ width: 28, height: 28 }}
-                >
-                  ›
-                </button>
-              </div>
-            )}
+            <Pagination
+              page={menuPage}
+              total={menuTotalPages}
+              setPage={setMenuPage}
+            />
           </>
         )}
 
-        {/* Save */}
         {pendingAdd.length > 0 && (
           <div style={{ marginTop: 14 }}>
             <button
-              className={`app_btn app_btn_confirm ${saving ? "btn_loading" : ""}`}
+              className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
               style={{
                 width: "100%",
                 height: 40,
@@ -2603,7 +3128,6 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
           </div>
         )}
 
-        {/* Remove confirmation modal */}
         <Modal
           isOpen={!!confirmRemove}
           onClose={() => setConfirmRemove(null)}
@@ -2620,7 +3144,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
                 Cancel
               </button>
               <button
-                className={`app_btn app_btn_confirm ${removing ? "btn_loading" : ""}`}
+                className={`app_btn app_btn_confirm${removing ? " btn_loading" : ""}`}
                 style={{
                   background: "#ef4444",
                   position: "relative",
