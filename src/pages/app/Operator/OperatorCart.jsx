@@ -944,10 +944,12 @@ export function InventoryTab({ cartId }) {
     try {
       const r = await api.get(SEARCH_URL(q));
       const d = r.data.data;
-      const items = [
-        ...(d?.ingredient || []).map((i) => ({ ...i, _type: "INGREDIENT" })),
-        ...(d?.preps || []).map((i) => ({ ...i, _type: "PREP_ITEM" })),
-      ];
+      // API returns paginated wrapper: { data: [...], total, ... }
+      const rawList = Array.isArray(d) ? d : d?.data || d?.ingredient || [];
+      const items = rawList.map((i) => ({
+        ...i,
+        _type: i._type || (i.unit ? "INGREDIENT" : "PREP_ITEM"),
+      }));
       setSearchResults((p) => ({ ...p, [idx]: items }));
     } catch {
       setSearchResults((p) => ({ ...p, [idx]: [] }));

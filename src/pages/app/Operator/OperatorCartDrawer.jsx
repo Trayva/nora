@@ -88,14 +88,14 @@ export default function OperatorCartDrawer({ cartId, onClose }) {
         <>
           {activeTab === "tasks" && <TasksTab cartId={cartId} />}
           {activeTab === "inventory" && <InventoryTab cartId={cartId} />}
-          {activeTab === "menu" && <MenuTab concepts={cart.concepts} />}
+          {activeTab === "menu" && <MenuTab menuItems={cart.menuItems || []} />}
           {activeTab === "elearning" && (
-            <ELearningTab concepts={cart.concepts} />
+            <ELearningTab menuItems={cart.menuItems || []} />
           )}
           {activeTab === "sales" && (
             <SalesTab
               cartId={cartId}
-              concepts={cart.concepts}
+              menuItems={cart.menuItems || []}
               isOperator={true}
             />
           )}
