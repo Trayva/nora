@@ -268,7 +268,7 @@ export default function IcartHome() {
                         <div className="icart_meta_row">
                           <span className="icart_meta_key">Brand</span>
                           <span className="icart_meta_val">
-                            {cart.vendor.businessName?.length > 0 ? (
+                            {cart.vendor ? (
                               cart.vendor.businessName
                             ) : (
                               <span className="icart_meta_muted">None</span>
