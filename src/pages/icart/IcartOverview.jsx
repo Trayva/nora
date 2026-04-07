@@ -4,6 +4,8 @@ import {
   MdWifi, MdWifiOff, MdLock, MdLockOpen, MdLocationOn, MdEdit, MdAdd,
   MdStorefront, MdSignalCellularAlt, MdPerson, MdVerified, MdExpandMore,
   MdExpandLess, MdImage, MdRestaurantMenu, MdVideocam, MdClose,
+  MdBuild, MdMenuBook, MdArrowBack, MdArrowForward, MdSearch, MdCheck,
+  MdOutlineInventory2,
 } from "react-icons/md";
 import api from "../../api/axios";
 import Modal from "../../components/Modal";
@@ -587,240 +589,511 @@ function InvoicePayModal({ invoice, application, onPaid, onClose }) {
 
 /* ── VendorMenuSection ───────────────────────────────────────── */
 const MAX_MENU_ITEMS = 5;
-const VENDOR_PAGE_SIZE = 6;
-const MENU_PAGE_SIZE = 8;
+const VENDOR_PAGE_SIZE = 8;
 
-const COUNTRIES = [
-  "Afghanistan","Albania","Algeria","Angola","Argentina","Australia","Austria",
-  "Bangladesh","Belgium","Bolivia","Brazil","Cameroon","Canada","Chile","China",
-  "Colombia","Congo","Côte d'Ivoire","Croatia","Czech Republic","Denmark",
-  "Ecuador","Egypt","Ethiopia","Finland","France","Germany","Ghana","Greece",
-  "Guatemala","Honduras","Hungary","India","Indonesia","Iran","Iraq","Ireland",
-  "Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kuwait",
-  "Lebanon","Libya","Malaysia","Mexico","Morocco","Mozambique","Myanmar",
-  "Nepal","Netherlands","New Zealand","Nicaragua","Niger","Nigeria","Norway",
-  "Pakistan","Panama","Peru","Philippines","Poland","Portugal","Romania",
-  "Russia","Saudi Arabia","Senegal","Sierra Leone","Somalia","South Africa",
-  "South Korea","Spain","Sri Lanka","Sudan","Sweden","Switzerland","Syria",
-  "Tanzania","Thailand","Tunisia","Turkey","Uganda","Ukraine","United Arab Emirates",
-  "United Kingdom","United States","Uruguay","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe",
-];
+/* ════════════════════════════════════════════════════════════════
+   BRAND + MENU SELECTION DRAWER
+   Wide drawer: brand list → menu detail tabs → financials
+   ════════════════════════════════════════════════════════════════ */
 
-function VendorMenuSection({ cart, onUpdate, onRefresh }) {
-  // phase: idle | picking-vendor | terms | vendor-detail
-  const [phase, setPhase] = useState("idle");
+/* ── Menu Detail Tabs Drawer ──────────────────────────────────── */
+function MenuDetailDrawer({ menuId, menuName, isSelected, onToggleSelect, selectedCount, onClose }) {
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
 
-  // vendor picking
-  const [vendors, setVendors] = useState([]);
-  const [vendorsLoading, setVendorsLoading] = useState(false);
-  const [vendorPage, setVendorPage] = useState(1);
-  const [vendorSearch, setVendorSearch] = useState("");
-  const [selectedVendor, setSelectedVendor] = useState(null);
+  useEffect(() => {
+    if (!menuId) return;
+    setLoading(true);
+    setSummary(null);
+    api.get(`/vendor/menu/${menuId}/summary`)
+      .then((r) => setSummary(r.data.data))
+      .catch(() => toast.error("Failed to load menu details"))
+      .finally(() => setLoading(false));
+  }, [menuId]);
 
-  // vendor menu preview (inline, not modal)
-  const [browseItems, setBrowseItems] = useState([]);
-  const [browseLoading, setBrowseLoading] = useState(false);
-  const [browsePage, setBrowsePage] = useState(1);
-  const [browseSearch, setBrowseSearch] = useState("");
+  const fmt = (n) => n != null ? Number(n).toLocaleString("en-NG", { maximumFractionDigits: 0 }) : "—";
 
-  // terms
+  const TABS = [
+    { key: "overview",     label: "Overview" },
+    { key: "machinery",    label: "Tools" },
+    { key: "ingredients",  label: "Ingredients" },
+    { key: "preps",        label: "Prep Items" },
+    { key: "sops",         label: "SOPs" },
+  ];
+
+  const item = summary?.menuItem || summary;
+  const concept = summary?.concept || {};
+  const machineries = summary?.machineries || [];
+  const ingredients = summary?.ingredients || [];
+  const prepItems = summary?.prepItems || [];
+  const sops = summary?.sops || item?.sops || [];
+  const recipe = summary?.recipe || item?.recipe || [];
+  // Concept fields fall through to item for backwards compat
+  const displayPackaging = item?.packaging || concept?.packaging;
+  const displayPackagingImage = item?.packagingImage || concept?.packagingImage;
+  const displayServeTo = item?.serveTo || concept?.serveTo;
+  const displayOrigin = item?.origin || concept?.origin;
+  const displayDescription = item?.description || concept?.description;
+  const baseCost = summary?.baseCost;
+
+  const atLimit = selectedCount >= MAX_MENU_ITEMS && !isSelected;
+
+  return (
+    /* Full-screen overlay drawer */
+    <div style={{ position: "fixed", inset: 0, zIndex: 1400, display: "flex", alignItems: "stretch", justifyContent: "flex-end" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)" }} />
+      <div style={{
+        position: "relative", zIndex: 1, width: "min(680px, 96vw)",
+        background: "var(--bg-card)", display: "flex", flexDirection: "column",
+        boxShadow: "-8px 0 40px rgba(0,0,0,0.25)", overflowY: "auto",
+      }}>
+        {/* Header */}
+        <div style={{ position: "sticky", top: 0, zIndex: 2, background: "var(--bg-card)", borderBottom: "1px solid var(--border)", padding: "18px 24px", display: "flex", alignItems: "center", gap: 14 }}>
+          <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: 9, background: "var(--bg-hover)", border: "1px solid var(--border)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", flexShrink: 0 }}>
+            <MdArrowBack size={16} />
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: "1rem", fontWeight: 900, color: "var(--text-heading)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{menuName}</div>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Menu item details</div>
+          </div>
+          {/* Select toggle */}
+          <button
+            onClick={onToggleSelect}
+            disabled={atLimit}
+            style={{
+              height: 38, padding: "0 18px", borderRadius: 10, cursor: atLimit ? "not-allowed" : "pointer",
+              fontFamily: "inherit", fontWeight: 800, fontSize: "0.82rem", flexShrink: 0,
+              display: "inline-flex", alignItems: "center", gap: 7, transition: "all 0.15s",
+              border: `1.5px solid ${isSelected ? "rgba(34,197,94,0.5)" : atLimit ? "var(--border)" : "rgba(203,108,220,0.4)"}`,
+              background: isSelected ? "rgba(34,197,94,0.1)" : atLimit ? "var(--bg-hover)" : "var(--bg-active)",
+              color: isSelected ? "#16a34a" : atLimit ? "var(--text-muted)" : "var(--accent)",
+              opacity: atLimit ? 0.5 : 1,
+            }}
+          >
+            {isSelected ? <><MdCheck size={15} /> Selected</> : atLimit ? "Limit reached" : <><MdAdd size={15} /> Select</>}
+          </button>
+        </div>
+
+        {/* Tab bar */}
+        <div style={{ display: "flex", borderBottom: "1px solid var(--border)", overflowX: "auto", scrollbarWidth: "none", background: "var(--bg-card)", flexShrink: 0 }}>
+          {TABS.map((t) => (
+            <button key={t.key} onClick={() => setActiveTab(t.key)}
+              style={{
+                padding: "12px 18px", background: "transparent", border: "none",
+                borderBottom: `2px solid ${activeTab === t.key ? "var(--accent)" : "transparent"}`,
+                color: activeTab === t.key ? "var(--accent)" : "var(--text-muted)",
+                fontSize: "0.8rem", fontWeight: activeTab === t.key ? 700 : 500,
+                cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit",
+              }}
+            >{t.label}</button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, padding: "20px 24px", overflowY: "auto" }}>
+          {loading ? (
+            <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
+              <div className="page_loader_spinner" style={{ width: 28, height: 28 }} />
+            </div>
+          ) : !summary ? (
+            <div className="icart_empty_inline" style={{ padding: "48px 0" }}>
+              <MdRestaurantMenu size={28} style={{ opacity: 0.25 }} />
+              <span>No details available</span>
+            </div>
+          ) : (
+            <>
+              {/* ── OVERVIEW ── */}
+              {activeTab === "overview" && (
+                <div>
+                  {item?.image && (
+                    <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", marginBottom: 20 }}>
+                      <img src={item.image} alt={item.name} style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }} />
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7))" }} />
+                      <div style={{ position: "absolute", bottom: 16, left: 18, right: 18 }}>
+                        <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "#fff", marginBottom: 4 }}>{item.name}</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {item.ticketTime > 0 && <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 8px", borderRadius: 5, background: "rgba(0,0,0,0.5)", color: "rgba(255,255,255,0.9)" }}>⏱ {item.ticketTime} min</span>}
+                          {displayServeTo && <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 8px", borderRadius: 5, background: "rgba(0,0,0,0.5)", color: "rgba(255,255,255,0.9)" }}>👥 {displayServeTo}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Concept + vendor info */}
+                  {(concept?.name || summary?.vendor?.businessName) && (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+                      {concept?.name && (
+                        <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "4px 11px", borderRadius: 999, background: "var(--bg-active)", color: "var(--accent)", border: "1px solid rgba(203,108,220,0.3)" }}>
+                          📦 {concept.name}
+                        </span>
+                      )}
+                      {summary?.vendor?.businessName && (
+                        <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "4px 11px", borderRadius: 999, background: "var(--bg-hover)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
+                          🏷 {summary.vendor.businessName}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {displayDescription && (
+                    <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.65, marginBottom: 20 }}>{displayDescription}</p>
+                  )}
+
+                  {/* Stats grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10, marginBottom: 20 }}>
+                    {[
+                      { label: "Selling Price", value: item?.sellingPrice > 0 ? `₦${fmt(item.sellingPrice)}` : null, accent: true },
+                      { label: "Recipe Cost", value: baseCost != null ? `₦${fmt(baseCost)}` : item?.recipeCost > 0 ? `₦${fmt(item.recipeCost)}` : null },
+                      { label: "Ticket Time", value: item?.ticketTime > 0 ? `${item.ticketTime} min` : null },
+                      { label: "Serves", value: displayServeTo || null },
+                      { label: "Origin", value: displayOrigin || null },
+                      { label: "Ingredients", value: ingredients.length > 0 ? String(ingredients.length) : null },
+                      { label: "Prep Items", value: prepItems.length > 0 ? String(prepItems.length) : null },
+                      { label: "Tools", value: machineries.length > 0 ? String(machineries.length) : null },
+                    ].filter((s) => s.value).map((s) => (
+                      <div key={s.label} style={{ background: s.accent ? "var(--bg-active)" : "var(--bg-hover)", border: `1px solid ${s.accent ? "rgba(203,108,220,0.2)" : "var(--border)"}`, borderRadius: 12, padding: "12px 14px" }}>
+                        <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{s.label}</div>
+                        <div style={{ fontSize: "0.95rem", fontWeight: 900, color: s.accent ? "var(--accent)" : "var(--text-heading)" }}>{s.value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Packaging */}
+                  {displayPackaging && (
+                    <div style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+                      <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Packaging</div>
+                      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                        {displayPackagingImage && <img src={displayPackagingImage} alt="" style={{ width: 52, height: 52, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />}
+                        <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text-body)", lineHeight: 1.6 }}>{displayPackaging}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tutorial video */}
+                  {item?.tutorialVideo && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Tutorial Video</div>
+                      {(() => {
+                        const src = item.tutorialVideo;
+                        const vimeoMatch = src.match(/vimeo\.com\/(\d+)/);
+                        const ytMatch = src.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                        const embedUrl = vimeoMatch ? `https://player.vimeo.com/video/${vimeoMatch[1]}` : ytMatch ? `https://www.youtube.com/embed/${ytMatch[1]}` : null;
+                        return embedUrl ? (
+                          <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden" }}>
+                            <iframe src={embedUrl} allow="autoplay; fullscreen" allowFullScreen style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }} />
+                          </div>
+                        ) : (
+                          <video src={src} controls style={{ width: "100%", borderRadius: 12, maxHeight: 260 }} />
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Variants */}
+                  {(summary?.variants || item?.variants)?.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>Variants</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {(summary?.variants || item?.variants).map((v, i) => (
+                          <span key={v.id || i} style={{ fontSize: "0.78rem", fontWeight: 700, padding: "6px 14px", borderRadius: 999, background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text-body)" }}>{v.name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recipe steps */}
+                  {recipe.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>Recipe Steps</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                        {recipe.map((step, i) => {
+                          const ing = step.ingredient || step.prepItem;
+                          return (
+                            <div key={step.id || i} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border)", alignItems: "center" }}>
+                              <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--bg-active)", border: "1px solid rgba(203,108,220,0.3)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.62rem", fontWeight: 900, flexShrink: 0 }}>{i + 1}</div>
+                              {ing?.image ? <img src={ing.image} alt="" style={{ width: 32, height: 32, borderRadius: 7, objectFit: "cover", flexShrink: 0 }} /> : null}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-body)" }}>{ing?.name || step.type}</div>
+                                {step.quantity != null && <div style={{ fontSize: "0.68rem", color: "var(--accent)", fontWeight: 700 }}>{step.quantity}{ing?.unit || ""}</div>}
+                                {step.instruction && <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>{step.instruction}</div>}
+                              </div>
+                              <span style={{ fontSize: "0.6rem", fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: step.type === "prep" ? "rgba(59,130,246,0.1)" : "rgba(34,197,94,0.1)", color: step.type === "prep" ? "#3b82f6" : "#16a34a", border: `1px solid ${step.type === "prep" ? "rgba(59,130,246,0.25)" : "rgba(34,197,94,0.25)"}`, flexShrink: 0 }}>{step.type}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── TOOLS / MACHINERY ── */}
+              {activeTab === "machinery" && (
+                <div>
+                  {machineries.length === 0 ? (
+                    <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+                      <MdBuild size={26} style={{ opacity: 0.25 }} />
+                      <span>No machineries listed</span>
+                    </div>
+                  ) : machineries.map((m, i) => {
+                    const mach = m.machinery || m;
+                    return (
+                      <div key={m.id || i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+                        {mach.image ? <img src={mach.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} /> : (
+                          <div style={{ width: 44, height: 44, borderRadius: 10, background: "var(--bg-hover)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <MdBuild size={18} style={{ color: "var(--text-muted)" }} />
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--text-body)" }}>{mach.name}</div>
+                          {mach.manufacturer && <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{mach.manufacturer}</div>}
+                        </div>
+                        {m.quantity > 1 && <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)" }}>× {m.quantity}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ── INGREDIENTS ── */}
+              {activeTab === "ingredients" && (
+                <div>
+                  {ingredients.length === 0 ? (
+                    <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+                      <MdOutlineInventory2 size={26} style={{ opacity: 0.25 }} />
+                      <span>No ingredients listed</span>
+                    </div>
+                  ) : ingredients.map((ing, i) => (
+                    <div key={ing.id || i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+                      {ing.image ? <img src={ing.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} /> : (
+                        <div style={{ width: 44, height: 44, borderRadius: 10, background: "var(--bg-hover)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <MdOutlineInventory2 size={18} style={{ color: "var(--text-muted)" }} />
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--text-body)" }}>{ing.name}</div>
+                        {ing.totalQuantity != null && (
+                          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Total: {ing.totalQuantity} {ing.unit}</div>
+                        )}
+                        {ing.usedIn?.length > 0 && (
+                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{ing.usedIn.map((u) => `${u.source}: ${u.quantity}${ing.unit || ""}`).join(" · ")}</div>
+                        )}
+                      </div>
+                      {ing.cost != null && (
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--text-heading)" }}>₦{fmt(ing.cost)}</div>
+                          <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>{ing.unit}</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* ── PREP ITEMS ── */}
+              {activeTab === "preps" && (
+                <div>
+                  {prepItems.length === 0 ? (
+                    <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+                      <MdRestaurantMenu size={26} style={{ opacity: 0.25 }} />
+                      <span>No prep items listed</span>
+                    </div>
+                  ) : prepItems.map((prep, i) => (
+                    <div key={prep.id || i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 10, background: "linear-gradient(135deg, rgba(203,108,220,0.15), rgba(203,108,220,0.05))", border: "1px solid rgba(203,108,220,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <MdRestaurantMenu size={18} style={{ color: "var(--accent)" }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--text-body)" }}>{prep.name}</div>
+                        {prep.unit && <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{prep.unit}</div>}
+                        {prep.usedIn?.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                            {prep.usedIn.map((u, j) => (
+                              <span key={j} style={{ fontSize: "0.62rem", padding: "1px 6px", borderRadius: 4, background: u.source === "extra" ? "rgba(168,85,247,0.1)" : "var(--bg-hover)", border: `1px solid ${u.source === "extra" ? "rgba(168,85,247,0.25)" : "var(--border)"}`, color: u.source === "extra" ? "#a855f7" : "var(--text-muted)" }}>
+                                {u.source} · {u.quantity}{prep.unit || ""}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {prep.cost != null && (
+                        <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--text-heading)", flexShrink: 0 }}>₦{fmt(prep.cost)}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* ── SOPs ── */}
+              {activeTab === "sops" && (
+                <div>
+                  {sops.length === 0 ? (
+                    <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+                      <MdMenuBook size={26} style={{ opacity: 0.25 }} />
+                      <span>No SOPs defined</span>
+                    </div>
+                  ) : sops.map((sop, i) => (
+                    <div key={sop.id || i} style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px", marginBottom: 10 }}>
+                      <div style={{ fontSize: "0.88rem", fontWeight: 800, color: "var(--text-heading)", marginBottom: 6 }}>{sop.title || sop.name || `Step ${i + 1}`}</div>
+                      {sop.description && <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text-muted)", lineHeight: 1.65 }}>{sop.description}</p>}
+                      {sop.steps?.length > 0 && (
+                        <ol style={{ margin: "10px 0 0", paddingLeft: 20 }}>
+                          {sop.steps.map((step, j) => (
+                            <li key={j} style={{ fontSize: "0.8rem", color: "var(--text-body)", lineHeight: 1.6, marginBottom: 4 }}>{step}</li>
+                          ))}
+                        </ol>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Brand + Menu Selection Drawer ───────────────────────────── */
+function BrandSelectionDrawer({ cart, onClose, onDone }) {
+  // sub-view: "brands" | "financials"
+  const [view, setView] = useState("brands");
+
+  // Brand list
+  const [brands, setBrands] = useState([]);
+  const [brandsLoading, setBrandsLoading] = useState(true);
+  const [brandSearch, setBrandSearch] = useState("");
+
+  // Expanded brand (to show its menus inline)
+  const [expandedBrandId, setExpandedBrandId] = useState(null);
+  const [brandMenus, setBrandMenus] = useState({}); // { [brandId]: { loading, items } }
+
+  // Selection
+  const [selectedBrandId, setSelectedBrandId] = useState(null);
+  const [selectedMenuIds, setSelectedMenuIds] = useState([]); // max 5
+
+  // Menu detail drawer
+  const [detailMenuId, setDetailMenuId] = useState(null);
+  const [detailMenuName, setDetailMenuName] = useState("");
+
+  // Financials
   const [termsData, setTermsData] = useState(null);
   const [termsLoading, setTermsLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-
-  // confirmation + invoice
   const [confirming, setConfirming] = useState(false);
   const [invoiceData, setInvoiceData] = useState(null);
 
-  // vendor-detail (manage existing menus)
-  const [cartMenuItems, setCartMenuItems] = useState(cart.menuItems || []);
-  const [vendorMenuItems, setVendorMenuItems] = useState([]);
-  const [menuLoading, setMenuLoading] = useState(false);
-  const [menuPage, setMenuPage] = useState(1);
-  const [menuSearch, setMenuSearch] = useState("");
-  const [pendingAdd, setPendingAdd] = useState([]);
-  const [markupValues, setMarkupValues] = useState({});
-  const [saving, setSaving] = useState(false);
-  const [confirmRemove, setConfirmRemove] = useState(null);
-  const [removing, setRemoving] = useState(false);
-
-  const assignedVendor = cart.vendor;
   const fmt = (n) => Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
 
-  // ── Fetch vendors ──
-  const fetchVendors = async () => {
-    setVendorsLoading(true);
-    try {
-      const res = await api.get("/vendor/profile");
-      const d = res.data.data;
-      setVendors(Array.isArray(d) ? d : d?.vendors || []);
-    } catch { toast.error("Failed to load vendors"); }
-    finally { setVendorsLoading(false); }
-  };
-
-  // ── Fetch vendor menu for preview (inline) ──
-  const fetchBrowseMenu = async (vendorId) => {
-    setBrowseLoading(true);
-    setBrowseItems([]);
-    setBrowsePage(1);
-    setBrowseSearch("");
-    try {
-      const res = await api.get(`/vendor/menu?vendorId=${vendorId}&page=1&limit=100`);
-      const d = res.data.data;
-      setBrowseItems(Array.isArray(d) ? d : d?.items || d?.menuItems || []);
-    } catch { toast.error("Failed to load menu"); }
-    finally { setBrowseLoading(false); }
-  };
-
-  // ── Auto-fetch menu when vendor is selected ──
+  // ── Load brands ──
   useEffect(() => {
-    if (selectedVendor) fetchBrowseMenu(selectedVendor.id);
-    else { setBrowseItems([]); setBrowseLoading(false); }
-  }, [selectedVendor?.id]);
+    api.get("/vendor/profile")
+      .then((r) => { const d = r.data.data; setBrands(d?.vendors || (Array.isArray(d) ? d : [])); })
+      .catch(() => toast.error("Failed to load brands"))
+      .finally(() => setBrandsLoading(false));
+  }, []);
 
-  // ── Fetch terms ──
-  const fetchTerms = async (country) => {
+  // ── Load menus for a brand ──
+  const loadBrandMenus = async (brandId) => {
+    if (brandMenus[brandId]) return; // already loaded
+    setBrandMenus((p) => ({ ...p, [brandId]: { loading: true, items: [] } }));
+    try {
+      const r = await api.get(`/vendor/menu?vendorId=${brandId}&page=1&limit=100`);
+      const d = r.data.data;
+      const items = d?.items || (Array.isArray(d) ? d : d?.menuItems || d?.data || []);
+      setBrandMenus((p) => ({ ...p, [brandId]: { loading: false, items } }));
+    } catch {
+      setBrandMenus((p) => ({ ...p, [brandId]: { loading: false, items: [] } }));
+    }
+  };
+
+  // ── Toggle brand expand ──
+  const toggleBrand = (brandId) => {
+    if (expandedBrandId === brandId) { setExpandedBrandId(null); return; }
+    setExpandedBrandId(brandId);
+    loadBrandMenus(brandId);
+  };
+
+  // ── Toggle menu selection ──
+  const toggleMenu = (menuId, brandId) => {
+    // Switching brand — clear previous selection
+    if (selectedBrandId && selectedBrandId !== brandId) {
+      setSelectedBrandId(brandId);
+      setSelectedMenuIds([menuId]);
+      return;
+    }
+    setSelectedBrandId(brandId);
+    setSelectedMenuIds((prev) => {
+      if (prev.includes(menuId)) return prev.filter((id) => id !== menuId);
+      if (prev.length >= MAX_MENU_ITEMS) { toast.error(`Max ${MAX_MENU_ITEMS} items`); return prev; }
+      return [...prev, menuId];
+    });
+  };
+
+  // ── Load terms when entering financials ──
+  useEffect(() => {
+    if (view !== "financials") return;
+    const country = cart.location?.country || "";
     if (!country) return;
     setTermsLoading(true);
-    setTermsData(null);
-    setTermsAccepted(false);
-    try {
-      const res = await api.get(`/icartVendorApplication/settings/country/${encodeURIComponent(country)}`);
-      setTermsData(res.data.data);
-    } catch (err) { toast.error(err.response?.data?.message || "No settings found for this country"); }
-    finally { setTermsLoading(false); }
-  };
+    api.get(`/icartVendorApplication/settings/country/${encodeURIComponent(country)}`)
+      .then((r) => setTermsData(r.data.data))
+      .catch((err) => toast.error(err.response?.data?.message || "No brand settings found"))
+      .finally(() => setTermsLoading(false));
+  }, [view]);
 
-  // Auto-load terms when entering terms phase
-  useEffect(() => {
-    if (phase === "terms") fetchTerms(cart.location?.country || "");
-  }, [phase]);
-
-  // ── Confirm vendor ──
+  // ── Confirm brand ──
   const handleConfirm = async () => {
-    if (!termsAccepted) { toast.error("Please accept the terms to continue"); return; }
+    if (!termsAccepted) { toast.error("Accept the terms to continue"); return; }
+    if (!selectedBrandId) { toast.error("Select a brand first"); return; }
     setConfirming(true);
     try {
-      const res = await api.post(`/icart/${cart.id}/change-vendor`, {
-        vendorId: selectedVendor.id,
-        country: cart.location?.country,
-      });
-      const { application, invoice } = res.data.data;
-      setInvoiceData({ application, invoice });
-      onUpdate({ ...cart, vendor: selectedVendor });
-    } catch (err) { toast.error(err.response?.data?.message || "Failed to set brand"); }
-    finally { setConfirming(false); }
+      const res = await api.post(`/icart/${cart.id}/change-vendor`, { vendorId: selectedBrandId });
+      const data = res.data.data;
+      // If backend returns invoice, show it; otherwise go straight to adding menus
+      if (data?.invoice) {
+        setInvoiceData({ invoice: data.invoice, application: data.application });
+      } else {
+        // No invoice needed — add menus directly
+        if (selectedMenuIds.length > 0) {
+          await api.post(`/icart/${cart.id}/menu-items`, {
+            items: selectedMenuIds.map((id) => ({ id, markup: 0 })),
+          });
+        }
+        toast.success("Brand and menu items set!");
+        onDone();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to set brand");
+    } finally {
+      setConfirming(false);
+    }
   };
 
   // ── After payment ──
-  const handlePaid = () => {
-    setInvoiceData(null);
-    setPhase("idle");
-    onRefresh();
-    toast.success("Brand confirmed! You can now manage your menu items.");
-  };
-
-  // ── Open vendor-detail ──
-  const openVendorDetail = () => {
-    setPhase("vendor-detail");
-    const vendorId = assignedVendor?.id || cart.menuItems?.[0]?.vendorId;
-    if (vendorId) {
-      setMenuLoading(true);
-      setVendorMenuItems([]);
-      setMenuPage(1);
-      setMenuSearch("");
-      api.get(`/vendor/menu?vendorId=${vendorId}&page=1&limit=100`)
-        .then((r) => { const d = r.data.data; setVendorMenuItems(Array.isArray(d) ? d : d?.items || d?.menuItems || []); })
-        .catch(() => toast.error("Failed to load menu items"))
-        .finally(() => setMenuLoading(false));
+  const handlePaid = async () => {
+    if (selectedMenuIds.length > 0) {
+      try {
+        await api.post(`/icart/${cart.id}/menu-items`, {
+          items: selectedMenuIds.map((id) => ({ id, markup: 0 })),
+        });
+      } catch { /* silent — menus can be added later */ }
     }
-    setCartMenuItems(cart.menuItems || []);
-    setPendingAdd([]);
-    setMarkupValues({});
+    setInvoiceData(null);
+    toast.success("Brand confirmed!");
+    onDone();
   };
 
-  // ── Menu item selection ──
-  const togglePendingAdd = (item) => {
-    if (isAdded(item.id)) return;
-    setPendingAdd((prev) => {
-      const exists = prev.find((p) => p.id === item.id);
-      if (exists) return prev.filter((p) => p.id !== item.id);
-      if (cartMenuItems.length + prev.length >= MAX_MENU_ITEMS) { toast.error(`Maximum ${MAX_MENU_ITEMS} menu items allowed`); return prev; }
-      return [...prev, { id: item.id, markup: 0 }];
-    });
-    setMarkupValues((prev) => ({ ...prev, [item.id]: prev[item.id] ?? "0" }));
-  };
-
-  const isPending = (id) => pendingAdd.some((p) => p.id === id);
-  const isAdded = (id) => cartMenuItems.some((m) => m.id === id || m.menuItemId === id);
-  const totalSelected = cartMenuItems.length + pendingAdd.length;
-
-  const handleSaveAdditions = async () => {
-    if (!pendingAdd.length) return;
-    setSaving(true);
-    try {
-      const items = pendingAdd.map((p) => ({ id: p.id, markup: Number(markupValues[p.id] || 0) }));
-      await api.post(`/icart/${cart.id}/menu-items`, { items });
-      toast.success(`${items.length} item${items.length !== 1 ? "s" : ""} added`);
-      setPendingAdd([]);
-      setMarkupValues({});
-      const refreshed = await api.get(`/icart/${cart.id}`);
-      const updated = refreshed.data.data;
-      setCartMenuItems(updated.menuItems || []);
-      onUpdate(updated);
-    } catch (err) { toast.error(err.response?.data?.message || "Failed to add items"); }
-    finally { setSaving(false); }
-  };
-
-  const handleRemove = async () => {
-    if (!confirmRemove) return;
-    setRemoving(true);
-    try {
-      await api.delete(`/icart/${cart.id}/menu-items`, { data: { ids: [confirmRemove.id || confirmRemove.menuItemId] } });
-      toast.success("Item removed");
-      setConfirmRemove(null);
-      setCartMenuItems((prev) => prev.filter((m) => m.id !== confirmRemove.id && m.menuItemId !== confirmRemove.id));
-      onRefresh();
-    } catch (err) { toast.error(err.response?.data?.message || "Failed to remove"); }
-    finally { setRemoving(false); }
-  };
-
-  // ── Filtered + paginated lists ──
-  const filteredVendors = vendors.filter((v) => !vendorSearch || v.businessName?.toLowerCase().includes(vendorSearch.toLowerCase()) || v.email?.toLowerCase().includes(vendorSearch.toLowerCase()));
-  const vendorTotalPages = Math.max(1, Math.ceil(filteredVendors.length / VENDOR_PAGE_SIZE));
-  const pagedVendors = filteredVendors.slice((vendorPage - 1) * VENDOR_PAGE_SIZE, vendorPage * VENDOR_PAGE_SIZE);
-
-  const filteredBrowse = browseItems.filter((m) => !browseSearch || m.name?.toLowerCase().includes(browseSearch.toLowerCase()));
-  const browseTotalPages = Math.max(1, Math.ceil(filteredBrowse.length / MENU_PAGE_SIZE));
-  const pagedBrowse = filteredBrowse.slice((browsePage - 1) * MENU_PAGE_SIZE, browsePage * MENU_PAGE_SIZE);
-
-  const filteredMenu = vendorMenuItems.filter((m) => !menuSearch || m.name?.toLowerCase().includes(menuSearch.toLowerCase()));
-  const menuTotalPages = Math.max(1, Math.ceil(filteredMenu.length / MENU_PAGE_SIZE));
-  const pagedMenu = filteredMenu.slice((menuPage - 1) * MENU_PAGE_SIZE, menuPage * MENU_PAGE_SIZE);
-
-  // ── Pagination ──
-  const Pager = ({ page, total, setPage }) => total <= 1 ? null : (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10 }}>
-      <button className="biz_icon_btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} style={{ width: 28, height: 28 }}>‹</button>
-      <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>{page} / {total}</span>
-      <button className="biz_icon_btn" onClick={() => setPage((p) => Math.min(total, p + 1))} disabled={page >= total} style={{ width: 28, height: 28 }}>›</button>
-    </div>
+  const filteredBrands = brands.filter((b) =>
+    !brandSearch.trim() ||
+    b.businessName?.toLowerCase().includes(brandSearch.toLowerCase()) ||
+    (b.brandTagline || b.branding?.tagline)?.toLowerCase().includes(brandSearch.toLowerCase())
   );
 
-  // ── Section title ──
-  const sectionTitle = (
-    <div className="drawer_section_title" style={{ marginTop: 20 }}>
-      <span>Brand & Menu</span>
-      {assignedVendor && phase === "idle" && (
-        <button className="icart_icon_action_btn" style={{ marginLeft: "auto" }}
-          onClick={() => { setPhase("picking-vendor"); fetchVendors(); setVendorSearch(""); setVendorPage(1); }}>
-          <MdEdit size={14} />
-        </button>
-      )}
-    </div>
-  );
+  const selectedBrand = brands.find((b) => b.id === selectedBrandId);
 
-  // ── Invoice modal always on top ──
+  // Invoice modal renders on top
   if (invoiceData) {
     return (
       <InvoicePayModal
@@ -832,436 +1105,714 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE: idle
-  // ═══════════════════════════════════════════════════════════
-  if (phase === "idle") {
-    const hasMenuItems = cart.menuItems?.length > 0;
-    return (
-      <>
-        {sectionTitle}
+  return (
+    <>
+      {/* Main selection drawer */}
+      <div style={{ position: "fixed", inset: 0, zIndex: 1300, display: "flex", alignItems: "stretch", justifyContent: "flex-end" }}>
+        <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)" }} />
+        <div style={{
+          position: "relative", zIndex: 1, width: "min(720px, 96vw)",
+          background: "var(--bg-card)", display: "flex", flexDirection: "column",
+          boxShadow: "-8px 0 40px rgba(0,0,0,0.25)",
+        }}>
 
-        {/* Brand card */}
-        {assignedVendor ? (
-          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden", marginBottom: 10 }}>
-            {/* Brand hero strip */}
-            <div style={{ background: "linear-gradient(135deg, rgba(203,108,220,0.12) 0%, rgba(203,108,220,0.04) 100%)", borderBottom: "1px solid var(--border)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-              {assignedVendor.branding?.logo || assignedVendor.brandLogo
-                ? <img src={assignedVendor.branding?.logo || assignedVendor.brandLogo} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1px solid var(--border)" }} />
-                : <div style={{ width: 42, height: 42, borderRadius: 10, background: "var(--bg-active)", border: "1px solid rgba(203,108,220,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <MdStorefront size={18} style={{ color: "var(--accent)" }} />
-                  </div>
-              }
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "0.92rem", fontWeight: 900, color: "var(--text-heading)", marginBottom: 2 }}>{assignedVendor.businessName || assignedVendor.name}</div>
-                {(assignedVendor.branding?.tagline || assignedVendor.brandTagline) && (
-                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{assignedVendor.branding?.tagline || assignedVendor.brandTagline}</div>
-                )}
+          {/* Header */}
+          <div style={{ flexShrink: 0, borderBottom: "1px solid var(--border)", padding: "20px 24px", display: "flex", alignItems: "center", gap: 14 }}>
+            <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: 9, background: "var(--bg-hover)", border: "1px solid var(--border)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", flexShrink: 0 }}>
+              <MdClose size={16} />
+            </button>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: "1.05rem", fontWeight: 900, color: "var(--text-heading)" }}>
+                {view === "financials" ? "Financials & Terms" : "Choose Brand"}
               </div>
-              <button className="app_btn app_btn_confirm" style={{ height: 34, padding: "0 14px", fontSize: "0.76rem", display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0 }} onClick={openVendorDetail}>
-                <MdRestaurantMenu size={13} /> Manage
-              </button>
+              <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                {view === "financials"
+                  ? `${selectedBrand?.businessName} · ${selectedMenuIds.length} item${selectedMenuIds.length !== 1 ? "s" : ""} selected`
+                  : `${selectedMenuIds.length}/${MAX_MENU_ITEMS} menus selected${selectedBrand ? ` from ${selectedBrand.businessName}` : ""}`
+                }
+              </div>
             </div>
-            {/* Menu items summary strip */}
-            {hasMenuItems && (
-              <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ display: "flex", gap: -6 }}>
-                  {cart.menuItems.slice(0, 4).map((item, i) => {
-                    const img = item.image || item.menuItem?.image;
-                    return img
-                      ? <img key={item.id} src={img} alt="" style={{ width: 26, height: 26, borderRadius: 6, objectFit: "cover", border: "2px solid var(--bg-card)", marginLeft: i > 0 ? -6 : 0, flexShrink: 0 }} />
-                      : <div key={item.id} style={{ width: 26, height: 26, borderRadius: 6, background: "var(--bg-hover)", border: "2px solid var(--bg-card)", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: i > 0 ? -6 : 0, flexShrink: 0 }}>
-                          <MdRestaurantMenu size={11} style={{ color: "var(--text-muted)" }} />
-                        </div>;
-                  })}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-body)" }}>
-                    {cart.menuItems.length} item{cart.menuItems.length !== 1 ? "s" : ""} active
-                  </span>
-                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginLeft: 6 }}>·</span>
-                  <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--accent)", marginLeft: 6 }}>
-                    {MAX_MENU_ITEMS - cart.menuItems.length} slot{MAX_MENU_ITEMS - cart.menuItems.length !== 1 ? "s" : ""} left
-                  </span>
-                </div>
-              </div>
+            {view === "brands" && selectedMenuIds.length > 0 && (
+              <button
+                className="app_btn app_btn_confirm"
+                style={{ height: 40, padding: "0 20px", display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0, fontSize: "0.84rem" }}
+                onClick={() => setView("financials")}
+              >
+                Continue <MdArrowForward size={15} />
+              </button>
+            )}
+            {view === "financials" && (
+              <button
+                onClick={() => setView("brands")}
+                style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: 4, fontFamily: "inherit", flexShrink: 0 }}
+              >
+                ← Back
+              </button>
             )}
           </div>
-        ) : hasMenuItems ? (
-          <div style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 11, padding: "11px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
-            <MdStorefront size={15} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-            <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", flex: 1 }}>No brand profile linked</span>
-            <button className="app_btn app_btn_confirm" style={{ height: 30, padding: "0 12px", fontSize: "0.74rem", display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0 }} onClick={openVendorDetail}>
-              <MdRestaurantMenu size={13} /> Manage
-            </button>
-          </div>
-        ) : (
-          <div className="icart_empty_inline" style={{ flexDirection: "column", gap: 8, padding: "14px 0" }}>
-            <MdStorefront size={22} style={{ opacity: 0.25 }} />
-            <span>No brand selected</span>
-          </div>
-        )}
 
-        <button className="app_btn app_btn_confirm"
-          style={{ height: 36, padding: "0 16px", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: 6 }}
-          onClick={() => { setPhase("picking-vendor"); fetchVendors(); setVendorSearch(""); setVendorPage(1); }}>
-          <MdAdd size={14} /> {assignedVendor || hasMenuItems ? "Change Brand" : "Select Brand"}
-        </button>
-      </>
-    );
-  }
+          {/* ── BRANDS VIEW ── */}
+          {view === "brands" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+              {/* Search */}
+              <div style={{ position: "relative", marginBottom: 20 }}>
+                <MdSearch size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
+                <input className="modal-input" style={{ paddingLeft: 36, height: 42, marginBottom: 0, fontSize: "0.88rem" }}
+                  placeholder="Search brands…" value={brandSearch} onChange={(e) => setBrandSearch(e.target.value)} />
+                {brandSearch && (
+                  <button onClick={() => setBrandSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex" }}>
+                    <MdClose size={14} />
+                  </button>
+                )}
+              </div>
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE: picking-vendor
-  // ═══════════════════════════════════════════════════════════
-  if (phase === "picking-vendor") {
-    return (
-      <>
-        {sectionTitle}
+              {/* Selection summary bar */}
+              {selectedMenuIds.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--bg-active)", border: "1px solid rgba(203,108,220,0.3)", borderRadius: 12, marginBottom: 16 }}>
+                  {(selectedBrand?.branding?.logo || selectedBrand?.brandLogo) ? (
+                    <img src={selectedBrand.branding?.logo || selectedBrand.brandLogo} alt="" style={{ width: 28, height: 28, borderRadius: 7, objectFit: "cover", flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(203,108,220,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <MdStorefront size={14} style={{ color: "var(--accent)" }} />
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--accent)" }}>{selectedBrand?.businessName}</div>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{selectedMenuIds.length} of {MAX_MENU_ITEMS} items selected</div>
+                  </div>
+                  <div style={{ display: "flex", gap: -4 }}>
+                    {selectedMenuIds.slice(0, 5).map((id, i) => {
+                      const allItems = brandMenus[selectedBrandId]?.items || [];
+                      const item = allItems.find((m) => m.id === id);
+                      return item?.image ? (
+                        <img key={id} src={item.image} alt="" style={{ width: 24, height: 24, borderRadius: 6, objectFit: "cover", border: "2px solid var(--bg-card)", marginLeft: i > 0 ? -6 : 0 }} />
+                      ) : null;
+                    })}
+                  </div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--accent)", flexShrink: 0, padding: "4px 10px", background: "rgba(203,108,220,0.15)", borderRadius: 8 }}>
+                    {selectedMenuIds.length}/{MAX_MENU_ITEMS}
+                  </div>
+                </div>
+              )}
 
-        {/* Back + title */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-          <button onClick={() => setPhase("idle")} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: 4, padding: 0, fontFamily: "inherit" }}>← Back</button>
-          <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "var(--text-heading)" }}>Choose Brand</span>
-        </div>
+              {brandsLoading ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+                  <div className="page_loader_spinner" style={{ width: 24, height: 24 }} />
+                </div>
+              ) : filteredBrands.length === 0 ? (
+                <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+                  <MdStorefront size={28} style={{ opacity: 0.25 }} />
+                  <span>No brands found</span>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {filteredBrands.map((brand) => {
+                    const isExpanded = expandedBrandId === brand.id;
+                    const menus = brandMenus[brand.id];
+                    const brandSelected = selectedBrandId === brand.id;
+                    const brandMenuCount = menus?.items?.length ?? null;
 
-        {/* Search */}
-        <input className="modal-input" placeholder="Search brands…" value={vendorSearch}
-          onChange={(e) => { setVendorSearch(e.target.value); setVendorPage(1); }} style={{ marginBottom: 12 }} />
-
-        {/* Brand grid */}
-        {vendorsLoading ? (
-          <div className="drawer_loading"><div className="page_loader_spinner" /></div>
-        ) : (
-          <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {pagedVendors.length === 0
-                ? <div className="icart_empty_inline"><MdStorefront size={18} style={{ opacity: 0.3 }} /><span>No brands found</span></div>
-                : pagedVendors.map((v) => {
-                    const isSel = selectedVendor?.id === v.id;
                     return (
-                      <div key={v.id} onClick={() => { setSelectedVendor(isSel ? null : v); }}
-                        style={{ borderRadius: 13, cursor: "pointer", transition: "all 0.15s", overflow: "hidden", border: `1.5px solid ${isSel ? "var(--accent)" : "var(--border)"}`, background: isSel ? "var(--bg-active)" : "var(--bg-hover)" }}>
+                      <div key={brand.id} style={{
+                        background: brandSelected ? "var(--bg-active)" : "var(--bg-hover)",
+                        border: `1.5px solid ${brandSelected ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                        borderRadius: 16, overflow: "hidden", transition: "all 0.15s",
+                      }}>
                         {/* Brand header row */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 13px" }}>
-                          {v.branding?.logo
-                            ? <img src={v.branding.logo} alt="" style={{ width: 36, height: 36, borderRadius: 9, objectFit: "cover", flexShrink: 0 }} />
-                            : <div style={{ width: 36, height: 36, borderRadius: 9, background: isSel ? "rgba(203,108,220,0.2)" : "var(--bg-card)", border: `1px solid ${isSel ? "rgba(203,108,220,0.3)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                <MdStorefront size={15} style={{ color: isSel ? "var(--accent)" : "var(--text-muted)" }} />
-                              </div>
-                          }
+                        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", cursor: "pointer" }} onClick={() => toggleBrand(brand.id)}>
+                          {(brand.branding?.logo || brand.brandLogo) ? (
+                            <img src={brand.branding?.logo || brand.brandLogo} alt="" style={{ width: 46, height: 46, borderRadius: 11, objectFit: "cover", flexShrink: 0, border: "1px solid var(--border)" }} />
+                          ) : (
+                            <div style={{ width: 46, height: 46, borderRadius: 11, background: brandSelected ? "rgba(203,108,220,0.2)" : "var(--bg-card)", border: `1px solid ${brandSelected ? "rgba(203,108,220,0.3)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <MdStorefront size={20} style={{ color: brandSelected ? "var(--accent)" : "var(--text-muted)" }} />
+                            </div>
+                          )}
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: "0.86rem", fontWeight: 800, color: isSel ? "var(--accent)" : "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.businessName}</div>
-                            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.email}{v.branding?.tagline ? ` · ${v.branding.tagline}` : ""}</div>
+                            <div style={{ fontSize: "0.95rem", fontWeight: 800, color: brandSelected ? "var(--accent)" : "var(--text-heading)", marginBottom: 2 }}>{brand.businessName}</div>
+                            {(brand.branding?.tagline || brand.brandTagline) && <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brand.branding?.tagline || brand.brandTagline}</div>}
+                            {brandMenuCount !== null && <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>{brandMenuCount} menu item{brandMenuCount !== 1 ? "s" : ""}</div>}
                           </div>
-                          <div style={{ width: 22, height: 22, borderRadius: "50%", border: `2px solid ${isSel ? "var(--accent)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: isSel ? "var(--accent)" : "transparent", transition: "all 0.15s" }}>
-                            {isSel && <MdVerified size={12} style={{ color: "#fff" }} />}
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                            {brandSelected && selectedMenuIds.length > 0 && (
+                              <span style={{ fontSize: "0.68rem", fontWeight: 800, padding: "3px 9px", borderRadius: 999, background: "rgba(203,108,220,0.15)", color: "var(--accent)", border: "1px solid rgba(203,108,220,0.3)" }}>
+                                {selectedMenuIds.length} selected
+                              </span>
+                            )}
+                            {isExpanded ? <MdExpandLess size={18} style={{ color: "var(--text-muted)" }} /> : <MdExpandMore size={18} style={{ color: "var(--text-muted)" }} />}
                           </div>
                         </div>
 
-                        {/* Inline menu preview — always shown when selected */}
-                        {isSel && (
-                          <div style={{ borderTop: `1px solid rgba(203,108,220,0.2)`, background: "rgba(203,108,220,0.04)" }}>
-                            {/* Menu search */}
-                            {browseItems.length > 4 && (
-                              <div style={{ padding: "8px 13px 0" }}>
-                                <input className="modal-input" placeholder="Search menu…" value={browseSearch}
-                                  onChange={(e) => { setBrowseSearch(e.target.value); setBrowsePage(1); }}
-                                  style={{ height: 32, fontSize: "0.78rem", marginBottom: 0 }} />
+                        {/* Menu list — collapsible */}
+                        {isExpanded && (
+                          <div style={{ borderTop: "1px solid var(--border)", background: "var(--bg-card)" }}>
+                            {menus?.loading ? (
+                              <div style={{ display: "flex", justifyContent: "center", padding: "24px 0" }}>
+                                <div className="page_loader_spinner" style={{ width: 18, height: 18 }} />
+                              </div>
+                            ) : !menus?.items?.length ? (
+                              <div className="icart_empty_inline" style={{ padding: "24px 0" }}>
+                                <MdRestaurantMenu size={20} style={{ opacity: 0.25 }} />
+                                <span>No menu items</span>
+                              </div>
+                            ) : (
+                              <div style={{ padding: "10px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+                                <div style={{ fontSize: "0.62rem", fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: brandSelected ? "var(--accent)" : "var(--text-muted)", marginBottom: 4 }}>
+                                  Menu · {menus.items.length} item{menus.items.length !== 1 ? "s" : ""}
+                                </div>
+                                {menus.items.map((item) => {
+                                  const isSel = selectedMenuIds.includes(item.id) && selectedBrandId === brand.id;
+                                  const atLimit = selectedMenuIds.length >= MAX_MENU_ITEMS && !isSel;
+                                  return (
+                                    <div key={item.id}
+                                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: isSel ? "var(--bg-active)" : "var(--bg-hover)", border: `1.5px solid ${isSel ? "rgba(203,108,220,0.4)" : "var(--border)"}`, borderRadius: 11, opacity: atLimit ? 0.5 : 1, transition: "all 0.12s" }}
+                                    >
+                                      {/* Image */}
+                                      {item.image ? (
+                                        <img src={item.image} alt="" style={{ width: 38, height: 38, borderRadius: 9, objectFit: "cover", flexShrink: 0 }} />
+                                      ) : (
+                                        <div style={{ width: 38, height: 38, borderRadius: 9, background: "var(--bg-card)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                          <MdRestaurantMenu size={16} style={{ color: "var(--text-muted)" }} />
+                                        </div>
+                                      )}
+                                      {/* Info */}
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: "0.84rem", fontWeight: 700, color: isSel ? "var(--accent)" : "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+                                        <div style={{ display: "flex", gap: 8, marginTop: 2, alignItems: "center" }}>
+                                          {item.sellingPrice > 0 && <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)" }}>₦{fmt(item.sellingPrice)}</span>}
+                                          {item.ticketTime > 0 && <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>⏱ {item.ticketTime}min</span>}
+                                        </div>
+                                      </div>
+                                      {/* Actions */}
+                                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                                        {/* View details */}
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setDetailMenuId(item.id); setDetailMenuName(item.name); }}
+                                          style={{ width: 32, height: 32, borderRadius: 8, background: "var(--bg-hover)", border: "1px solid var(--border)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}
+                                          title="View details"
+                                        >
+                                          <MdExpandMore size={15} />
+                                        </button>
+                                        {/* Select toggle */}
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); if (!atLimit) toggleMenu(item.id, brand.id); }}
+                                          disabled={atLimit}
+                                          style={{ width: 32, height: 32, borderRadius: 8, background: isSel ? "var(--accent)" : "var(--bg-hover)", border: `1px solid ${isSel ? "var(--accent)" : "var(--border)"}`, cursor: atLimit ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: isSel ? "#fff" : "var(--text-muted)" }}
+                                          title={isSel ? "Deselect" : "Select"}
+                                        >
+                                          {isSel ? <MdCheck size={16} /> : <MdAdd size={15} />}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
-                            <div style={{ padding: "8px 13px 10px" }}>
-                              {browseLoading ? (
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", color: "var(--text-muted)", fontSize: "0.76rem" }}>
-                                  <div className="page_loader_spinner" style={{ width: 14, height: 14 }} /> Loading menu…
-                                </div>
-                              ) : browseItems.length === 0 ? (
-                                <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", padding: "8px 0", textAlign: "center" }}>No menu items</div>
-                              ) : (
-                                <>
-                                  {/* Menu items as compact chips */}
-                                  <div style={{ fontSize: "0.6rem", fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--accent)", marginBottom: 8 }}>
-                                    Menu Preview · {browseItems.length} item{browseItems.length !== 1 ? "s" : ""}
-                                  </div>
-                                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                                    {pagedBrowse.map((item) => (
-                                      <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 10px", background: "var(--bg-card)", borderRadius: 9, border: "1px solid var(--border)" }}>
-                                        {item.image
-                                          ? <img src={item.image} alt="" style={{ width: 30, height: 30, borderRadius: 7, objectFit: "cover", flexShrink: 0 }} />
-                                          : <div style={{ width: 30, height: 30, borderRadius: 7, background: "var(--bg-hover)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MdRestaurantMenu size={12} style={{ color: "var(--text-muted)" }} /></div>
-                                        }
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                          <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                                          {item.description && <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.description}</div>}
-                                        </div>
-                                        {item.sellingPrice > 0 && <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--text-heading)", flexShrink: 0 }}>₦{fmt(item.sellingPrice)}</div>}
-                                      </div>
-                                    ))}
-                                  </div>
-                                  <Pager page={browsePage} total={browseTotalPages} setPage={setBrowsePage} />
-                                </>
-                              )}
-                            </div>
-                            {/* Proceed button */}
-                            <div style={{ padding: "0 13px 12px" }}>
-                              <button className="app_btn app_btn_confirm"
-                                style={{ width: "100%", height: 38, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.82rem" }}
-                                onClick={(e) => { e.stopPropagation(); setPhase("terms"); }}>
-                                Proceed to Terms →
-                              </button>
-                            </div>
                           </div>
                         )}
                       </div>
                     );
-                  })
-              }
+                  })}
+                </div>
+              )}
             </div>
-            <Pager page={vendorPage} total={vendorTotalPages} setPage={setVendorPage} />
-          </>
-        )}
-      </>
-    );
-  }
+          )}
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE: terms
-  // ═══════════════════════════════════════════════════════════
-  if (phase === "terms") {
-    const country = cart.location?.country || "";
-    return (
-      <>
-        {sectionTitle}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-          <button onClick={() => setPhase("picking-vendor")} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: 4, padding: 0, fontFamily: "inherit" }}>← Back</button>
-          <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "var(--text-heading)" }}>Terms & Payments</span>
-        </div>
-
-        {/* Selected brand recap */}
-        {selectedVendor && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", background: "var(--bg-active)", border: "1px solid rgba(203,108,220,0.3)", borderRadius: 11, marginBottom: 14 }}>
-            {selectedVendor.branding?.logo
-              ? <img src={selectedVendor.branding.logo} alt="" style={{ width: 30, height: 30, borderRadius: 7, objectFit: "cover", flexShrink: 0 }} />
-              : <div style={{ width: 30, height: 30, borderRadius: 7, background: "rgba(203,108,220,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MdStorefront size={14} style={{ color: "var(--accent)" }} /></div>
-            }
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--accent)" }}>{selectedVendor.businessName}</div>
-              <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{browseItems.length} menu item{browseItems.length !== 1 ? "s" : ""}</div>
-            </div>
-            <MdVerified size={16} style={{ color: "var(--accent)", flexShrink: 0 }} />
-          </div>
-        )}
-
-        {/* Country indicator */}
-        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 12, padding: "8px 12px", background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 9 }}>
-          <MdLocationOn size={14} style={{ color: "var(--accent)", flexShrink: 0 }} />
-          <span style={{ fontSize: "0.78rem", color: "var(--text-body)", fontWeight: 600 }}>{country || "No location set on this iCart"}</span>
-        </div>
-
-        {termsLoading && <div className="drawer_loading"><div className="page_loader_spinner" /></div>}
-
-        {!termsLoading && !termsData && (
-          <div className="icart_empty_inline" style={{ flexDirection: "column", gap: 6, padding: "12px 0" }}>
-            <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", textAlign: "center" }}>
-              {country ? `No brand settings found for ${country}.` : "Set a location on this iCart first."}
-            </span>
-          </div>
-        )}
-
-        {termsData && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {termsData.payments?.length > 0 && (
-              <div style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
-                <div style={{ fontSize: "0.62rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 10 }}>Payment Schedule</div>
-                {termsData.payments.map((p, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, paddingBottom: i < termsData.payments.length - 1 ? 8 : 0, marginBottom: i < termsData.payments.length - 1 ? 8 : 0, borderBottom: i < termsData.payments.length - 1 ? "1px solid var(--border)" : "none" }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-body)", marginBottom: 2 }}>{p.title}</div>
-                      {p.description && <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{p.description}</div>}
-                      <div style={{ display: "flex", gap: 5, marginTop: 3 }}>
-                        {p.recurring && <span style={{ fontSize: "0.6rem", fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "rgba(59,130,246,0.1)", color: "#3b82f6", border: "1px solid rgba(59,130,246,0.25)" }}>Recurring</span>}
-                        {p.refundable && <span style={{ fontSize: "0.6rem", fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "rgba(34,197,94,0.1)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.25)" }}>Refundable</span>}
-                      </div>
+          {/* ── FINANCIALS VIEW ── */}
+          {view === "financials" && (
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+              {/* Selected brand recap */}
+              {selectedBrand && (
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--bg-active)", border: "1px solid rgba(203,108,220,0.3)", borderRadius: 14, marginBottom: 20 }}>
+                  {(selectedBrand.branding?.logo || selectedBrand.brandLogo) ? (
+                    <img src={selectedBrand.branding?.logo || selectedBrand.brandLogo} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 42, height: 42, borderRadius: 10, background: "rgba(203,108,220,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <MdStorefront size={18} style={{ color: "var(--accent)" }} />
                     </div>
-                    <div style={{ fontSize: "0.96rem", fontWeight: 900, color: "var(--accent)", flexShrink: 0 }}>{termsData.currency} {fmt(p.amount)}</div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "0.9rem", fontWeight: 900, color: "var(--accent)" }}>{selectedBrand.businessName}</div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{selectedMenuIds.length} menu item{selectedMenuIds.length !== 1 ? "s" : ""} selected</div>
                   </div>
-                ))}
-              </div>
-            )}
+                  <MdVerified size={18} style={{ color: "var(--accent)", flexShrink: 0 }} />
+                </div>
+              )}
 
-            {termsData.terms && (
-              <div style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
-                <div style={{ fontSize: "0.62rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 8 }}>Terms & Conditions</div>
-                <div style={{ fontSize: "0.78rem", color: "var(--text-body)", lineHeight: 1.65, maxHeight: 150, overflowY: "auto", paddingRight: 4 }}>{termsData.terms}</div>
-              </div>
-            )}
+              {/* Selected menu items preview */}
+              {selectedMenuIds.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: "0.62rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 10 }}>Selected Menu Items</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {selectedMenuIds.map((id) => {
+                      const allItems = brandMenus[selectedBrandId]?.items || [];
+                      const item = allItems.find((m) => m.id === id);
+                      if (!item) return null;
+                      return (
+                        <div key={id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 10 }}>
+                          {item.image ? <img src={item.image} alt="" style={{ width: 32, height: 32, borderRadius: 7, objectFit: "cover", flexShrink: 0 }} /> : <div style={{ width: 32, height: 32, borderRadius: 7, background: "var(--bg-card)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MdRestaurantMenu size={14} style={{ color: "var(--text-muted)" }} /></div>}
+                          <span style={{ flex: 1, fontSize: "0.82rem", fontWeight: 700, color: "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</span>
+                          {item.sellingPrice > 0 && <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--text-muted)", flexShrink: 0 }}>₦{fmt(item.sellingPrice)}</span>}
+                          <span style={{ fontSize: "0.6rem", fontWeight: 800, padding: "2px 7px", borderRadius: 999, background: "rgba(34,197,94,0.1)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.25)", flexShrink: 0 }}>Selected</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
-            {/* Accept — prominent checkbox */}
-            <button onClick={() => setTermsAccepted((v) => !v)}
-              style={{ display: "flex", alignItems: "center", gap: 12, background: termsAccepted ? "var(--bg-active)" : "var(--bg-hover)", border: `2px solid ${termsAccepted ? "var(--accent)" : "var(--border)"}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
-              <div style={{ width: 22, height: 22, borderRadius: 7, border: `2px solid ${termsAccepted ? "var(--accent)" : "var(--border)"}`, background: termsAccepted ? "var(--accent)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>
-                {termsAccepted && <MdVerified size={14} style={{ color: "#fff" }} />}
+              {/* Country indicator */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 13px", background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 10, marginBottom: 16 }}>
+                <MdLocationOn size={14} style={{ color: "var(--accent)", flexShrink: 0 }} />
+                <span style={{ fontSize: "0.8rem", color: "var(--text-body)", fontWeight: 600 }}>
+                  {cart.location?.country || "No location set on this iCart"}
+                </span>
               </div>
-              <div style={{ flex: 1, textAlign: "left" }}>
-                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: termsAccepted ? "var(--accent)" : "var(--text-body)" }}>I agree to the terms and conditions</div>
-                <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>For {termsData.country} · {termsData.currency}</div>
-              </div>
-            </button>
 
-            <div style={{ display: "flex", gap: 8 }}>
-              <button className="app_btn app_btn_cancel" style={{ flex: 1, height: 42 }} onClick={() => setPhase("picking-vendor")} disabled={confirming}>Back</button>
-              <button className={`app_btn app_btn_confirm${confirming ? " btn_loading" : ""}`}
-                style={{ flex: 2, height: 42, position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                onClick={handleConfirm} disabled={confirming}>
-                <span className="btn_text">Confirm — {selectedVendor?.businessName}</span>
-                {confirming && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
-              </button>
+              {termsLoading && <div className="drawer_loading"><div className="page_loader_spinner" /></div>}
+
+              {!termsLoading && !termsData && (
+                <div style={{ padding: "14px", background: "rgba(234,179,8,0.07)", border: "1px solid rgba(234,179,8,0.2)", borderRadius: 10, fontSize: "0.8rem", color: "#ca8a04", marginBottom: 16 }}>
+                  {cart.location?.country ? `No brand settings found for ${cart.location.country}.` : "Set a location on this iCart first to load terms."}
+                </div>
+              )}
+
+              {termsData && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {termsData.payments?.length > 0 && (
+                    <div style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 14, padding: "14px 16px" }}>
+                      <div style={{ fontSize: "0.62rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 12 }}>Payment Schedule</div>
+                      {termsData.payments.map((p, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, paddingBottom: i < termsData.payments.length - 1 ? 10 : 0, marginBottom: i < termsData.payments.length - 1 ? 10 : 0, borderBottom: i < termsData.payments.length - 1 ? "1px solid var(--border)" : "none" }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-body)", marginBottom: 3 }}>{p.title}</div>
+                            {p.description && <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{p.description}</div>}
+                            <div style={{ display: "flex", gap: 5, marginTop: 5 }}>
+                              {p.recurring && <span style={{ fontSize: "0.6rem", fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "rgba(59,130,246,0.1)", color: "#3b82f6", border: "1px solid rgba(59,130,246,0.25)" }}>Recurring</span>}
+                              {p.refundable && <span style={{ fontSize: "0.6rem", fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "rgba(34,197,94,0.1)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.25)" }}>Refundable</span>}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: "1rem", fontWeight: 900, color: "var(--accent)", flexShrink: 0 }}>{termsData.currency} {fmt(p.amount)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {termsData.terms && (
+                    <div style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 14, padding: "14px 16px" }}>
+                      <div style={{ fontSize: "0.62rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 10 }}>Terms & Conditions</div>
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-body)", lineHeight: 1.7, maxHeight: 180, overflowY: "auto", paddingRight: 4 }}>{termsData.terms}</div>
+                    </div>
+                  )}
+
+                  {/* Accept checkbox */}
+                  <button onClick={() => setTermsAccepted((v) => !v)}
+                    style={{ display: "flex", alignItems: "center", gap: 14, background: termsAccepted ? "var(--bg-active)" : "var(--bg-hover)", border: `2px solid ${termsAccepted ? "var(--accent)" : "var(--border)"}`, borderRadius: 14, padding: "14px 16px", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
+                    <div style={{ width: 24, height: 24, borderRadius: 8, border: `2px solid ${termsAccepted ? "var(--accent)" : "var(--border)"}`, background: termsAccepted ? "var(--accent)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>
+                      {termsAccepted && <MdCheck size={15} style={{ color: "#fff" }} />}
+                    </div>
+                    <div style={{ flex: 1, textAlign: "left" }}>
+                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: termsAccepted ? "var(--accent)" : "var(--text-body)" }}>I agree to the terms and conditions</div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>For {termsData.country} · {termsData.currency}</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Confirm button */}
+              <div style={{ marginTop: 24 }}>
+                <button
+                  className={`app_btn app_btn_confirm${confirming ? " btn_loading" : ""}`}
+                  style={{ width: "100%", height: 48, position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: "0.92rem", fontWeight: 800 }}
+                  onClick={handleConfirm}
+                  disabled={confirming || !selectedBrandId}
+                >
+                  <span className="btn_text">Confirm — {selectedBrand?.businessName}</span>
+                  {confirming && <span className="btn_loader" style={{ width: 16, height: 16 }} />}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-      </>
+          )}
+        </div>
+      </div>
+
+      {/* Menu detail drawer — renders on top */}
+      {detailMenuId && (
+        <MenuDetailDrawer
+          menuId={detailMenuId}
+          menuName={detailMenuName}
+          isSelected={selectedMenuIds.includes(detailMenuId) && selectedBrandId === expandedBrandId}
+          onToggleSelect={() => {
+            const brandId = expandedBrandId;
+            if (brandId) toggleMenu(detailMenuId, brandId);
+          }}
+          selectedCount={selectedMenuIds.length}
+          onClose={() => { setDetailMenuId(null); setDetailMenuName(""); }}
+        />
+      )}
+    </>
+  );
+}
+
+/* ── Beautiful Idle Card ──────────────────────────────────────── */
+function BrandIdleCard({ cart, onChangeBrand, onManageMenu }) {
+  const assignedVendor = cart.vendor;
+  const menuItems = cart.menuItems || [];
+  const fmt = (n) => Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+
+  if (!assignedVendor && menuItems.length === 0) {
+    return (
+      <div style={{
+        border: "2px dashed var(--border)", borderRadius: 16, padding: "28px 20px",
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center",
+        background: "var(--bg-hover)", cursor: "pointer", transition: "all 0.15s",
+      }}
+        onClick={onChangeBrand}
+        onMouseEnter={(e) => e.currentTarget.style.borderColor = "rgba(203,108,220,0.4)"}
+        onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--border)"}
+      >
+        <div style={{ width: 52, height: 52, borderRadius: 14, background: "var(--bg-active)", border: "1px solid rgba(203,108,220,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <MdStorefront size={24} style={{ color: "var(--accent)", opacity: 0.7 }} />
+        </div>
+        <div>
+          <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "var(--text-heading)", marginBottom: 4 }}>No Brand Selected</div>
+          <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>Tap to choose a brand and menu items for this iCart</div>
+        </div>
+        <button className="app_btn app_btn_confirm" style={{ height: 38, padding: "0 20px", display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.82rem" }}>
+          <MdAdd size={15} /> Select Brand
+        </button>
+      </div>
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE: vendor-detail (manage menus)
-  // ═══════════════════════════════════════════════════════════
-  if (phase === "vendor-detail") {
-    const activeVendorName = assignedVendor?.businessName || (cartMenuItems[0] && "Vendor") || "Vendor";
-    const atLimit = totalSelected >= MAX_MENU_ITEMS;
+  const brandColor = assignedVendor?.brandColor;
+  const gradientBg = brandColor
+    ? `linear-gradient(135deg, ${brandColor}22 0%, ${brandColor}08 100%)`
+    : "linear-gradient(135deg, rgba(203,108,220,0.1) 0%, rgba(203,108,220,0.03) 100%)";
+  const borderCol = brandColor ? `${brandColor}44` : "rgba(203,108,220,0.2)";
 
-    return (
-      <>
-        {sectionTitle}
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-          <button onClick={() => { setPhase("idle"); setPendingAdd([]); setMarkupValues({}); }}
-            style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: 4, padding: 0, fontFamily: "inherit" }}>← Back</button>
+  return (
+    <div style={{ background: "var(--bg-card)", border: `1px solid ${borderCol}`, borderRadius: 18, overflow: "hidden" }}>
+      {/* Gradient brand header */}
+      <div style={{ background: gradientBg, padding: "18px 18px 14px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {assignedVendor?.brandLogo ? (
+            <img src={assignedVendor.brandLogo} alt="" style={{ width: 48, height: 48, borderRadius: 12, objectFit: "cover", flexShrink: 0, border: "2px solid rgba(255,255,255,0.15)", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }} />
+          ) : (
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <MdStorefront size={22} style={{ color: brandColor || "var(--accent)" }} />
+            </div>
+          )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: "0.88rem", fontWeight: 900, color: "var(--text-heading)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeVendorName}</div>
-          </div>
-          <div style={{ fontSize: "0.68rem", fontWeight: 800, padding: "3px 10px", borderRadius: 999, background: atLimit ? "rgba(239,68,68,0.1)" : "var(--bg-active)", color: atLimit ? "#ef4444" : "var(--accent)", border: `1px solid ${atLimit ? "rgba(239,68,68,0.25)" : "rgba(203,108,220,0.3)"}`, flexShrink: 0 }}>
-            {totalSelected}/{MAX_MENU_ITEMS} items
-          </div>
-        </div>
-
-        {/* Active items */}
-        {cartMenuItems.length > 0 && (
-          <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: "0.6rem", fontWeight: 900, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 8 }}>Active Items</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {cartMenuItems.map((item) => {
-                const name = item.name || item.menuItem?.name || "Item";
-                const img = item.image || item.menuItem?.image;
-                const price = item.sellingPrice || item.menuItem?.sellingPrice || 0;
-                return (
-                  <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 11 }}>
-                    {img ? <img src={img} alt="" style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
-                      : <div style={{ width: 34, height: 34, borderRadius: 8, background: "var(--bg-card)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MdRestaurantMenu size={13} style={{ color: "var(--text-muted)" }} /></div>
-                    }
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
-                      {price > 0 && <div style={{ fontSize: "0.67rem", color: "var(--text-muted)" }}>₦{fmt(price)}</div>}
-                    </div>
-                    <span style={{ fontSize: "0.6rem", fontWeight: 800, padding: "2px 7px", borderRadius: 999, background: "rgba(34,197,94,0.1)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.25)", flexShrink: 0 }}>Active</span>
-                    <button onClick={() => setConfirmRemove(item)} style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <MdClose size={13} />
-                    </button>
-                  </div>
-                );
-              })}
+            <div style={{ fontSize: "1.05rem", fontWeight: 900, color: "var(--text-heading)", marginBottom: 2 }}>
+              {assignedVendor?.businessName || assignedVendor?.name || "Brand"}
             </div>
+            {(assignedVendor?.brandTagline) && (
+              <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{assignedVendor.brandTagline}</div>
+            )}
           </div>
-        )}
+          <button
+            onClick={onChangeBrand}
+            style={{ height: 34, padding: "0 13px", borderRadius: 9, border: "1px solid rgba(203,108,220,0.3)", background: "rgba(203,108,220,0.08)", color: "var(--accent)", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: "0.76rem", display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0 }}
+          >
+            <MdEdit size={13} /> Change Brand
+          </button>
+        </div>
+      </div>
 
-        {/* Add from brand */}
-        <div style={{ fontSize: "0.6rem", fontWeight: 900, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 8 }}>
-          Add from Brand {atLimit && <span style={{ color: "#ef4444" }}>— Limit reached</span>}
+      {/* Menu items strip */}
+      {menuItems.length > 0 ? (
+        <div style={{ padding: "14px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div>
+              <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--text-heading)" }}>{menuItems.length} Menu Item{menuItems.length !== 1 ? "s" : ""}</span>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginLeft: 8 }}>· {MAX_MENU_ITEMS - menuItems.length} slot{MAX_MENU_ITEMS - menuItems.length !== 1 ? "s" : ""} left</span>
+            </div>
+            <button onClick={onManageMenu}
+              style={{ height: 30, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-hover)", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: "0.72rem", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <MdRestaurantMenu size={12} /> Manage
+            </button>
+          </div>
+          {/* Menu cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 8 }}>
+            {menuItems.map((item, idx) => {
+              const name = item.name || item.menuItem?.name || "Item";
+              const img = item.image || item.menuItem?.image;
+              const price = item.sellingPrice || item.menuItem?.sellingPrice || 0;
+              return (
+                <div key={item.id || idx} style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 11, overflow: "hidden" }}>
+                  {img ? (
+                    <img src={img} alt={name} style={{ width: "100%", height: 64, objectFit: "cover", display: "block" }} />
+                  ) : (
+                    <div style={{ width: "100%", height: 64, background: "var(--bg-active)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <MdRestaurantMenu size={20} style={{ color: "var(--text-muted)", opacity: 0.4 }} />
+                    </div>
+                  )}
+                  <div style={{ padding: "7px 8px" }}>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
+                    {price > 0 && <div style={{ fontSize: "0.68rem", color: "var(--accent)", fontWeight: 700 }}>₦{fmt(price)}</div>}
+                  </div>
+                </div>
+              );
+            })}
+            {/* Empty slots */}
+            {Array.from({ length: MAX_MENU_ITEMS - menuItems.length }).map((_, i) => (
+              <div key={`empty-${i}`} style={{ border: "1.5px dashed var(--border)", borderRadius: 11, height: 100, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4 }}>
+                <MdAdd size={16} style={{ color: "var(--text-muted)" }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: "16px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "var(--bg-hover)", border: "1px dashed var(--border)", borderRadius: 11, cursor: "pointer" }} onClick={onChangeBrand}>
+            <MdAdd size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>No menu items — click to select</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Manage Existing Menu (after brand is set) ────────────────── */
+function ManageMenuDrawer({ cart, onClose, onRefresh }) {
+  const assignedVendor = cart.vendor;
+  const [cartMenuItems, setCartMenuItems] = useState(cart.menuItems || []);
+  const [vendorMenuItems, setVendorMenuItems] = useState([]);
+  const [menuLoading, setMenuLoading] = useState(false);
+  const [menuSearch, setMenuSearch] = useState("");
+  const [menuPage, setMenuPage] = useState(1);
+  const [pendingAdd, setPendingAdd] = useState([]);
+  const [markupValues, setMarkupValues] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(null);
+  const [removing, setRemoving] = useState(false);
+  const fmt = (n) => Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+  const MENU_PAGE_SIZE = 8;
+
+  useEffect(() => {
+    const vendorId = assignedVendor?.id || cart.menuItems?.[0]?.vendorId;
+    if (!vendorId) return;
+    setMenuLoading(true);
+    api.get(`/vendor/menu?vendorId=${vendorId}&page=1&limit=100`)
+      .then((r) => { const d = r.data.data; setVendorMenuItems(d?.items || (Array.isArray(d) ? d : d?.menuItems || d?.data || [])); })
+      .catch(() => toast.error("Failed to load menu items"))
+      .finally(() => setMenuLoading(false));
+  }, []);
+
+  const isPending = (id) => pendingAdd.some((p) => p.id === id);
+  const isAdded = (id) => cartMenuItems.some((m) => m.id === id || m.menuItemId === id);
+  const totalSelected = cartMenuItems.length + pendingAdd.length;
+  const atLimit = totalSelected >= MAX_MENU_ITEMS;
+
+  const togglePending = (item) => {
+    if (isAdded(item.id)) return;
+    setPendingAdd((prev) => {
+      const exists = prev.find((p) => p.id === item.id);
+      if (exists) return prev.filter((p) => p.id !== item.id);
+      if (atLimit) { toast.error(`Max ${MAX_MENU_ITEMS} items`); return prev; }
+      return [...prev, { id: item.id, markup: 0 }];
+    });
+    setMarkupValues((p) => ({ ...p, [item.id]: p[item.id] ?? "0" }));
+  };
+
+  const handleSave = async () => {
+    if (!pendingAdd.length) return;
+    setSaving(true);
+    try {
+      await api.post(`/icart/${cart.id}/menu-items`, { items: pendingAdd.map((p) => ({ id: p.id, markup: Number(markupValues[p.id] || 0) })) });
+      toast.success(`${pendingAdd.length} item${pendingAdd.length !== 1 ? "s" : ""} added`);
+      setPendingAdd([]); setMarkupValues({});
+      const refreshed = await api.get(`/icart/${cart.id}`);
+      setCartMenuItems(refreshed.data.data?.menuItems || []);
+      onRefresh();
+    } catch (err) { toast.error(err.response?.data?.message || "Failed"); }
+    finally { setSaving(false); }
+  };
+
+  const handleRemove = async () => {
+    if (!confirmRemove) return;
+    setRemoving(true);
+    try {
+      await api.delete(`/icart/${cart.id}/menu-items`, { data: { ids: [confirmRemove.id || confirmRemove.menuItemId] } });
+      toast.success("Item removed");
+      setConfirmRemove(null);
+      setCartMenuItems((p) => p.filter((m) => m.id !== confirmRemove.id && m.menuItemId !== confirmRemove.id));
+      onRefresh();
+    } catch (err) { toast.error(err.response?.data?.message || "Failed"); }
+    finally { setRemoving(false); }
+  };
+
+  const filteredMenu = vendorMenuItems.filter((m) => !menuSearch || m.name?.toLowerCase().includes(menuSearch.toLowerCase()));
+  const totalPages = Math.max(1, Math.ceil(filteredMenu.length / MENU_PAGE_SIZE));
+  const pagedMenu = filteredMenu.slice((menuPage - 1) * MENU_PAGE_SIZE, menuPage * MENU_PAGE_SIZE);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1300, display: "flex", alignItems: "stretch", justifyContent: "flex-end" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)" }} />
+      <div style={{ position: "relative", zIndex: 1, width: "min(560px, 96vw)", background: "var(--bg-card)", display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.25)" }}>
+        {/* Header */}
+        <div style={{ flexShrink: 0, borderBottom: "1px solid var(--border)", padding: "18px 22px", display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: 9, background: "var(--bg-hover)", border: "1px solid var(--border)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", flexShrink: 0 }}>
+            <MdClose size={16} />
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--text-heading)" }}>Manage Menu</div>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{totalSelected}/{MAX_MENU_ITEMS} items</div>
+          </div>
+          <div style={{ fontSize: "0.72rem", fontWeight: 800, padding: "4px 10px", borderRadius: 999, background: atLimit ? "rgba(239,68,68,0.1)" : "var(--bg-active)", color: atLimit ? "#ef4444" : "var(--accent)", border: `1px solid ${atLimit ? "rgba(239,68,68,0.25)" : "rgba(203,108,220,0.3)"}` }}>
+            {totalSelected}/{MAX_MENU_ITEMS}
+          </div>
         </div>
 
-        {vendorMenuItems.length > MENU_PAGE_SIZE && (
-          <input className="modal-input" placeholder="Search menu…" value={menuSearch}
-            onChange={(e) => { setMenuSearch(e.target.value); setMenuPage(1); }} style={{ marginBottom: 8 }} />
-        )}
-
-        {menuLoading ? (
-          <div className="drawer_loading"><div className="page_loader_spinner" /></div>
-        ) : vendorMenuItems.length === 0 ? (
-          <div className="icart_empty_inline"><MdRestaurantMenu size={18} style={{ opacity: 0.3 }} /><span>No menu items available</span></div>
-        ) : (
-          <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {pagedMenu.map((item) => {
-                const added = isAdded(item.id);
-                const pending = isPending(item.id);
-                const disabled = !pending && !added && atLimit;
-                return (
-                  <div key={item.id}
-                    style={{ background: pending ? "var(--bg-active)" : "var(--bg-hover)", border: `1.5px solid ${pending ? "rgba(203,108,220,0.4)" : "var(--border)"}`, borderRadius: 11, overflow: "hidden", opacity: disabled ? 0.45 : 1, transition: "all 0.12s" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px" }}>
-                      {item.image ? <img src={item.image} alt="" style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
-                        : <div style={{ width: 34, height: 34, borderRadius: 8, background: "var(--bg-card)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MdRestaurantMenu size={13} style={{ color: "var(--text-muted)" }} /></div>
-                      }
+        <div style={{ flex: 1, overflowY: "auto", padding: "18px 22px" }}>
+          {/* Active items */}
+          {cartMenuItems.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: "0.62rem", fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 10 }}>Active Items</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {cartMenuItems.map((item) => {
+                  const name = item.name || item.menuItem?.name || "Item";
+                  const img = item.image || item.menuItem?.image;
+                  const price = item.sellingPrice || item.menuItem?.sellingPrice || 0;
+                  return (
+                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 11 }}>
+                      {img ? <img src={img} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} /> : <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--bg-card)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MdRestaurantMenu size={14} style={{ color: "var(--text-muted)" }} /></div>}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: "0.82rem", fontWeight: 700, color: pending ? "var(--accent)" : "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                        {item.sellingPrice > 0 && <div style={{ fontSize: "0.67rem", color: "var(--text-muted)" }}>₦{fmt(item.sellingPrice)}</div>}
+                        <div style={{ fontSize: "0.84rem", fontWeight: 700, color: "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
+                        {price > 0 && <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>₦{fmt(price)}</div>}
                       </div>
-                      {added
-                        ? <span style={{ fontSize: "0.6rem", fontWeight: 800, padding: "2px 7px", borderRadius: 999, background: "rgba(34,197,94,0.1)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.25)", flexShrink: 0 }}>Added</span>
-                        : <button onClick={() => !disabled && togglePendingAdd(item)}
-                            style={{ width: 28, height: 28, borderRadius: 7, background: pending ? "var(--accent)" : "var(--bg-card)", border: `1px solid ${pending ? "var(--accent)" : "var(--border)"}`, color: pending ? "#fff" : "var(--text-muted)", cursor: disabled ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <span style={{ fontSize: "0.6rem", fontWeight: 800, padding: "2px 7px", borderRadius: 999, background: "rgba(34,197,94,0.1)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.25)", flexShrink: 0 }}>Active</span>
+                      <button onClick={() => setConfirmRemove(item)} style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <MdClose size={13} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Add from brand */}
+          <div style={{ fontSize: "0.62rem", fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 10 }}>
+            Add from Brand {atLimit && <span style={{ color: "#ef4444" }}>— Limit reached</span>}
+          </div>
+
+          {vendorMenuItems.length > MENU_PAGE_SIZE && (
+            <input className="modal-input" placeholder="Search menu…" value={menuSearch}
+              onChange={(e) => { setMenuSearch(e.target.value); setMenuPage(1); }} style={{ marginBottom: 10 }} />
+          )}
+
+          {menuLoading ? (
+            <div className="drawer_loading"><div className="page_loader_spinner" /></div>
+          ) : vendorMenuItems.length === 0 ? (
+            <div className="icart_empty_inline"><MdRestaurantMenu size={18} style={{ opacity: 0.3 }} /><span>No menu items available</span></div>
+          ) : (
+            <>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {pagedMenu.map((item) => {
+                  const added = isAdded(item.id);
+                  const pending = isPending(item.id);
+                  const disabled = !pending && !added && atLimit;
+                  return (
+                    <div key={item.id} style={{ background: pending ? "var(--bg-active)" : "var(--bg-hover)", border: `1.5px solid ${pending ? "rgba(203,108,220,0.4)" : "var(--border)"}`, borderRadius: 11, overflow: "hidden", opacity: disabled ? 0.45 : 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px" }}>
+                        {item.image ? <img src={item.image} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} /> : <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--bg-card)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MdRestaurantMenu size={14} style={{ color: "var(--text-muted)" }} /></div>}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.84rem", fontWeight: 700, color: pending ? "var(--accent)" : "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+                          {item.sellingPrice > 0 && <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>₦{fmt(item.sellingPrice)}</div>}
+                        </div>
+                        {added ? <span style={{ fontSize: "0.6rem", fontWeight: 800, padding: "2px 7px", borderRadius: 999, background: "rgba(34,197,94,0.1)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.25)", flexShrink: 0 }}>Added</span>
+                          : <button onClick={() => !disabled && togglePending(item)} style={{ width: 28, height: 28, borderRadius: 7, background: pending ? "var(--accent)" : "var(--bg-card)", border: `1px solid ${pending ? "var(--accent)" : "var(--border)"}`, color: pending ? "#fff" : "var(--text-muted)", cursor: disabled ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             {pending ? <MdClose size={13} /> : <MdAdd size={14} />}
                           </button>
-                      }
-                    </div>
-                    {pending && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "0 12px 9px" }}>
-                        <label style={{ fontSize: "0.66rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap" }}>Markup %</label>
-                        <input className="modal-input" type="number" min="0" placeholder="0"
-                          value={markupValues[item.id] ?? "0"}
-                          onChange={(e) => setMarkupValues((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                          style={{ height: 30, fontSize: "0.78rem", marginBottom: 0, flex: 1, maxWidth: 90 }} />
+                        }
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <Pager page={menuPage} total={menuTotalPages} setPage={setMenuPage} />
-          </>
-        )}
+                      {pending && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "0 12px 9px" }}>
+                          <label style={{ fontSize: "0.66rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap" }}>Markup %</label>
+                          <input className="modal-input" type="number" min="0" placeholder="0" value={markupValues[item.id] ?? "0"} onChange={(e) => setMarkupValues((p) => ({ ...p, [item.id]: e.target.value }))} style={{ height: 30, fontSize: "0.78rem", marginBottom: 0, flex: 1, maxWidth: 90 }} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {totalPages > 1 && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 12 }}>
+                  <button className="biz_icon_btn" onClick={() => setMenuPage((p) => Math.max(1, p - 1))} disabled={menuPage <= 1} style={{ width: 28, height: 28 }}>‹</button>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>{menuPage}/{totalPages}</span>
+                  <button className="biz_icon_btn" onClick={() => setMenuPage((p) => Math.min(totalPages, p + 1))} disabled={menuPage >= totalPages} style={{ width: 28, height: 28 }}>›</button>
+                </div>
+              )}
+            </>
+          )}
 
-        {pendingAdd.length > 0 && (
-          <div style={{ marginTop: 14 }}>
-            <button className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
-              style={{ width: "100%", height: 42, position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: "0.86rem" }}
-              onClick={handleSaveAdditions} disabled={saving}>
-              <span className="btn_text">Add {pendingAdd.length} Item{pendingAdd.length !== 1 ? "s" : ""} to iCart</span>
-              {saving && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
-            </button>
-          </div>
-        )}
-
-        <Modal isOpen={!!confirmRemove} onClose={() => setConfirmRemove(null)}
-          title="Remove Menu Item"
-          description={`Remove "${confirmRemove?.name || confirmRemove?.menuItem?.name}" from this iCart?`}>
-          <div className="modal-body">
-            <div className="modal-footer">
-              <button className="app_btn app_btn_cancel" type="button" onClick={() => setConfirmRemove(null)}>Cancel</button>
-              <button className={`app_btn app_btn_confirm${removing ? " btn_loading" : ""}`}
-                style={{ background: "#ef4444", position: "relative", minWidth: 110 }}
-                onClick={handleRemove} disabled={removing}>
-                <span className="btn_text">Remove</span>
-                {removing && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
+          {pendingAdd.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <button className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+                style={{ width: "100%", height: 42, position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                onClick={handleSave} disabled={saving}>
+                <span className="btn_text">Add {pendingAdd.length} Item{pendingAdd.length !== 1 ? "s" : ""}</span>
+                {saving && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
               </button>
             </div>
-          </div>
-        </Modal>
-      </>
-    );
-  }
+          )}
+        </div>
+      </div>
 
-  return null;
+      <Modal isOpen={!!confirmRemove} onClose={() => setConfirmRemove(null)} title="Remove Menu Item"
+        description={`Remove "${confirmRemove?.name || confirmRemove?.menuItem?.name}" from this iCart?`}>
+        <div className="modal-body">
+          <div className="modal-footer">
+            <button className="app_btn app_btn_cancel" onClick={() => setConfirmRemove(null)}>Cancel</button>
+            <button className={`app_btn app_btn_confirm${removing ? " btn_loading" : ""}`}
+              style={{ background: "#ef4444", position: "relative", minWidth: 110 }}
+              onClick={handleRemove} disabled={removing}>
+              <span className="btn_text">Remove</span>
+              {removing && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/* ── VendorMenuSection (root) ─────────────────────────────────── */
+function VendorMenuSection({ cart, onUpdate, onRefresh }) {
+  const [showBrandDrawer, setShowBrandDrawer] = useState(false);
+  const [showManageDrawer, setShowManageDrawer] = useState(false);
+
+  return (
+    <>
+      <div className="drawer_section_title" style={{ marginTop: 20 }}>
+        <span>Brand & Menu</span>
+      </div>
+
+      <BrandIdleCard
+        cart={cart}
+        onChangeBrand={() => setShowBrandDrawer(true)}
+        onManageMenu={() => setShowManageDrawer(true)}
+      />
+
+      {showBrandDrawer && (
+        <BrandSelectionDrawer
+          cart={cart}
+          onClose={() => setShowBrandDrawer(false)}
+          onDone={() => { setShowBrandDrawer(false); onRefresh(); }}
+        />
+      )}
+
+      {showManageDrawer && (
+        <ManageMenuDrawer
+          cart={cart}
+          onClose={() => setShowManageDrawer(false)}
+          onRefresh={() => { onRefresh(); }}
+        />
+      )}
+    </>
+  );
 }
 
 
@@ -1425,4 +1976,4 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
       {showLiveStream && <LiveStreamModal onClose={() => setShowLiveStream(false)} />}
     </div>
   );
-} 
+}

@@ -129,7 +129,6 @@ export default function IcartHome() {
     fetchAll();
   }, []);
 
-  
   // When a cart is updated from inside the drawer, sync it back to the list
   const handleCartUpdate = (updatedCart) => {
     setIcarts((prev) =>
@@ -254,23 +253,23 @@ export default function IcartHome() {
                       </div>
 
                       <div className="icart_item_meta">
-                        {cart?.status !=='PURCHASED'?
+                        {cart?.status !== "PURCHASED" ? (
+                          <div className="icart_meta_row">
+                            <span className="icart_meta_key">Contract</span>
+                            <span className="icart_meta_val">
+                              {cart.contract?.contractStatus || (
+                                <span className="icart_meta_muted">
+                                  Not started
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        ) : null}
                         <div className="icart_meta_row">
-                          <span className="icart_meta_key">Contract</span>
+                          <span className="icart_meta_key">Brand</span>
                           <span className="icart_meta_val">
-                            {cart.contract?.contractStatus || (
-                              <span className="icart_meta_muted">
-                                Not started
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                          :null}
-                        <div className="icart_meta_row">
-                          <span className="icart_meta_key">Brands</span>
-                          <span className="icart_meta_val">
-                            {cart.concepts?.length > 0 ? (
-                              cart.concepts.length
+                            {cart.vendor.businessName?.length > 0 ? (
+                              cart.vendor.businessName
                             ) : (
                               <span className="icart_meta_muted">None</span>
                             )}
