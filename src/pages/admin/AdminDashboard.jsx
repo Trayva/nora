@@ -130,7 +130,14 @@ export default function AdminDashboard() {
 
   // State edit / delete
   const [editingState, setEditingState] = useState(null);
-  const [editStateForm, setEditStateForm] = useState({ name: "", code: "", country: "", currency: "", notes: "", status: "" });
+  const [editStateForm, setEditStateForm] = useState({
+    name: "",
+    code: "",
+    country: "",
+    currency: "",
+    notes: "",
+    status: "",
+  });
   const [savingState, setSavingState] = useState(false);
   const [confirmDeleteState, setConfirmDeleteState] = useState(null);
   const [deletingState, setDeletingState] = useState(null);
@@ -349,15 +356,20 @@ export default function AdminDashboard() {
   };
 
   const handleUpdateState = async () => {
-    if (!editStateForm.currency.trim()) return toast.error("Currency is required");
+    if (!editStateForm.currency.trim())
+      return toast.error("Currency is required");
     setSavingState(true);
     try {
       await api.patch(`/config/state/${editingState.id}`, {
-        ...(editStateForm.name.trim()    && { name:     editStateForm.name.trim() }),
-        ...(editStateForm.code.trim()    && { code:     editStateForm.code.trim() }),
-        ...(editStateForm.country.trim() && { country:  editStateForm.country.trim() }),
-        ...(editStateForm.status         && { status:   editStateForm.status }),
-        ...(editStateForm.notes.trim()   && { notes:    editStateForm.notes.trim() }),
+        ...(editStateForm.name.trim() && { name: editStateForm.name.trim() }),
+        ...(editStateForm.code.trim() && { code: editStateForm.code.trim() }),
+        ...(editStateForm.country.trim() && {
+          country: editStateForm.country.trim(),
+        }),
+        ...(editStateForm.status && { status: editStateForm.status }),
+        ...(editStateForm.notes.trim() && {
+          notes: editStateForm.notes.trim(),
+        }),
         currency: editStateForm.currency.trim(),
       });
       toast.success("State updated");
@@ -978,7 +990,6 @@ export default function AdminDashboard() {
         <div className="admin_two_col" style={{ marginBottom: 16 }}>
           <AdminSalesFormula />
           <AdminVendorApplicationSettings />
-
         </div>
         <AdminContractSettings />
       </div>
@@ -1142,36 +1153,104 @@ export default function AdminDashboard() {
                 {editingState?.id === state.id ? (
                   /* Inline edit form */
                   <div className="admin_form_card" style={{ marginBottom: 8 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: 12,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
+                          color: "var(--text-heading)",
+                        }}
+                      >
                         Edit {state.name}
                       </span>
-                      <button className="biz_icon_btn" onClick={() => setEditingState(null)}>
+                      <button
+                        className="biz_icon_btn"
+                        onClick={() => setEditingState(null)}
+                      >
                         <MdClose size={13} />
                       </button>
                     </div>
-                    <div className="admin_form_grid" style={{ marginBottom: 8 }}>
+                    <div
+                      className="admin_form_grid"
+                      style={{ marginBottom: 8 }}
+                    >
                       <div className="form-field" style={{ marginBottom: 0 }}>
                         <label className="modal-label">Name</label>
-                        <input className="modal-input" value={editStateForm.name} onChange={(e) => setEditStateForm((p) => ({ ...p, name: e.target.value }))} />
+                        <input
+                          className="modal-input"
+                          value={editStateForm.name}
+                          onChange={(e) =>
+                            setEditStateForm((p) => ({
+                              ...p,
+                              name: e.target.value,
+                            }))
+                          }
+                        />
                       </div>
                       <div className="form-field" style={{ marginBottom: 0 }}>
                         <label className="modal-label">Code</label>
-                        <input className="modal-input" placeholder="e.g. LAG" value={editStateForm.code} onChange={(e) => setEditStateForm((p) => ({ ...p, code: e.target.value }))} />
+                        <input
+                          className="modal-input"
+                          placeholder="e.g. LAG"
+                          value={editStateForm.code}
+                          onChange={(e) =>
+                            setEditStateForm((p) => ({
+                              ...p,
+                              code: e.target.value,
+                            }))
+                          }
+                        />
                       </div>
                       <div className="form-field" style={{ marginBottom: 0 }}>
                         <label className="modal-label">Country</label>
-                        <CountrySelect value={editStateForm.country} onChange={(e) => setEditStateForm((p) => ({ ...p, country: e.target.value }))} />
+                        <CountrySelect
+                          value={editStateForm.country}
+                          onChange={(e) =>
+                            setEditStateForm((p) => ({
+                              ...p,
+                              country: e.target.value,
+                            }))
+                          }
+                        />
                       </div>
                       <div className="form-field" style={{ marginBottom: 0 }}>
                         <label className="modal-label">Currency *</label>
-                        <input className="modal-input" placeholder="e.g. NGN" value={editStateForm.currency} onChange={(e) => setEditStateForm((p) => ({ ...p, currency: e.target.value }))} />
+                        <input
+                          className="modal-input"
+                          placeholder="e.g. NGN"
+                          value={editStateForm.currency}
+                          onChange={(e) =>
+                            setEditStateForm((p) => ({
+                              ...p,
+                              currency: e.target.value,
+                            }))
+                          }
+                        />
                       </div>
                     </div>
-                    <div className="admin_form_grid" style={{ marginBottom: 10 }}>
+                    <div
+                      className="admin_form_grid"
+                      style={{ marginBottom: 10 }}
+                    >
                       <div className="form-field" style={{ marginBottom: 0 }}>
                         <label className="modal-label">Status</label>
-                        <select className="modal-input" value={editStateForm.status} onChange={(e) => setEditStateForm((p) => ({ ...p, status: e.target.value }))}>
+                        <select
+                          className="modal-input"
+                          value={editStateForm.status}
+                          onChange={(e) =>
+                            setEditStateForm((p) => ({
+                              ...p,
+                              status: e.target.value,
+                            }))
+                          }
+                        >
                           <option value="">— no change —</option>
                           <option value="ACTIVE">ACTIVE</option>
                           <option value="PENDING">PENDING</option>
@@ -1180,34 +1259,80 @@ export default function AdminDashboard() {
                       </div>
                       <div className="form-field" style={{ marginBottom: 0 }}>
                         <label className="modal-label">Notes</label>
-                        <input className="modal-input" placeholder="Optional" value={editStateForm.notes} onChange={(e) => setEditStateForm((p) => ({ ...p, notes: e.target.value }))} />
+                        <input
+                          className="modal-input"
+                          placeholder="Optional"
+                          value={editStateForm.notes}
+                          onChange={(e) =>
+                            setEditStateForm((p) => ({
+                              ...p,
+                              notes: e.target.value,
+                            }))
+                          }
+                        />
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                      <button className="app_btn app_btn_cancel" style={{ height: 34 }} onClick={() => setEditingState(null)}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      <button
+                        className="app_btn app_btn_cancel"
+                        style={{ height: 34 }}
+                        onClick={() => setEditingState(null)}
+                      >
                         Cancel
                       </button>
                       <button
                         className={`app_btn app_btn_confirm${savingState ? " btn_loading" : ""}`}
-                        style={{ height: 34, minWidth: 80, position: "relative" }}
+                        style={{
+                          height: 34,
+                          minWidth: 80,
+                          position: "relative",
+                        }}
                         onClick={handleUpdateState}
                         disabled={savingState}
                       >
                         <span className="btn_text">Save</span>
-                        {savingState && <span className="btn_loader" style={{ width: 12, height: 12 }} />}
+                        {savingState && (
+                          <span
+                            className="btn_loader"
+                            style={{ width: 12, height: 12 }}
+                          />
+                        )}
                       </button>
                     </div>
                   </div>
                 ) : (
                   /* Normal state row */
                   <div className="admin_drawer_row">
-                    <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(22,163,74,0.1)", border: "1px solid rgba(22,163,74,0.2)", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontWeight: 800, fontSize: "0.7rem" }}>
+                    <div
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 9,
+                        background: "rgba(22,163,74,0.1)",
+                        border: "1px solid rgba(22,163,74,0.2)",
+                        color: "#16a34a",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        fontWeight: 800,
+                        fontSize: "0.7rem",
+                      }}
+                    >
                       {state.code || state.name?.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="admin_drawer_info">
                       <div className="admin_drawer_name">{state.name}</div>
                       <div className="admin_drawer_sub">
-                        {[state.country, state.currency, state.status].filter(Boolean).join(" · ")}
+                        {[state.country, state.currency, state.status]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
@@ -1250,30 +1375,85 @@ export default function AdminDashboard() {
 
       {/* Confirm delete state modal */}
       {confirmDeleteState && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 1400, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1400,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <div
             onClick={() => setConfirmDeleteState(null)}
-            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)" }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(0,0,0,0.55)",
+              backdropFilter: "blur(3px)",
+            }}
           />
-          <div style={{ position: "relative", zIndex: 1, background: "var(--bg-card)", borderRadius: 16, padding: "24px", width: "min(360px, 92vw)", boxShadow: "0 16px 48px rgba(0,0,0,0.3)" }}>
-            <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-heading)", marginBottom: 8 }}>
+          <div
+            style={{
+              position: "relative",
+              zIndex: 1,
+              background: "var(--bg-card)",
+              borderRadius: 16,
+              padding: "24px",
+              width: "min(360px, 92vw)",
+              boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.95rem",
+                fontWeight: 800,
+                color: "var(--text-heading)",
+                marginBottom: 8,
+              }}
+            >
               Delete State
             </div>
-            <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 20 }}>
-              Delete <strong style={{ color: "var(--text-body)" }}>{confirmDeleteState.name}</strong>? This cannot be undone.
+            <div
+              style={{
+                fontSize: "0.82rem",
+                color: "var(--text-muted)",
+                marginBottom: 20,
+              }}
+            >
+              Delete{" "}
+              <strong style={{ color: "var(--text-body)" }}>
+                {confirmDeleteState.name}
+              </strong>
+              ? This cannot be undone.
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="app_btn app_btn_cancel" style={{ flex: 1, height: 40 }} onClick={() => setConfirmDeleteState(null)}>
+              <button
+                className="app_btn app_btn_cancel"
+                style={{ flex: 1, height: 40 }}
+                onClick={() => setConfirmDeleteState(null)}
+              >
                 Cancel
               </button>
               <button
                 className={`app_btn app_btn_confirm${deletingState ? " btn_loading" : ""}`}
-                style={{ flex: 1, height: 40, background: "#ef4444", position: "relative" }}
+                style={{
+                  flex: 1,
+                  height: 40,
+                  background: "#ef4444",
+                  position: "relative",
+                }}
                 onClick={() => handleDeleteState(confirmDeleteState.id)}
                 disabled={!!deletingState}
               >
                 <span className="btn_text">Delete</span>
-                {deletingState && <span className="btn_loader" style={{ width: 13, height: 13 }} />}
+                {deletingState && (
+                  <span
+                    className="btn_loader"
+                    style={{ width: 13, height: 13 }}
+                  />
+                )}
               </button>
             </div>
           </div>
