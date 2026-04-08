@@ -13,6 +13,8 @@ import {
   MdCircle,
   MdArrowForward,
   MdOutlineTrendingUp,
+  MdEdit,
+  MdDelete,
 } from "react-icons/md";
 import { LuPlus } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
@@ -125,6 +127,13 @@ export default function AdminDashboard() {
     currency: "",
   });
   const [savingLocation, setSavingLocation] = useState(false);
+
+  // State edit / delete
+  const [editingState, setEditingState] = useState(null);
+  const [editStateForm, setEditStateForm] = useState({ name: "", code: "", country: "", currency: "", notes: "", status: "" });
+  const [savingState, setSavingState] = useState(false);
+  const [confirmDeleteState, setConfirmDeleteState] = useState(null);
+  const [deletingState, setDeletingState] = useState(null);
 
   const fetchStats = async () => {
     setStatsLoading(true);
@@ -336,6 +345,42 @@ export default function AdminDashboard() {
       toast.error(err.response?.data?.message || "Failed");
     } finally {
       setSavingLocation(false);
+    }
+  };
+
+  const handleUpdateState = async () => {
+    if (!editStateForm.currency.trim()) return toast.error("Currency is required");
+    setSavingState(true);
+    try {
+      await api.patch(`/config/state/${editingState.id}`, {
+        ...(editStateForm.name.trim()    && { name:     editStateForm.name.trim() }),
+        ...(editStateForm.code.trim()    && { code:     editStateForm.code.trim() }),
+        ...(editStateForm.country.trim() && { country:  editStateForm.country.trim() }),
+        ...(editStateForm.status         && { status:   editStateForm.status }),
+        ...(editStateForm.notes.trim()   && { notes:    editStateForm.notes.trim() }),
+        currency: editStateForm.currency.trim(),
+      });
+      toast.success("State updated");
+      setEditingState(null);
+      openDrawer("locations");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update state");
+    } finally {
+      setSavingState(false);
+    }
+  };
+
+  const handleDeleteState = async (id) => {
+    setDeletingState(id);
+    try {
+      await api.delete(`/config/state/${id}`);
+      toast.success("State deleted");
+      setConfirmDeleteState(null);
+      openDrawer("locations");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete state");
+    } finally {
+      setDeletingState(null);
     }
   };
 
@@ -954,13 +999,13 @@ export default function AdminDashboard() {
         onClose={() => {
           setDrawer(null);
           setShowLocationForm(false);
+          setEditingState(null);
         }}
         title={cfg.title || ""}
         description={cfg.description || ""}
         width={500}
       >
         {/* Location create form */}
-
         {drawer === "locations" && (
           <div style={{ marginBottom: 16 }}>
             {showLocationForm ? (
@@ -1089,12 +1134,151 @@ export default function AdminDashboard() {
           <div className="admin_empty">
             <p style={{ margin: 0, fontSize: "0.82rem" }}>Nothing here yet.</p>
           </div>
+        ) : drawer === "locations" ? (
+          /* ── Location rows with edit/delete ── */
+          <div className="admin_drawer_list">
+            {drawerItems.map((state) => (
+              <div key={state.id}>
+                {editingState?.id === state.id ? (
+                  /* Inline edit form */
+                  <div className="admin_form_card" style={{ marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                        Edit {state.name}
+                      </span>
+                      <button className="biz_icon_btn" onClick={() => setEditingState(null)}>
+                        <MdClose size={13} />
+                      </button>
+                    </div>
+                    <div className="admin_form_grid" style={{ marginBottom: 8 }}>
+                      <div className="form-field" style={{ marginBottom: 0 }}>
+                        <label className="modal-label">Name</label>
+                        <input className="modal-input" value={editStateForm.name} onChange={(e) => setEditStateForm((p) => ({ ...p, name: e.target.value }))} />
+                      </div>
+                      <div className="form-field" style={{ marginBottom: 0 }}>
+                        <label className="modal-label">Code</label>
+                        <input className="modal-input" placeholder="e.g. LAG" value={editStateForm.code} onChange={(e) => setEditStateForm((p) => ({ ...p, code: e.target.value }))} />
+                      </div>
+                      <div className="form-field" style={{ marginBottom: 0 }}>
+                        <label className="modal-label">Country</label>
+                        <CountrySelect value={editStateForm.country} onChange={(e) => setEditStateForm((p) => ({ ...p, country: e.target.value }))} />
+                      </div>
+                      <div className="form-field" style={{ marginBottom: 0 }}>
+                        <label className="modal-label">Currency *</label>
+                        <input className="modal-input" placeholder="e.g. NGN" value={editStateForm.currency} onChange={(e) => setEditStateForm((p) => ({ ...p, currency: e.target.value }))} />
+                      </div>
+                    </div>
+                    <div className="admin_form_grid" style={{ marginBottom: 10 }}>
+                      <div className="form-field" style={{ marginBottom: 0 }}>
+                        <label className="modal-label">Status</label>
+                        <select className="modal-input" value={editStateForm.status} onChange={(e) => setEditStateForm((p) => ({ ...p, status: e.target.value }))}>
+                          <option value="">— no change —</option>
+                          <option value="ACTIVE">ACTIVE</option>
+                          <option value="PENDING">PENDING</option>
+                          <option value="SUSPENDED">SUSPENDED</option>
+                        </select>
+                      </div>
+                      <div className="form-field" style={{ marginBottom: 0 }}>
+                        <label className="modal-label">Notes</label>
+                        <input className="modal-input" placeholder="Optional" value={editStateForm.notes} onChange={(e) => setEditStateForm((p) => ({ ...p, notes: e.target.value }))} />
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                      <button className="app_btn app_btn_cancel" style={{ height: 34 }} onClick={() => setEditingState(null)}>
+                        Cancel
+                      </button>
+                      <button
+                        className={`app_btn app_btn_confirm${savingState ? " btn_loading" : ""}`}
+                        style={{ height: 34, minWidth: 80, position: "relative" }}
+                        onClick={handleUpdateState}
+                        disabled={savingState}
+                      >
+                        <span className="btn_text">Save</span>
+                        {savingState && <span className="btn_loader" style={{ width: 12, height: 12 }} />}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Normal state row */
+                  <div className="admin_drawer_row">
+                    <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(22,163,74,0.1)", border: "1px solid rgba(22,163,74,0.2)", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontWeight: 800, fontSize: "0.7rem" }}>
+                      {state.code || state.name?.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="admin_drawer_info">
+                      <div className="admin_drawer_name">{state.name}</div>
+                      <div className="admin_drawer_sub">
+                        {[state.country, state.currency, state.status].filter(Boolean).join(" · ")}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+                      <button
+                        className="biz_icon_btn"
+                        title="Edit"
+                        onClick={() => {
+                          setEditingState(state);
+                          setEditStateForm({
+                            name: state.name || "",
+                            code: state.code || "",
+                            country: state.country || "",
+                            currency: state.currency || "",
+                            notes: state.notes || "",
+                            status: state.status || "",
+                          });
+                        }}
+                      >
+                        <MdEdit size={14} />
+                      </button>
+                      <button
+                        className="biz_icon_btn biz_icon_btn_danger"
+                        title="Delete"
+                        onClick={() => setConfirmDeleteState(state)}
+                      >
+                        <MdDelete size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="admin_drawer_list">
             {drawerItems.map((item) => renderEntityRow(item))}{" "}
           </div>
         )}
       </Drawer>
+
+      {/* Confirm delete state modal */}
+      {confirmDeleteState && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1400, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div
+            onClick={() => setConfirmDeleteState(null)}
+            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)" }}
+          />
+          <div style={{ position: "relative", zIndex: 1, background: "var(--bg-card)", borderRadius: 16, padding: "24px", width: "min(360px, 92vw)", boxShadow: "0 16px 48px rgba(0,0,0,0.3)" }}>
+            <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-heading)", marginBottom: 8 }}>
+              Delete State
+            </div>
+            <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 20 }}>
+              Delete <strong style={{ color: "var(--text-body)" }}>{confirmDeleteState.name}</strong>? This cannot be undone.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="app_btn app_btn_cancel" style={{ flex: 1, height: 40 }} onClick={() => setConfirmDeleteState(null)}>
+                Cancel
+              </button>
+              <button
+                className={`app_btn app_btn_confirm${deletingState ? " btn_loading" : ""}`}
+                style={{ flex: 1, height: 40, background: "#ef4444", position: "relative" }}
+                onClick={() => handleDeleteState(confirmDeleteState.id)}
+                disabled={!!deletingState}
+              >
+                <span className="btn_text">Delete</span>
+                {deletingState && <span className="btn_loader" style={{ width: 13, height: 13 }} />}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -16,7 +16,6 @@ import {
   MdImage,
 } from "react-icons/md";
 import Drawer from "../../../components/Drawer";
-import MachinerySearchInput from "../../../components/MachinerySearchInput";
 import RecipeStepForm from "../../../components/RecipeStepForm";
 import RecipeStepsList from "../../../components/RecipeStepsList";
 import IngredientSearchInput from "../../../components/IngredientSearchInput";
@@ -35,6 +34,103 @@ import {
 import { useAppState } from "../../../contexts/StateContext";
 import Modal from "../../../components/Modal";
 import api from "../../../api/axios";
+
+const COUNTRIES = [
+  "Afghanistan",
+  "Albania",
+  "Algeria",
+  "Angola",
+  "Argentina",
+  "Australia",
+  "Austria",
+  "Bangladesh",
+  "Belgium",
+  "Bolivia",
+  "Brazil",
+  "Cameroon",
+  "Canada",
+  "Chile",
+  "China",
+  "Colombia",
+  "Congo",
+  "Côte d'Ivoire",
+  "Croatia",
+  "Czech Republic",
+  "Denmark",
+  "Ecuador",
+  "Egypt",
+  "Ethiopia",
+  "Finland",
+  "France",
+  "Germany",
+  "Ghana",
+  "Greece",
+  "Guatemala",
+  "Honduras",
+  "Hungary",
+  "India",
+  "Indonesia",
+  "Iran",
+  "Iraq",
+  "Ireland",
+  "Israel",
+  "Italy",
+  "Jamaica",
+  "Japan",
+  "Jordan",
+  "Kazakhstan",
+  "Kenya",
+  "Kuwait",
+  "Lebanon",
+  "Libya",
+  "Malaysia",
+  "Mexico",
+  "Morocco",
+  "Mozambique",
+  "Myanmar",
+  "Nepal",
+  "Netherlands",
+  "New Zealand",
+  "Nicaragua",
+  "Niger",
+  "Nigeria",
+  "Norway",
+  "Pakistan",
+  "Panama",
+  "Peru",
+  "Philippines",
+  "Poland",
+  "Portugal",
+  "Romania",
+  "Russia",
+  "Saudi Arabia",
+  "Senegal",
+  "Sierra Leone",
+  "Somalia",
+  "South Africa",
+  "South Korea",
+  "Spain",
+  "Sri Lanka",
+  "Sudan",
+  "Sweden",
+  "Switzerland",
+  "Syria",
+  "Tanzania",
+  "Thailand",
+  "Tunisia",
+  "Turkey",
+  "Uganda",
+  "Ukraine",
+  "United Arab Emirates",
+  "United Kingdom",
+  "United States",
+  "Uruguay",
+  "Venezuela",
+  "Vietnam",
+  "Yemen",
+  "Zambia",
+  "Zimbabwe",
+];
 
 /* ── Collapsible section wrapper ─────────────────────────────────────────── */
 function Section({ title, count, defaultOpen = true, children, action }) {
@@ -354,6 +450,202 @@ function EditMenuItemForm({ item, onSaved, onCancel }) {
   );
 }
 
+/* ── Inline machinery search (bypasses broken MachinerySearchInput) ──────── */
+function MachSearchInput({ onSelect, selectedMach }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [open, setOpen] = useState(false);
+  const debRef = useRef(null);
+
+  const search = (q) => {
+    if (!q.trim()) {
+      setResults([]);
+      return;
+    }
+    clearTimeout(debRef.current);
+    debRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const r = await api.get(
+          `/library/machinery?search=${encodeURIComponent(q)}&limit=8`,
+        );
+        const d = r.data.data;
+        setResults(Array.isArray(d) ? d : d?.data || d?.items || []);
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 7,
+          height: 40,
+          padding: "0 10px",
+          background: "var(--bg-hover)",
+          border: "1px solid var(--border)",
+          borderRadius: 9,
+        }}
+      >
+        <MdBuild
+          size={14}
+          style={{ color: "var(--text-muted)", flexShrink: 0 }}
+        />
+        <input
+          style={{
+            flex: 1,
+            border: "none",
+            background: "transparent",
+            outline: "none",
+            fontSize: "0.82rem",
+            color: "var(--text-body)",
+            fontFamily: "inherit",
+          }}
+          placeholder="Search machinery…"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            onSelect(null);
+            setOpen(true);
+            search(e.target.value);
+          }}
+          onFocus={() => setOpen(true)}
+        />
+        {query && (
+          <button
+            onClick={() => {
+              setQuery("");
+              setResults([]);
+              onSelect(null);
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--text-muted)",
+              display: "flex",
+              padding: 0,
+            }}
+          >
+            <LuX size={12} />
+          </button>
+        )}
+      </div>
+      {open && query && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            right: 0,
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: 10,
+            zIndex: 60,
+            maxHeight: 180,
+            overflowY: "auto",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+          }}
+        >
+          {searching ? (
+            <div
+              style={{
+                padding: "10px 12px",
+                fontSize: "0.78rem",
+                color: "var(--text-muted)",
+              }}
+            >
+              Searching…
+            </div>
+          ) : results.length === 0 ? (
+            <div
+              style={{
+                padding: "10px 12px",
+                fontSize: "0.78rem",
+                color: "var(--text-muted)",
+              }}
+            >
+              No results for "{query}"
+            </div>
+          ) : (
+            results.map((m) => (
+              <div
+                key={m.id}
+                onClick={() => {
+                  onSelect(m);
+                  setQuery(m.name);
+                  setOpen(false);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  borderBottom: "1px solid var(--border)",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "var(--bg-hover)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
+              >
+                <MdBuild
+                  size={13}
+                  style={{ color: "var(--text-muted)", flexShrink: 0 }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                    }}
+                  >
+                    {m.name}
+                  </div>
+                  {m.manufacturer && (
+                    <div
+                      style={{
+                        fontSize: "0.68rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      {m.manufacturer}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+      {selectedMach && (
+        <div className="ing_selected_chip" style={{ marginTop: 8 }}>
+          <span
+            className="ing_type_badge"
+            style={{
+              background: "rgba(100,116,139,0.15)",
+              color: "var(--text-muted)",
+            }}
+          >
+            machine
+          </span>
+          <span>{selectedMach.name}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Main component ──────────────────────────────────────────────────────── */
 export default function MenuItemDrawer({ item, onClose, onUpdated }) {
   const { selectedState } = useAppState();
@@ -407,6 +699,22 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
   const [savingMarkup, setSavingMarkup] = useState(false);
   const [deletingMarkup, setDeletingMarkup] = useState(null);
 
+  // Menu Task Templates
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null);
+  const [templateName, setTemplateName] = useState("");
+  const [templateDesc, setTemplateDesc] = useState("");
+  const [templateType, setTemplateType] = useState("CHECKLIST");
+  const [templateRecurrence, setTemplateRecurrence] = useState("DAILY");
+  const [templateTime, setTemplateTime] = useState("");
+  const [templateFields, setTemplateFields] = useState([
+    { type: "checkbox", label: "" },
+  ]);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [deletingTemplate, setDeletingTemplate] = useState(null);
+
   const fetchDetail = async () => {
     if (!item) return;
     setLoading(true);
@@ -453,6 +761,7 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
       fetchDetail();
       fetchMachineries();
       fetchMarkups();
+      fetchTemplates();
     } else {
       setDetail(null);
       setMachineries([]);
@@ -536,6 +845,85 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
     } finally {
       setDeletingMarkup(null);
     }
+  };
+
+  const fetchTemplates = async () => {
+    if (!item) return;
+    setTemplatesLoading(true);
+    try {
+      const r = await api.get(`/icart/tasks/templates?menuId=${item.id}`);
+      setTemplates(r.data.data?.items || r.data.data || []);
+    } catch {
+      /* silent */
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  const resetTemplateForm = () => {
+    setTemplateName("");
+    setTemplateDesc("");
+    setTemplateType("CHECKLIST");
+    setTemplateRecurrence("DAILY");
+    setTemplateTime("");
+    setTemplateFields([{ type: "checkbox", label: "" }]);
+    setEditingTemplate(null);
+    setShowTemplateForm(false);
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!templateName.trim()) return toast.error("Template name is required");
+    const validFields = templateFields.filter((f) => f.label.trim());
+    if (!validFields.length) return toast.error("Add at least one field");
+    setSavingTemplate(true);
+    const payload = {
+      name: templateName.trim(),
+      description: templateDesc.trim() || undefined,
+      type: templateType,
+      recurrence: templateRecurrence,
+      schema: { fields: validFields },
+      menuItemId: item.id,
+      time: templateTime || undefined,
+    };
+    try {
+      if (editingTemplate) {
+        await api.patch(
+          `/icart/tasks/templates/${editingTemplate.id}`,
+          payload,
+        );
+        toast.success("Template updated");
+      } else {
+        await api.post("/icart/tasks/templates", payload);
+        toast.success("Template created");
+      }
+      resetTemplateForm();
+      fetchTemplates();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save template");
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (tplId) => {
+    setDeletingTemplate(tplId);
+    try {
+      await api.delete(`/icart/tasks/templates/${tplId}`);
+      toast.success("Template deleted");
+      setTemplates((p) => p.filter((t) => t.id !== tplId));
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed");
+    } finally {
+      setDeletingTemplate(null);
+    }
+  };
+
+  const updateTplField = (i, key, val) => {
+    setTemplateFields((p) => {
+      const u = [...p];
+      u[i] = { ...u[i], [key]: val };
+      return u;
+    });
   };
 
   // ── Recipe ─────────────────────────────────────────────────────────────────
@@ -667,7 +1055,7 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
       onClose={onClose}
       title={item?.name || ""}
       description={item?.description || "Menu item details"}
-      width={480}
+      width={520}
     >
       {loading ? (
         <div className="page_loader">
@@ -760,6 +1148,136 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
               deletingId={deletingStep}
               onUpdate={handleUpdateStep}
             />
+          </Section>
+
+          {/* ── Machineries / Tools ── */}
+          <Section
+            title="Machineries & Tools"
+            count={machineries.length}
+            defaultOpen={false}
+            action={
+              <button
+                className="app_btn app_btn_confirm biz_add_btn"
+                onClick={() => setShowMachForm((v) => !v)}
+              >
+                <LuPlus size={13} /> Add
+              </button>
+            }
+          >
+            {showMachForm && (
+              <form onSubmit={handleAddMachinery} className="recipe_add_form">
+                <div className="form-field">
+                  <label className="modal-label">Machinery Name *</label>
+                  <MachSearchInput
+                    onSelect={(m) => setSelectedMach(m)}
+                    selectedMach={selectedMach}
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="modal-label">Quantity</label>
+                  <input
+                    className="modal-input"
+                    type="number"
+                    min="1"
+                    value={machQty}
+                    onChange={(e) => setMachQty(e.target.value)}
+                    placeholder="1"
+                  />
+                </div>
+                <div className="recipe_add_actions">
+                  <button
+                    className="app_btn app_btn_cancel"
+                    type="button"
+                    onClick={() => {
+                      setShowMachForm(false);
+                      setSelectedMach(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className={`app_btn app_btn_confirm ${savingMach ? "btn_loading" : ""}`}
+                    type="submit"
+                    disabled={savingMach || !selectedMach}
+                    style={{ position: "relative", minWidth: 90 }}
+                  >
+                    <span className="btn_text">Add</span>
+                    {savingMach && (
+                      <span
+                        className="btn_loader"
+                        style={{ width: 13, height: 13 }}
+                      />
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+            {machLoading ? (
+              <div className="drawer_loading">
+                <div className="page_loader_spinner" />
+              </div>
+            ) : machineries.length === 0 ? (
+              <div className="biz_empty" style={{ padding: "20px 0" }}>
+                <MdBuild size={22} style={{ opacity: 0.3 }} />
+                <p>No machineries added yet.</p>
+              </div>
+            ) : (
+              <div className="drawer_items_list">
+                {machineries.map((m) => {
+                  const mach = m.machinery || m;
+                  const mId = m.machineryId || m.id;
+                  return (
+                    <div key={mId} className="recipe_step_row">
+                      {mach.image ? (
+                        <img
+                          src={mach.image}
+                          alt={mach.name}
+                          className="ing_option_img"
+                          style={{ borderRadius: 8 }}
+                        />
+                      ) : (
+                        <div className="ing_option_img ing_option_img_placeholder">
+                          <MdBuild size={12} />
+                        </div>
+                      )}
+                      <div className="recipe_step_info">
+                        <span className="recipe_step_id">{mach.name}</span>
+                        {mach.manufacturer && (
+                          <span className="recipe_step_instruction">
+                            {mach.manufacturer}
+                          </span>
+                        )}
+                      </div>
+                      {m.quantity > 1 && (
+                        <span className="recipe_step_qty">× {m.quantity}</span>
+                      )}
+                      <button
+                        className="biz_icon_btn biz_icon_btn_danger"
+                        onClick={() =>
+                          setConfirmDeleteMach({ id: mId, name: mach.name })
+                        }
+                        disabled={deletingMach === mId}
+                        style={{ position: "relative" }}
+                      >
+                        {deletingMach === mId ? (
+                          <span
+                            className="btn_loader"
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderColor: "#ef4444",
+                              borderTopColor: "transparent",
+                            }}
+                          />
+                        ) : (
+                          <LuTrash2 size={13} />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </Section>
 
           {/* ── Variants ── */}
@@ -1005,150 +1523,6 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
             )}
           </Section>
 
-          {/* ── Machineries / Tools ── */}
-          <Section
-            title="Machineries & Tools"
-            count={machineries.length}
-            defaultOpen={false}
-            action={
-              <button
-                className="app_btn app_btn_confirm biz_add_btn"
-                onClick={() => setShowMachForm((v) => !v)}
-              >
-                <LuPlus size={13} /> Add
-              </button>
-            }
-          >
-            {showMachForm && (
-              <form onSubmit={handleAddMachinery} className="recipe_add_form">
-                <div className="form-field">
-                  <label className="modal-label">Search Machinery *</label>
-                  <MachinerySearchInput
-                    placeholder="Search or create machinery..."
-                    onSelect={(m) => setSelectedMach(m)}
-                  />
-                  {selectedMach && (
-                    <div className="ing_selected_chip" style={{ marginTop: 8 }}>
-                      <span
-                        className="ing_type_badge"
-                        style={{
-                          background: "rgba(100,116,139,0.15)",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        machine
-                      </span>
-                      <span>{selectedMach.name}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="form-field">
-                  <label className="modal-label">Quantity</label>
-                  <input
-                    className="modal-input"
-                    type="number"
-                    min="1"
-                    value={machQty}
-                    onChange={(e) => setMachQty(e.target.value)}
-                    placeholder="1"
-                  />
-                </div>
-                <div className="recipe_add_actions">
-                  <button
-                    className="app_btn app_btn_cancel"
-                    type="button"
-                    onClick={() => {
-                      setShowMachForm(false);
-                      setSelectedMach(null);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className={`app_btn app_btn_confirm ${savingMach ? "btn_loading" : ""}`}
-                    type="submit"
-                    disabled={savingMach || !selectedMach}
-                    style={{ position: "relative", minWidth: 90 }}
-                  >
-                    <span className="btn_text">Add</span>
-                    {savingMach && (
-                      <span
-                        className="btn_loader"
-                        style={{ width: 13, height: 13 }}
-                      />
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
-            {machLoading ? (
-              <div className="drawer_loading">
-                <div className="page_loader_spinner" />
-              </div>
-            ) : machineries.length === 0 ? (
-              <div className="biz_empty" style={{ padding: "20px 0" }}>
-                <MdBuild size={22} style={{ opacity: 0.3 }} />
-                <p>No machineries added yet.</p>
-              </div>
-            ) : (
-              <div className="drawer_items_list">
-                {machineries.map((m) => {
-                  const mach = m.machinery || m;
-                  const mId = m.machineryId || m.id;
-                  return (
-                    <div key={mId} className="recipe_step_row">
-                      {mach.image ? (
-                        <img
-                          src={mach.image}
-                          alt={mach.name}
-                          className="ing_option_img"
-                          style={{ borderRadius: 8 }}
-                        />
-                      ) : (
-                        <div className="ing_option_img ing_option_img_placeholder">
-                          <MdBuild size={12} />
-                        </div>
-                      )}
-                      <div className="recipe_step_info">
-                        <span className="recipe_step_id">{mach.name}</span>
-                        {mach.manufacturer && (
-                          <span className="recipe_step_instruction">
-                            {mach.manufacturer}
-                          </span>
-                        )}
-                      </div>
-                      {m.quantity > 1 && (
-                        <span className="recipe_step_qty">× {m.quantity}</span>
-                      )}
-                      <button
-                        className="biz_icon_btn biz_icon_btn_danger"
-                        onClick={() =>
-                          setConfirmDeleteMach({ id: mId, name: mach.name })
-                        }
-                        disabled={deletingMach === mId}
-                        style={{ position: "relative" }}
-                      >
-                        {deletingMach === mId ? (
-                          <span
-                            className="btn_loader"
-                            style={{
-                              width: 12,
-                              height: 12,
-                              borderColor: "#ef4444",
-                              borderTopColor: "transparent",
-                            }}
-                          />
-                        ) : (
-                          <LuTrash2 size={13} />
-                        )}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Section>
-
           {/* ── Markup Management ── */}
           <Section
             title="Markup by Country"
@@ -1168,13 +1542,19 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
                 <div className="register_row">
                   <div className="form-field">
                     <label className="modal-label">Country *</label>
-                    <input
+                    <select
                       className="modal-input"
-                      placeholder="e.g. Nigeria"
                       value={markupCountry}
                       onChange={(e) => setMarkupCountry(e.target.value)}
                       required
-                    />
+                    >
+                      <option value="">Select country…</option>
+                      {COUNTRIES.map((co) => (
+                        <option key={co} value={co}>
+                          {co}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="form-field">
                     <label className="modal-label">Markup % *</label>
@@ -1337,6 +1717,295 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
                   No packaging details. Edit the item above to add packaging
                   info.
                 </p>
+              </div>
+            )}
+          </Section>
+
+          {/* ── Task Templates ── */}
+          <Section
+            title="Task Templates"
+            count={templates.length}
+            defaultOpen={false}
+            action={
+              <button
+                className="app_btn app_btn_confirm biz_add_btn"
+                onClick={() => {
+                  resetTemplateForm();
+                  setShowTemplateForm((v) => !v);
+                }}
+              >
+                <LuPlus size={13} /> Add
+              </button>
+            }
+          >
+            {(showTemplateForm || editingTemplate) && (
+              <div className="recipe_add_form">
+                {!editingTemplate && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 10,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        color: "var(--text-heading)",
+                      }}
+                    >
+                      New Template
+                    </span>
+                    <button
+                      className="biz_icon_btn"
+                      onClick={resetTemplateForm}
+                    >
+                      <LuX size={13} />
+                    </button>
+                  </div>
+                )}
+                <div className="form-field">
+                  <label className="modal-label">Template Name *</label>
+                  <input
+                    className="modal-input"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="e.g. Daily Opening Checklist"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="modal-label">Description</label>
+                  <input
+                    className="modal-input"
+                    value={templateDesc}
+                    onChange={(e) => setTemplateDesc(e.target.value)}
+                    placeholder="Optional"
+                  />
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 8,
+                  }}
+                >
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label className="modal-label">Type</label>
+                    <select
+                      className="modal-input"
+                      value={templateType}
+                      onChange={(e) => setTemplateType(e.target.value)}
+                    >
+                      <option value="CHECKLIST">Checklist</option>
+                      <option value="LOG">Log</option>
+                      <option value="PROCESS">Process</option>
+                    </select>
+                  </div>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label className="modal-label">Recurrence</label>
+                    <select
+                      className="modal-input"
+                      value={templateRecurrence}
+                      onChange={(e) => setTemplateRecurrence(e.target.value)}
+                    >
+                      <option value="DAILY">Daily</option>
+                      <option value="PER_SHIFT">Per Shift</option>
+                      <option value="WEEKLY">Weekly</option>
+                      <option value="AS_NEEDED">As Needed</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-field">
+                  <label className="modal-label">
+                    Scheduled Time (optional)
+                  </label>
+                  <input
+                    className="modal-input"
+                    type="time"
+                    value={templateTime}
+                    onChange={(e) => setTemplateTime(e.target.value)}
+                  />
+                </div>
+
+                {/* Fields */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 6,
+                  }}
+                >
+                  <label className="modal-label" style={{ margin: 0 }}>
+                    Fields *
+                  </label>
+                  <button
+                    className="biz_icon_btn"
+                    onClick={() =>
+                      setTemplateFields((p) => [
+                        ...p,
+                        { type: "checkbox", label: "" },
+                      ])
+                    }
+                  >
+                    <LuPlus size={13} />
+                  </button>
+                </div>
+                {templateFields.map((field, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      gap: 6,
+                      marginBottom: 6,
+                      alignItems: "center",
+                    }}
+                  >
+                    <select
+                      className="modal-input"
+                      style={{ width: 105, flexShrink: 0 }}
+                      value={field.type}
+                      onChange={(e) =>
+                        updateTplField(i, "type", e.target.value)
+                      }
+                    >
+                      <option value="checkbox">Checkbox</option>
+                      <option value="number">Number</option>
+                      <option value="text">Text</option>
+                    </select>
+                    <input
+                      className="modal-input"
+                      style={{ flex: 1 }}
+                      placeholder="Field label"
+                      value={field.label}
+                      onChange={(e) =>
+                        updateTplField(i, "label", e.target.value)
+                      }
+                    />
+                    <button
+                      className="biz_icon_btn biz_icon_btn_danger"
+                      onClick={() =>
+                        setTemplateFields((p) =>
+                          p.filter((_, idx) => idx !== i),
+                        )
+                      }
+                      disabled={templateFields.length === 1}
+                    >
+                      <LuX size={13} />
+                    </button>
+                  </div>
+                ))}
+
+                <div className="recipe_add_actions" style={{ marginTop: 10 }}>
+                  <button
+                    className="app_btn app_btn_cancel"
+                    onClick={resetTemplateForm}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className={`app_btn app_btn_confirm ${savingTemplate ? "btn_loading" : ""}`}
+                    onClick={handleSaveTemplate}
+                    disabled={savingTemplate}
+                    style={{ position: "relative", minWidth: 90 }}
+                  >
+                    <span className="btn_text">
+                      {editingTemplate ? "Save" : "Create"}
+                    </span>
+                    {savingTemplate && (
+                      <span
+                        className="btn_loader"
+                        style={{ width: 13, height: 13 }}
+                      />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {templatesLoading ? (
+              <div className="drawer_loading">
+                <div className="page_loader_spinner" />
+              </div>
+            ) : templates.length === 0 && !showTemplateForm ? (
+              <div className="biz_empty" style={{ padding: "16px 0" }}>
+                <p>No task templates for this menu item yet.</p>
+              </div>
+            ) : (
+              <div className="drawer_items_list" style={{ marginTop: 8 }}>
+                {templates.map((tpl) => (
+                  <div
+                    key={tpl.id}
+                    className="recipe_step_row"
+                    style={{
+                      opacity: editingTemplate?.id === tpl.id ? 0.4 : 1,
+                    }}
+                  >
+                    <div className="recipe_step_info">
+                      <span className="recipe_step_id">{tpl.name}</span>
+                      <span className="recipe_step_instruction">
+                        {tpl.type} · {tpl.recurrence}
+                        {tpl.time ? ` · ${tpl.time}` : ""}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "0.62rem",
+                        fontWeight: 700,
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                        background: "var(--bg-hover)",
+                        border: "1px solid var(--border)",
+                        color: "var(--text-muted)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {tpl.schema?.fields?.length || 0} fields
+                    </span>
+                    <button
+                      className="biz_icon_btn"
+                      onClick={() => {
+                        setEditingTemplate(tpl);
+                        setTemplateName(tpl.name);
+                        setTemplateDesc(tpl.description || "");
+                        setTemplateType(tpl.type || "CHECKLIST");
+                        setTemplateRecurrence(tpl.recurrence || "DAILY");
+                        setTemplateTime(tpl.time || "");
+                        setTemplateFields(
+                          tpl.schema?.fields || [
+                            { type: "checkbox", label: "" },
+                          ],
+                        );
+                        setShowTemplateForm(false);
+                      }}
+                      title="Edit"
+                    >
+                      <LuPencil size={13} />
+                    </button>
+                    <button
+                      className="biz_icon_btn biz_icon_btn_danger"
+                      onClick={() => handleDeleteTemplate(tpl.id)}
+                      disabled={deletingTemplate === tpl.id}
+                      style={{ position: "relative" }}
+                    >
+                      {deletingTemplate === tpl.id ? (
+                        <span
+                          className="btn_loader"
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderColor: "#ef4444",
+                            borderTopColor: "transparent",
+                          }}
+                        />
+                      ) : (
+                        <LuTrash2 size={13} />
+                      )}
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </Section>
