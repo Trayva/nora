@@ -27,6 +27,7 @@ import {
   MdOutlineInventory2,
 } from "react-icons/md";
 import api from "../../api/axios";
+import { useAppState } from "../../contexts/StateContext";
 import Modal from "../../components/Modal";
 
 const LOCATION_TYPES = ["ACTIVE", "POTENTIAL", "INACTIVE", "RESTRICTED"];
@@ -1460,19 +1461,45 @@ function MenuDetailDrawer({
   selectedCount,
   onClose,
 }) {
+  const { selectedState } = useAppState();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [menuPrice, setMenuPrice] = useState(null);
 
   useEffect(() => {
     if (!menuId) return;
     setLoading(true);
     setSummary(null);
+    setMenuPrice(null);
     api
       .get(`/vendor/menu/${menuId}/summary`)
       .then((r) => setSummary(r.data.data))
       .catch(() => toast.error("Failed to load menu details"))
       .finally(() => setLoading(false));
+    // Fetch selling price separately
+    // Build price URL as explicit query string (axios params option broken in this codebase)
+    const priceParams = [];
+    if (selectedState?.id) priceParams.push(`stateId=${selectedState.id}`);
+    const priceUrl = `/library/price/menu/${menuId}${priceParams.length ? `?${priceParams.join("&")}` : ""}`;
+    api
+      .get(priceUrl)
+      .then((r) => {
+        const d = r.data.data;
+        // API may return { sellingPrice, price } or a raw number
+        const raw =
+          d?.sellingPrice ??
+          d?.price ??
+          d?.total ??
+          (typeof d === "number" ? d : null);
+        const parsed = raw != null ? Number(raw) : null;
+        setMenuPrice(
+          parsed != null && !isNaN(parsed) && parsed > 0 ? parsed : null,
+        );
+      })
+      .catch(() => {
+        /* silent — price may not exist yet */
+      });
   }, [menuId]);
 
   const fmt = (n) =>
@@ -1530,7 +1557,7 @@ function MenuDetailDrawer({
         style={{
           position: "relative",
           zIndex: 1,
-          width: "min(680px, 96vw)",
+          width: "min(680px, 100vw)",
           background: "var(--bg-card)",
           display: "flex",
           flexDirection: "column",
@@ -1810,6 +1837,78 @@ function MenuDetailDrawer({
                     </p>
                   )}
 
+                  {/* Price highlight — selling price from /library/price/menu/:id */}
+                  {(menuPrice != null || baseCost != null) && (
+                    <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+                      {menuPrice != null && (
+                        <div
+                          style={{
+                            flex: 1,
+                            background: "var(--bg-active)",
+                            border: "1px solid rgba(203,108,220,0.2)",
+                            borderRadius: 12,
+                            padding: "12px 14px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "0.6rem",
+                              fontWeight: 700,
+                              color: "var(--text-muted)",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                              marginBottom: 3,
+                            }}
+                          >
+                            Selling Price
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "1.1rem",
+                              fontWeight: 900,
+                              color: "var(--accent)",
+                            }}
+                          >
+                            ₦{fmt(menuPrice)}
+                          </div>
+                        </div>
+                      )}
+                      {baseCost != null && (
+                        <div
+                          style={{
+                            flex: 1,
+                            background: "var(--bg-hover)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 12,
+                            padding: "12px 14px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "0.6rem",
+                              fontWeight: 700,
+                              color: "var(--text-muted)",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                              marginBottom: 3,
+                            }}
+                          >
+                            Recipe Cost
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "1.1rem",
+                              fontWeight: 900,
+                              color: "var(--text-heading)",
+                            }}
+                          >
+                            ₦{fmt(baseCost)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Stats grid */}
                   <div
                     style={{
@@ -1824,9 +1923,11 @@ function MenuDetailDrawer({
                       {
                         label: "Selling Price",
                         value:
-                          item?.sellingPrice > 0
-                            ? `₦${fmt(item.sellingPrice)}`
-                            : null,
+                          menuPrice != null
+                            ? `₦${fmt(menuPrice)}`
+                            : item?.sellingPrice > 0
+                              ? `₦${fmt(item.sellingPrice)}`
+                              : null,
                         accent: true,
                       },
                       {
@@ -2812,7 +2913,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
           style={{
             position: "relative",
             zIndex: 1,
-            width: "min(720px, 96vw)",
+            width: "min(720px, 100vw)",
             background: "var(--bg-card)",
             display: "flex",
             flexDirection: "column",
@@ -3961,7 +4062,13 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
 }
 
 /* ── Beautiful Idle Card ──────────────────────────────────────── */
-function BrandIdleCard({ cart, onChangeBrand, onManageMenu, onMenuClick }) {
+function BrandIdleCard({
+  cart,
+  onChangeBrand,
+  onManageMenu,
+  onMenuClick,
+  onRemoveBrand,
+}) {
   const assignedVendor = cart.vendor;
   const menuItems = cart.menuItems || [];
   const fmt = (n) =>
@@ -4143,6 +4250,27 @@ function BrandIdleCard({ cart, onChangeBrand, onManageMenu, onMenuClick }) {
             }}
           >
             <MdEdit size={13} /> Change Brand
+          </button>
+          <button
+            onClick={onRemoveBrand}
+            style={{
+              height: 34,
+              padding: "0 13px",
+              borderRadius: 9,
+              border: "1px solid rgba(239,68,68,0.25)",
+              background: "rgba(239,68,68,0.06)",
+              color: "#ef4444",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontWeight: 700,
+              fontSize: "0.76rem",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              flexShrink: 0,
+            }}
+          >
+            Remove
           </button>
         </div>
       </div>
@@ -4352,6 +4480,8 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(null);
   const [removing, setRemoving] = useState(false);
+  const [manageDetailId, setManageDetailId] = useState(null);
+  const [manageDetailName, setManageDetailName] = useState("");
   const fmt = (n) =>
     Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
   const MENU_PAGE_SIZE = 8;
@@ -4476,7 +4606,7 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
         style={{
           position: "relative",
           zIndex: 1,
-          width: "min(560px, 96vw)",
+          width: "min(560px, 100vw)",
           background: "var(--bg-card)",
           display: "flex",
           flexDirection: "column",
@@ -4566,6 +4696,12 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                   return (
                     <div
                       key={item.id}
+                      onClick={() => {
+                        const id = item.menuItemId || item.id;
+                        const n = item.name || item.menuItem?.name || "Item";
+                        setManageDetailId(id);
+                        setManageDetailName(n);
+                      }}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -4574,7 +4710,15 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                         background: "var(--bg-hover)",
                         border: "1px solid var(--border)",
                         borderRadius: 11,
+                        cursor: "pointer",
                       }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.borderColor =
+                          "rgba(203,108,220,0.3)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.borderColor = "var(--border)")
+                      }
                     >
                       {img ? (
                         <img
@@ -4647,7 +4791,10 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                         Active
                       </span>
                       <button
-                        onClick={() => setConfirmRemove(item)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmRemove(item);
+                        }}
                         style={{
                           width: 28,
                           height: 28,
@@ -4736,6 +4883,11 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                           alignItems: "center",
                           gap: 10,
                           padding: "10px 12px",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => {
+                          setManageDetailId(item.id);
+                          setManageDetailName(item.name || "Menu Item");
                         }}
                       >
                         {item.image ? (
@@ -4813,7 +4965,10 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                           </span>
                         ) : (
                           <button
-                            onClick={() => !disabled && togglePending(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!disabled) togglePending(item);
+                            }}
                             style={{
                               width: 28,
                               height: 28,
@@ -4992,6 +5147,21 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
           </div>
         </div>
       </Modal>
+
+      {/* Menu detail drawer — opens when any menu row is clicked */}
+      {manageDetailId && (
+        <MenuDetailDrawer
+          menuId={manageDetailId}
+          menuName={manageDetailName}
+          isSelected={false}
+          onToggleSelect={() => {}}
+          selectedCount={0}
+          onClose={() => {
+            setManageDetailId(null);
+            setManageDetailName("");
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -5000,8 +5170,24 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
 function VendorMenuSection({ cart, onUpdate, onRefresh }) {
   const [showBrandDrawer, setShowBrandDrawer] = useState(false);
   const [showManageDrawer, setShowManageDrawer] = useState(false);
+  const [confirmRemoveBrand, setConfirmRemoveBrand] = useState(false);
+  const [removingBrand, setRemovingBrand] = useState(false);
   const [idleDetailId, setIdleDetailId] = useState(null);
   const [idleDetailName, setIdleDetailName] = useState("");
+
+  const handleRemoveBrand = async () => {
+    setRemovingBrand(true);
+    try {
+      await api.delete(`/icart/${cart.id}/remove-vendor`);
+      toast.success("Brand removed");
+      setConfirmRemoveBrand(false);
+      onRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove brand");
+    } finally {
+      setRemovingBrand(false);
+    }
+  };
 
   const handleIdleMenuClick = (item) => {
     const id = item.menuItemId || item.id;
@@ -5021,6 +5207,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
         onChangeBrand={() => setShowBrandDrawer(true)}
         onManageMenu={() => setShowManageDrawer(true)}
         onMenuClick={handleIdleMenuClick}
+        onRemoveBrand={() => setConfirmRemoveBrand(true)}
       />
 
       {showBrandDrawer && (
@@ -5056,6 +5243,90 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
             setIdleDetailName("");
           }}
         />
+      )}
+
+      {/* Confirm remove brand modal */}
+      {confirmRemoveBrand && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1400,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            onClick={() => setConfirmRemoveBrand(false)}
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(0,0,0,0.55)",
+              backdropFilter: "blur(3px)",
+            }}
+          />
+          <div
+            style={{
+              position: "relative",
+              zIndex: 1,
+              background: "var(--bg-card)",
+              borderRadius: 16,
+              padding: "24px",
+              width: "min(360px, 92vw)",
+              boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.95rem",
+                fontWeight: 800,
+                color: "var(--text-heading)",
+                marginBottom: 8,
+              }}
+            >
+              Remove Brand
+            </div>
+            <div
+              style={{
+                fontSize: "0.82rem",
+                color: "var(--text-muted)",
+                marginBottom: 20,
+              }}
+            >
+              This will remove the brand and all menu items from this iCart.
+              This cannot be undone.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                className="app_btn app_btn_cancel"
+                style={{ flex: 1, height: 40 }}
+                onClick={() => setConfirmRemoveBrand(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className={`app_btn app_btn_confirm${removingBrand ? " btn_loading" : ""}`}
+                style={{
+                  flex: 1,
+                  height: 40,
+                  background: "#ef4444",
+                  position: "relative",
+                }}
+                onClick={handleRemoveBrand}
+                disabled={removingBrand}
+              >
+                <span className="btn_text">Remove</span>
+                {removingBrand && (
+                  <span
+                    className="btn_loader"
+                    style={{ width: 13, height: 13 }}
+                  />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
