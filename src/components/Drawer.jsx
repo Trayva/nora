@@ -1,14 +1,23 @@
 import { useEffect } from "react";
 import { LuX } from "react-icons/lu";
 
-export default function Drawer({ isOpen, onClose, title, description, children, width = 520 }) {
+export default function Drawer({
+  isOpen,
+  onClose,
+  title,
+  description,
+  children,
+  width = 520,
+}) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -19,7 +28,13 @@ export default function Drawer({ isOpen, onClose, title, description, children, 
       <div className="drawer_backdrop" onClick={onClose} />
 
       {/* Panel */}
-      <div className="drawer_panel" style={{ width }}>
+      <div
+        className="drawer_panel"
+        style={{ width }}
+        onClick={(e) =>
+          e.stopPropagation()
+        } /* ← prevent clicks inside from hitting backdrop */
+      >
         <div className="drawer_header">
           <div className="drawer_header_text">
             <h3 className="drawer_title">{title}</h3>

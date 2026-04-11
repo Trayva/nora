@@ -8,6 +8,7 @@ import IcartWorkforce from "./IcartWorkforce";
 import IcartInventory from "./IcartInventory";
 import IcartSales from "./IcartSales";
 import IcartOrders from "./IcartOrders";
+import IcartReports from "./IcartReports"; // ← new
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -16,6 +17,7 @@ const TABS = [
   { key: "inventory", label: "Inventory" },
   { key: "sales", label: "Sales" },
   { key: "orders", label: "Orders" },
+  { key: "reports", label: "Reports" }, // ← new
 ];
 
 export default function IcartDrawer({ cartId, onClose, onUpdate }) {
@@ -51,51 +53,52 @@ export default function IcartDrawer({ cartId, onClose, onUpdate }) {
   };
 
   return (
-    <>
-      <Drawer
-        isOpen={!!cartId}
-        onClose={onClose}
-        title={cart ? cart.serialNumber : "iCart Details"}
-        description={cart ? cart.location?.name || "No location assigned" : ""}
-        width={520}
-      >
-        {/* Sticky Tabs */}
-        <div className="drawer_tabs_bar">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              className={`drawer_tab_btn ${activeTab === tab.key ? "drawer_tab_active" : ""}`}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+    <Drawer
+      isOpen={!!cartId}
+      onClose={onClose}
+      title={cart ? cart.serialNumber : "iCart Details"}
+      description={cart ? cart.location?.name || "No location assigned" : ""}
+      width={520}
+    >
+      {/* Sticky Tabs */}
+      <div className="drawer_tabs_bar">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            className={`drawer_tab_btn ${activeTab === tab.key ? "drawer_tab_active" : ""}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        {/* Content */}
-        {loading ? (
-          <div className="drawer_loading">
-            <div className="page_loader_spinner" />
-          </div>
-        ) : !cart ? null : (
-          <>
-            {activeTab === "overview" && (
-              <IcartOverview
-                cart={cart}
-                onUpdate={handleCartUpdate}
-                onRefresh={fetchCart}
-              />
-            )}
-            {activeTab === "tasks" && <IcartTasks cart={cart} />}
-            {activeTab === "workforce" && (
-              <IcartWorkforce cart={cart} onRefresh={fetchCart} />
-            )}
-            {activeTab === "inventory" && <IcartInventory cart={cart} />}
-            {activeTab === "sales" && <IcartSales cart={cart} />}
-            {activeTab === "orders" && <IcartOrders cartId={cart.id} />}
-          </>
-        )}
-      </Drawer>
-    </>
+      {/* Content */}
+      {loading ? (
+        <div className="drawer_loading">
+          <div className="page_loader_spinner" />
+        </div>
+      ) : !cart ? null : (
+        <>
+          {activeTab === "overview" && (
+            <IcartOverview
+              cart={cart}
+              onUpdate={handleCartUpdate}
+              onRefresh={fetchCart}
+            />
+          )}
+          {activeTab === "tasks" && <IcartTasks cart={cart} />}
+          {activeTab === "workforce" && (
+            <IcartWorkforce cart={cart} onRefresh={fetchCart} />
+          )}
+          {activeTab === "inventory" && <IcartInventory cart={cart} />}
+          {activeTab === "sales" && <IcartSales cart={cart} />}
+          {activeTab === "orders" && <IcartOrders cartId={cart.id} />}
+          {activeTab === "reports" && (
+            <IcartReports cart={cart} canUpdateStatus={true} />
+          )}
+        </>
+      )}
+    </Drawer>
   );
 }

@@ -26,6 +26,7 @@ import {
   MdSearch,
   MdHistory,
   MdRemoveCircleOutline,
+  MdArrowForward,
 } from "react-icons/md";
 import { LuShoppingCart } from "react-icons/lu";
 import {
@@ -2553,41 +2554,1184 @@ function MenuItemSummaryView({ summary }) {
   );
 }
 
-/* ── Main ELearningTab (menu-item based) ─────────────────────── */
+/**
+ * PATCH FOR OperatorCart.jsx
+ * ============================================================
+ * 1. Add these icons to your existing MdXxx imports (react-icons/md):
+ *       MdHistory, MdArrowForward, MdCheckCircle
+ *    (MdSchool, MdArrowBack, MdCheck, MdClose, MdRestaurantMenu,
+ *     MdImage, MdPlayCircle are already imported)
+ *
+ * 2. In OperatorCart.jsx, find the line:
+ *       export function ELearningTab({ menuItems }) {
+ *    and DELETE everything from that line to the matching closing `}` of the function.
+ *
+ * 3. Paste ALL of the code below (the four sub-components + the new ELearningTab)
+ *    in its place — immediately before `export function SalesTab`.
+ * ============================================================
+ */
+
+/* ── Scores history view ─────────────────────────────────────── */
+function ScoresView({ onBack }) {
+  const [scores, setScores] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api
+      .get("/library/elearning/scores")
+      .then((r) => {
+        const d = r.data.data;
+
+        setScores(
+          Array.isArray(d) ? d : d?.tests || d?.items || d?.scores || [],
+        );
+      })
+      .catch(() => toast.error("Failed to load scores"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const fmtDate = (d) =>
+    d
+      ? new Date(d).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : "—";
+
+  const scoreColor = (pct) =>
+    pct >= 80 ? "#16a34a" : pct >= 50 ? "#ca8a04" : "#ef4444";
+  const scoreBg = (pct) =>
+    pct >= 80
+      ? "rgba(34,197,94,0.1)"
+      : pct >= 50
+        ? "rgba(234,179,8,0.1)"
+        : "rgba(239,68,68,0.1)";
+
+  return (
+    <div>
+      <button
+        onClick={onBack}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          background: "none",
+          border: "none",
+          color: "var(--text-muted)",
+          fontSize: "0.8rem",
+          fontWeight: 700,
+          cursor: "pointer",
+          padding: 0,
+          marginBottom: 16,
+          fontFamily: "inherit",
+        }}
+      >
+        <MdArrowBack size={15} /> Back to Learning
+      </button>
+
+      <div
+        style={{
+          fontSize: "0.95rem",
+          fontWeight: 900,
+          color: "var(--text-heading)",
+          marginBottom: 4,
+        }}
+      >
+        Test History
+      </div>
+      <div
+        style={{
+          fontSize: "0.74rem",
+          color: "var(--text-muted)",
+          marginBottom: 16,
+        }}
+      >
+        Your past e-learning test results
+      </div>
+
+      {loading ? (
+        <div className="drawer_loading">
+          <div className="page_loader_spinner" />
+        </div>
+      ) : scores.length === 0 ? (
+        <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+          <MdHistory size={28} style={{ opacity: 0.3 }} />
+          <span>No test attempts yet</span>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {scores.map((entry, i) => {
+            const pct =
+              entry.percentage ??
+              (entry.score != null && entry.total
+                ? Math.round((entry.score / entry.total) * 100)
+                : null);
+            const passed = entry.passed ?? (pct != null ? pct >= 50 : null);
+            return (
+              <div
+                key={entry.id || i}
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 13,
+                  padding: "13px 15px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: "50%",
+                    background: pct != null ? scoreBg(pct) : "var(--bg-hover)",
+                    border: `2px solid ${pct != null ? scoreColor(pct) : "var(--border)"}`,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.88rem",
+                      fontWeight: 900,
+                      color:
+                        entry.score != null
+                          ? scoreColor(Math.min(entry.score, 100))
+                          : "var(--text-muted)",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {entry.score != null ? `${entry.score}` : "—"}
+                  </span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: "0.84rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                      marginBottom: 3,
+                    }}
+                  >
+                    {entry.title ||
+                      `Test #${(entry.id || "").slice(0, 6).toUpperCase()}`}
+                  </div>
+                  <div className="icart_task_meta">
+                    {entry.score != null && <span>Score: {entry.score}</span>}
+                    {entry.createdAt && (
+                      <>
+                        <span className="contract_row_dot">·</span>
+                        <span>{fmtDate(entry.createdAt)}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {passed != null && (
+                  <span
+                    style={{
+                      fontSize: "0.65rem",
+                      fontWeight: 800,
+                      padding: "3px 9px",
+                      borderRadius: 999,
+                      flexShrink: 0,
+                      background: passed
+                        ? "rgba(34,197,94,0.1)"
+                        : "rgba(239,68,68,0.1)",
+                      color: passed ? "#16a34a" : "#ef4444",
+                      border: `1px solid ${passed ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`,
+                    }}
+                  >
+                    {passed ? "Passed" : "Failed"}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Test result view ────────────────────────────────────────── */
+function TestResultView({ result, onRetake, onDone }) {
+  const pct =
+    result.percentage ??
+    (result.score != null && result.total
+      ? Math.round((result.score / result.total) * 100)
+      : null);
+  const passed = result.passed ?? (pct != null ? pct >= 50 : null);
+  const color =
+    pct != null
+      ? pct >= 80
+        ? "#16a34a"
+        : pct >= 50
+          ? "#ca8a04"
+          : "#ef4444"
+      : "var(--text-muted)";
+  const bg =
+    pct != null
+      ? pct >= 80
+        ? "rgba(34,197,94,0.08)"
+        : pct >= 50
+          ? "rgba(234,179,8,0.08)"
+          : "rgba(239,68,68,0.08)"
+      : "var(--bg-hover)";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "24px 0 8px",
+      }}
+    >
+      <div
+        style={{
+          width: 110,
+          height: 110,
+          borderRadius: "50%",
+          background: bg,
+          border: `3px solid ${color}`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 16,
+        }}
+      >
+        <span
+          style={{ fontSize: "2rem", fontWeight: 900, color, lineHeight: 1 }}
+        >
+          {pct != null ? `${pct}%` : "—"}
+        </span>
+        {result.score != null && result.total != null && (
+          <span
+            style={{
+              fontSize: "0.72rem",
+              color: "var(--text-muted)",
+              marginTop: 3,
+            }}
+          >
+            {result.score}/{result.total}
+          </span>
+        )}
+      </div>
+      <div
+        style={{
+          fontSize: "1.1rem",
+          fontWeight: 900,
+          color: passed ? "#16a34a" : "#ef4444",
+          marginBottom: 6,
+        }}
+      >
+        {passed === true
+          ? "🎉 Passed!"
+          : passed === false
+            ? "Try Again"
+            : "Test Complete"}
+      </div>
+      <div
+        style={{
+          fontSize: "0.82rem",
+          color: "var(--text-muted)",
+          marginBottom: 24,
+          textAlign: "center",
+          maxWidth: 280,
+        }}
+      >
+        {passed === true
+          ? "Great work! You've demonstrated solid knowledge of this menu item."
+          : passed === false
+            ? "Review the learning materials and try again to improve your score."
+            : "Your test has been submitted."}
+      </div>
+
+      {result.answers?.length > 0 && (
+        <div style={{ width: "100%", marginBottom: 20 }}>
+          <div
+            style={{
+              fontSize: "0.62rem",
+              fontWeight: 900,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: "var(--text-muted)",
+              marginBottom: 10,
+            }}
+          >
+            Answer Review
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {result.answers.map((ans, i) => (
+              <div
+                key={ans.questionId || i}
+                style={{
+                  background: ans.correct
+                    ? "rgba(34,197,94,0.06)"
+                    : "rgba(239,68,68,0.06)",
+                  border: `1px solid ${ans.correct ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                }}
+              >
+                <div
+                  style={{ display: "flex", alignItems: "flex-start", gap: 8 }}
+                >
+                  <div style={{ flexShrink: 0, marginTop: 1 }}>
+                    {ans.correct ? (
+                      <MdCheck size={15} style={{ color: "#16a34a" }} />
+                    ) : (
+                      <MdClose size={15} style={{ color: "#ef4444" }} />
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        color: "var(--text-body)",
+                        marginBottom: 3,
+                      }}
+                    >
+                      {ans.question || `Q${i + 1}`}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.72rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      Your answer:{" "}
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          color: ans.correct ? "#16a34a" : "#ef4444",
+                        }}
+                      >
+                        {ans.answer}
+                      </span>
+                    </div>
+                    {!ans.correct && ans.correctAnswer && (
+                      <div
+                        style={{
+                          fontSize: "0.72rem",
+                          color: "#16a34a",
+                          marginTop: 2,
+                        }}
+                      >
+                        Correct:{" "}
+                        <span style={{ fontWeight: 700 }}>
+                          {ans.correctAnswer}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 8, width: "100%" }}>
+        {onRetake && (
+          <button
+            className="app_btn app_btn_cancel"
+            style={{ flex: 1, height: 42 }}
+            onClick={onRetake}
+          >
+            Retake Test
+          </button>
+        )}
+        <button
+          className="app_btn app_btn_confirm"
+          style={{ flex: 2, height: 42 }}
+          onClick={onDone}
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Active Test View — paste this ENTIRE block into OperatorCart.jsx ── */
+/* Replace the existing function ActiveTestView({ test, onSubmit, onCancel }) */
+
+function ActiveTestView({ test, onSubmit, onCancel }) {
+  const questions = Array.isArray(test?.questions) ? test.questions : [];
+  const [current, setCurrent] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const totalQ = questions.length;
+  const answered = Object.keys(answers).length;
+  const progress = totalQ > 0 ? Math.round((answered / totalQ) * 100) : 0;
+  const q = questions[current] || null;
+
+  const selectAnswer = (questionId, answer) =>
+    setAnswers((p) => ({ ...p, [questionId]: answer }));
+
+  const handleSubmit = async () => {
+    if (answered < totalQ) {
+      const confirmed = window.confirm(
+        `You've answered ${answered} of ${totalQ} questions. Submit anyway?`,
+      );
+      if (!confirmed) return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await api.post("/library/elearning/submit", {
+        testId: test.id,
+        answers: Object.entries(answers).map(([questionId, answer]) => ({
+          questionId,
+          answer,
+        })),
+      });
+      onSubmit(res.data.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to submit test");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (totalQ === 0 || !q) {
+    return (
+      <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+        <MdSchool size={28} style={{ opacity: 0.3 }} />
+        <span>No questions in this test</span>
+      </div>
+    );
+  }
+
+  // Safely handle options — API sends null for WRITTEN questions
+  const rawOptions = q.options ?? q.choices ?? [];
+  const options = Array.isArray(rawOptions) ? rawOptions : [];
+  const isWritten = q.type === "WRITTEN" || options.length === 0;
+  const selectedAnswer = answers[q.id] ?? "";
+
+  return (
+    <div>
+      {/* Progress header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 16,
+        }}
+      >
+        <button
+          onClick={onCancel}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: "var(--bg-hover)",
+            border: "1px solid var(--border)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--text-muted)",
+            flexShrink: 0,
+          }}
+        >
+          <MdArrowBack size={15} />
+        </button>
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              fontSize: "0.78rem",
+              color: "var(--text-muted)",
+              marginBottom: 4,
+            }}
+          >
+            Question {current + 1} of {totalQ}
+          </div>
+          <div
+            style={{
+              height: 4,
+              background: "var(--bg-hover)",
+              borderRadius: 999,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: `${progress}%`,
+                background: "var(--accent)",
+                borderRadius: 999,
+                transition: "width 0.3s ease",
+              }}
+            />
+          </div>
+        </div>
+        <div
+          style={{
+            fontSize: "0.72rem",
+            fontWeight: 800,
+            color: "var(--accent)",
+            padding: "3px 10px",
+            background: "var(--bg-active)",
+            borderRadius: 999,
+            border: "1px solid rgba(203,108,220,0.3)",
+            flexShrink: 0,
+          }}
+        >
+          {answered}/{totalQ}
+        </div>
+      </div>
+
+      {/* Question card */}
+      <div
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 14,
+          padding: "18px 16px",
+          marginBottom: 14,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 10,
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: "var(--bg-active)",
+              border: "1px solid rgba(203,108,220,0.3)",
+              color: "var(--accent)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.7rem",
+              fontWeight: 900,
+              flexShrink: 0,
+            }}
+          >
+            {current + 1}
+          </div>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "0.92rem",
+              fontWeight: 700,
+              color: "var(--text-heading)",
+              lineHeight: 1.55,
+              flex: 1,
+            }}
+          >
+            {q.question || q.text || q.prompt || "Question"}
+          </p>
+        </div>
+
+        {!isWritten ? (
+          /* Multiple choice */
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {options.map((opt, oi) => {
+              const optValue =
+                typeof opt === "string"
+                  ? opt
+                  : (opt?.value ?? opt?.text ?? opt?.label ?? String(opt));
+              const isSelected = selectedAnswer === optValue;
+              return (
+                <button
+                  key={oi}
+                  onClick={() => selectAnswer(q.id, optValue)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "12px 14px",
+                    borderRadius: 11,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    textAlign: "left",
+                    background: isSelected
+                      ? "var(--bg-active)"
+                      : "var(--bg-hover)",
+                    border: `1.5px solid ${isSelected ? "rgba(203,108,220,0.5)" : "var(--border)"}`,
+                    transition: "all 0.12s",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      flexShrink: 0,
+                      border: `2px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                      background: isSelected ? "var(--accent)" : "transparent",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {isSelected && (
+                      <MdCheck size={12} style={{ color: "#fff" }} />
+                    )}
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "0.85rem",
+                      fontWeight: isSelected ? 700 : 500,
+                      color: isSelected ? "var(--accent)" : "var(--text-body)",
+                    }}
+                  >
+                    {optValue}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          /* Written / free-text */
+          <textarea
+            className="modal-input"
+            rows={3}
+            placeholder="Type your answer…"
+            value={selectedAnswer}
+            onChange={(e) => selectAnswer(q.id, e.target.value)}
+            style={{
+              width: "100%",
+              resize: "vertical",
+              fontFamily: "inherit",
+              marginBottom: 0,
+            }}
+          />
+        )}
+      </div>
+
+      {/* Prev / Next / Submit */}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          className="app_btn app_btn_cancel"
+          style={{ height: 42, width: 44, padding: 0, flexShrink: 0 }}
+          onClick={() => setCurrent((c) => Math.max(0, c - 1))}
+          disabled={current === 0}
+        >
+          <MdArrowBack size={16} />
+        </button>
+        {current < totalQ - 1 ? (
+          <button
+            className="app_btn app_btn_confirm"
+            style={{
+              flex: 1,
+              height: 42,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+            }}
+            onClick={() => setCurrent((c) => c + 1)}
+          >
+            Next <MdArrowForward size={15} />
+          </button>
+        ) : (
+          <button
+            className={`app_btn app_btn_confirm${submitting ? " btn_loading" : ""}`}
+            style={{
+              flex: 1,
+              height: 42,
+              position: "relative",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+            }}
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
+            <span className="btn_text">Submit Test</span>
+            {submitting && (
+              <span className="btn_loader" style={{ width: 14, height: 14 }} />
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Question dot navigator */}
+      {totalQ > 1 && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 5,
+            marginTop: 14,
+            flexWrap: "wrap",
+          }}
+        >
+          {questions.map((qItem, qi) => (
+            <button
+              key={qi}
+              onClick={() => setCurrent(qi)}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 7,
+                cursor: "pointer",
+                border: `1px solid ${qi === current ? "var(--accent)" : answers[qItem?.id] ? "rgba(34,197,94,0.4)" : "var(--border)"}`,
+                background:
+                  qi === current
+                    ? "var(--bg-active)"
+                    : answers[qItem?.id]
+                      ? "rgba(34,197,94,0.08)"
+                      : "var(--bg-hover)",
+                color:
+                  qi === current
+                    ? "var(--accent)"
+                    : answers[qItem?.id]
+                      ? "#16a34a"
+                      : "var(--text-muted)",
+                fontSize: "0.7rem",
+                fontWeight: 700,
+              }}
+            >
+              {qi + 1}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Start test view ─────────────────────────────────────────── */
+function StartTestView({ menuItems, onStarted, onCancel }) {
+  const [selectedIds, setSelectedIds] = useState(
+    menuItems.length === 1 ? [menuItems[0].id] : [],
+  );
+  const [starting, setStarting] = useState(false);
+
+  const toggle = (id) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
+  const handleStart = async () => {
+    if (!selectedIds.length)
+      return toast.error("Select at least one menu item");
+    setStarting(true);
+    try {
+      const res = await api.post("/library/elearning", {
+        menuIds: selectedIds,
+      });
+      onStarted(res.data.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to start test");
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  return (
+    <div>
+      <button
+        onClick={onCancel}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          background: "none",
+          border: "none",
+          color: "var(--text-muted)",
+          fontSize: "0.8rem",
+          fontWeight: 700,
+          cursor: "pointer",
+          padding: 0,
+          marginBottom: 16,
+          fontFamily: "inherit",
+        }}
+      >
+        <MdArrowBack size={15} /> Back to Learning
+      </button>
+
+      {/* Hero */}
+      <div
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(203,108,220,0.12) 0%, rgba(203,108,220,0.04) 100%)",
+          border: "1px solid rgba(203,108,220,0.2)",
+          borderRadius: 16,
+          padding: "20px 18px",
+          marginBottom: 20,
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 14,
+        }}
+      >
+        <div
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            flexShrink: 0,
+            background: "rgba(203,108,220,0.15)",
+            border: "1px solid rgba(203,108,220,0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <MdSchool size={22} style={{ color: "var(--accent)" }} />
+        </div>
+        <div>
+          <div
+            style={{
+              fontSize: "1rem",
+              fontWeight: 900,
+              color: "var(--text-heading)",
+              marginBottom: 4,
+            }}
+          >
+            Knowledge Test
+          </div>
+          <div
+            style={{
+              fontSize: "0.78rem",
+              color: "var(--text-muted)",
+              lineHeight: 1.55,
+            }}
+          >
+            Select the menu items you want to be tested on. Questions will cover
+            ingredients, preparation steps, and techniques.
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          fontSize: "0.62rem",
+          fontWeight: 900,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          color: "var(--text-muted)",
+          marginBottom: 10,
+        }}
+      >
+        Select Menu Items ({selectedIds.length} selected)
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          marginBottom: 20,
+        }}
+      >
+        {menuItems.map((item) => {
+          const name = item.name || item.menuItem?.name || "Item";
+          const img = item.image || item.menuItem?.image;
+          const isSel = selectedIds.includes(item.id);
+          return (
+            <button
+              key={item.id}
+              onClick={() => toggle(item.id)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "11px 13px",
+                borderRadius: 12,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                textAlign: "left",
+                background: isSel ? "var(--bg-active)" : "var(--bg-hover)",
+                border: `1.5px solid ${isSel ? "rgba(203,108,220,0.45)" : "var(--border)"}`,
+                transition: "all 0.12s",
+              }}
+            >
+              {img ? (
+                <img
+                  src={img}
+                  alt=""
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 9,
+                    objectFit: "cover",
+                    flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 9,
+                    background: isSel
+                      ? "rgba(203,108,220,0.15)"
+                      : "var(--bg-card)",
+                    border: `1px solid ${isSel ? "rgba(203,108,220,0.3)" : "var(--border)"}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <MdRestaurantMenu
+                    size={16}
+                    style={{
+                      color: isSel ? "var(--accent)" : "var(--text-muted)",
+                    }}
+                  />
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: "0.88rem",
+                    fontWeight: 700,
+                    color: isSel ? "var(--accent)" : "var(--text-body)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {name}
+                </div>
+                {item.ticketTime > 0 && (
+                  <div
+                    style={{
+                      fontSize: "0.68rem",
+                      color: "var(--text-muted)",
+                      marginTop: 1,
+                    }}
+                  >
+                    ⏱ {item.ticketTime} min prep
+                  </div>
+                )}
+              </div>
+              <div
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 6,
+                  flexShrink: 0,
+                  border: `2px solid ${isSel ? "var(--accent)" : "var(--border)"}`,
+                  background: isSel ? "var(--accent)" : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {isSel && <MdCheck size={14} style={{ color: "#fff" }} />}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        className={`app_btn app_btn_confirm${starting ? " btn_loading" : ""}`}
+        style={{
+          width: "100%",
+          height: 46,
+          position: "relative",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          fontSize: "0.92rem",
+          fontWeight: 800,
+        }}
+        onClick={handleStart}
+        disabled={starting || !selectedIds.length}
+      >
+        <span className="btn_text">
+          <MdSchool size={16} /> Start Test
+          {selectedIds.length > 0 &&
+            ` · ${selectedIds.length} item${selectedIds.length !== 1 ? "s" : ""}`}
+        </span>
+        {starting && (
+          <span className="btn_loader" style={{ width: 15, height: 15 }} />
+        )}
+      </button>
+    </div>
+  );
+}
+
+/* ── Main E-Learning Tab ─────────────────────────────────────── */
 export function ELearningTab({ menuItems }) {
+  const [mode, setMode] = useState("learn"); // "learn" | "start-test" | "active-test" | "result" | "scores"
   const [selectedId, setSelectedId] = useState(null);
   const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [activeTest, setActiveTest] = useState(null);
+  const [testResult, setTestResult] = useState(null);
 
   const loadSummary = async (menuItemId) => {
     setSelectedId(menuItemId);
     setSummary(null);
-    setLoading(true);
+    setLoadingSummary(true);
     try {
       const res = await api.get(`/vendor/menu/${menuItemId}/summary`);
       setSummary(res.data.data);
     } catch {
       toast.error("Failed to load item summary");
     } finally {
-      setLoading(false);
+      setLoadingSummary(false);
     }
   };
 
-  // Auto-select first item
   useEffect(() => {
     if (menuItems?.length > 0 && !selectedId) loadSummary(menuItems[0].id);
   }, [menuItems]);
 
-  if (!menuItems?.length)
+  if (!menuItems?.length) {
     return (
       <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
         <MdSchool size={28} style={{ opacity: 0.3 }} />
         <span>No menu items available</span>
       </div>
     );
+  }
 
+  if (mode === "scores") return <ScoresView onBack={() => setMode("learn")} />;
+
+  if (mode === "start-test") {
+    return (
+      <StartTestView
+        menuItems={menuItems}
+        onStarted={(test) => {
+          setActiveTest(test);
+          setMode("active-test");
+        }}
+        onCancel={() => setMode("learn")}
+      />
+    );
+  }
+
+  if (mode === "active-test" && activeTest) {
+    return (
+      <ActiveTestView
+        test={activeTest}
+        onSubmit={(result) => {
+          setTestResult(result);
+          setMode("result");
+        }}
+        onCancel={() => {
+          if (
+            window.confirm("Abandon this test? Your progress will be lost.")
+          ) {
+            setActiveTest(null);
+            setMode("learn");
+          }
+        }}
+      />
+    );
+  }
+
+  if (mode === "result" && testResult) {
+    return (
+      <TestResultView
+        result={testResult}
+        onRetake={() => {
+          setActiveTest(null);
+          setTestResult(null);
+          setMode("start-test");
+        }}
+        onDone={() => {
+          setActiveTest(null);
+          setTestResult(null);
+          setMode("learn");
+        }}
+      />
+    );
+  }
+
+  /* ── Default: learn mode ── */
   return (
     <div>
+      {/* Test action bar */}
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          marginBottom: 18,
+          padding: "12px 14px",
+          background: "var(--bg-hover)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+          alignItems: "center",
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              fontSize: "0.82rem",
+              fontWeight: 800,
+              color: "var(--text-heading)",
+            }}
+          >
+            Ready to be tested?
+          </div>
+          <div
+            style={{
+              fontSize: "0.7rem",
+              color: "var(--text-muted)",
+              marginTop: 1,
+            }}
+          >
+            Test your knowledge of the menu
+          </div>
+        </div>
+        <button
+          onClick={() => setMode("scores")}
+          style={{
+            height: 34,
+            padding: "0 12px",
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+            background: "var(--bg-card)",
+            color: "var(--text-muted)",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontWeight: 700,
+            fontSize: "0.75rem",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            flexShrink: 0,
+          }}
+        >
+          <MdHistory size={14} /> Scores
+        </button>
+        <button
+          onClick={() => setMode("start-test")}
+          className="app_btn app_btn_confirm"
+          style={{
+            height: 34,
+            padding: "0 14px",
+            fontSize: "0.78rem",
+            fontWeight: 800,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            flexShrink: 0,
+          }}
+        >
+          <MdSchool size={14} /> Take Test
+        </button>
+      </div>
+
       {/* Item selector pills */}
       {menuItems.length > 1 && (
         <div
@@ -2639,12 +3783,13 @@ export function ELearningTab({ menuItems }) {
           })}
         </div>
       )}
-      {loading && (
+
+      {loadingSummary && (
         <div className="drawer_loading">
           <div className="page_loader_spinner" />
         </div>
       )}
-      {summary && !loading && <MenuItemSummaryView summary={summary} />}
+      {summary && !loadingSummary && <MenuItemSummaryView summary={summary} />}
     </div>
   );
 }

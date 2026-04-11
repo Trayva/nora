@@ -125,6 +125,8 @@ export default function AdminDashboard() {
     country: "",
     code: "",
     currency: "",
+    maxSlots: "",
+    slotRadius: "",
   });
   const [savingLocation, setSavingLocation] = useState(false);
 
@@ -343,10 +345,25 @@ export default function AdminDashboard() {
         ...(locationForm.currency && {
           currency: locationForm.currency.trim(),
         }),
+        ...(locationForm.maxSlots !== "" &&
+          locationForm.maxSlots !== undefined && {
+            maxSlots: Number(locationForm.maxSlots),
+          }),
+        ...(locationForm.slotRadius !== "" &&
+          locationForm.slotRadius !== undefined && {
+            slotRadius: Number(locationForm.slotRadius),
+          }),
       });
       toast.success("State created");
       setShowLocationForm(false);
-      setLocationForm({ name: "", country: "", code: "", currency: "" });
+      setLocationForm({
+        name: "",
+        country: "",
+        code: "",
+        currency: "",
+        maxSlots: "",
+        slotRadius: "",
+      });
       if (drawer === "locations") openDrawer("locations");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed");
@@ -371,6 +388,12 @@ export default function AdminDashboard() {
           notes: editStateForm.notes.trim(),
         }),
         currency: editStateForm.currency.trim(),
+        ...(editStateForm.maxSlots !== "" && {
+          maxSlots: Number(editStateForm.maxSlots),
+        }),
+        ...(editStateForm.slotRadius !== "" && {
+          slotRadius: Number(editStateForm.slotRadius),
+        }),
       });
       toast.success("State updated");
       setEditingState(null);
@@ -1094,6 +1117,38 @@ export default function AdminDashboard() {
                       }
                     />
                   </div>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label className="modal-label">Max Slots</label>
+                    <input
+                      className="modal-input"
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 50"
+                      value={locationForm.maxSlots}
+                      onChange={(e) =>
+                        setLocationForm((p) => ({
+                          ...p,
+                          maxSlots: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label className="modal-label">Slot Radius (km)</label>
+                    <input
+                      className="modal-input"
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 5"
+                      value={locationForm.slotRadius}
+                      onChange={(e) =>
+                        setLocationForm((p) => ({
+                          ...p,
+                          slotRadius: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
                 <div
                   style={{
@@ -1271,6 +1326,38 @@ export default function AdminDashboard() {
                           }
                         />
                       </div>
+                      <div className="form-field" style={{ marginBottom: 0 }}>
+                        <label className="modal-label">Max Slots</label>
+                        <input
+                          className="modal-input"
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 50"
+                          value={editStateForm.maxSlots}
+                          onChange={(e) =>
+                            setEditStateForm((p) => ({
+                              ...p,
+                              maxSlots: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="form-field" style={{ marginBottom: 0 }}>
+                        <label className="modal-label">Slot Radius (km)</label>
+                        <input
+                          className="modal-input"
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 5"
+                          value={editStateForm.slotRadius}
+                          onChange={(e) =>
+                            setEditStateForm((p) => ({
+                              ...p,
+                              slotRadius: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
                     </div>
                     <div
                       style={{
@@ -1330,7 +1417,17 @@ export default function AdminDashboard() {
                     <div className="admin_drawer_info">
                       <div className="admin_drawer_name">{state.name}</div>
                       <div className="admin_drawer_sub">
-                        {[state.country, state.currency, state.status]
+                        {[
+                          state.country,
+                          state.currency,
+                          state.status,
+                          state.maxSlots != null
+                            ? `${state.maxSlots} slots`
+                            : null,
+                          state.slotRadius != null
+                            ? `r=${state.slotRadius}km`
+                            : null,
+                        ]
                           .filter(Boolean)
                           .join(" · ")}
                       </div>
@@ -1348,6 +1445,14 @@ export default function AdminDashboard() {
                             currency: state.currency || "",
                             notes: state.notes || "",
                             status: state.status || "",
+                            maxSlots:
+                              state.maxSlots != null
+                                ? String(state.maxSlots)
+                                : "",
+                            slotRadius:
+                              state.slotRadius != null
+                                ? String(state.slotRadius)
+                                : "",
                           });
                         }}
                       >

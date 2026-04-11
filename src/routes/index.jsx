@@ -179,6 +179,7 @@ import ShopPage from "../pages/website/ShopPage";
 import ShopCheckoutPage from "../pages/website/ShopCheckoutPage";
 import ShopOrderPage from "../pages/website/ShopOrderPage";
 import { getDefaultRoute } from "../utils/AuthHelpers";
+import AggregatorPage from "../pages/app/Aggregator/AggregatorPage";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -271,6 +272,7 @@ export default function Routes() {
         { path: "business/concept/:id", element: <ConceptPage /> },
         { path: "operator", element: <OperatorHome /> },
         { path: "operator/cart/:cartId", element: <OperatorCartPage /> },
+        { path: "aggregator", element: <AggregatorPage /> },
       ],
     },
 

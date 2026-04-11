@@ -761,7 +761,6 @@ span {
   font-size: 0.9rem;
 }
 
-
 /* ── Drawer ───────────────────────────────────────────────────── */
 
 .drawer_backdrop {
@@ -771,6 +770,8 @@ span {
   backdrop-filter: blur(4px);
   z-index: 200;
   animation: drawerFadeIn 0.2s ease;
+    touch-action: none;   /* ← add this */
+
 }
 
 .drawer_panel {
@@ -865,6 +866,9 @@ span {
   display: flex;
   flex-direction: column;
   gap: 20px;
+
+  overscroll-behavior: contain; /* stops scroll from leaking to body */
+  -webkit-overflow-scrolling: touch; /* iOS momentum scroll */
 }
 
 @media (max-width: 600px) {

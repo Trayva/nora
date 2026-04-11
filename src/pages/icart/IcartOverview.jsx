@@ -25,6 +25,9 @@ import {
   MdSearch,
   MdCheck,
   MdOutlineInventory2,
+  MdAccessTime,
+  MdOpenInNew,
+  MdLocalShipping,
 } from "react-icons/md";
 import api from "../../api/axios";
 import { useAppState } from "../../contexts/StateContext";
@@ -92,14 +95,12 @@ function LiveStreamModal({ onClose }) {
     }
   };
 
-  // Sync state when user presses Escape to exit fullscreen
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
-  // Close modal on Escape (only when not fullscreen — browser handles Escape in fullscreen)
   useEffect(() => {
     const handler = (e) => {
       if (e.key === "Escape" && !document.fullscreenElement) onClose();
@@ -148,7 +149,6 @@ function LiveStreamModal({ onClose }) {
             : {}),
         }}
       >
-        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -188,7 +188,6 @@ function LiveStreamModal({ onClose }) {
               Kitchen camera feed
             </div>
           </div>
-          {/* Fullscreen toggle */}
           <button
             onClick={toggleFullscreen}
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
@@ -228,7 +227,6 @@ function LiveStreamModal({ onClose }) {
           </button>
         </div>
 
-        {/* Video placeholder */}
         <div
           style={{
             position: "relative",
@@ -241,7 +239,6 @@ function LiveStreamModal({ onClose }) {
             gap: 12,
           }}
         >
-          {/* Scanlines */}
           <div
             style={{
               position: "absolute",
@@ -282,7 +279,6 @@ function LiveStreamModal({ onClose }) {
               Live stream will appear here when the camera is connected
             </div>
           </div>
-          {/* Status badge */}
           <div
             style={{
               position: "absolute",
@@ -316,7 +312,6 @@ function LiveStreamModal({ onClose }) {
               OFFLINE
             </span>
           </div>
-          {/* Fullscreen hint */}
           {!isFullscreen && (
             <button
               onClick={toggleFullscreen}
@@ -358,7 +353,6 @@ function LiveStreamModal({ onClose }) {
   );
 }
 
-/* ── Location Form ─────────────────────────────────────────── */
 /* ── Map Picker ──────────────────────────────────────────────── */
 function MapPicker({ lat, lng, onPick }) {
   const mapRef = useRef(null);
@@ -367,14 +361,12 @@ function MapPicker({ lat, lng, onPick }) {
   const [mapReady, setMapReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
-  // Default center: Abuja, Nigeria
   const DEFAULT_LAT = 9.0765;
   const DEFAULT_LNG = 7.3986;
   const initLat = lat && !isNaN(Number(lat)) ? Number(lat) : DEFAULT_LAT;
   const initLng = lng && !isNaN(Number(lng)) ? Number(lng) : DEFAULT_LNG;
 
   useEffect(() => {
-    // Load Leaflet CSS
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
       link.id = "leaflet-css";
@@ -383,14 +375,12 @@ function MapPicker({ lat, lng, onPick }) {
       document.head.appendChild(link);
     }
 
-    // Load Leaflet JS
     const loadLeaflet = () => {
       if (window.L) {
         initMap();
         return;
       }
       if (document.getElementById("leaflet-js")) {
-        // already loading — wait
         const wait = setInterval(() => {
           if (window.L) {
             clearInterval(wait);
@@ -416,7 +406,6 @@ function MapPicker({ lat, lng, onPick }) {
         maxZoom: 19,
       }).addTo(map);
 
-      // Custom accent-colored marker
       const icon = L.divIcon({
         className: "",
         html: `<div style="width:22px;height:22px;background:#cb6cdc;border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(203,108,220,0.5)"></div>`,
@@ -431,14 +420,12 @@ function MapPicker({ lat, lng, onPick }) {
       markerRef.current = marker;
       leafletRef.current = map;
 
-      // Click map → move marker
       map.on("click", (e) => {
         const { lat, lng } = e.latlng;
         marker.setLatLng([lat, lng]);
         onPick(lat, lng);
       });
 
-      // Drag marker
       marker.on("dragend", (e) => {
         const { lat, lng } = e.target.getLatLng();
         onPick(lat, lng);
@@ -458,7 +445,6 @@ function MapPicker({ lat, lng, onPick }) {
     };
   }, []);
 
-  // Keep marker in sync when lat/lng are typed manually
   useEffect(() => {
     if (!markerRef.current || !leafletRef.current) return;
     const newLat = Number(lat);
@@ -550,6 +536,7 @@ function MapPicker({ lat, lng, onPick }) {
   );
 }
 
+/* ── Location Form ─────────────────────────────────────────── */
 function LocationForm({ cartId, onSaved, onCancel }) {
   const [form, setForm] = useState(BLANK_LOCATION);
   const [saving, setSaving] = useState(false);
@@ -590,7 +577,6 @@ function LocationForm({ cartId, onSaved, onCancel }) {
           longitude: longitude.toFixed(6),
         }));
         setShowMap(true);
-        // Reverse geocode with Nominatim
         try {
           const r = await fetch(
             `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
@@ -672,7 +658,7 @@ function LocationForm({ cartId, onSaved, onCancel }) {
         country: p.country || a.country || p.country,
       }));
     } catch {
-      /* silent — coords already set */
+      /* silent */
     }
   };
 
@@ -779,7 +765,6 @@ function LocationForm({ cartId, onSaved, onCancel }) {
           </select>
         </div>
 
-        {/* Coordinates section */}
         <div className="form-field" style={{ gridColumn: "1 / -1" }}>
           <div
             style={{
@@ -793,7 +778,6 @@ function LocationForm({ cartId, onSaved, onCancel }) {
               Coordinates *
             </label>
             <div style={{ display: "flex", gap: 6 }}>
-              {/* Detect GPS */}
               <button
                 onClick={detectGPS}
                 disabled={detectingGPS}
@@ -833,7 +817,6 @@ function LocationForm({ cartId, onSaved, onCancel }) {
                   </>
                 )}
               </button>
-              {/* Toggle map */}
               <button
                 onClick={() => setShowMap((v) => !v)}
                 style={{
@@ -858,7 +841,6 @@ function LocationForm({ cartId, onSaved, onCancel }) {
             </div>
           </div>
 
-          {/* Map */}
           {showMap && (
             <div style={{ marginBottom: 10 }}>
               <MapPicker
@@ -869,7 +851,6 @@ function LocationForm({ cartId, onSaved, onCancel }) {
             </div>
           )}
 
-          {/* Lat/Lng manual inputs */}
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
           >
@@ -883,9 +864,7 @@ function LocationForm({ cartId, onSaved, onCancel }) {
                 step="any"
                 placeholder="e.g. 9.0765"
                 value={form.latitude}
-                onChange={(e) => {
-                  set("latitude", e.target.value);
-                }}
+                onChange={(e) => set("latitude", e.target.value)}
                 style={{ marginBottom: 0 }}
               />
             </div>
@@ -899,9 +878,7 @@ function LocationForm({ cartId, onSaved, onCancel }) {
                 step="any"
                 placeholder="e.g. 7.3986"
                 value={form.longitude}
-                onChange={(e) => {
-                  set("longitude", e.target.value);
-                }}
+                onChange={(e) => set("longitude", e.target.value)}
                 style={{ marginBottom: 0 }}
               />
             </div>
@@ -991,7 +968,7 @@ function LocationForm({ cartId, onSaved, onCancel }) {
 
 /* ── Invoice Payment Modal ───────────────────────────────────── */
 function InvoicePayModal({ invoice, application, onPaid, onClose }) {
-  const [paying, setPaying] = useState(null); // "wallet" | "online"
+  const [paying, setPaying] = useState(null);
   const [showMethods, setShowMethods] = useState(false);
   const [wallet, setWallet] = useState(null);
   const [walletLoading, setWalletLoading] = useState(true);
@@ -1443,16 +1420,257 @@ function InvoicePayModal({ invoice, application, onPaid, onClose }) {
   );
 }
 
-/* ── VendorMenuSection ───────────────────────────────────────── */
+/* ── Constants ─────────────────────────────────────────────── */
 const MAX_MENU_ITEMS = 5;
 const VENDOR_PAGE_SIZE = 8;
 
-/* ════════════════════════════════════════════════════════════════
-   BRAND + MENU SELECTION DRAWER
-   Wide drawer: brand list → menu detail tabs → financials
-   ════════════════════════════════════════════════════════════════ */
-
 /* ── Menu Detail Tabs Drawer ──────────────────────────────────── */
+/* ── Machinery Supply Modal ──────────────────────────────────── */
+function MachinerySupplyModal({ cart, selectedMachItems, onClose, onSubmitted }) {
+  const [suppliers, setSuppliers] = useState([]);
+  const [suppliersLoading, setSuppliersLoading] = useState(true);
+  const [supplierId, setSupplierId] = useState("");
+  const [quantities, setQuantities] = useState(() =>
+    Object.fromEntries(selectedMachItems.map((m) => [m.id, "1"]))
+  );
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const stateId = cart?.location?.stateId || cart?.location?.state?.id || "";
+    const url = stateId ? `/supplier?stateId=${stateId}` : "/supplier";
+    api
+      .get(url)
+      .then((r) => {
+        const d = r.data.data;
+        setSuppliers(Array.isArray(d) ? d : d?.items || d?.suppliers || []);
+      })
+      .catch(() => toast.error("Failed to load suppliers"))
+      .finally(() => setSuppliersLoading(false));
+  }, [cart]);
+
+  const handleSubmit = async () => {
+    if (!supplierId) return toast.error("Select a supplier");
+    const valid = selectedMachItems.filter(
+      (m) => quantities[m.id] && Number(quantities[m.id]) > 0
+    );
+    if (!valid.length) return toast.error("Enter quantity for at least one item");
+    setSubmitting(true);
+    try {
+      await api.post("/icart/supply", {
+        cartId: cart?.id,
+        supplierId,
+        machineryItems: valid.map((m) => ({
+          machineryId: m.id,
+          quantity: Number(quantities[m.id]),
+        })),
+      });
+      onSubmitted();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to create supply request");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1500,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        onClick={!submitting ? onClose : undefined}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(0,0,0,0.65)",
+          backdropFilter: "blur(3px)",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          width: "min(440px, 95vw)",
+          background: "var(--bg-card)",
+          borderRadius: 18,
+          overflow: "hidden",
+          boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
+          display: "flex",
+          flexDirection: "column",
+          maxHeight: "88vh",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: "18px 20px 14px",
+            borderBottom: "1px solid var(--border)",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: "rgba(203,108,220,0.1)",
+              border: "1px solid rgba(203,108,220,0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <MdLocalShipping size={17} style={{ color: "var(--accent)" }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--text-heading)" }}>
+              Request Supply
+            </div>
+            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+              {selectedMachItems.length} machinery item{selectedMachItems.length !== 1 ? "s" : ""}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 7,
+              background: "var(--bg-hover)",
+              border: "1px solid var(--border)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--text-muted)",
+            }}
+          >
+            <MdClose size={14} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "16px 20px" }}>
+          {/* Supplier */}
+          <div className="form-field">
+            <label className="modal-label">Supplier *</label>
+            {suppliersLoading ? (
+              <div className="modal-input" style={{ color: "var(--text-muted)", fontSize: "0.82rem", display: "flex", alignItems: "center" }}>
+                Loading suppliers…
+              </div>
+            ) : suppliers.length === 0 ? (
+              <div className="modal-input" style={{ color: "var(--text-muted)", fontSize: "0.82rem", display: "flex", alignItems: "center" }}>
+                No suppliers available
+              </div>
+            ) : (
+              <select className="modal-input" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+                <option value="">Select a supplier…</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.businessName || s.user?.fullName || s.user?.name || s.id.slice(0, 8).toUpperCase()}
+                    {s.state?.name ? ` — ${s.state.name}` : ""}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Machinery items + quantities */}
+          <div style={{ marginTop: 4 }}>
+            <label className="modal-label" style={{ marginBottom: 10, display: "block" }}>
+              Items & Quantities *
+            </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {selectedMachItems.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 12px",
+                    background: "var(--bg-hover)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 11,
+                  }}
+                >
+                  {m.image ? (
+                    <img
+                      src={m.image}
+                      alt=""
+                      style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 36, height: 36, borderRadius: 8,
+                        background: "rgba(203,108,220,0.08)", border: "1px solid rgba(203,108,220,0.2)",
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}
+                    >
+                      <MdBuild size={15} style={{ color: "var(--accent)" }} />
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "0.84rem", fontWeight: 700, color: "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {m.name}
+                    </div>
+                    <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Machinery</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    <input
+                      className="modal-input"
+                      type="number"
+                      min="1"
+                      value={quantities[m.id] ?? "1"}
+                      onChange={(e) => setQuantities((p) => ({ ...p, [m.id]: e.target.value }))}
+                      style={{ width: 64, height: 34, textAlign: "center", marginBottom: 0, fontSize: "0.88rem", fontWeight: 700 }}
+                    />
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>unit</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "14px 20px 20px", borderTop: "1px solid var(--border)", display: "flex", gap: 8, flexShrink: 0 }}>
+          <button
+            className="app_btn app_btn_cancel"
+            style={{ flex: 1, height: 42 }}
+            onClick={onClose}
+            disabled={submitting}
+          >
+            Cancel
+          </button>
+          <button
+            className={`app_btn app_btn_confirm${submitting ? " btn_loading" : ""}`}
+            style={{ flex: 2, height: 42, position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+            onClick={handleSubmit}
+            disabled={submitting || !supplierId}
+          >
+            <span className="btn_text">
+              <MdLocalShipping size={15} /> Submit Request
+            </span>
+            {submitting && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MenuDetailDrawer({
   menuId,
   menuName,
@@ -1460,12 +1678,31 @@ function MenuDetailDrawer({
   onToggleSelect,
   selectedCount,
   onClose,
+  cart,
 }) {
   const { selectedState } = useAppState();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [menuPrice, setMenuPrice] = useState(null);
+
+  // Machinery supply request state
+  const [selectedMachIds, setSelectedMachIds] = useState([]); // { id, name, image }
+  const [showMachSupply, setShowMachSupply] = useState(false);
+
+  const toggleMachSelection = (mach) => {
+    setSelectedMachIds((prev) => {
+      const exists = prev.find((m) => m.id === mach.id);
+      if (exists) return prev.filter((m) => m.id !== mach.id);
+      return [...prev, { id: mach.id, name: mach.name, image: mach.image }];
+    });
+  };
+
+  // Fix drawer scroll: lock body when open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
 
   useEffect(() => {
     if (!menuId) return;
@@ -1477,8 +1714,6 @@ function MenuDetailDrawer({
       .then((r) => setSummary(r.data.data))
       .catch(() => toast.error("Failed to load menu details"))
       .finally(() => setLoading(false));
-    // Fetch selling price separately
-    // Build price URL as explicit query string (axios params option broken in this codebase)
     const priceParams = [];
     if (selectedState?.id) priceParams.push(`stateId=${selectedState.id}`);
     const priceUrl = `/library/price/menu/${menuId}${priceParams.length ? `?${priceParams.join("&")}` : ""}`;
@@ -1486,7 +1721,6 @@ function MenuDetailDrawer({
       .get(priceUrl)
       .then((r) => {
         const d = r.data.data;
-        // API may return { sellingPrice, price } or a raw number
         const raw =
           d?.sellingPrice ??
           d?.price ??
@@ -1497,9 +1731,7 @@ function MenuDetailDrawer({
           parsed != null && !isNaN(parsed) && parsed > 0 ? parsed : null,
         );
       })
-      .catch(() => {
-        /* silent — price may not exist yet */
-      });
+      .catch(() => {});
   }, [menuId]);
 
   const fmt = (n) =>
@@ -1522,7 +1754,6 @@ function MenuDetailDrawer({
   const prepItems = summary?.prepItems || [];
   const sops = summary?.sops || item?.sops || [];
   const recipe = summary?.recipe || item?.recipe || [];
-  // Concept fields fall through to item for backwards compat
   const displayPackaging = item?.packaging || concept?.packaging;
   const displayPackagingImage = item?.packagingImage || concept?.packagingImage;
   const displayServeTo = item?.serveTo || concept?.serveTo;
@@ -1533,7 +1764,7 @@ function MenuDetailDrawer({
   const atLimit = selectedCount >= MAX_MENU_ITEMS && !isSelected;
 
   return (
-    /* Full-screen overlay drawer */
+    <>
     <div
       style={{
         position: "fixed",
@@ -1562,7 +1793,8 @@ function MenuDetailDrawer({
           display: "flex",
           flexDirection: "column",
           boxShadow: "-8px 0 40px rgba(0,0,0,0.25)",
-          overflowY: "auto",
+          height: "100vh",
+          overflowY: "hidden",
         }}
       >
         {/* Header */}
@@ -1577,6 +1809,7 @@ function MenuDetailDrawer({
             display: "flex",
             alignItems: "center",
             gap: 14,
+            flexShrink: 0,
           }}
         >
           <button
@@ -1614,7 +1847,6 @@ function MenuDetailDrawer({
               Menu item details
             </div>
           </div>
-          {/* Select toggle */}
           <button
             onClick={onToggleSelect}
             disabled={atLimit}
@@ -1693,7 +1925,7 @@ function MenuDetailDrawer({
           ))}
         </div>
 
-        {/* Content */}
+        {/* Scrollable content */}
         <div style={{ flex: 1, padding: "20px 24px", overflowY: "auto" }}>
           {loading ? (
             <div
@@ -1715,7 +1947,6 @@ function MenuDetailDrawer({
             </div>
           ) : (
             <>
-              {/* ── OVERVIEW ── */}
               {activeTab === "overview" && (
                 <div>
                   {item?.image && (
@@ -1799,7 +2030,6 @@ function MenuDetailDrawer({
                     </div>
                   )}
 
-                  {/* Vendor info only */}
                   {summary?.vendor?.businessName && (
                     <div
                       style={{
@@ -1837,7 +2067,6 @@ function MenuDetailDrawer({
                     </p>
                   )}
 
-                  {/* Price highlight — selling price from /library/price/menu/:id */}
                   {(menuPrice != null || baseCost != null) && (
                     <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
                       {menuPrice != null && (
@@ -1909,7 +2138,6 @@ function MenuDetailDrawer({
                     </div>
                   )}
 
-                  {/* Stats grid */}
                   <div
                     style={{
                       display: "grid",
@@ -2010,7 +2238,6 @@ function MenuDetailDrawer({
                       ))}
                   </div>
 
-                  {/* Packaging */}
                   {displayPackaging && (
                     <div
                       style={{
@@ -2067,7 +2294,6 @@ function MenuDetailDrawer({
                     </div>
                   )}
 
-                  {/* Tutorial video */}
                   {item?.tutorialVideo && (
                     <div style={{ marginBottom: 16 }}>
                       <div
@@ -2131,7 +2357,6 @@ function MenuDetailDrawer({
                     </div>
                   )}
 
-                  {/* Variants */}
                   {(summary?.variants || item?.variants)?.length > 0 && (
                     <div style={{ marginBottom: 16 }}>
                       <div
@@ -2169,7 +2394,6 @@ function MenuDetailDrawer({
                     </div>
                   )}
 
-                  {/* Recipe steps */}
                   {recipe.length > 0 && (
                     <div>
                       <div
@@ -2298,9 +2522,8 @@ function MenuDetailDrawer({
                 </div>
               )}
 
-              {/* ── TOOLS / MACHINERY ── */}
               {activeTab === "machinery" && (
-                <div>
+                <div style={{ paddingBottom: selectedMachIds.length > 0 ? 80 : 0 }}>
                   {machineries.length === 0 ? (
                     <div
                       className="icart_empty_inline"
@@ -2310,91 +2533,143 @@ function MenuDetailDrawer({
                       <span>No machineries listed</span>
                     </div>
                   ) : (
-                    machineries.map((m, i) => {
-                      const mach = m.machinery || m;
-                      return (
-                        <div
-                          key={m.id || i}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 12,
-                            padding: "12px 0",
-                            borderBottom: "1px solid var(--border)",
-                          }}
-                        >
-                          {mach.image ? (
-                            <img
-                              src={mach.image}
-                              alt=""
+                    <>
+                      {/* Hint text */}
+                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                        <MdLocalShipping size={13} style={{ flexShrink: 0 }} />
+                        Tap the + on any item to add it to a supply request
+                      </div>
+                      {machineries.map((m, i) => {
+                        const mach = m.machinery || m;
+                        const isSel = selectedMachIds.some((s) => s.id === mach.id);
+                        return (
+                          <div
+                            key={m.id || i}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 12,
+                              padding: "11px 12px",
+                              borderRadius: 12,
+                              marginBottom: 6,
+                              background: isSel ? "var(--bg-active)" : "var(--bg-hover)",
+                              border: `1.5px solid ${isSel ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                              transition: "all 0.12s",
+                            }}
+                          >
+                            {mach.image ? (
+                              <img
+                                src={mach.image}
+                                alt=""
+                                style={{
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 10,
+                                  objectFit: "cover",
+                                  flexShrink: 0,
+                                }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 10,
+                                  background: isSel ? "rgba(203,108,220,0.15)" : "var(--bg-card)",
+                                  border: `1px solid ${isSel ? "rgba(203,108,220,0.3)" : "var(--border)"}`,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <MdBuild
+                                  size={18}
+                                  style={{ color: isSel ? "var(--accent)" : "var(--text-muted)" }}
+                                />
+                              </div>
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{
+                                  fontSize: "0.88rem",
+                                  fontWeight: 700,
+                                  color: isSel ? "var(--accent)" : "var(--text-body)",
+                                }}
+                              >
+                                {mach.name}
+                              </div>
+                              {mach.manufacturer && (
+                                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                                  {mach.manufacturer}
+                                </div>
+                              )}
+                            </div>
+                            {m.quantity > 0 && (
+                              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", flexShrink: 0 }}>
+                                × {m.quantity}
+                              </span>
+                            )}
+                            {/* Select for order button */}
+                            <button
+                              onClick={() => toggleMachSelection(mach)}
+                              title={isSel ? "Remove from order" : "Add to order"}
                               style={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: 10,
-                                objectFit: "cover",
-                                flexShrink: 0,
-                              }}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: 10,
-                                background: "var(--bg-hover)",
-                                border: "1px solid var(--border)",
+                                width: 32,
+                                height: 32,
+                                borderRadius: 8,
+                                border: `1px solid ${isSel ? "var(--accent)" : "var(--border)"}`,
+                                background: isSel ? "var(--accent)" : "var(--bg-card)",
+                                color: isSel ? "#fff" : "var(--text-muted)",
+                                cursor: "pointer",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 flexShrink: 0,
                               }}
                             >
-                              <MdBuild
-                                size={18}
-                                style={{ color: "var(--text-muted)" }}
-                              />
-                            </div>
-                          )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div
-                              style={{
-                                fontSize: "0.88rem",
-                                fontWeight: 700,
-                                color: "var(--text-body)",
-                              }}
-                            >
-                              {mach.name}
-                            </div>
-                            {mach.manufacturer && (
-                              <div
-                                style={{
-                                  fontSize: "0.72rem",
-                                  color: "var(--text-muted)",
-                                }}
-                              >
-                                {mach.manufacturer}
-                              </div>
-                            )}
+                              {isSel ? <MdCheck size={15} /> : <MdAdd size={15} />}
+                            </button>
                           </div>
-                          {m.quantity > 1 && (
-                            <span
-                              style={{
-                                fontSize: "0.78rem",
-                                fontWeight: 700,
-                                color: "var(--text-muted)",
-                              }}
-                            >
-                              × {m.quantity}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* Sticky bottom bar when items selected */}
+                  {selectedMachIds.length > 0 && (
+                    <div
+                      style={{
+                        position: "sticky",
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        padding: "12px 0 4px",
+                        background: "linear-gradient(to bottom, transparent, var(--bg-card) 30%)",
+                      }}
+                    >
+                      <button
+                        className="app_btn app_btn_confirm"
+                        style={{
+                          width: "100%",
+                          height: 44,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 8,
+                          fontSize: "0.88rem",
+                          fontWeight: 800,
+                        }}
+                        onClick={() => setShowMachSupply(true)}
+                      >
+                        <MdLocalShipping size={16} />
+                        Request Supply · {selectedMachIds.length} item{selectedMachIds.length !== 1 ? "s" : ""}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
 
-              {/* ── INGREDIENTS ── */}
               {activeTab === "ingredients" && (
                 <div>
                   {ingredients.length === 0 ? (
@@ -2515,7 +2790,6 @@ function MenuDetailDrawer({
                 </div>
               )}
 
-              {/* ── PREP ITEMS ── */}
               {activeTab === "preps" && (
                 <div>
                   {prepItems.length === 0 ? (
@@ -2629,7 +2903,6 @@ function MenuDetailDrawer({
                 </div>
               )}
 
-              {/* ── SOPs ── */}
               {activeTab === "sops" && (
                 <div>
                   {sops.length === 0 ? (
@@ -2701,42 +2974,82 @@ function MenuDetailDrawer({
         </div>
       </div>
     </div>
+
+    {/* ── Machinery Supply Request Modal ── */}
+    {showMachSupply && (
+      <MachinerySupplyModal
+        cart={cart}
+        selectedMachItems={selectedMachIds}
+        onClose={() => setShowMachSupply(false)}
+        onSubmitted={() => {
+          setShowMachSupply(false);
+          setSelectedMachIds([]);
+          toast.success("Supply request created!");
+        }}
+      />
+    )}
+    </>
   );
 }
 
 /* ── Brand + Menu Selection Drawer ───────────────────────────── */
 function BrandSelectionDrawer({ cart, onClose, onDone }) {
-  // sub-view: "brands" | "financials"
   const [view, setView] = useState("brands");
 
-  // Brand list
   const [brands, setBrands] = useState([]);
   const [brandsLoading, setBrandsLoading] = useState(true);
   const [brandSearch, setBrandSearch] = useState("");
 
-  // Expanded brand (to show its menus inline)
   const [expandedBrandId, setExpandedBrandId] = useState(null);
-  const [brandMenus, setBrandMenus] = useState({}); // { [brandId]: { loading, items } }
+  const [brandMenus, setBrandMenus] = useState({});
 
-  // Selection
   const [selectedBrandId, setSelectedBrandId] = useState(null);
-  const [selectedMenuIds, setSelectedMenuIds] = useState([]); // max 5
+  const [selectedMenuIds, setSelectedMenuIds] = useState([]);
 
-  // Menu detail drawer
   const [detailMenuId, setDetailMenuId] = useState(null);
   const [detailMenuName, setDetailMenuName] = useState("");
 
-  // Financials
+  // Available slots state
+  const [availableSlots, setAvailableSlots] = useState(null);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+
   const [termsData, setTermsData] = useState(null);
   const [termsLoading, setTermsLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [invoiceData, setInvoiceData] = useState(null);
 
+  // Fix drawer scroll: lock body when open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
   const fmt = (n) =>
     Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
 
-  // ── Load brands ──
+  // Fetch available slots when cart has location
+  useEffect(() => {
+    const lat = cart.location?.latitude;
+    const lng = cart.location?.longitude;
+    const stateId = cart.location?.stateId || cart.location?.state?.id;
+    if (!lat || !lng) return;
+
+    setSlotsLoading(true);
+    const params = [`lat=${lat}`, `lng=${lng}`];
+    if (stateId) params.push(`stateId=${stateId}`);
+    if (selectedBrandId) params.push(`vendorId=${selectedBrandId}`);
+
+    api
+      .get(`/icart/available-slots?${params.join("&")}`)
+      .then((r) => {
+        const slots = r.data?.data?.slots;
+        setAvailableSlots(slots != null ? Number(slots) : null);
+      })
+      .catch(() => setAvailableSlots(null))
+      .finally(() => setSlotsLoading(false));
+  }, [selectedBrandId, cart.location]);
+
   useEffect(() => {
     api
       .get("/vendor/profile")
@@ -2748,9 +3061,8 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
       .finally(() => setBrandsLoading(false));
   }, []);
 
-  // ── Load menus for a brand ──
   const loadBrandMenus = async (brandId) => {
-    if (brandMenus[brandId]) return; // already loaded
+    if (brandMenus[brandId]) return;
     setBrandMenus((p) => ({ ...p, [brandId]: { loading: true, items: [] } }));
     try {
       const r = await api.get(
@@ -2768,7 +3080,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
     }
   };
 
-  // ── Toggle brand expand ──
   const toggleBrand = (brandId) => {
     if (expandedBrandId === brandId) {
       setExpandedBrandId(null);
@@ -2778,9 +3089,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
     loadBrandMenus(brandId);
   };
 
-  // ── Toggle menu selection ──
   const toggleMenu = (menuId, brandId) => {
-    // Switching brand — clear previous selection
     if (selectedBrandId && selectedBrandId !== brandId) {
       setSelectedBrandId(brandId);
       setSelectedMenuIds([menuId]);
@@ -2797,7 +3106,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
     });
   };
 
-  // ── Load terms when entering financials ──
   useEffect(() => {
     if (view !== "financials") return;
     const country = cart.location?.country || "";
@@ -2814,7 +3122,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
       .finally(() => setTermsLoading(false));
   }, [view]);
 
-  // ── Confirm brand ──
   const handleConfirm = async () => {
     if (!termsAccepted) {
       toast.error("Accept the terms to continue");
@@ -2831,7 +3138,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
         menuIds: selectedMenuIds,
       });
       const data = res.data.data;
-      // If backend returns invoice, show it; otherwise go straight to adding menus
       if (data?.invoice) {
         setInvoiceData({
           invoice: data.invoice,
@@ -2848,7 +3154,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
     }
   };
 
-  // ── After payment ──
   const handlePaid = async () => {
     if (selectedMenuIds.length > 0) {
       try {
@@ -2856,7 +3161,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
           items: selectedMenuIds.map((id) => ({ id, markup: 0 })),
         });
       } catch {
-        /* silent — menus can be added later */
+        /* silent */
       }
     }
     setInvoiceData(null);
@@ -2875,7 +3180,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
 
   const selectedBrand = brands.find((b) => b.id === selectedBrandId);
 
-  // Invoice modal renders on top
   if (invoiceData) {
     return (
       <InvoicePayModal
@@ -2889,7 +3193,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
 
   return (
     <>
-      {/* Main selection drawer */}
       <div
         style={{
           position: "fixed",
@@ -2918,6 +3221,8 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
             display: "flex",
             flexDirection: "column",
             boxShadow: "-8px 0 40px rgba(0,0,0,0.25)",
+            height: "100vh",
+            overflow: "hidden",
           }}
         >
           {/* Header */}
@@ -2965,6 +3270,63 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                   : `${selectedMenuIds.length}/${MAX_MENU_ITEMS} menus selected${selectedBrand ? ` from ${selectedBrand.businessName}` : ""}`}
               </div>
             </div>
+
+            {/* Available slots indicator */}
+            {view === "brands" && (cart.location?.latitude) && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "5px 10px",
+                  borderRadius: 8,
+                  background: availableSlots === 0
+                    ? "rgba(239,68,68,0.08)"
+                    : availableSlots != null && availableSlots <= 2
+                      ? "rgba(234,179,8,0.08)"
+                      : "rgba(34,197,94,0.08)",
+                  border: `1px solid ${availableSlots === 0
+                    ? "rgba(239,68,68,0.2)"
+                    : availableSlots != null && availableSlots <= 2
+                      ? "rgba(234,179,8,0.2)"
+                      : "rgba(34,197,94,0.2)"}`,
+                  flexShrink: 0,
+                }}
+              >
+                {slotsLoading ? (
+                  <div className="page_loader_spinner" style={{ width: 11, height: 11 }} />
+                ) : (
+                  <MdSignalCellularAlt
+                    size={12}
+                    style={{
+                      color: availableSlots === 0
+                        ? "#ef4444"
+                        : availableSlots != null && availableSlots <= 2
+                          ? "#ca8a04"
+                          : "#16a34a",
+                    }}
+                  />
+                )}
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    fontWeight: 800,
+                    color: availableSlots === 0
+                      ? "#ef4444"
+                      : availableSlots != null && availableSlots <= 2
+                        ? "#ca8a04"
+                        : "#16a34a",
+                  }}
+                >
+                  {slotsLoading
+                    ? "Slots…"
+                    : availableSlots != null
+                      ? `${availableSlots} slot${availableSlots !== 1 ? "s" : ""}`
+                      : "—"}
+                </span>
+              </div>
+            )}
+
             {view === "brands" && selectedMenuIds.length > 0 && (
               <button
                 className="app_btn app_btn_confirm"
@@ -3006,7 +3368,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
           {/* ── BRANDS VIEW ── */}
           {view === "brands" && (
             <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
-              {/* Search */}
               <div style={{ position: "relative", marginBottom: 20 }}>
                 <MdSearch
                   size={16}
@@ -3051,7 +3412,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                 )}
               </div>
 
-              {/* Selection summary bar */}
               {selectedMenuIds.length > 0 && (
                 <div
                   style={{
@@ -3196,7 +3556,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                           transition: "all 0.15s",
                         }}
                       >
-                        {/* Brand header row */}
                         <div
                           style={{
                             display: "flex",
@@ -3323,7 +3682,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                           </div>
                         </div>
 
-                        {/* Menu list — collapsible */}
                         {isExpanded && (
                           <div
                             style={{
@@ -3408,7 +3766,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                                         cursor: "pointer",
                                       }}
                                     >
-                                      {/* Image */}
                                       {item.image ? (
                                         <img
                                           src={item.image}
@@ -3443,7 +3800,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                                           />
                                         </div>
                                       )}
-                                      {/* Info */}
                                       <div style={{ flex: 1, minWidth: 0 }}>
                                         <div
                                           style={{
@@ -3483,14 +3839,17 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                                               style={{
                                                 fontSize: "0.68rem",
                                                 color: "var(--text-muted)",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 2,
                                               }}
                                             >
-                                              ⏱ {item.ticketTime}min
+                                              <MdAccessTime size={11} />
+                                              {item.ticketTime}min
                                             </span>
                                           )}
                                         </div>
                                       </div>
-                                      {/* Actions */}
                                       <div
                                         style={{
                                           display: "flex",
@@ -3498,7 +3857,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                                           flexShrink: 0,
                                         }}
                                       >
-                                        {/* Select toggle */}
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
@@ -3551,7 +3909,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
           {/* ── FINANCIALS VIEW ── */}
           {view === "financials" && (
             <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
-              {/* Selected brand recap */}
               {selectedBrand && (
                 <div
                   style={{
@@ -3625,7 +3982,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                 </div>
               )}
 
-              {/* Selected menu items preview */}
               {selectedMenuIds.length > 0 && (
                 <div style={{ marginBottom: 20 }}>
                   <div
@@ -3738,7 +4094,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                 </div>
               )}
 
-              {/* Country indicator */}
               <div
                 style={{
                   display: "flex",
@@ -3939,7 +4294,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                     </div>
                   )}
 
-                  {/* Accept checkbox */}
                   <button
                     onClick={() => setTermsAccepted((v) => !v)}
                     style={{
@@ -4003,7 +4357,6 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                 </div>
               )}
 
-              {/* Confirm button */}
               <div style={{ marginTop: 24 }}>
                 <button
                   className={`app_btn app_btn_confirm${confirming ? " btn_loading" : ""}`}
@@ -4037,11 +4390,11 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
         </div>
       </div>
 
-      {/* Menu detail drawer — renders on top */}
       {detailMenuId && (
         <MenuDetailDrawer
           menuId={detailMenuId}
           menuName={detailMenuName}
+          cart={cart}
           isSelected={
             selectedMenuIds.includes(detailMenuId) &&
             selectedBrandId === expandedBrandId
@@ -4061,7 +4414,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
   );
 }
 
-/* ── Beautiful Idle Card ──────────────────────────────────────── */
+/* ── BrandIdleCard ───────────────────────────────────────────── */
 function BrandIdleCard({
   cart,
   onChangeBrand,
@@ -4162,7 +4515,6 @@ function BrandIdleCard({
         overflow: "hidden",
       }}
     >
-      {/* Gradient brand header */}
       <div
         style={{
           background: gradientBg,
@@ -4230,52 +4582,48 @@ function BrandIdleCard({
               </div>
             )}
           </div>
+          {/* Change brand → just a plus/edit icon, no text */}
           <button
             onClick={onChangeBrand}
+            title="Change Brand"
             style={{
+              width: 34,
               height: 34,
-              padding: "0 13px",
               borderRadius: 9,
               border: "1px solid rgba(203,108,220,0.3)",
               background: "rgba(203,108,220,0.08)",
               color: "var(--accent)",
               cursor: "pointer",
-              fontFamily: "inherit",
-              fontWeight: 700,
-              fontSize: "0.76rem",
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
-              gap: 5,
+              justifyContent: "center",
               flexShrink: 0,
             }}
           >
-            <MdEdit size={13} /> Change Brand
+            <MdEdit size={15} />
           </button>
           <button
             onClick={onRemoveBrand}
+            title="Remove Brand"
             style={{
+              width: 34,
               height: 34,
-              padding: "0 13px",
               borderRadius: 9,
               border: "1px solid rgba(239,68,68,0.25)",
               background: "rgba(239,68,68,0.06)",
               color: "#ef4444",
               cursor: "pointer",
-              fontFamily: "inherit",
-              fontWeight: 700,
-              fontSize: "0.76rem",
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
-              gap: 5,
+              justifyContent: "center",
               flexShrink: 0,
             }}
           >
-            Remove
+            <MdClose size={15} />
           </button>
         </div>
       </div>
 
-      {/* Menu items strip */}
       {menuItems.length > 0 ? (
         <div style={{ padding: "14px 18px" }}>
           <div
@@ -4328,7 +4676,6 @@ function BrandIdleCard({
               <MdRestaurantMenu size={12} /> Manage
             </button>
           </div>
-          {/* Menu cards */}
           <div
             style={{
               display: "grid",
@@ -4341,6 +4688,7 @@ function BrandIdleCard({
               const img = item.image || item.menuItem?.image;
               const price =
                 item.sellingPrice || item.menuItem?.sellingPrice || 0;
+              const ticketTime = item.ticketTime || item.menuItem?.ticketTime || 0;
               return (
                 <div
                   key={item.id || idx}
@@ -4352,6 +4700,7 @@ function BrandIdleCard({
                     overflow: "hidden",
                     cursor: "pointer",
                     transition: "border-color 0.12s",
+                    position: "relative",
                   }}
                   onMouseEnter={(e) =>
                     (e.currentTarget.style.borderColor =
@@ -4389,6 +4738,23 @@ function BrandIdleCard({
                       />
                     </div>
                   )}
+                  {/* Clickable indicator overlay */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 5,
+                      right: 5,
+                      width: 18,
+                      height: 18,
+                      borderRadius: "50%",
+                      background: "rgba(0,0,0,0.45)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <MdOpenInNew size={10} style={{ color: "rgba(255,255,255,0.85)" }} />
+                  </div>
                   <div style={{ padding: "7px 8px" }}>
                     <div
                       style={{
@@ -4402,22 +4768,37 @@ function BrandIdleCard({
                     >
                       {name}
                     </div>
-                    {price > 0 && (
-                      <div
-                        style={{
-                          fontSize: "0.68rem",
-                          color: "var(--accent)",
-                          fontWeight: 700,
-                        }}
-                      >
-                        ₦{fmt(price)}
-                      </div>
-                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                      {price > 0 && (
+                        <div
+                          style={{
+                            fontSize: "0.68rem",
+                            color: "var(--accent)",
+                            fontWeight: 700,
+                          }}
+                        >
+                          ₦{fmt(price)}
+                        </div>
+                      )}
+                      {ticketTime > 0 && (
+                        <div
+                          style={{
+                            fontSize: "0.62rem",
+                            color: "var(--text-muted)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 2,
+                          }}
+                        >
+                          <MdAccessTime size={10} />
+                          {ticketTime}m
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
             })}
-            {/* Empty slots */}
             {Array.from({ length: MAX_MENU_ITEMS - menuItems.length }).map(
               (_, i) => (
                 <div
@@ -4467,7 +4848,7 @@ function BrandIdleCard({
   );
 }
 
-/* ── Manage Existing Menu (after brand is set) ────────────────── */
+/* ── Manage Existing Menu ─────────────────────────────────────── */
 function ManageMenuDrawer({ cart, onClose, onRefresh }) {
   const assignedVendor = cart.vendor;
   const [cartMenuItems, setCartMenuItems] = useState(cart.menuItems || []);
@@ -4485,6 +4866,12 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
   const fmt = (n) =>
     Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
   const MENU_PAGE_SIZE = 8;
+
+  // Fix drawer scroll
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
 
   useEffect(() => {
     const vendorId = assignedVendor?.id || cart.menuItems?.[0]?.vendorId;
@@ -4611,6 +4998,8 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
           display: "flex",
           flexDirection: "column",
           boxShadow: "-8px 0 40px rgba(0,0,0,0.25)",
+          height: "100vh",
+          overflow: "hidden",
         }}
       >
         {/* Header */}
@@ -4671,6 +5060,7 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
           </div>
         </div>
 
+        {/* Scrollable body */}
         <div style={{ flex: 1, overflowY: "auto", padding: "18px 22px" }}>
           {/* Active items */}
           {cartMenuItems.length > 0 && (
@@ -4693,6 +5083,7 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                   const img = item.image || item.menuItem?.image;
                   const price =
                     item.sellingPrice || item.menuItem?.sellingPrice || 0;
+                  const ticketTime = item.ticketTime || item.menuItem?.ticketTime || 0;
                   return (
                     <div
                       key={item.id}
@@ -4765,17 +5156,44 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                         >
                           {name}
                         </div>
-                        {price > 0 && (
-                          <div
-                            style={{
-                              fontSize: "0.68rem",
-                              color: "var(--text-muted)",
-                            }}
-                          >
-                            ₦{fmt(price)}
-                          </div>
-                        )}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                          {price > 0 && (
+                            <div
+                              style={{
+                                fontSize: "0.68rem",
+                                color: "var(--text-muted)",
+                              }}
+                            >
+                              ₦{fmt(price)}
+                            </div>
+                          )}
+                          {/* Ticket time badge */}
+                          {ticketTime > 0 && (
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 3,
+                                fontSize: "0.64rem",
+                                fontWeight: 700,
+                                color: "var(--text-muted)",
+                                padding: "1px 5px",
+                                borderRadius: 4,
+                                background: "var(--bg-card)",
+                                border: "1px solid var(--border)",
+                              }}
+                            >
+                              <MdAccessTime size={10} />
+                              {ticketTime}min
+                            </div>
+                          )}
+                        </div>
                       </div>
+                      {/* Clickable indicator */}
+                      <MdOpenInNew
+                        size={13}
+                        style={{ color: "var(--text-muted)", opacity: 0.5, flexShrink: 0 }}
+                      />
                       <span
                         style={{
                           fontSize: "0.6rem",
@@ -4937,17 +5355,44 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                           >
                             {item.name}
                           </div>
-                          {item.sellingPrice > 0 && (
-                            <div
-                              style={{
-                                fontSize: "0.68rem",
-                                color: "var(--text-muted)",
-                              }}
-                            >
-                              ₦{fmt(item.sellingPrice)}
-                            </div>
-                          )}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                            {item.sellingPrice > 0 && (
+                              <div
+                                style={{
+                                  fontSize: "0.68rem",
+                                  color: "var(--text-muted)",
+                                }}
+                              >
+                                ₦{fmt(item.sellingPrice)}
+                              </div>
+                            )}
+                            {/* Ticket time badge */}
+                            {item.ticketTime > 0 && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 3,
+                                  fontSize: "0.64rem",
+                                  fontWeight: 700,
+                                  color: "var(--text-muted)",
+                                  padding: "1px 5px",
+                                  borderRadius: 4,
+                                  background: "var(--bg-card)",
+                                  border: "1px solid var(--border)",
+                                }}
+                              >
+                                <MdAccessTime size={10} />
+                                {item.ticketTime}min
+                              </div>
+                            )}
+                          </div>
                         </div>
+                        {/* Clickable indicator */}
+                        <MdOpenInNew
+                          size={13}
+                          style={{ color: "var(--text-muted)", opacity: 0.4, flexShrink: 0 }}
+                        />
                         {added ? (
                           <span
                             style={{
@@ -5148,11 +5593,11 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
         </div>
       </Modal>
 
-      {/* Menu detail drawer — opens when any menu row is clicked */}
       {manageDetailId && (
         <MenuDetailDrawer
           menuId={manageDetailId}
           menuName={manageDetailName}
+          cart={cart}
           isSelected={false}
           onToggleSelect={() => {}}
           selectedCount={0}
@@ -5198,8 +5643,17 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
 
   return (
     <>
+      {/* Section title with plus icon */}
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
-        <span>Brand & Menu</span>
+        <span>Brands</span>
+        <button
+          className="icart_icon_action_btn"
+          style={{ marginLeft: "auto" }}
+          title="Change / Add Brand"
+          onClick={() => setShowBrandDrawer(true)}
+        >
+          <MdAdd size={15} />
+        </button>
       </div>
 
       <BrandIdleCard
@@ -5235,6 +5689,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
         <MenuDetailDrawer
           menuId={idleDetailId}
           menuName={idleDetailName}
+          cart={cart}
           isSelected={false}
           onToggleSelect={() => {}}
           selectedCount={0}
@@ -5245,7 +5700,6 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
         />
       )}
 
-      {/* Confirm remove brand modal */}
       {confirmRemoveBrand && (
         <div
           style={{
@@ -5395,14 +5849,6 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
     setShowLocationForm(false);
     onUpdate({ ...cart, location: newLocation });
   };
-  const formatDate = (d) =>
-    d
-      ? new Date(d).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
-      : null;
 
   return (
     <div className="icart_tab_content">
@@ -5423,7 +5869,6 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
           loading={togglingLock}
           onToggle={handleToggleLock}
         />
-        {/* Live Stream row */}
         <div
           className="icart_toggle_row"
           style={{ cursor: "pointer" }}
