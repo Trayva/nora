@@ -165,7 +165,16 @@ export default function AdminUsers() {
                 style={{ cursor: "pointer" }}
                 onClick={() => setSelected(u)}
               >
-                <div className="admin_drawer_avatar">{initials(u)}</div>
+                {u.image ? (
+                  <img
+                    src={u.image}
+                    alt=""
+                    className="admin_drawer_avatar"
+                    style={{ objectFit: "cover", padding: 0 }}
+                  />
+                ) : (
+                  <div className="admin_drawer_avatar">{initials(u)}</div>
+                )}{" "}
                 <div className="admin_drawer_info">
                   <div className="admin_drawer_name">{u.fullName || "—"}</div>
                   <div className="admin_drawer_sub">{u.email}</div>
