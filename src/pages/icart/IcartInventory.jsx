@@ -641,24 +641,24 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
             {/* Show badge if rows have data */}
             {((t.key === "ingredients" && activeIngCount > 0) ||
               (t.key === "machinery" && activeMachCount > 0)) && (
-              <span
-                style={{
-                  minWidth: 16,
-                  height: 16,
-                  borderRadius: 999,
-                  background: "var(--accent)",
-                  color: "#fff",
-                  fontSize: "0.58rem",
-                  fontWeight: 900,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "0 4px",
-                }}
-              >
-                {t.key === "ingredients" ? activeIngCount : activeMachCount}
-              </span>
-            )}
+                <span
+                  style={{
+                    minWidth: 16,
+                    height: 16,
+                    borderRadius: 999,
+                    background: "var(--accent)",
+                    color: "#fff",
+                    fontSize: "0.58rem",
+                    fontWeight: 900,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 4px",
+                  }}
+                >
+                  {t.key === "ingredients" ? activeIngCount : activeMachCount}
+                </span>
+              )}
           </button>
         ))}
       </div>
@@ -1323,7 +1323,7 @@ function SupplyRequestRow({ req, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
   const [receiving, setReceiving] = useState(false);
 
-  const fmt = (n) => Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+  const fmt = (n) => Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
 
   // Normalise ingredient items and machinery items into one unified list
   const ingItems = (req.items || []).map((it) => ({
