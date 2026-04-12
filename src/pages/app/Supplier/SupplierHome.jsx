@@ -23,12 +23,13 @@ import {
   MdOutlineInventory2,
   MdRefresh,
   MdCircle,
+  MdBuild,
+  MdAdd,
 } from "react-icons/md";
 import { PiTruck } from "react-icons/pi";
 import api from "../../../api/axios";
 import Drawer from "../../../components/Drawer";
 
-/* ── helpers ──────────────────────────────────────────────── */
 const fmt = (n) =>
   Number(n || 0).toLocaleString("en-NG", {
     minimumFractionDigits: 2,
@@ -80,6 +81,12 @@ const STATUS = {
     border: "rgba(139,92,246,0.25)",
     label: "Reviewed",
   },
+  RECEIVED: {
+    color: "#16a34a",
+    bg: "rgba(34,197,94,0.1)",
+    border: "rgba(34,197,94,0.25)",
+    label: "Received",
+  },
 };
 const getS = (k) => STATUS[k] || STATUS.PENDING;
 
@@ -109,7 +116,6 @@ function Chip({ status, small }) {
   );
 }
 
-/* ── File upload ──────────────────────────────────────────── */
 function FileInput({ label, accept = "image/*", onChange, currentUrl, hint }) {
   const ref = useRef(null);
   const [preview, setPreview] = useState(currentUrl || null);
@@ -204,7 +210,6 @@ function FileInput({ label, accept = "image/*", onChange, currentUrl, hint }) {
   );
 }
 
-/* ── Profile Form ─────────────────────────────────────────── */
 function ProfileForm({ existing, onSaved, onCancel }) {
   const [name, setName] = useState(existing?.businessName || "");
   const [logo, setLogo] = useState(null);
@@ -369,7 +374,6 @@ function ProfileForm({ existing, onSaved, onCancel }) {
   );
 }
 
-/* ── Profile Card ─────────────────────────────────────────── */
 function ProfileCard({ profile, onEdit }) {
   return (
     <div
@@ -587,7 +591,7 @@ function ProfileCard({ profile, onEdit }) {
   );
 }
 
-/* ── Inline Price editor (inside drawer) ─────────────────── */
+/* ── Inline Price (ingredients) ── */
 function InlinePrice({ ingredientId, stateId }) {
   const [price, setPrice] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -602,9 +606,9 @@ function InlinePrice({ ingredientId, stateId }) {
     }
     setLoading(true);
     api
-      .get("/library/ingredient/supplier/my-prices", {
-        params: { ingredientId },
-      })
+      .get(
+        `/library/ingredient/supplier/my-prices?ingredientId=${ingredientId}`,
+      )
       .then((r) => {
         const list = r.data?.data?.data || [];
         const entry = list.find((p) => p.ingredientId === ingredientId);
@@ -615,7 +619,6 @@ function InlinePrice({ ingredientId, stateId }) {
       .catch(() => setPrice(null))
       .finally(() => setLoading(false));
   };
-
   useEffect(() => {
     fetchMyPrice();
   }, [ingredientId]);
@@ -650,7 +653,6 @@ function InlinePrice({ ingredientId, stateId }) {
     return (
       <div className="page_loader_spinner" style={{ width: 12, height: 12 }} />
     );
-
   if (editing)
     return (
       <div
@@ -716,7 +718,6 @@ function InlinePrice({ ingredientId, stateId }) {
         </button>
       </div>
     );
-
   if (price != null)
     return (
       <button
@@ -743,7 +744,6 @@ function InlinePrice({ ingredientId, stateId }) {
         <MdEdit size={10} style={{ opacity: 0.6 }} />
       </button>
     );
-
   return (
     <button
       onClick={(e) => {
@@ -771,7 +771,180 @@ function InlinePrice({ ingredientId, stateId }) {
   );
 }
 
-/* ── Review Panel ─────────────────────────────────────────── */
+/* ── Inline Machinery Price ── */
+function InlineMachineryPrice({ machineryId, stateId }) {
+  const [price, setPrice] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const fetchMyPrice = () => {
+    if (!machineryId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    api
+      .get(`/library/machinery/supplier/my-prices?machineryId=${machineryId}`)
+      .then((r) => {
+        const d = r.data?.data;
+        const list = Array.isArray(d) ? d : d?.data || [];
+        const entry = list.find((p) => p.machineryId === machineryId);
+        const p = entry?.price != null ? Number(entry.price) : null;
+        setPrice(p);
+        if (p != null) setVal(String(p));
+      })
+      .catch(() => setPrice(null))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => {
+    fetchMyPrice();
+  }, [machineryId]);
+
+  const save = async () => {
+    if (!val || isNaN(Number(val)) || Number(val) < 0)
+      return toast.error("Enter a valid price");
+    setSaving(true);
+    try {
+      await api.post("/library/machinery/supplier-price", {
+        machineryId,
+        stateId,
+        price: Number(val),
+      });
+      fetchMyPrice();
+      setEditing(false);
+      toast.success("Price saved");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="page_loader_spinner" style={{ width: 12, height: 12 }} />
+    );
+  if (editing)
+    return (
+      <div
+        style={{ display: "flex", gap: 5, alignItems: "center" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ position: "relative" }}>
+          <span
+            style={{
+              position: "absolute",
+              left: 7,
+              top: "50%",
+              transform: "translateY(-50%)",
+              fontSize: "0.7rem",
+              color: "var(--text-muted)",
+              pointerEvents: "none",
+            }}
+          >
+            ₦
+          </span>
+          <input
+            className="modal-input"
+            type="number"
+            min="0"
+            autoFocus
+            style={{
+              paddingLeft: 20,
+              height: 28,
+              width: 90,
+              fontSize: "0.76rem",
+              marginBottom: 0,
+            }}
+            value={val}
+            onChange={(e) => setVal(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") save();
+              if (e.key === "Escape") setEditing(false);
+            }}
+          />
+        </div>
+        <button
+          className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+          style={{
+            height: 28,
+            padding: "0 10px",
+            fontSize: "0.7rem",
+            position: "relative",
+          }}
+          onClick={save}
+          disabled={saving}
+        >
+          <span className="btn_text">Save</span>
+          {saving && (
+            <span className="btn_loader" style={{ width: 10, height: 10 }} />
+          )}
+        </button>
+        <button
+          className="app_btn app_btn_cancel"
+          style={{ height: 28, padding: "0 8px", fontSize: "0.7rem" }}
+          onClick={() => setEditing(false)}
+        >
+          ✕
+        </button>
+      </div>
+    );
+  if (price != null)
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setEditing(true);
+        }}
+        style={{
+          background: "rgba(34,197,94,0.08)",
+          border: "1px solid rgba(34,197,94,0.2)",
+          borderRadius: 6,
+          padding: "2px 8px",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          fontSize: "0.72rem",
+          fontWeight: 700,
+          color: "#16a34a",
+        }}
+      >
+        <MdAttachMoney size={12} />₦{fmt(price)}
+        <MdEdit size={10} style={{ opacity: 0.6 }} />
+      </button>
+    );
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setEditing(true);
+      }}
+      style={{
+        background: "rgba(239,68,68,0.06)",
+        border: "1px solid rgba(239,68,68,0.15)",
+        borderRadius: 6,
+        padding: "2px 8px",
+        cursor: "pointer",
+        fontFamily: "inherit",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        fontSize: "0.7rem",
+        fontWeight: 700,
+        color: "#ef4444",
+      }}
+    >
+      <MdAttachMoney size={12} />
+      No price — Set
+    </button>
+  );
+}
+
+/* ── Review Panel ── */
 function ReviewPanel({ req, onDone, onCancel }) {
   const [qtys, setQtys] = useState(() =>
     Object.fromEntries(
@@ -965,14 +1138,165 @@ function ReviewPanel({ req, onDone, onCancel }) {
   );
 }
 
-/* ── Request Drawer ───────────────────────────────────────── */
+/* ── Request Card ── */
+function RequestCard({ req, onClick }) {
+  const loc = req.cart?.location;
+  const ingredientCount = req.items?.length || 0;
+  const machineryCount = req.supplyRequestMachineryItems?.length || 0;
+  const thumbImg =
+    req.items?.[0]?.ingredient?.image ||
+    req.supplyRequestMachineryItems?.[0]?.machinery?.image;
+
+  return (
+    <div
+      className="icart_item_card"
+      style={{ cursor: "pointer" }}
+      onClick={onClick}
+    >
+      <div className="icart_item_top">
+        <div className="icart_item_icon">
+          {thumbImg ? (
+            <img
+              src={thumbImg}
+              alt=""
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 5,
+                objectFit: "cover",
+              }}
+            />
+          ) : (
+            <PiTruck size={16} />
+          )}
+        </div>
+        <Chip status={req.status} small />
+      </div>
+      <div className="icart_item_serial" style={{ fontFamily: "monospace" }}>
+        #{req.id.slice(0, 8).toUpperCase()}
+      </div>
+      <div className="icart_item_meta">
+        <div className="icart_meta_row">
+          <span className="icart_meta_key">Cart</span>
+          <span
+            className="icart_meta_val"
+            style={{ fontFamily: "monospace", fontSize: "0.72rem" }}
+          >
+            {req.cart?.serialNumber ||
+              req.cartId?.slice(0, 8).toUpperCase() ||
+              "—"}
+          </span>
+        </div>
+        {ingredientCount > 0 && (
+          <div className="icart_meta_row">
+            <span className="icart_meta_key">Ingredients</span>
+            <span className="icart_meta_val">
+              {ingredientCount} item{ingredientCount !== 1 ? "s" : ""}
+            </span>
+          </div>
+        )}
+        {machineryCount > 0 && (
+          <div className="icart_meta_row">
+            <span className="icart_meta_key">Machinery</span>
+            <span
+              className="icart_meta_val"
+              style={{ display: "inline-flex", alignItems: "center", gap: 3 }}
+            >
+              <MdBuild size={11} style={{ color: "var(--accent)" }} />
+              {machineryCount} item{machineryCount !== 1 ? "s" : ""}
+            </span>
+          </div>
+        )}
+        {ingredientCount === 0 && machineryCount === 0 && (
+          <div className="icart_meta_row">
+            <span className="icart_meta_key">Items</span>
+            <span className="icart_meta_muted">None</span>
+          </div>
+        )}
+        <div className="icart_meta_row">
+          <span className="icart_meta_key">Supplier</span>
+          <span
+            className="icart_meta_val"
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {req.supplier?.businessName || "—"}
+          </span>
+        </div>
+        <div className="icart_meta_row">
+          <span className="icart_meta_key">Location</span>
+          <span className="icart_meta_val">
+            {loc?.name ? (
+              <span className="icart_location_val">
+                <MdOutlineLocationOn size={11} />
+                {loc.name}
+              </span>
+            ) : (
+              <span className="icart_meta_muted">Not set</span>
+            )}
+          </span>
+        </div>
+        <div className="icart_meta_row">
+          <span className="icart_meta_key">Date</span>
+          <span className="icart_meta_val">{fmtDate(req.createdAt)}</span>
+        </div>
+        {req.totalAmount > 0 && (
+          <div className="icart_meta_row">
+            <span className="icart_meta_key">Total</span>
+            <span
+              className="icart_meta_val"
+              style={{ fontWeight: 800, color: "var(--accent)" }}
+            >
+              ₦
+              {Number(req.totalAmount).toLocaleString("en-NG", {
+                maximumFractionDigits: 0,
+              })}
+            </span>
+          </div>
+        )}
+        {(req.status === "SUPPLIER_REVIEWED" || req.status === "ACCEPTED") && (
+          <div className="icart_meta_row" style={{ marginTop: 2 }}>
+            <span
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 700,
+                color: "#a855f7",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 3,
+              }}
+            >
+              <MdLocalShipping size={11} /> Tap to ship
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Request Drawer ── */
 function RequestDrawer({ req, profile, onClose, onRefresh }) {
   const [reviewing, setReviewing] = useState(false);
   const [shipping, setShipping] = useState(false);
   const [itemsOpen, setItemsOpen] = useState(true);
+  const [itemsTab, setItemsTab] = useState("ingredients");
+
+  const ingredientItems = req?.items || [];
+  const machineryItems = req?.supplyRequestMachineryItems || [];
+  const hasMachinery = machineryItems.length > 0;
+  const hasIngredients = ingredientItems.length > 0;
+
+  useEffect(() => {
+    if (!hasIngredients && hasMachinery) setItemsTab("machinery");
+    else setItemsTab("ingredients");
+  }, [req?.id]);
+
   if (!req) return null;
 
-  const s = getS(req.status);
   const loc = req.cart?.location;
   const mapsUrl =
     loc?.latitude && loc?.longitude
@@ -1011,7 +1335,6 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
       description={req.cart?.serialNumber || ""}
       width={480}
     >
-      {/* Status + date */}
       <div
         style={{
           display: "flex",
@@ -1047,7 +1370,6 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
         )}
       </div>
 
-      {/* Location */}
       {loc && (
         <div
           style={{
@@ -1094,7 +1416,6 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
                 href={mapsUrl}
                 target="_blank"
                 rel="noreferrer"
-                title="Open in Maps"
                 style={{
                   width: 28,
                   height: 28,
@@ -1112,7 +1433,6 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
               </a>
               <button
                 onClick={copyMaps}
-                title="Copy link"
                 style={{
                   width: 28,
                   height: 28,
@@ -1134,61 +1454,81 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
         </div>
       )}
 
-      {/* Requester */}
       {req.requester && (
         <div style={{ marginBottom: 16 }}>
           <div className="drawer_section_title" style={{ marginBottom: 8 }}>
             Requester
           </div>
           <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 12px",
+              background: "var(--bg-hover)",
+              borderRadius: 10,
+            }}
           >
-            {[
-              { label: "Name", value: req.requester?.fullName },
-              { label: "Phone", value: req.requester?.phone },
-              { label: "Email", value: req.requester?.email },
-            ]
-              .filter((r) => r.value)
-              .map((r) => (
-                <div
-                  key={r.label}
+            {req.requester.image ? (
+              <img
+                src={req.requester.image}
+                alt=""
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  flexShrink: 0,
+                  border: "2px solid var(--border)",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: "var(--bg-active)",
+                  border: "1px solid rgba(203,108,220,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <span
                   style={{
-                    background: "var(--bg-hover)",
-                    borderRadius: 9,
-                    padding: "8px 11px",
+                    fontSize: "0.78rem",
+                    fontWeight: 900,
+                    color: "var(--accent)",
                   }}
                 >
-                  <div
-                    style={{
-                      fontSize: "0.6rem",
-                      fontWeight: 700,
-                      color: "var(--text-muted)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      marginBottom: 2,
-                    }}
-                  >
-                    {r.label}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.76rem",
-                      fontWeight: 700,
-                      color: "var(--text-body)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {r.value}
-                  </div>
-                </div>
-              ))}
+                  {(req.requester.fullName ||
+                    req.requester.email ||
+                    "?")[0].toUpperCase()}
+                </span>
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-body)",
+                }}
+              >
+                {req.requester.fullName || "—"}
+              </div>
+              <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                {[req.requester.email, req.requester.phone]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Ingredients — collapsible */}
       <div style={{ marginBottom: 16 }}>
         <button
           onClick={() => setItemsOpen((v) => !v)}
@@ -1208,7 +1548,7 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
             className="drawer_section_title"
             style={{ margin: 0, flex: 1, textAlign: "left" }}
           >
-            Ingredients ({req.items?.length || 0})
+            Items ({ingredientItems.length + machineryItems.length})
           </span>
           {itemsOpen ? (
             <MdExpandLess size={15} style={{ color: "var(--text-muted)" }} />
@@ -1216,80 +1556,200 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
             <MdExpandMore size={15} style={{ color: "var(--text-muted)" }} />
           )}
         </button>
-        {itemsOpen &&
-          (req.items || []).map((it, i) => {
-            const ing = it.ingredient;
-            return (
-              <div
-                key={it.id || i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "10px 0",
-                  borderTop: "1px solid var(--border)",
-                }}
-              >
-                {ing?.image ? (
-                  <img
-                    src={ing.image}
-                    alt=""
+
+        {itemsOpen && (
+          <>
+            {hasIngredients && hasMachinery && (
+              <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+                {[
+                  {
+                    key: "ingredients",
+                    label: `Ingredients (${ingredientItems.length})`,
+                  },
+                  {
+                    key: "machinery",
+                    label: `Machinery (${machineryItems.length})`,
+                  },
+                ].map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setItemsTab(t.key)}
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 8,
-                      objectFit: "cover",
-                      flexShrink: 0,
+                      height: 28,
+                      padding: "0 12px",
+                      borderRadius: 7,
+                      fontFamily: "inherit",
+                      border: `1px solid ${itemsTab === t.key ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                      background:
+                        itemsTab === t.key
+                          ? "var(--bg-active)"
+                          : "var(--bg-hover)",
+                      color:
+                        itemsTab === t.key
+                          ? "var(--accent)"
+                          : "var(--text-muted)",
+                      cursor: "pointer",
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
                     }}
-                  />
-                ) : (
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {(itemsTab === "ingredients" || !hasMachinery) &&
+              ingredientItems.map((it, i) => {
+                const ing = it.ingredient;
+                return (
                   <div
+                    key={it.id || i}
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 8,
-                      background: "var(--bg-hover)",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
+                      gap: 10,
+                      padding: "10px 0",
+                      borderTop: "1px solid var(--border)",
                     }}
                   >
-                    <MdOutlineInventory2
-                      size={15}
-                      style={{ color: "var(--text-muted)" }}
+                    {ing?.image ? (
+                      <img
+                        src={ing.image}
+                        alt=""
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          objectFit: "cover",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          background: "var(--bg-hover)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <MdOutlineInventory2
+                          size={15}
+                          style={{ color: "var(--text-muted)" }}
+                        />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
+                          color: "var(--text-body)",
+                        }}
+                      >
+                        {ing?.name || "Item"}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.68rem",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        {it.quantity?.toLocaleString()}
+                        {ing?.unit || ""}
+                        {it.suppliedQuantity != null &&
+                          ` · ✓ Supplied: ${it.suppliedQuantity.toLocaleString()}${ing?.unit || ""}`}
+                      </div>
+                    </div>
+                    <InlinePrice
+                      ingredientId={ing?.id || it.ingredientId}
+                      stateId={profile?.state?.id}
                     />
                   </div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
+                );
+              })}
+
+            {(itemsTab === "machinery" || !hasIngredients) &&
+              machineryItems.map((it, i) => {
+                const mach = it.machinery;
+                return (
                   <div
+                    key={it.id || i}
                     style={{
-                      fontSize: "0.82rem",
-                      fontWeight: 700,
-                      color: "var(--text-body)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "10px 0",
+                      borderTop: "1px solid var(--border)",
                     }}
                   >
-                    {ing?.name || "Item"}
+                    {mach?.image ? (
+                      <img
+                        src={mach.image}
+                        alt=""
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          objectFit: "cover",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          background: "rgba(203,108,220,0.08)",
+                          border: "1px solid rgba(203,108,220,0.2)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <MdBuild size={15} style={{ color: "var(--accent)" }} />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
+                          color: "var(--text-body)",
+                        }}
+                      >
+                        {mach?.name || "Machinery"}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.68rem",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        Qty: {it.quantity?.toLocaleString()}
+                        {it.suppliedQuantity != null &&
+                          ` · ✓ Supplied: ${it.suppliedQuantity.toLocaleString()}`}
+                        {mach?.manufacturer ? ` · ${mach.manufacturer}` : ""}
+                      </div>
+                    </div>
+                    <InlineMachineryPrice
+                      machineryId={mach?.id || it.machineryId}
+                      stateId={profile?.state?.id}
+                    />
                   </div>
-                  <div
-                    style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}
-                  >
-                    {it.quantity?.toLocaleString()}
-                    {ing?.unit || ""}
-                    {it.suppliedQuantity != null &&
-                      ` · ✓ Supplied: ${it.suppliedQuantity.toLocaleString()}${ing?.unit || ""}`}
-                  </div>
-                </div>
-                <InlinePrice
-                  ingredientId={ing?.id || it.ingredientId}
-                  stateId={profile?.state?.id}
-                />
-              </div>
-            );
-          })}
+                );
+              })}
+          </>
+        )}
       </div>
 
-      {/* Actions */}
       <div
         style={{
           paddingTop: 16,
@@ -1369,7 +1829,6 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
             <MdCheck size={15} /> Delivered
           </div>
         )}
-
         {reviewing && (
           <ReviewPanel
             req={req}
@@ -1386,134 +1845,7 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
   );
 }
 
-/* ── Minimal Request Card (iCart style) ──────────────────── */
-function RequestCard({ req, onClick }) {
-  const s = getS(req.status);
-  const loc = req.cart?.location;
-  const itemCount = req.items?.length || 0;
-  const firstIng = req.items?.[0]?.ingredient;
-
-  return (
-    <div
-      className="icart_item_card"
-      style={{ cursor: "pointer" }}
-      onClick={onClick}
-    >
-      {/* Top: icon + status */}
-      <div className="icart_item_top">
-        <div className="icart_item_icon">
-          {firstIng?.image ? (
-            <img
-              src={firstIng.image}
-              alt=""
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 5,
-                objectFit: "cover",
-              }}
-            />
-          ) : (
-            <PiTruck size={16} />
-          )}
-        </div>
-        <Chip status={req.status} small />
-      </div>
-
-      {/* Request ID */}
-      <div className="icart_item_serial" style={{ fontFamily: "monospace" }}>
-        #{req.id.slice(0, 8).toUpperCase()}
-      </div>
-
-      {/* Meta rows */}
-      <div className="icart_item_meta">
-        <div className="icart_meta_row">
-          <span className="icart_meta_key">Cart</span>
-          <span
-            className="icart_meta_val"
-            style={{ fontFamily: "monospace", fontSize: "0.72rem" }}
-          >
-            {req.cart?.serialNumber ||
-              req.cartId?.slice(0, 8).toUpperCase() ||
-              "—"}
-          </span>
-        </div>
-        <div className="icart_meta_row">
-          <span className="icart_meta_key">Items</span>
-          <span className="icart_meta_val">
-            {itemCount > 0 ? (
-              `${itemCount} ingredient${itemCount !== 1 ? "s" : ""}`
-            ) : (
-              <span className="icart_meta_muted">None</span>
-            )}
-          </span>
-        </div>
-        <div className="icart_meta_row">
-          <span className="icart_meta_key">Supplier</span>
-          <span
-            className="icart_meta_val"
-            style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {req.supplier?.businessName || "—"}
-          </span>
-        </div>
-        <div className="icart_meta_row">
-          <span className="icart_meta_key">Location</span>
-          <span className="icart_meta_val">
-            {loc?.name ? (
-              <span className="icart_location_val">
-                <MdOutlineLocationOn size={11} />
-                {loc.name}
-              </span>
-            ) : (
-              <span className="icart_meta_muted">Not set</span>
-            )}
-          </span>
-        </div>
-        <div className="icart_meta_row">
-          <span className="icart_meta_key">Date</span>
-          <span className="icart_meta_val">{fmtDate(req.createdAt)}</span>
-        </div>
-        {req.totalAmount > 0 && (
-          <div className="icart_meta_row">
-            <span className="icart_meta_key">Total</span>
-            <span
-              className="icart_meta_val"
-              style={{ fontWeight: 800, color: "var(--accent)" }}
-            >
-              ₦
-              {Number(req.totalAmount).toLocaleString("en-NG", {
-                maximumFractionDigits: 0,
-              })}
-            </span>
-          </div>
-        )}
-        {(req.status === "SUPPLIER_REVIEWED" || req.status === "ACCEPTED") && (
-          <div className="icart_meta_row" style={{ marginTop: 2 }}>
-            <span
-              style={{
-                fontSize: "0.65rem",
-                fontWeight: 700,
-                color: "#a855f7",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 3,
-              }}
-            >
-              <MdLocalShipping size={11} /> Tap to ship
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ── Requests Tab ─────────────────────────────────────────── */
+/* ── Requests Tab ── */
 function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
   const [filter, setFilter] = useState("ALL");
   const [search, setSearch] = useState("");
@@ -1531,6 +1863,9 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
         !r.items?.some((it) =>
           it.ingredient?.name?.toLowerCase().includes(q),
         ) &&
+        !r.supplyRequestMachineryItems?.some((it) =>
+          it.machinery?.name?.toLowerCase().includes(q),
+        ) &&
         !r.requester?.fullName?.toLowerCase().includes(q)
       )
         return false;
@@ -1546,7 +1881,6 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
 
   return (
     <div>
-      {/* Status pills + controls */}
       <div
         style={{
           display: "flex",
@@ -1640,7 +1974,6 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
         </button>
       </div>
 
-      {/* Filters panel */}
       {showFilters && (
         <div
           style={{
@@ -1668,7 +2001,7 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
             <input
               className="modal-input"
               style={{ paddingLeft: 30, marginBottom: 0, height: 36 }}
-              placeholder="Search cart, ingredient, requester…"
+              placeholder="Search cart, ingredient, machinery, requester…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -1799,8 +2132,7 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
   );
 }
 
-/* ── Prices Tab ───────────────────────────────────────────── */
-/* ── Price Card with inline edit ────────────────────────────── */
+/* ── Price Card (ingredients) ── */
 function PriceCard({ p, stateId, onSaved }) {
   const ing = p.ingredient;
   const [editing, setEditing] = useState(false);
@@ -1817,7 +2149,7 @@ function PriceCard({ p, stateId, onSaved }) {
         stateId,
         price: Number(val),
       });
-      toast.success(`Price updated`);
+      toast.success("Price updated");
       setEditing(false);
       onSaved();
     } catch (err) {
@@ -1885,7 +2217,6 @@ function PriceCard({ p, stateId, onSaved }) {
           )}
         </div>
       </div>
-
       {editing ? (
         <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
           <div style={{ position: "relative", flex: 1 }}>
@@ -1993,7 +2324,201 @@ function PriceCard({ p, stateId, onSaved }) {
   );
 }
 
-function PricesTab({ profile }) {
+/* ── Machinery Price Card ── */
+function MachineryPriceCard({ p, stateId, onSaved }) {
+  const mach = p.machinery;
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(String(p.price ?? ""));
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!val || isNaN(Number(val)) || Number(val) < 0)
+      return toast.error("Enter a valid price");
+    setSaving(true);
+    try {
+      await api.post("/library/machinery/supplier-price", {
+        machineryId: mach?.id || p.machineryId,
+        stateId,
+        price: Number(val),
+      });
+      toast.success("Price updated");
+      setEditing(false);
+      onSaved();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="icart_item_card" style={{ padding: "14px 14px 12px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 10,
+        }}
+      >
+        {mach?.image ? (
+          <img
+            src={mach.image}
+            alt=""
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              objectFit: "cover",
+              flexShrink: 0,
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              background: "rgba(203,108,220,0.08)",
+              border: "1px solid rgba(203,108,220,0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <MdBuild size={15} style={{ color: "var(--accent)" }} />
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              color: "var(--text-body)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {mach?.name || "Item"}
+          </div>
+          {mach?.manufacturer && (
+            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+              {mach.manufacturer}
+            </div>
+          )}
+        </div>
+      </div>
+      {editing ? (
+        <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+          <div style={{ position: "relative", flex: 1 }}>
+            <span
+              style={{
+                position: "absolute",
+                left: 7,
+                top: "50%",
+                transform: "translateY(-50%)",
+                fontSize: "0.7rem",
+                color: "var(--text-muted)",
+                pointerEvents: "none",
+                fontWeight: 600,
+              }}
+            >
+              ₦
+            </span>
+            <input
+              className="modal-input"
+              type="number"
+              min="0"
+              autoFocus
+              style={{
+                paddingLeft: 18,
+                height: 30,
+                fontSize: "0.76rem",
+                marginBottom: 0,
+              }}
+              value={val}
+              onChange={(e) => setVal(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") save();
+                if (e.key === "Escape") setEditing(false);
+              }}
+            />
+          </div>
+          <button
+            className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+            style={{
+              height: 30,
+              padding: "0 10px",
+              fontSize: "0.7rem",
+              position: "relative",
+              flexShrink: 0,
+            }}
+            onClick={save}
+            disabled={saving}
+          >
+            <span className="btn_text">Save</span>
+            {saving && (
+              <span className="btn_loader" style={{ width: 10, height: 10 }} />
+            )}
+          </button>
+          <button
+            className="app_btn app_btn_cancel"
+            style={{
+              height: 30,
+              padding: "0 7px",
+              fontSize: "0.7rem",
+              flexShrink: 0,
+            }}
+            onClick={() => {
+              setEditing(false);
+              setVal(String(p.price ?? ""));
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 6,
+          }}
+        >
+          <div style={{ fontSize: "1rem", fontWeight: 900, color: "#16a34a" }}>
+            ₦{fmt(p.price)}
+          </div>
+          <button
+            onClick={() => setEditing(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              height: 26,
+              padding: "0 8px",
+              borderRadius: 6,
+              border: "1px solid var(--border)",
+              background: "var(--bg-hover)",
+              color: "var(--text-muted)",
+              cursor: "pointer",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              fontFamily: "inherit",
+            }}
+          >
+            <MdEdit size={11} /> Edit
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Ingredient Prices Tab ── */
+function IngredientPricesTab({ profile }) {
   const [prices, setPrices] = useState([]);
   const [allPrices, setAllPrices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2002,16 +2527,17 @@ function PricesTab({ profile }) {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const LIMIT = 20;
-
   const [ingredient, setIngredient] = useState(null);
   const [ingSearch, setIngSearch] = useState("");
   const [ingResults, setIngResults] = useState([]);
   const [ingSearching, setIngSearching] = useState(false);
   const [ingOpen, setIngOpen] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newForm, setNewForm] = useState({ name: "", unit: "" });
   const [price, setPrice] = useState("");
   const [saving, setSaving] = useState(false);
   const debRef = useRef(null);
-  const wrapRef = useRef(null);
 
   const fetchPrices = async (pg = 1, q = "") => {
     setLoading(true);
@@ -2031,7 +2557,6 @@ function PricesTab({ profile }) {
     }
   };
 
-  // Derive client-side filtered prices (fallback if API search not supported)
   useEffect(() => {
     if (!search.trim()) {
       setPrices(allPrices);
@@ -2047,12 +2572,9 @@ function PricesTab({ profile }) {
     );
   }, [search, allPrices]);
 
-  // Initial load
   useEffect(() => {
     fetchPrices(1, "");
   }, []);
-
-  // Re-fetch when page changes
   useEffect(() => {
     fetchPrices(page, "");
   }, [page]);
@@ -2070,15 +2592,35 @@ function PricesTab({ profile }) {
           `/library/ingredient?search=${encodeURIComponent(q)}&limit=8`,
         );
         const d = r.data.data;
-        // API returns paginated wrapper: { data: [...], total, ... }
-        const list = Array.isArray(d) ? d : d?.data || d?.ingredient || [];
-        setIngResults(list);
+        setIngResults(Array.isArray(d) ? d : d?.data || d?.ingredient || []);
       } catch {
         setIngResults([]);
       } finally {
         setIngSearching(false);
       }
     }, 300);
+  };
+
+  const handleCreate = async () => {
+    if (!newForm.name.trim() || !newForm.unit.trim()) return;
+    setCreating(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", newForm.name.trim());
+      fd.append("unit", newForm.unit.trim());
+      const res = await api.post("/library/ingredient", fd);
+      const created = res.data.data;
+      setIngredient(created);
+      setIngSearch(created.name);
+      setIngOpen(false);
+      setShowCreate(false);
+      setNewForm({ name: "", unit: "" });
+      toast.success(`${created.name} created`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to create");
+    } finally {
+      setCreating(false);
+    }
   };
 
   const save = async () => {
@@ -2107,7 +2649,6 @@ function PricesTab({ profile }) {
 
   return (
     <div>
-      {/* Set price form */}
       <div
         style={{
           background: "var(--bg-card)",
@@ -2135,7 +2676,7 @@ function PricesTab({ profile }) {
             alignItems: "end",
           }}
         >
-          <div ref={wrapRef} style={{ position: "relative" }}>
+          <div style={{ position: "relative" }}>
             <label className="modal-label">Ingredient</label>
             <div
               style={{
@@ -2183,6 +2724,7 @@ function PricesTab({ profile }) {
                   setIngSearch(e.target.value);
                   setIngredient(null);
                   setIngOpen(true);
+                  setShowCreate(false);
                   searchIngredients(e.target.value);
                 }}
                 onFocus={() => setIngOpen(true)}
@@ -2218,7 +2760,7 @@ function PricesTab({ profile }) {
                   border: "1px solid var(--border)",
                   borderRadius: 10,
                   zIndex: 60,
-                  maxHeight: 180,
+                  maxHeight: 220,
                   overflowY: "auto",
                   boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
                 }}
@@ -2241,7 +2783,7 @@ function PricesTab({ profile }) {
                       color: "var(--text-muted)",
                     }}
                   >
-                    No results
+                    No results for "{ingSearch}"
                   </div>
                 ) : (
                   ingResults.map((item) => (
@@ -2321,6 +2863,109 @@ function PricesTab({ profile }) {
                     </div>
                   ))
                 )}
+                <div
+                  style={{
+                    padding: "8px 12px",
+                    borderTop: "1px solid var(--border)",
+                  }}
+                >
+                  {!showCreate ? (
+                    <button
+                      onClick={() => setShowCreate(true)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "var(--accent)",
+                        fontWeight: 700,
+                        fontSize: "0.78rem",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                        padding: 0,
+                      }}
+                    >
+                      <MdAdd size={14} /> Create "
+                      {ingSearch || "new ingredient"}"
+                    </button>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          New Ingredient
+                        </span>
+                        <button
+                          onClick={() => setShowCreate(false)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "var(--text-muted)",
+                            display: "flex",
+                            padding: 0,
+                          }}
+                        >
+                          <MdClose size={13} />
+                        </button>
+                      </div>
+                      <input
+                        className="modal-input"
+                        placeholder="Name *"
+                        value={newForm.name}
+                        onChange={(e) =>
+                          setNewForm((p) => ({ ...p, name: e.target.value }))
+                        }
+                        style={{ marginBottom: 0 }}
+                      />
+                      <input
+                        className="modal-input"
+                        placeholder="Unit * (e.g. g, ml, kg)"
+                        value={newForm.unit}
+                        onChange={(e) =>
+                          setNewForm((p) => ({ ...p, unit: e.target.value }))
+                        }
+                        style={{ marginBottom: 0 }}
+                      />
+                      <button
+                        className={`app_btn app_btn_confirm${creating ? " btn_loading" : ""}`}
+                        onClick={handleCreate}
+                        disabled={creating || !newForm.name || !newForm.unit}
+                        style={{
+                          height: 32,
+                          position: "relative",
+                          fontSize: "0.78rem",
+                        }}
+                      >
+                        <span className="btn_text">Create & Select</span>
+                        {creating && (
+                          <span
+                            className="btn_loader"
+                            style={{ width: 11, height: 11 }}
+                          />
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -2398,7 +3043,6 @@ function PricesTab({ profile }) {
         )}
       </div>
 
-      {/* Search */}
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         <div style={{ position: "relative", flex: 1 }}>
           <MdSearch
@@ -2424,9 +3068,7 @@ function PricesTab({ profile }) {
           />
           {search && (
             <button
-              onClick={() => {
-                setSearch("");
-              }}
+              onClick={() => setSearch("")}
               style={{
                 position: "absolute",
                 right: 8,
@@ -2506,10 +3148,7 @@ function PricesTab({ profile }) {
               <button
                 className="app_btn app_btn_cancel"
                 style={{ height: 32, padding: "0 14px", fontSize: "0.76rem" }}
-                onClick={() => {
-                  setPage((p) => p - 1);
-                  fetchPrices(page - 1, search);
-                }}
+                onClick={() => setPage((p) => p - 1)}
                 disabled={page <= 1}
               >
                 ‹ Prev
@@ -2526,10 +3165,7 @@ function PricesTab({ profile }) {
               <button
                 className="app_btn app_btn_cancel"
                 style={{ height: 32, padding: "0 14px", fontSize: "0.76rem" }}
-                onClick={() => {
-                  setPage((p) => p + 1);
-                  fetchPrices(page + 1, search);
-                }}
+                onClick={() => setPage((p) => p + 1)}
                 disabled={page >= totalPages}
               >
                 Next ›
@@ -2542,7 +3178,718 @@ function PricesTab({ profile }) {
   );
 }
 
-/* ── Main ─────────────────────────────────────────────────── */
+/* ── Machinery Prices Tab ── */
+function MachineryPricesTab({ profile }) {
+  const [prices, setPrices] = useState([]);
+  const [allPrices, setAllPrices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const LIMIT = 20;
+  const [machinery, setMachinery] = useState(null);
+  const [machSearch, setMachSearch] = useState("");
+  const [machResults, setMachResults] = useState([]);
+  const [machSearching, setMachSearching] = useState(false);
+  const [machOpen, setMachOpen] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newForm, setNewForm] = useState({ name: "", description: "" });
+  const [price, setPrice] = useState("");
+  const [saving, setSaving] = useState(false);
+  const debRef = useRef(null);
+
+  const fetchPrices = async (pg = 1) => {
+    setLoading(true);
+    try {
+      let url = `/library/machinery/supplier/my-prices?page=${pg}&limit=${LIMIT}`;
+      if (profile?.state?.id) url += `&stateId=${profile.state.id}`;
+      const r = await api.get(url);
+      const d = r.data.data;
+      const list = Array.isArray(d) ? d : d?.data || [];
+      setAllPrices(list);
+      setTotal(d?.total || list.length);
+      setTotalPages(d?.totalPages || 1);
+    } catch {
+      toast.error("Failed to load machinery prices");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const q = search.toLowerCase();
+    setPrices(
+      !q
+        ? allPrices
+        : allPrices.filter((p) => p.machinery?.name?.toLowerCase().includes(q)),
+    );
+  }, [search, allPrices]);
+  useEffect(() => {
+    fetchPrices(1);
+  }, []);
+  useEffect(() => {
+    fetchPrices(page);
+  }, [page]);
+
+  const searchMachinery = (q) => {
+    if (!q.trim()) {
+      setMachResults([]);
+      return;
+    }
+    clearTimeout(debRef.current);
+    debRef.current = setTimeout(async () => {
+      setMachSearching(true);
+      try {
+        const r = await api.get(
+          `/library/machinery?search=${encodeURIComponent(q)}&limit=8`,
+        );
+        const d = r.data.data;
+        setMachResults(Array.isArray(d) ? d : d?.data || []);
+      } catch {
+        setMachResults([]);
+      } finally {
+        setMachSearching(false);
+      }
+    }, 300);
+  };
+
+  const handleCreate = async () => {
+    if (!newForm.name.trim()) return;
+    setCreating(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", newForm.name.trim());
+      if (newForm.description)
+        fd.append("description", newForm.description.trim());
+      const res = await api.post("/library/machinery", fd);
+      const created = res.data.data;
+      setMachinery(created);
+      setMachSearch(created.name);
+      setMachOpen(false);
+      setShowCreate(false);
+      setNewForm({ name: "", description: "" });
+      toast.success(`${created.name} created`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to create");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const save = async () => {
+    if (!machinery) return toast.error("Select a machinery item first");
+    if (!price || Number(price) < 0) return toast.error("Enter a valid price");
+    if (!profile?.state?.id) return toast.error("No state on your profile");
+    setSaving(true);
+    try {
+      await api.post("/library/machinery/supplier-price", {
+        machineryId: machinery.id,
+        stateId: profile.state.id,
+        price: Number(price),
+      });
+      toast.success(`Price set for ${machinery.name}`);
+      setMachinery(null);
+      setMachSearch("");
+      setPrice("");
+      setMachResults([]);
+      fetchPrices(1);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <div
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 14,
+          padding: 16,
+          marginBottom: 20,
+        }}
+      >
+        <div
+          style={{
+            fontSize: "0.82rem",
+            fontWeight: 800,
+            color: "var(--text-heading)",
+            marginBottom: 14,
+          }}
+        >
+          Set / Update Machinery Price
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr auto auto",
+            gap: 8,
+            alignItems: "end",
+          }}
+        >
+          <div style={{ position: "relative" }}>
+            <label className="modal-label">Machinery</label>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                height: 40,
+                padding: "0 10px",
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                borderRadius: 9,
+              }}
+            >
+              {machinery?.image ? (
+                <img
+                  src={machinery.image}
+                  alt=""
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 4,
+                    objectFit: "cover",
+                    flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <MdSearch
+                  size={14}
+                  style={{ color: "var(--text-muted)", flexShrink: 0 }}
+                />
+              )}
+              <input
+                style={{
+                  flex: 1,
+                  border: "none",
+                  background: "transparent",
+                  outline: "none",
+                  fontSize: "0.82rem",
+                  color: "var(--text-body)",
+                  fontFamily: "inherit",
+                }}
+                placeholder="Search machinery…"
+                value={machSearch}
+                onChange={(e) => {
+                  setMachSearch(e.target.value);
+                  setMachinery(null);
+                  setMachOpen(true);
+                  setShowCreate(false);
+                  searchMachinery(e.target.value);
+                }}
+                onFocus={() => setMachOpen(true)}
+              />
+              {(machSearch || machinery) && (
+                <button
+                  onClick={() => {
+                    setMachinery(null);
+                    setMachSearch("");
+                    setMachResults([]);
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--text-muted)",
+                    display: "flex",
+                    padding: 0,
+                  }}
+                >
+                  <MdClose size={12} />
+                </button>
+              )}
+            </div>
+            {machOpen && machSearch && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 4px)",
+                  left: 0,
+                  right: 0,
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 10,
+                  zIndex: 60,
+                  maxHeight: 220,
+                  overflowY: "auto",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                }}
+              >
+                {machSearching ? (
+                  <div
+                    style={{
+                      padding: "10px 12px",
+                      fontSize: "0.78rem",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    Searching…
+                  </div>
+                ) : machResults.length === 0 ? (
+                  <div
+                    style={{
+                      padding: "10px 12px",
+                      fontSize: "0.78rem",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    No results for "{machSearch}"
+                  </div>
+                ) : (
+                  machResults.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => {
+                        setMachinery(item);
+                        setMachSearch(item.name);
+                        setMachOpen(false);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "8px 12px",
+                        cursor: "pointer",
+                        borderBottom: "1px solid var(--border)",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background = "var(--bg-hover)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
+                    >
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt=""
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 5,
+                            objectFit: "cover",
+                            flexShrink: 0,
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 5,
+                            background: "var(--bg-hover)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <MdBuild
+                            size={11}
+                            style={{ color: "var(--text-muted)" }}
+                          />
+                        </div>
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            color: "var(--text-body)",
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                        {item.manufacturer && (
+                          <div
+                            style={{
+                              fontSize: "0.66rem",
+                              color: "var(--text-muted)",
+                            }}
+                          >
+                            {item.manufacturer}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+                <div
+                  style={{
+                    padding: "8px 12px",
+                    borderTop: "1px solid var(--border)",
+                  }}
+                >
+                  {!showCreate ? (
+                    <button
+                      onClick={() => setShowCreate(true)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "var(--accent)",
+                        fontWeight: 700,
+                        fontSize: "0.78rem",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                        padding: 0,
+                      }}
+                    >
+                      <MdAdd size={14} /> Create "
+                      {machSearch || "new machinery"}"
+                    </button>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          New Machinery
+                        </span>
+                        <button
+                          onClick={() => setShowCreate(false)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "var(--text-muted)",
+                            display: "flex",
+                            padding: 0,
+                          }}
+                        >
+                          <MdClose size={13} />
+                        </button>
+                      </div>
+                      <input
+                        className="modal-input"
+                        placeholder="Name *"
+                        value={newForm.name}
+                        onChange={(e) =>
+                          setNewForm((p) => ({ ...p, name: e.target.value }))
+                        }
+                        style={{ marginBottom: 0 }}
+                      />
+                      <input
+                        className="modal-input"
+                        placeholder="Description (optional)"
+                        value={newForm.description}
+                        onChange={(e) =>
+                          setNewForm((p) => ({
+                            ...p,
+                            description: e.target.value,
+                          }))
+                        }
+                        style={{ marginBottom: 0 }}
+                      />
+                      <button
+                        className={`app_btn app_btn_confirm${creating ? " btn_loading" : ""}`}
+                        onClick={handleCreate}
+                        disabled={creating || !newForm.name}
+                        style={{
+                          height: 32,
+                          position: "relative",
+                          fontSize: "0.78rem",
+                        }}
+                      >
+                        <span className="btn_text">Create & Select</span>
+                        {creating && (
+                          <span
+                            className="btn_loader"
+                            style={{ width: 11, height: 11 }}
+                          />
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="modal-label">Price (₦)</label>
+            <div style={{ position: "relative" }}>
+              <span
+                style={{
+                  position: "absolute",
+                  left: 9,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  fontSize: "0.78rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 600,
+                  pointerEvents: "none",
+                }}
+              >
+                ₦
+              </span>
+              <input
+                className="modal-input"
+                type="number"
+                min="0"
+                style={{
+                  paddingLeft: 22,
+                  height: 40,
+                  width: 120,
+                  marginBottom: 0,
+                }}
+                placeholder="0.00"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && save()}
+              />
+            </div>
+          </div>
+          <button
+            className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+            style={{
+              height: 40,
+              padding: "0 18px",
+              position: "relative",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              flexShrink: 0,
+            }}
+            onClick={save}
+            disabled={saving || !machinery}
+          >
+            <span className="btn_text">
+              <MdBuild size={14} /> Save
+            </span>
+            {saving && (
+              <span className="btn_loader" style={{ width: 13, height: 13 }} />
+            )}
+          </button>
+        </div>
+        {profile?.state?.name && (
+          <div
+            style={{
+              marginTop: 10,
+              fontSize: "0.7rem",
+              color: "var(--text-muted)",
+              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <MdOutlineLocationOn size={12} />
+            Prices for {profile.state.name}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <div style={{ position: "relative", flex: 1 }}>
+          <MdSearch
+            size={14}
+            style={{
+              position: "absolute",
+              left: 10,
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "var(--text-muted)",
+              pointerEvents: "none",
+            }}
+          />
+          <input
+            className="modal-input"
+            style={{ paddingLeft: 30, marginBottom: 0, height: 36 }}
+            placeholder="Search machinery prices…"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              style={{
+                position: "absolute",
+                right: 8,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--text-muted)",
+                display: "flex",
+              }}
+            >
+              <MdClose size={13} />
+            </button>
+          )}
+        </div>
+        <button
+          onClick={() => fetchPrices(page)}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+            background: "var(--bg-hover)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--text-muted)",
+            flexShrink: 0,
+          }}
+        >
+          <MdRefresh size={14} />
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="drawer_loading">
+          <div className="page_loader_spinner" />
+        </div>
+      ) : prices.length === 0 ? (
+        <div className="icart_empty_state" style={{ padding: "40px 0" }}>
+          <MdBuild size={28} style={{ opacity: 0.25 }} />
+          <p className="icart_empty_title">No machinery prices set yet</p>
+          <p className="icart_empty_sub">Use the form above to add prices.</p>
+        </div>
+      ) : (
+        <>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+              gap: 10,
+              marginBottom: 14,
+            }}
+          >
+            {prices.map((p) => (
+              <MachineryPriceCard
+                key={p.id}
+                p={p}
+                stateId={profile?.state?.id}
+                onSaved={() => fetchPrices(page)}
+              />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+            >
+              <button
+                className="app_btn app_btn_cancel"
+                style={{ height: 32, padding: "0 14px", fontSize: "0.76rem" }}
+                onClick={() => setPage((p) => p - 1)}
+                disabled={page <= 1}
+              >
+                ‹ Prev
+              </button>
+              <span
+                style={{
+                  fontSize: "0.78rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 600,
+                }}
+              >
+                {page} / {totalPages} · {total} total
+              </span>
+              <button
+                className="app_btn app_btn_cancel"
+                style={{ height: 32, padding: "0 14px", fontSize: "0.76rem" }}
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= totalPages}
+              >
+                Next ›
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ── Prices Tab (Ingredients / Machinery toggle) ── */
+function PricesTab({ profile }) {
+  const [priceType, setPriceType] = useState("ingredients");
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          gap: 0,
+          marginBottom: 20,
+          background: "var(--bg-hover)",
+          borderRadius: 10,
+          padding: 3,
+          border: "1px solid var(--border)",
+          width: "fit-content",
+        }}
+      >
+        {[
+          { key: "ingredients", label: "Ingredients" },
+          { key: "machinery", label: "Machinery" },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setPriceType(t.key)}
+            style={{
+              padding: "7px 20px",
+              borderRadius: 8,
+              border: "none",
+              fontFamily: "inherit",
+              background:
+                priceType === t.key ? "var(--bg-card)" : "transparent",
+              color:
+                priceType === t.key ? "var(--accent)" : "var(--text-muted)",
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              boxShadow:
+                priceType === t.key ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+              transition: "all 0.15s",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {priceType === "ingredients" ? (
+        <IngredientPricesTab profile={profile} />
+      ) : (
+        <MachineryPricesTab profile={profile} />
+      )}
+    </div>
+  );
+}
+
+/* ── Main ── */
 export default function SupplierHome() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -2559,7 +3906,6 @@ export default function SupplierHome() {
       setProfile(null);
     }
   };
-
   const fetchReqs = async () => {
     setReqLoading(true);
     try {
@@ -2601,13 +3947,9 @@ export default function SupplierHome() {
               marginBottom: 3,
             }}
           >
-           
             <h2 className="page_title_big m-0">Supplier</h2>
           </div>
-          <p
-            className="welcome_message"
-            style={{ marginBottom: 0 }}
-          >
+          <p className="welcome_message" style={{ marginBottom: 0 }}>
             Manage your business and fulfil supply requests
           </p>
         </div>

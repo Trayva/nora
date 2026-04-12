@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import api from "../../api/axios";
+import api from "../../../api/axios";
 import {
   MdBuild,
   MdAdd,
