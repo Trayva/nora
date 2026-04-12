@@ -27,6 +27,37 @@ const fmtDate = (d) =>
     })
     : "—";
 
+/* ── Maintenance Checklist Constant ── */
+const MAINTENANCE_CHECKLIST = {
+  "Opening Routines": [
+    "Self Implement Personal Hygiene Checklist",
+    "Turn On Wafel Iron, Soft Icecream Machine and POS",
+    "Check Water Level in Bain Marie and Turn On",
+    "Place Caramel Tubs And Chocolate Tubs On Heating",
+    "Put In Place, Stroopwafel Station",
+    "Put In Place Milk Tea Station",
+    "Sanitizer In Place & Filled As Needed",
+    "Tissue Boxes Filled As Needed",
+  ],
+  "Service Routines": [
+    "Customer Line Of Sight Is Clean",
+    "Check Freshness & Toppings Every 15 Minutes",
+    "Clean Wafel Station Frequently Especially The Cutting Board",
+    "Make Sure At Least 50% of Tubs Full and Two Doughs Out",
+    "Check Milk Tea Level",
+  ],
+  "Closing Routines": [
+    "Switch Off POS, Wafel Iron and Soft Icecream Machine",
+    "Empty All Caramel and Chocolate Tubs and Wash",
+    "Wash Mixing Containers and Straw Containers",
+    "Wipe Down All Working Surfaces",
+    "Wash Bain Marie and Wipe Down",
+    "Count Physical Inventory and Sign Off On Daily Report",
+    "Store All Perishables in Fridge",
+    "Turn Off Main Lights and Secure Cart",
+  ],
+};
+
 const STATUS_OPTIONS = ["PENDING", "IN_PROGRESS", "RESOLVED", "CLOSED"];
 
 const statusStyle = {
@@ -374,37 +405,66 @@ function ReportRow({ report, canUpdateStatus }) {
                 Checklist
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {report.responses.map((r, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      padding: "9px 12px",
-                      background: "var(--bg-hover)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 9,
-                    }}
-                  >
+                {report.responses.map((r, i) => {
+                  const aLower = r.a?.toLowerCase();
+                  const isYes = aLower === "yes";
+                  const isNo = aLower === "no";
+                  return (
                     <div
+                      key={i}
                       style={{
-                        fontSize: "0.7rem",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        marginBottom: 3,
+                        padding: "9px 12px",
+                        background: "var(--bg-hover)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 9,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
                       }}
                     >
-                      {r.q}
+                      {(isYes || isNo) && (
+                        <div
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: "50%",
+                            background: isYes
+                              ? "rgba(34,197,94,0.1)"
+                              : "rgba(239,68,68,0.1)",
+                            color: isYes ? "#16a34a" : "#ef4444",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isYes ? <MdCheck size={12} /> : <MdClose size={12} />}
+                        </div>
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                            marginBottom: 1,
+                          }}
+                        >
+                          {r.q}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.82rem",
+                            fontWeight: 600,
+                            color: "var(--text-body)",
+                          }}
+                        >
+                          {r.a}
+                        </div>
+                      </div>
                     </div>
-                    <div
-                      style={{
-                        fontSize: "0.82rem",
-                        fontWeight: 600,
-                        color: "var(--text-body)",
-                      }}
-                    >
-                      {r.a}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -656,7 +716,15 @@ function ReportRow({ report, canUpdateStatus }) {
 /* ── Create Report Form ── */
 function CreateReportForm({ cartId, onCreated, onCancel }) {
   const [reportText, setReportText] = useState("");
-  const [responses, setResponses] = useState([]);
+  const [responses, setResponses] = useState(() => {
+    const initial = [];
+    Object.values(MAINTENANCE_CHECKLIST).forEach((items) => {
+      items.forEach((q) => {
+        initial.push({ q, a: "No", isPredefined: true });
+      });
+    });
+    return initial;
+  });
   const [submitting, setSubmitting] = useState(false);
 
   const addResponse = ({ q = '', isIssue = false }) => setResponses((p) => [...p, { q, a: "", isIssue }]);
@@ -666,6 +734,12 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
     );
   const removeResponse = (i) =>
     setResponses((p) => p.filter((_, idx) => idx !== i));
+
+  const toggleChecklistItem = (q) => {
+    setResponses((prev) =>
+      prev.map((r) => (r.q === q ? { ...r, a: r.a === "Yes" ? "No" : "Yes" } : r)),
+    );
+  };
 
   const handleSubmit = async () => {
     if (!reportText.trim() || reportText.trim().length < 5)
@@ -722,67 +796,148 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
         />
       </div>
 
-      {responses.length > 0 && (
+      <div style={{ marginBottom: 20 }}>
+        {Object.entries(MAINTENANCE_CHECKLIST).map(([group, items]) => (
+          <div key={group} style={{ marginBottom: 16 }}>
+            <div
+              style={{
+                fontSize: "0.68rem",
+                fontWeight: 800,
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                marginBottom: 8,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <div style={{ flex: 1, height: 1, background: "var(--bg-card)" }} />
+              {group}
+              <div style={{ flex: 1, height: 1, background: "var(--bg-card)" }} />
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                gap: 8,
+              }}
+            >
+              {items.map((item) => {
+                const isChecked = responses.find((r) => r.q === item)?.a === "Yes";
+                return (
+                  <div
+                    key={item}
+                    onClick={() => toggleChecklistItem(item)}
+                    style={{
+                      padding: "8px 12px",
+                      background: isChecked ? "rgba(203,108,220,0.08)" : "var(--bg-card)",
+                      border: `1px solid ${isChecked ? "var(--accent)" : "var(--border)"}`,
+                      borderRadius: 10,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 4,
+                        border: `2px solid ${isChecked ? "var(--accent)" : "var(--text-muted)"}`,
+                        background: isChecked ? "var(--accent)" : "transparent",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {isChecked && <MdCheck size={12} style={{ color: "#fff" }} />}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: isChecked ? 700 : 500,
+                        color: isChecked ? "var(--text-body)" : "var(--text-muted)",
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {item}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {responses.filter((r) => !r.isPredefined).length > 0 && (
         <div style={{ marginBottom: 10 }}>
-          <label className="modal-label">Checklist Items</label>
+          <label className="modal-label">Observations & Issues</label>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {responses.map((r, i) => (
-              <div
-                key={i}
-                style={{
-                  background: "var(--bg-card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 10,
-                  padding: "10px 12px",
-                }}
-              >
+            {responses.map((r, i) => {
+              if (r.isPredefined) return null;
+              return (
                 <div
+                  key={i}
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: 6,
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 10,
+                    padding: "10px 12px",
                   }}
                 >
-                  <span
+                  <div
                     style={{
-                      fontSize: "0.68rem",
-                      fontWeight: 700,
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    Item {i + 1}
-                  </span>
-                  <button
-                    onClick={() => removeResponse(i)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "var(--text-muted)",
                       display: "flex",
-                      padding: 0,
+                      justifyContent: "space-between",
+                      marginBottom: 6,
                     }}
                   >
-                    <MdClose size={13} />
-                  </button>
+                    <span
+                      style={{
+                        fontSize: "0.68rem",
+                        fontWeight: 700,
+                        color: r.isIssue ? "#ef4444" : "var(--text-muted)",
+                      }}
+                    >
+                      {r.isIssue ? "Issue" : `Custom Item ${i + 1}`}
+                    </span>
+                    <button
+                      onClick={() => removeResponse(i)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--text-muted)",
+                        display: "flex",
+                        padding: 0,
+                      }}
+                    >
+                      <MdClose size={13} />
+                    </button>
+                  </div>
+                  <input
+                    className="modal-input"
+                    placeholder="Question / check item"
+                    value={r.q}
+                    disabled={r.isIssue}
+                    onChange={(e) => updateResponse(i, "q", e.target.value)}
+                    style={{ marginBottom: 6 }}
+                  />
+                  <input
+                    className="modal-input"
+                    placeholder="Answer / observation"
+                    value={r.a}
+                    onChange={(e) => updateResponse(i, "a", e.target.value)}
+                    style={{ marginBottom: 0 }}
+                  />
                 </div>
-                <input
-                  className="modal-input"
-                  placeholder="Question / check item"
-                  value={r.q}
-                  disabled={r.isIssue}
-                  onChange={(e) => updateResponse(i, "q", e.target.value)}
-                  style={{ marginBottom: 6 }}
-                />
-                <input
-                  className="modal-input"
-                  placeholder="Answer / observation"
-                  value={r.a}
-                  onChange={(e) => updateResponse(i, "a", e.target.value)}
-                  style={{ marginBottom: 0 }}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
