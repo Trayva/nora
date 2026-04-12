@@ -262,7 +262,9 @@ function ReportRow({ report, canUpdateStatus }) {
           </div>
         </div>
 
-        <StatusBadge status={localStatus} />
+        {report.responses?.find((r) => r.isIssue) && (
+          <StatusBadge status={localStatus} />
+        )}
         {expanded ? (
           <MdExpandLess
             size={16}
@@ -441,13 +443,14 @@ function ReportRow({ report, canUpdateStatus }) {
                           {isYes ? <MdCheck size={12} /> : <MdClose size={12} />}
                         </div>
                       )}
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1, display: "flex", flexDirection: r.isIssue ? "column-reverse" : "column" }}>
                         <div
                           style={{
                             fontSize: "0.7rem",
                             fontWeight: 700,
                             color: "var(--text-muted)",
-                            marginBottom: 1,
+                            marginBottom: r.isIssue ? 0 : 1,
+                            marginTop: r.isIssue ? 2 : 0,
                           }}
                         >
                           {r.q}
@@ -456,7 +459,8 @@ function ReportRow({ report, canUpdateStatus }) {
                           style={{
                             fontSize: "0.82rem",
                             fontWeight: 600,
-                            color: "var(--text-body)",
+                            color: r.isIssue ? "#ef4444" : "var(--text-body)",
+
                           }}
                         >
                           {r.a}
@@ -725,6 +729,7 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
     });
     return initial;
   });
+  const [images, setImages] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
   const addResponse = ({ q = '', isIssue = false }) => setResponses((p) => [...p, { q, a: "", isIssue }]);
@@ -747,11 +752,23 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
     setSubmitting(true);
     try {
       const validResponses = responses.filter((r) => r.q.trim() && r.a.trim());
-      const res = await api.post("/icart/maintenance", {
-        cartId,
-        reportText: reportText.trim(),
-        ...(validResponses.length > 0 ? { responses: validResponses } : {}),
+
+      const formData = new FormData();
+      formData.append("cartId", cartId);
+      formData.append("reportText", reportText.trim());
+
+      if (validResponses.length > 0) {
+        formData.append("responses", JSON.stringify(validResponses));
+      }
+
+      images.forEach((img) => {
+        formData.append("images", img);
       });
+
+      const res = await api.post("/icart/maintenance", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
       toast.success("Report submitted");
       onCreated(res.data.data);
     } catch (err) {
@@ -941,6 +958,23 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
           </div>
         </div>
       )}
+
+      <div className="form-field">
+        <label className="modal-label">Upload Images (Optional)</label>
+        <input
+          type="file"
+          multiple
+          accept="image/*"
+          className="modal-input"
+          onChange={(e) => setImages(Array.from(e.target.files))}
+          style={{ padding: "8px 12px" }}
+        />
+        {images.length > 0 && (
+          <div style={{ marginTop: 8, fontSize: "0.75rem", color: "var(--text-muted)" }}>
+            {images.length} image(s) selected
+          </div>
+        )}
+      </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <button
