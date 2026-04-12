@@ -43,10 +43,10 @@ import {
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "—";
 
 function StatusChip({ status }) {
@@ -429,15 +429,15 @@ function SupplyRequestRow({ req }) {
   const invoiceSc =
     req.invoice?.status === "PAID"
       ? {
-          bg: "rgba(34,197,94,0.1)",
-          color: "#16a34a",
-          border: "rgba(34,197,94,0.25)",
-        }
+        bg: "rgba(34,197,94,0.1)",
+        color: "#16a34a",
+        border: "rgba(34,197,94,0.25)",
+      }
       : {
-          bg: "rgba(234,179,8,0.1)",
-          color: "#ca8a04",
-          border: "rgba(234,179,8,0.25)",
-        };
+        bg: "rgba(234,179,8,0.1)",
+        color: "#ca8a04",
+        border: "rgba(234,179,8,0.25)",
+      };
 
   return (
     <div
@@ -908,7 +908,7 @@ export function InventoryTab({ cartId }) {
         const d = r.data.data;
         setSuppliers(Array.isArray(d) ? d : d?.suppliers || d?.items || []);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const handleRecordUsage = async () => {
@@ -1424,8 +1424,8 @@ export function InventoryTab({ cartId }) {
                               borderBottom: "1px solid var(--border)",
                             }}
                             onMouseEnter={(e) =>
-                              (e.currentTarget.style.background =
-                                "var(--bg-hover)")
+                            (e.currentTarget.style.background =
+                              "var(--bg-hover)")
                             }
                             onMouseLeave={(e) =>
                               (e.currentTarget.style.background = "transparent")
@@ -1865,21 +1865,21 @@ function LearnRecipeStep({ step, index }) {
   const typeColor =
     step.type === "variant"
       ? {
-          bg: "rgba(203,108,220,0.1)",
-          color: "var(--accent)",
-          border: "rgba(203,108,220,0.25)",
-        }
+        bg: "rgba(203,108,220,0.1)",
+        color: "var(--accent)",
+        border: "rgba(203,108,220,0.25)",
+      }
       : step.type === "prep"
         ? {
-            bg: "rgba(59,130,246,0.1)",
-            color: "#3b82f6",
-            border: "rgba(59,130,246,0.25)",
-          }
+          bg: "rgba(59,130,246,0.1)",
+          color: "#3b82f6",
+          border: "rgba(59,130,246,0.25)",
+        }
         : {
-            bg: "rgba(34,197,94,0.1)",
-            color: "#16a34a",
-            border: "rgba(34,197,94,0.25)",
-          };
+          bg: "rgba(34,197,94,0.1)",
+          color: "#16a34a",
+          border: "rgba(34,197,94,0.25)",
+        };
   return (
     <div
       style={{
@@ -2593,10 +2593,10 @@ function ScoresView({ onBack }) {
   const fmtDate = (d) =>
     d
       ? new Date(d).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
       : "—";
 
   const scoreColor = (pct) =>
@@ -2706,7 +2706,7 @@ function ScoresView({ onBack }) {
                       lineHeight: 1,
                     }}
                   >
-                    {entry.score != null ? `${entry.score}` : "—"}
+                    {entry.score != null ? `${entry.score.toFixed(0)}` : "—"}
                   </span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -2722,7 +2722,7 @@ function ScoresView({ onBack }) {
                       `Test #${(entry.id || "").slice(0, 6).toUpperCase()}`}
                   </div>
                   <div className="icart_task_meta">
-                    {entry.score != null && <span>Score: {entry.score}</span>}
+                    {entry.score != null && <span>Score: {entry.score.toFixed(2)}</span>}
                     {entry.createdAt && (
                       <>
                         <span className="contract_row_dot">·</span>
@@ -4365,14 +4365,14 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
       [key]: prev[key]
         ? { ...prev[key], qty: prev[key].qty + qty }
         : {
-            item,
-            qty,
-            variantId,
-            extraIds,
-            variantLabel,
-            extrasLabels,
-            unitPrice,
-          },
+          item,
+          qty,
+          variantId,
+          extraIds,
+          variantLabel,
+          extrasLabels,
+          unitPrice,
+        },
     }));
     toast.success(`${item.name} added`, { autoClose: 800 });
   };
@@ -5068,9 +5068,9 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
   const fmtChartDate = (d) =>
     d
       ? new Date(d).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-        })
+        day: "2-digit",
+        month: "short",
+      })
       : "";
   const fmtTick = (v) => `₦${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`;
 

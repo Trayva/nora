@@ -659,7 +659,7 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
   const [responses, setResponses] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const addResponse = () => setResponses((p) => [...p, { q: "", a: "" }]);
+  const addResponse = ({ q = '', isIssue = false }) => setResponses((p) => [...p, { q, a: "", isIssue }]);
   const updateResponse = (i, field, val) =>
     setResponses((p) =>
       p.map((r, idx) => (idx === i ? { ...r, [field]: val } : r)),
@@ -707,15 +707,15 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
           marginBottom: 14,
         }}
       >
-        New Maintenance Report
+        New Report
       </div>
 
       <div className="form-field">
-        <label className="modal-label">Issue Description *</label>
+        <label className="modal-label">Description *</label>
         <textarea
           className="modal-input"
           rows={3}
-          placeholder="Describe the maintenance issue… (min 5 chars)"
+          placeholder="Describe the your report (min 5 chars)"
           value={reportText}
           onChange={(e) => setReportText(e.target.value)}
           style={{ resize: "vertical", fontFamily: "inherit" }}
@@ -770,6 +770,7 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
                   className="modal-input"
                   placeholder="Question / check item"
                   value={r.q}
+                  disabled={r.isIssue}
                   onChange={(e) => updateResponse(i, "q", e.target.value)}
                   style={{ marginBottom: 6 }}
                 />
@@ -786,25 +787,47 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
         </div>
       )}
 
-      <button
-        onClick={addResponse}
-        style={{
-          background: "none",
-          border: "none",
-          color: "var(--accent)",
-          fontWeight: 700,
-          fontSize: "0.78rem",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          padding: 0,
-          marginBottom: 14,
-        }}
-      >
-        <MdAdd size={14} /> Add checklist item
-      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <button
+          onClick={addResponse}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--accent)",
+            fontWeight: 700,
+            fontSize: "0.78rem",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            padding: 0,
+            marginBottom: 14,
+          }}
+        >
+          <MdAdd size={14} /> Add checklist item
+        </button>
+        <button
+          onClick={() => addResponse({ q: `Issue/Problem`, isIssue: true })}
+          style={{
+            background: "var(--accent)",
+            border: "1px solid var(--accent)",
+            color: "white",
+            fontWeight: 700,
+            fontSize: "0.78rem",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            padding: "7px 10px",
+            marginBottom: 14,
+            borderRadius: 8
+          }}
+        >
+          <MdAdd size={14} /> Report an issue
+        </button>
+      </div>
 
       <div style={{ display: "flex", gap: 8 }}>
         <button
@@ -887,7 +910,7 @@ export default function MaintenanceTab({ cartId, canUpdateStatus = false }) {
               color: "var(--text-heading)",
             }}
           >
-            Maintenance Reports
+            Reports
           </span>
           {total > 0 && (
             <span
@@ -924,7 +947,7 @@ export default function MaintenanceTab({ cartId, canUpdateStatus = false }) {
             </>
           ) : (
             <>
-              <MdAdd size={13} /> Report Issue
+              <MdAdd size={13} /> Submit Report
             </>
           )}
         </button>
@@ -949,7 +972,7 @@ export default function MaintenanceTab({ cartId, canUpdateStatus = false }) {
       ) : reports.length === 0 && !showForm ? (
         <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
           <MdBuild size={28} style={{ opacity: 0.3 }} />
-          <span>No maintenance reports yet</span>
+          <span>No reports yet</span>
         </div>
       ) : (
         reports.map((r) => (
