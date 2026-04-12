@@ -126,12 +126,15 @@ function Section({ icon: Icon, title, children, defaultOpen = true }) {
   );
 }
 
-function InvoiceRow({ inv, onMarkPaid }) {
+function InvoiceRow({ inv, onMarkPaid, onDiscount }) {
   const [expanded, setExpanded] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [discounting, setDiscounting] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState("");
   const isPaid = inv.status === "PAID";
   const s = isPaid
     ? {
+
         bg: "rgba(34,197,94,0.1)",
         color: "#16a34a",
         border: "rgba(34,197,94,0.25)",
@@ -146,6 +149,21 @@ function InvoiceRow({ inv, onMarkPaid }) {
     setPaying(true);
     try {
       await onMarkPaid(inv.id);
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const handleApplyDiscount = async (e) => {
+    e.stopPropagation();
+    if (!discountAmount || isNaN(discountAmount)) return;
+    setPaying(true);
+    try {
+      await onDiscount(inv.id, Number(discountAmount));
+      setDiscounting(false);
+      setDiscountAmount("");
+    } catch {
+      // Toast already handled in parent
     } finally {
       setPaying(false);
     }
@@ -210,29 +228,77 @@ function InvoiceRow({ inv, onMarkPaid }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {!isPaid && (
-            <button
-              className={`app_btn app_btn_confirm${paying ? " btn_loading" : ""}`}
-              style={{
-                height: 26,
-                padding: "0 10px",
-                fontSize: "0.7rem",
-                position: "relative",
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleMark();
-              }}
-              disabled={paying}
-            >
-              <span className="btn_text">Mark Paid</span>
-              {paying && (
-                <span
-                  className="btn_loader"
-                  style={{ width: 11, height: 11 }}
-                />
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {discounting ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="number"
+                    style={{ width: 66, height: 26, fontSize: "0.7rem", borderRadius: 6, border: "1px solid var(--accent)", background: "var(--bg-active)", color: "var(--accent)", padding: "0 8px", outline: "none", fontWeight: 700 }}
+                    placeholder="Amt"
+                    autoFocus
+                    value={discountAmount}
+                    onChange={(e) => setDiscountAmount(e.target.value)}
+                  />
+                  <button
+                    className={`app_btn app_btn_confirm${paying ? " btn_loading" : ""}`}
+                    style={{ height: 26, padding: "0 10px", fontSize: "0.7rem", borderRadius: 6 }}
+                    onClick={handleApplyDiscount}
+                    disabled={paying || !discountAmount}
+                  >
+                    <span className="btn_text">Apply</span>
+                  </button>
+                  <button
+                    className="app_btn app_btn_cancel"
+                    style={{ height: 26, padding: "0 6px", borderRadius: 6 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDiscounting(false);
+                      setDiscountAmount("");
+                    }}
+                    disabled={paying}
+                  >
+                    <MdClose size={12} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    style={{ height: 26, padding: "0 8px", fontSize: "0.65rem", fontWeight: 800, color: "var(--text-muted)", background: "var(--bg-card)", border: "1px dashed var(--border)", borderRadius: 6, cursor: "pointer", fontFamily: "inherit" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDiscounting(true);
+                    }}
+                  >
+                    DISCOUNT
+                  </button>
+                  <button
+                    className={`app_btn app_btn_confirm${paying ? " btn_loading" : ""}`}
+                    style={{
+                      height: 26,
+                      padding: "0 10px",
+                      fontSize: "0.7rem",
+                      position: "relative",
+                      borderRadius: 6,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMark();
+                    }}
+                    disabled={paying}
+                  >
+                    <span className="btn_text">Mark Paid</span>
+                    {paying && (
+                      <span
+                        className="btn_loader"
+                        style={{ width: 11, height: 11 }}
+                      />
+                    )}
+                  </button>
+                </>
               )}
-            </button>
+            </div>
           )}
+
           {expanded ? (
             <MdExpandLess size={14} style={{ color: "var(--text-muted)" }} />
           ) : (
@@ -275,6 +341,23 @@ function InvoiceRow({ inv, onMarkPaid }) {
               </span>
             </div>
           ))}
+          {inv.discount > 0 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                color: "var(--accent)",
+                paddingLeft: 8,
+              }}
+            >
+              <span>Discount</span>
+              <span>
+                - {inv.currency} {fmt(inv.discount)}
+              </span>
+            </div>
+          )}
           {inv.paidAt && (
             <div
               style={{
@@ -286,6 +369,7 @@ function InvoiceRow({ inv, onMarkPaid }) {
               Paid: {fmtDt(inv.paidAt)} via {inv.paymentMethod}
             </div>
           )}
+
         </div>
       )}
     </div>
@@ -471,6 +555,19 @@ export default function AdminUserDetail({ user, onClose }) {
       toast.error(err.response?.data?.message || "Failed");
     } finally {
       setCreatingInv(false);
+    }
+  };
+
+  const handleApplyInvDiscount = async (invId, discount) => {
+    try {
+      const res = await api.patch(`/finance/invoice/${invId}/discount`, { discount });
+      toast.success("Discount applied successfully");
+      setInvoices((prev) =>
+        prev.map((i) => (i.id === invId ? res.data.data : i))
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to apply discount");
+      throw err;
     }
   };
 
@@ -1194,7 +1291,7 @@ export default function AdminUserDetail({ user, onClose }) {
             </div>
           ) : (
             invoices.map((inv) => (
-              <InvoiceRow key={inv.id} inv={inv} onMarkPaid={handleMarkPaid} />
+              <InvoiceRow key={inv.id} inv={inv} onMarkPaid={handleMarkPaid} onDiscount={handleApplyInvDiscount} />
             ))
           )}
         </Section>

@@ -368,12 +368,30 @@ export default function Invoices() {
               )}
             </div>
 
-            <div className="icart_card_total">
+            {selected.discount > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "12px 14px 4px",
+                  fontSize: "0.86rem",
+                  fontWeight: 600,
+                  color: "var(--text-muted)",
+                }}
+              >
+                <span>Discount</span>
+                <span style={{ color: "var(--accent)" }}>
+                  - {formatAmount(selected.discount, selected.currency)}
+                </span>
+              </div>
+            )}
+            <div className="icart_card_total" style={{ paddingTop: selected.discount > 0 ? 8 : 14 }}>
               <span className="icart_total_label">Total</span>
               <span className="icart_total_amount">
                 {formatAmount(selected.total, selected.currency)}
               </span>
             </div>
+
 
             {selected.status === "PENDING" && (
               <div
