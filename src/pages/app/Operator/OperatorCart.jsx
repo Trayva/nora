@@ -43,10 +43,10 @@ import {
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    })
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
     : "—";
 
 function StatusChip({ status }) {
@@ -429,15 +429,15 @@ function SupplyRequestRow({ req }) {
   const invoiceSc =
     req.invoice?.status === "PAID"
       ? {
-        bg: "rgba(34,197,94,0.1)",
-        color: "#16a34a",
-        border: "rgba(34,197,94,0.25)",
-      }
+          bg: "rgba(34,197,94,0.1)",
+          color: "#16a34a",
+          border: "rgba(34,197,94,0.25)",
+        }
       : {
-        bg: "rgba(234,179,8,0.1)",
-        color: "#ca8a04",
-        border: "rgba(234,179,8,0.25)",
-      };
+          bg: "rgba(234,179,8,0.1)",
+          color: "#ca8a04",
+          border: "rgba(234,179,8,0.25)",
+        };
 
   return (
     <div
@@ -908,7 +908,7 @@ export function InventoryTab({ cartId }) {
         const d = r.data.data;
         setSuppliers(Array.isArray(d) ? d : d?.suppliers || d?.items || []);
       })
-      .catch(() => { });
+      .catch(() => {});
   }, []);
 
   const handleRecordUsage = async () => {
@@ -1424,8 +1424,8 @@ export function InventoryTab({ cartId }) {
                               borderBottom: "1px solid var(--border)",
                             }}
                             onMouseEnter={(e) =>
-                            (e.currentTarget.style.background =
-                              "var(--bg-hover)")
+                              (e.currentTarget.style.background =
+                                "var(--bg-hover)")
                             }
                             onMouseLeave={(e) =>
                               (e.currentTarget.style.background = "transparent")
@@ -1747,34 +1747,60 @@ function getEmbedUrl(src) {
   return null;
 }
 
-function VideoBlock({ src, label }) {
+function VideoBlock({ src, label, onWatched }) {
   if (src) {
     const embedUrl = getEmbedUrl(src);
     if (embedUrl) {
       return (
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            aspectRatio: "16/9",
-            borderRadius: 12,
-            overflow: "hidden",
-            background: "#000",
-          }}
-        >
-          <iframe
-            src={embedUrl}
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
+        <div>
+          <div
             style={{
-              position: "absolute",
-              inset: 0,
+              position: "relative",
               width: "100%",
-              height: "100%",
-              border: "none",
+              aspectRatio: "16/9",
+              borderRadius: 12,
+              overflow: "hidden",
+              background: "#000",
             }}
-            title="Tutorial video"
-          />
+          >
+            <iframe
+              src={embedUrl}
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                border: "none",
+              }}
+              title="Tutorial video"
+            />
+          </div>
+          {onWatched && (
+            <button
+              onClick={onWatched}
+              style={{
+                marginTop: 8,
+                width: "100%",
+                height: 36,
+                borderRadius: 9,
+                border: "1px solid rgba(34,197,94,0.3)",
+                background: "rgba(34,197,94,0.07)",
+                color: "#16a34a",
+                fontFamily: "inherit",
+                fontWeight: 700,
+                fontSize: "0.8rem",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              <MdCheck size={15} /> Mark as Watched
+            </button>
+          )}
         </div>
       );
     }
@@ -1783,6 +1809,7 @@ function VideoBlock({ src, label }) {
         src={src}
         controls
         playsInline
+        onEnded={onWatched}
         style={{
           width: "100%",
           borderRadius: 12,
@@ -1865,21 +1892,21 @@ function LearnRecipeStep({ step, index }) {
   const typeColor =
     step.type === "variant"
       ? {
-        bg: "rgba(203,108,220,0.1)",
-        color: "var(--accent)",
-        border: "rgba(203,108,220,0.25)",
-      }
+          bg: "rgba(203,108,220,0.1)",
+          color: "var(--accent)",
+          border: "rgba(203,108,220,0.25)",
+        }
       : step.type === "prep"
         ? {
-          bg: "rgba(59,130,246,0.1)",
-          color: "#3b82f6",
-          border: "rgba(59,130,246,0.25)",
-        }
+            bg: "rgba(59,130,246,0.1)",
+            color: "#3b82f6",
+            border: "rgba(59,130,246,0.25)",
+          }
         : {
-          bg: "rgba(34,197,94,0.1)",
-          color: "#16a34a",
-          border: "rgba(34,197,94,0.25)",
-        };
+            bg: "rgba(34,197,94,0.1)",
+            color: "#16a34a",
+            border: "rgba(34,197,94,0.25)",
+          };
   return (
     <div
       style={{
@@ -2192,7 +2219,7 @@ function LearnPrepItemCard({ prep }) {
 }
 
 /* ── Menu Item Summary View ──────────────────────────────────── */
-function MenuItemSummaryView({ summary }) {
+function MenuItemSummaryView({ summary, onVideoWatched, videoWatched }) {
   const [learnSection, setLearnSection] = useState("recipe");
   const [activeVariant, setActiveVariant] = useState(0);
 
@@ -2347,7 +2374,43 @@ function MenuItemSummaryView({ summary }) {
         <VideoBlock
           src={item.tutorialVideo}
           label="Tutorial not yet uploaded"
+          onWatched={onVideoWatched}
         />
+        {item.tutorialVideo && !videoWatched && (
+          <div
+            style={{
+              marginTop: 8,
+              padding: "8px 12px",
+              background: "rgba(234,179,8,0.08)",
+              border: "1px solid rgba(234,179,8,0.25)",
+              borderRadius: 8,
+              fontSize: "0.74rem",
+              color: "#ca8a04",
+              fontWeight: 600,
+            }}
+          >
+            ⚠ Watch the full video then tap "Mark as Watched" to unlock the test
+          </div>
+        )}
+        {item.tutorialVideo && videoWatched && (
+          <div
+            style={{
+              marginTop: 8,
+              padding: "8px 12px",
+              background: "rgba(34,197,94,0.07)",
+              border: "1px solid rgba(34,197,94,0.2)",
+              borderRadius: 8,
+              fontSize: "0.74rem",
+              color: "#16a34a",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
+            <MdCheck size={14} /> Tutorial watched — test is unlocked!
+          </div>
+        )}
       </div>
 
       {/* Variant selector */}
@@ -2555,19 +2618,65 @@ function MenuItemSummaryView({ summary }) {
 }
 
 /**
- * PATCH FOR OperatorCart.jsx
+ * PATCH FOR OperatorCart.jsx  — E-Learning: video gate + letter grades
  * ============================================================
- * 1. Add these icons to your existing MdXxx imports (react-icons/md):
- *       MdHistory, MdArrowForward, MdCheckCircle
- *    (MdSchool, MdArrowBack, MdCheck, MdClose, MdRestaurantMenu,
- *     MdImage, MdPlayCircle are already imported)
+ * STEP 1 — Replace VideoBlock function signature (adds onWatched prop):
  *
- * 2. In OperatorCart.jsx, find the line:
+ *   FIND:    function VideoBlock({ src, label }) {
+ *   REPLACE: function VideoBlock({ src, label, onWatched }) {
+ *
+ *   Then inside VideoBlock, on the iframe path add a "Mark as Watched" button:
+ *   After the closing </div> of the iframe wrapper, insert:
+ *
+ *     {onWatched && (
+ *       <button onClick={onWatched} style={{ marginTop: 8, width: "100%", height: 36,
+ *         borderRadius: 9, border: "1px solid rgba(34,197,94,0.3)",
+ *         background: "rgba(34,197,94,0.07)", color: "#16a34a",
+ *         fontFamily: "inherit", fontWeight: 700, fontSize: "0.8rem",
+ *         cursor: "pointer", display: "flex", alignItems: "center",
+ *         justifyContent: "center", gap: 6 }}>
+ *         <MdCheck size={15} /> Mark as Watched
+ *       </button>
+ *     )}
+ *
+ *   On the native <video> tag, add:  onEnded={onWatched}
+ *
+ * ─────────────────────────────────────────────────────────────
+ * STEP 2 — Replace MenuItemSummaryView signature + Tutorial Video block:
+ *
+ *   FIND:    function MenuItemSummaryView({ summary }) {
+ *   REPLACE: function MenuItemSummaryView({ summary, onVideoWatched, videoWatched }) {
+ *
+ *   FIND the tutorial VideoBlock call:
+ *     <VideoBlock src={item.tutorialVideo} label="Tutorial not yet uploaded" />
+ *   REPLACE WITH:
+ *     <VideoBlock src={item.tutorialVideo} label="Tutorial not yet uploaded" onWatched={onVideoWatched} />
+ *     {item.tutorialVideo && !videoWatched && (
+ *       <div style={{ marginTop:8, padding:"8px 12px", background:"rgba(234,179,8,0.08)",
+ *         border:"1px solid rgba(234,179,8,0.25)", borderRadius:8,
+ *         fontSize:"0.74rem", color:"#ca8a04", fontWeight:600 }}>
+ *         ⚠ Watch the full video then tap "Mark as Watched" to unlock the test
+ *       </div>
+ *     )}
+ *     {item.tutorialVideo && videoWatched && (
+ *       <div style={{ marginTop:8, padding:"8px 12px", background:"rgba(34,197,94,0.07)",
+ *         border:"1px solid rgba(34,197,94,0.2)", borderRadius:8,
+ *         fontSize:"0.74rem", color:"#16a34a", fontWeight:600,
+ *         display:"flex", alignItems:"center", gap:5 }}>
+ *         <MdCheck size={14} /> Tutorial watched — test is unlocked!
+ *       </div>
+ *     )}
+ *
+ * ─────────────────────────────────────────────────────────────
+ * STEP 3 — Replace the entire ELearning section:
+ *
+ *   In OperatorCart.jsx, find the line:
  *       export function ELearningTab({ menuItems }) {
- *    and DELETE everything from that line to the matching closing `}` of the function.
+ *   DELETE everything from that line to its matching closing `}`.
+ *   Also delete the ScoresView, TestResultView, ActiveTestView, StartTestView
+ *   functions that appear just above it (they are replaced by the versions below).
  *
- * 3. Paste ALL of the code below (the four sub-components + the new ELearningTab)
- *    in its place — immediately before `export function SalesTab`.
+ *   Paste ALL of the code below immediately before `export function SalesTab`.
  * ============================================================
  */
 
@@ -2581,7 +2690,6 @@ function ScoresView({ onBack }) {
       .get("/library/elearning/scores")
       .then((r) => {
         const d = r.data.data;
-
         setScores(
           Array.isArray(d) ? d : d?.tests || d?.items || d?.scores || [],
         );
@@ -2593,10 +2701,10 @@ function ScoresView({ onBack }) {
   const fmtDate = (d) =>
     d
       ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
       : "—";
 
   const scoreColor = (pct) =>
@@ -2700,13 +2808,11 @@ function ScoresView({ onBack }) {
                       fontSize: "0.88rem",
                       fontWeight: 900,
                       color:
-                        entry.score != null
-                          ? scoreColor(Math.min(entry.score, 100))
-                          : "var(--text-muted)",
+                        pct != null ? scoreColor(pct) : "var(--text-muted)",
                       lineHeight: 1,
                     }}
                   >
-                    {entry.score != null ? `${entry.score.toFixed(0)}` : "—"}
+                    {pct != null ? `${pct}%` : "—"}
                   </span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -2718,11 +2824,17 @@ function ScoresView({ onBack }) {
                       marginBottom: 3,
                     }}
                   >
-                    {entry.title ||
+                    {entry.menuItemName ||
+                      entry.menuItem?.name ||
+                      entry.title ||
                       `Test #${(entry.id || "").slice(0, 6).toUpperCase()}`}
                   </div>
                   <div className="icart_task_meta">
-                    {entry.score != null && <span>Score: {entry.score.toFixed(2)}</span>}
+                    {entry.score != null && entry.total != null && (
+                      <span>
+                        {entry.score}/{entry.total} correct
+                      </span>
+                    )}
                     {entry.createdAt && (
                       <>
                         <span className="contract_row_dot">·</span>
@@ -2803,7 +2915,7 @@ function TestResultView({ result, onRetake, onDone }) {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          marginBottom: 16,
+          marginBottom: 12,
         }}
       >
         <span
@@ -2823,6 +2935,110 @@ function TestResultView({ result, onRetake, onDone }) {
           </span>
         )}
       </div>
+      {/* Letter grade badge */}
+      {(() => {
+        const g =
+          pct == null
+            ? null
+            : pct >= 90
+              ? {
+                  letter: "A",
+                  label: "Distinction",
+                  color: "#16a34a",
+                  bg: "rgba(34,197,94,0.1)",
+                  border: "rgba(34,197,94,0.3)",
+                }
+              : pct >= 75
+                ? {
+                    letter: "B",
+                    label: "Credit",
+                    color: "#3b82f6",
+                    bg: "rgba(59,130,246,0.1)",
+                    border: "rgba(59,130,246,0.3)",
+                  }
+                : pct >= 60
+                  ? {
+                      letter: "C",
+                      label: "Merit",
+                      color: "#ca8a04",
+                      bg: "rgba(234,179,8,0.1)",
+                      border: "rgba(234,179,8,0.3)",
+                    }
+                  : pct >= 50
+                    ? {
+                        letter: "D",
+                        label: "Pass",
+                        color: "#f97316",
+                        bg: "rgba(249,115,22,0.1)",
+                        border: "rgba(249,115,22,0.3)",
+                      }
+                    : {
+                        letter: "F",
+                        label: "Fail",
+                        color: "#ef4444",
+                        bg: "rgba(239,68,68,0.1)",
+                        border: "rgba(239,68,68,0.3)",
+                      };
+        if (!g) return null;
+        return (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginBottom: 12,
+              padding: "10px 18px",
+              background: g.bg,
+              border: `1.5px solid ${g.border}`,
+              borderRadius: 14,
+            }}
+          >
+            <div
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 14,
+                background: "rgba(255,255,255,0.12)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "1.8rem",
+                  fontWeight: 900,
+                  color: g.color,
+                  lineHeight: 1,
+                }}
+              >
+                {g.letter}
+              </span>
+            </div>
+            <div>
+              <div
+                style={{ fontSize: "1.05rem", fontWeight: 900, color: g.color }}
+              >
+                {g.label}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  color: "var(--text-muted)",
+                  marginTop: 1,
+                }}
+              >
+                {g.letter === "A" && "Excellent · 90–100%"}
+                {g.letter === "B" && "Credit · 75–89%"}
+                {g.letter === "C" && "Merit · 60–74%"}
+                {g.letter === "D" && "Pass · 50–59%"}
+                {g.letter === "F" && "Below pass · under 50%"}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       <div
         style={{
           fontSize: "1.1rem",
@@ -2961,19 +3177,17 @@ function TestResultView({ result, onRetake, onDone }) {
   );
 }
 
-/* ── Active Test View — paste this ENTIRE block into OperatorCart.jsx ── */
-/* Replace the existing function ActiveTestView({ test, onSubmit, onCancel }) */
-
+/* ── Active test ─────────────────────────────────────────────── */
 function ActiveTestView({ test, onSubmit, onCancel }) {
-  const questions = Array.isArray(test?.questions) ? test.questions : [];
+  const questions = test.questions || [];
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
+  const q = questions[current];
   const totalQ = questions.length;
   const answered = Object.keys(answers).length;
   const progress = totalQ > 0 ? Math.round((answered / totalQ) * 100) : 0;
-  const q = questions[current] || null;
 
   const selectAnswer = (questionId, answer) =>
     setAnswers((p) => ({ ...p, [questionId]: answer }));
@@ -3002,7 +3216,7 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
     }
   };
 
-  if (totalQ === 0 || !q) {
+  if (!q) {
     return (
       <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
         <MdSchool size={28} style={{ opacity: 0.3 }} />
@@ -3011,11 +3225,9 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
     );
   }
 
-  // Safely handle options — API sends null for WRITTEN questions
-  const rawOptions = q.options ?? q.choices ?? [];
-  const options = Array.isArray(rawOptions) ? rawOptions : [];
+  const options = q.options || q.choices || [];
   const isWritten = q.type === "WRITTEN" || options.length === 0;
-  const selectedAnswer = answers[q.id] ?? "";
+  const selectedAnswer = answers[q.id];
 
   return (
     <div>
@@ -3091,7 +3303,7 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
         </div>
       </div>
 
-      {/* Question card */}
+      {/* Question */}
       <div
         style={{
           background: "var(--bg-card)",
@@ -3142,13 +3354,12 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
         </div>
 
         {!isWritten ? (
-          /* Multiple choice */
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {options.map((opt, oi) => {
               const optValue =
                 typeof opt === "string"
                   ? opt
-                  : (opt?.value ?? opt?.text ?? opt?.label ?? String(opt));
+                  : opt.value || opt.text || opt.label || String(opt);
               const isSelected = selectedAnswer === optValue;
               return (
                 <button
@@ -3201,19 +3412,13 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
             })}
           </div>
         ) : (
-          /* Written / free-text */
           <textarea
             className="modal-input"
             rows={3}
             placeholder="Type your answer…"
-            value={selectedAnswer}
+            value={selectedAnswer || ""}
             onChange={(e) => selectAnswer(q.id, e.target.value)}
-            style={{
-              width: "100%",
-              resize: "vertical",
-              fontFamily: "inherit",
-              marginBottom: 0,
-            }}
+            style={{ width: "100%", resize: "vertical", fontFamily: "inherit" }}
           />
         )}
       </div>
@@ -3239,7 +3444,7 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
               justifyContent: "center",
               gap: 6,
             }}
-            onClick={() => setCurrent((c) => c + 1)}
+            onClick={() => setCurrent((c) => Math.min(totalQ - 1, c + 1))}
           >
             Next <MdArrowForward size={15} />
           </button>
@@ -3286,17 +3491,17 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
                 height: 28,
                 borderRadius: 7,
                 cursor: "pointer",
-                border: `1px solid ${qi === current ? "var(--accent)" : answers[qItem?.id] ? "rgba(34,197,94,0.4)" : "var(--border)"}`,
+                border: `1px solid ${qi === current ? "var(--accent)" : answers[qItem.id] ? "rgba(34,197,94,0.4)" : "var(--border)"}`,
                 background:
                   qi === current
                     ? "var(--bg-active)"
-                    : answers[qItem?.id]
+                    : answers[qItem.id]
                       ? "rgba(34,197,94,0.08)"
                       : "var(--bg-hover)",
                 color:
                   qi === current
                     ? "var(--accent)"
-                    : answers[qItem?.id]
+                    : answers[qItem.id]
                       ? "#16a34a"
                       : "var(--text-muted)",
                 fontSize: "0.7rem",
@@ -3577,13 +3782,21 @@ export function ELearningTab({ menuItems }) {
   const [activeTest, setActiveTest] = useState(null);
   const [testResult, setTestResult] = useState(null);
 
+  // Track which items' tutorials have been watched
+  const [watchedIds, setWatchedIds] = useState(new Set());
+  const markWatched = (id) => setWatchedIds((prev) => new Set([...prev, id]));
+
   const loadSummary = async (menuItemId) => {
     setSelectedId(menuItemId);
     setSummary(null);
     setLoadingSummary(true);
     try {
       const res = await api.get(`/vendor/menu/${menuItemId}/summary`);
-      setSummary(res.data.data);
+      const data = res.data.data;
+      setSummary(data);
+      // Auto-unlock items with no tutorial video
+      const item = data?.menuItem || data;
+      if (!item?.tutorialVideo) markWatched(menuItemId);
     } catch {
       toast.error("Failed to load item summary");
     } finally {
@@ -3681,7 +3894,9 @@ export function ELearningTab({ menuItems }) {
               color: "var(--text-heading)",
             }}
           >
-            Ready to be tested?
+            {watchedIds.has(selectedId)
+              ? "Ready to be tested?"
+              : "Watch the tutorial first"}
           </div>
           <div
             style={{
@@ -3690,7 +3905,9 @@ export function ELearningTab({ menuItems }) {
               marginTop: 1,
             }}
           >
-            Test your knowledge of the menu
+            {watchedIds.has(selectedId)
+              ? "Test your knowledge of the menu"
+              : "Finish the video below to unlock the test"}
           </div>
         </div>
         <button
@@ -3717,6 +3934,7 @@ export function ELearningTab({ menuItems }) {
         <button
           onClick={() => setMode("start-test")}
           className="app_btn app_btn_confirm"
+          disabled={!watchedIds.has(selectedId)}
           style={{
             height: 34,
             padding: "0 14px",
@@ -3726,9 +3944,17 @@ export function ELearningTab({ menuItems }) {
             alignItems: "center",
             gap: 5,
             flexShrink: 0,
+            opacity: watchedIds.has(selectedId) ? 1 : 0.45,
+            cursor: watchedIds.has(selectedId) ? "pointer" : "not-allowed",
           }}
+          title={
+            !watchedIds.has(selectedId)
+              ? "Watch the tutorial video first"
+              : undefined
+          }
         >
-          <MdSchool size={14} /> Take Test
+          <MdSchool size={14} />{" "}
+          {watchedIds.has(selectedId) ? "Take Test" : "🔒 Locked"}
         </button>
       </div>
 
@@ -3778,6 +4004,22 @@ export function ELearningTab({ menuItems }) {
                   />
                 )}
                 {name}
+                {watchedIds.has(item.id) && (
+                  <span
+                    style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: "50%",
+                      background: "#16a34a",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdCheck size={9} style={{ color: "#fff" }} />
+                  </span>
+                )}
               </button>
             );
           })}
@@ -3789,7 +4031,13 @@ export function ELearningTab({ menuItems }) {
           <div className="page_loader_spinner" />
         </div>
       )}
-      {summary && !loadingSummary && <MenuItemSummaryView summary={summary} />}
+      {summary && !loadingSummary && (
+        <MenuItemSummaryView
+          summary={summary}
+          onVideoWatched={() => selectedId && markWatched(selectedId)}
+          videoWatched={selectedId ? watchedIds.has(selectedId) : false}
+        />
+      )}
     </div>
   );
 }
@@ -4365,14 +4613,14 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
       [key]: prev[key]
         ? { ...prev[key], qty: prev[key].qty + qty }
         : {
-          item,
-          qty,
-          variantId,
-          extraIds,
-          variantLabel,
-          extrasLabels,
-          unitPrice,
-        },
+            item,
+            qty,
+            variantId,
+            extraIds,
+            variantLabel,
+            extrasLabels,
+            unitPrice,
+          },
     }));
     toast.success(`${item.name} added`, { autoClose: 800 });
   };
@@ -5068,9 +5316,9 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
   const fmtChartDate = (d) =>
     d
       ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-      })
+          day: "2-digit",
+          month: "short",
+        })
       : "";
   const fmtTick = (v) => `₦${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`;
 
