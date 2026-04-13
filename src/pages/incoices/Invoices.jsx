@@ -61,132 +61,462 @@ function formatAmount(amount, currency) {
 }
 
 /* ── PDF Receipt Generator ── */
+function getLoggedInUser() {
+  try {
+    const auth = JSON.parse(localStorage.getItem("trayva-auth") || "{}");
+    return auth.user || null;
+  } catch {
+    return null;
+  }
+}
+
+function invoiceContext(invoice) {
+  if (invoice.supplyRequestId)
+    return {
+      type: "Supply Request",
+      ref: "#" + invoice.supplyRequestId.slice(0, 8).toUpperCase(),
+    };
+  if (invoice.iCartVendorApplicationId)
+    return {
+      type: "Vendor Application",
+      ref: "#" + invoice.iCartVendorApplicationId.slice(0, 8).toUpperCase(),
+    };
+  if (invoice.contractApplicationId)
+    return {
+      type: "Contract Application",
+      ref: "#" + invoice.contractApplicationId.slice(0, 8).toUpperCase(),
+    };
+  if (invoice.conceptRentalApplicationId)
+    return {
+      type: "Concept Rental",
+      ref: "#" + invoice.conceptRentalApplicationId.slice(0, 8).toUpperCase(),
+    };
+  if (invoice.icartId)
+    return {
+      type: "iCart",
+      ref: "#" + invoice.icartId.slice(0, 8).toUpperCase(),
+    };
+  return { type: "General", ref: "—" };
+}
+
 function generateReceiptHTML(invoice) {
   const items = invoice.items || [];
-  const rows = items
+  const user = getLoggedInUser();
+  const ctx = invoiceContext(invoice);
+  const na = (v) => (v != null && v !== "" ? v : "—");
+  const cur = (invoice.currency || "NGN").toUpperCase();
+  const isPaid = invoice.status === "PAID";
+  const statusLabel = isPaid ? "✓  PAID" : invoice.status;
+
+  const itemRows = items
     .map(
-      (item) => `
-    <tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;">${item.title || "—"}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:center;">${item.quantity}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right;">${invoice.currency} ${Number(item.amount || 0).toLocaleString()}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;">${invoice.currency} ${Number((item.amount || 0) * item.quantity).toLocaleString()}</td>
-    </tr>
-  `,
+      (item) =>
+        `<tr>
+      <td class="td-main">
+        <span class="item-title">${item.title || "—"}</span>
+        ${item.description ? `<span class="item-sub">${item.description}</span>` : ""}
+      </td>
+      <td class="td-c">${item.quantity.toLocaleString()}</td>
+      <td class="td-r">${cur} ${Number(item.amount || 0).toLocaleString()}</td>
+      <td class="td-r td-strong">${cur} ${Number((item.amount || 0) * item.quantity).toLocaleString()}</td>
+    </tr>`,
     )
     .join("");
 
+  const discountRow =
+    invoice.discount > 0
+      ? `<tr><td colspan="3" class="td-r" style="color:#22c55e;font-size:12px;padding:6px 12px">Discount</td>
+       <td class="td-r" style="color:#22c55e;font-size:12px;padding:6px 12px;font-weight:700">− ${cur} ${Number(invoice.discount).toLocaleString()}</td></tr>`
+      : "";
+
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <title>Receipt #${invoice.id.slice(0, 8).toUpperCase()}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a1a; background: #fff; padding: 48px; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #16a34a; }
-    .brand { font-size: 28px; font-weight: 900; color: #16a34a; letter-spacing: -0.5px; }
-    .brand-sub { font-size: 12px; color: #6b7280; margin-top: 4px; }
-    .receipt-label { text-align: right; }
-    .receipt-id { font-size: 22px; font-weight: 800; color: #1a1a1a; }
-    .paid-badge { display: inline-block; margin-top: 6px; padding: 4px 14px; background: #dcfce7; color: #16a34a; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; border: 1px solid #bbf7d0; }
-    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
-    .meta-box { background: #f9fafb; border-radius: 8px; padding: 12px 16px; border: 1px solid #f0f0f0; }
-    .meta-label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-    .meta-value { font-size: 14px; font-weight: 700; color: #1a1a1a; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-    thead tr { background: #f9fafb; }
-    th { padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 2px solid #e5e7eb; }
-    th:not(:first-child) { text-align: center; }
-    th:last-child { text-align: right; }
-    .total-row { background: #f0fdf4; }
-    .total-row td { padding: 12px; font-size: 16px; font-weight: 900; color: #16a34a; border-top: 2px solid #16a34a; }
-    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; text-align: center; }
-    @media print { body { padding: 24px; } }
-  </style>
+<meta charset="UTF-8"/>
+<title>Receipt · NORA AI · ${invoice.id.slice(0, 8).toUpperCase()}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  /* ── Reset ── */
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+  /* ── Tokens — mirrors your CSS vars ── */
+  :root{
+    --ink:#0a0a0a;
+    --ink-sub:#444444;
+    --ink-muted:#777777;
+    --bg:#ffffff;
+    --bg-card:#f5f5f5;
+    --bg-hover:#e8e8e8;
+    --border:#e0e0e0;
+    --accent:#cb6cdc;
+    --accent-bg:rgba(203,108,220,0.08);
+    --accent-border:rgba(203,108,220,0.25);
+    --green:#16a34a;
+    --green-bg:rgba(34,197,94,0.08);
+    --green-border:rgba(34,197,94,0.2);
+    --blue:#2563eb;
+    --blue-bg:rgba(37,99,235,0.07);
+    --amber:#ca8a04;
+    --amber-bg:rgba(234,179,8,0.08);
+    --amber-border:rgba(234,179,8,0.25);
+  }
+
+  body{
+    font-family:'DM Sans',sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    max-width:800px;
+    margin:0 auto;
+    padding:0;
+    font-size:13px;
+    line-height:1.5;
+  }
+
+  /* ── Page shell ── */
+  .page{padding:48px 52px 44px;position:relative}
+
+  /* Subtle diagonal grid watermark */
+  .page::after{
+    content:'';
+    position:fixed;inset:0;
+    background-image:
+      linear-gradient(rgba(203,108,220,.04) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(203,108,220,.04) 1px,transparent 1px);
+    background-size:32px 32px;
+    pointer-events:none;z-index:0;
+  }
+  .page>*{position:relative;z-index:1}
+
+  /* ── Header ── */
+  .header{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    padding-bottom:24px;
+    border-bottom:1px solid var(--border);
+    margin-bottom:28px;
+  }
+
+  /* Logo: wordmark + accent dot */
+  .logo-block{}
+  .logo-wordmark{
+    display:flex;align-items:center;gap:0;
+    font-family:'DM Sans',sans-serif;
+    font-size:22px;font-weight:700;
+    color:var(--ink);letter-spacing:-0.02em;line-height:1;
+  }
+  .logo-wordmark .dot{
+    display:inline-block;
+    width:7px;height:7px;
+    border-radius:50%;
+    background:var(--accent);
+    margin-left:2px;
+    margin-bottom:12px;
+    flex-shrink:0;
+  }
+  .logo-tagline{
+    font-size:9.5px;font-weight:500;
+    color:var(--accent);
+    letter-spacing:0.16em;text-transform:uppercase;
+    margin-top:5px;
+  }
+  .logo-address{
+    font-size:10px;font-weight:400;
+    color:var(--ink-muted);
+    margin-top:4px;line-height:1.5;
+  }
+  .logo-socials{
+    display:flex;gap:10px;margin-top:5px;flex-wrap:wrap;
+  }
+  .logo-socials span{
+    font-size:9.5px;font-weight:500;
+    color:var(--ink-muted);letter-spacing:0.04em;
+  }
+  .logo-socials .sep{color:var(--border)}
+
+  /* Receipt meta — right side */
+  .receipt-meta{text-align:right}
+  .receipt-eyebrow{
+    font-size:9px;font-weight:600;
+    letter-spacing:0.2em;text-transform:uppercase;
+    color:var(--ink-muted);margin-bottom:6px;
+  }
+  .receipt-num{
+    font-family:'DM Mono',monospace;
+    font-size:18px;font-weight:500;
+    color:var(--ink);letter-spacing:0.02em;line-height:1;
+  }
+  .receipt-issued{
+    font-size:10px;color:var(--ink-muted);
+    margin-top:5px;font-weight:400;
+  }
+  .status-chip{
+    display:inline-block;margin-top:9px;
+    padding:4px 14px;border-radius:999px;
+    font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+  }
+  .chip-paid{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+  .chip-pending{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+
+  /* ── Accent bar under header ── */
+  .accent-bar{
+    height:2px;
+    background:linear-gradient(90deg,var(--accent),rgba(203,108,220,0));
+    border-radius:999px;
+    margin-bottom:28px;
+  }
+
+  /* ── Party cards ── */
+  .party-row{
+    display:grid;grid-template-columns:repeat(3,1fr);
+    gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+    border-radius:14px;overflow:hidden;
+    margin-bottom:24px;
+  }
+  .party-card{
+    background:var(--bg-card);
+    padding:18px 16px;
+    position:relative;
+  }
+  .party-card::before{
+    content:'';position:absolute;
+    top:0;left:0;right:0;height:2px;
+  }
+  .party-card.pc-customer::before{background:var(--blue)}
+  .party-card.pc-company::before{background:var(--accent)}
+  .party-card.pc-icart::before{background:var(--amber)}
+
+  .party-eyebrow{
+    font-size:8.5px;font-weight:700;
+    letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--ink-muted);margin-bottom:12px;
+  }
+  .party-field{margin-bottom:8px}
+  .party-field:last-child{margin-bottom:0}
+  .party-key{
+    font-size:8.5px;font-weight:600;
+    letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--ink-muted);margin-bottom:2px;
+  }
+  .party-val{
+    font-size:12.5px;font-weight:500;
+    color:var(--ink);word-break:break-word;line-height:1.35;
+  }
+  .party-val.bold{font-weight:700}
+  .party-val.small{font-size:10.5px;color:var(--ink-sub)}
+
+  /* ── Meta strip ── */
+  .meta-strip{
+    display:flex;flex-wrap:wrap;
+    border:1px solid var(--border);
+    border-radius:10px;overflow:hidden;
+    margin-bottom:24px;
+  }
+  .meta-cell{
+    flex:1;min-width:100px;
+    padding:11px 14px;
+    background:var(--bg);
+    border-right:1px solid var(--border);
+  }
+  .meta-cell:last-child{border-right:none}
+  .meta-key{
+    font-size:8px;font-weight:600;
+    letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--ink-muted);margin-bottom:3px;
+  }
+  .meta-val{
+    font-size:12.5px;font-weight:600;
+    color:var(--ink);
+    font-family:'DM Mono',monospace;
+  }
+
+  /* ── Items table ── */
+  .items-wrap{margin-bottom:8px}
+  table{width:100%;border-collapse:collapse}
+  thead tr{border-bottom:1.5px solid var(--ink)}
+  th{
+    padding:8px 12px;
+    font-size:8px;font-weight:700;
+    letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--ink-muted);text-align:left;
+  }
+  th:not(:first-child){text-align:center}
+  th:last-child{text-align:right}
+  tbody tr{border-bottom:1px solid var(--border)}
+  tbody tr:last-child{border-bottom:none}
+  td{padding:12px;vertical-align:top}
+  .td-main{text-align:left}
+  .td-c{text-align:center;color:var(--ink-sub);font-size:12.5px}
+  .td-r{text-align:right;color:var(--ink-sub);font-size:12.5px}
+  .td-strong{font-weight:700;color:var(--ink)!important}
+  .item-title{display:block;font-size:13px;font-weight:600;color:var(--ink)}
+  .item-sub{display:block;font-size:10px;color:var(--ink-muted);margin-top:2px;font-style:italic}
+
+  /* ── Total box ── */
+  .total-box{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--accent-bg);
+    border:1px solid var(--accent-border);
+    border-radius:10px;
+    padding:14px 18px;
+    margin-top:8px;margin-bottom:32px;
+  }
+  .total-label{
+    font-size:10px;font-weight:600;
+    letter-spacing:0.14em;text-transform:uppercase;
+    color:var(--accent);
+  }
+  .total-amount{
+    font-family:'DM Mono',monospace;
+    font-size:22px;font-weight:500;
+    color:var(--accent);letter-spacing:-0.01em;
+  }
+
+  /* ── Footer ── */
+  .footer{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-top:1px solid var(--border);
+    padding-top:18px;
+  }
+  .footer-left{font-size:9.5px;color:var(--ink-muted);line-height:1.8}
+  .footer-left strong{color:var(--ink-sub);font-weight:600}
+  .footer-right{text-align:right}
+  .footer-mono{
+    font-family:'DM Mono',monospace;
+    font-size:8.5px;color:var(--ink-muted);letter-spacing:0.06em;
+    line-height:1.8;
+  }
+  .footer-mono .hl{color:var(--accent)}
+
+  @media print{
+    body{margin:0}
+    .page{padding:28px 36px}
+    @page{size:A4;margin:10mm}
+  }
+</style>
 </head>
 <body>
+<div class="page">
+
+  <!-- Header -->
   <div class="header">
-    <div>
-      <div class="brand">NORA</div>
-      <div class="brand-sub">iCart Food Infrastructure</div>
+    <div class="logo-block">
+      <div class="logo-wordmark">NORA AI<span class="dot"></span></div>
+      <div class="logo-tagline">Sustainable Urban Mobility</div>
+      <div class="logo-address">50 Ebitu Ukiwe Street, Jabi, Abuja</div>
+      <div class="logo-socials">
+        <span>@noraai</span><span class="sep">·</span>
+        <span>in/nora-ai</span><span class="sep">·</span>
+        <span>x.com/noraai</span><span class="sep">·</span>
+        <span>hello@nora.io</span>
+      </div>
     </div>
-    <div class="receipt-label">
-      <div class="receipt-id">Invoice #${invoice.id.slice(0, 8).toUpperCase()}</div>
-      <div class="paid-badge">✓ PAID</div>
-    </div>
-  </div>
-
-  <div class="meta-grid">
-    <div class="meta-box">
-      <div class="meta-label">Issue Date</div>
-      <div class="meta-value">${formatDate(invoice.createdAt)}</div>
-    </div>
-    <div class="meta-box">
-      <div class="meta-label">Due Date</div>
-      <div class="meta-value">${formatDate(invoice.dueDate)}</div>
-    </div>
-    ${
-      invoice.paidAt
-        ? `
-    <div class="meta-box">
-      <div class="meta-label">Paid On</div>
-      <div class="meta-value">${formatDate(invoice.paidAt)}</div>
-    </div>`
-        : ""
-    }
-    ${
-      invoice.paymentMethod
-        ? `
-    <div class="meta-box">
-      <div class="meta-label">Payment Method</div>
-      <div class="meta-value">${invoice.paymentMethod}</div>
-    </div>`
-        : ""
-    }
-    <div class="meta-box">
-      <div class="meta-label">Currency</div>
-      <div class="meta-value">${invoice.currency}</div>
+    <div class="receipt-meta">
+      <div class="receipt-eyebrow">Payment Receipt</div>
+      <div class="receipt-num">#${invoice.id.slice(0, 8).toUpperCase()}</div>
+      <div class="receipt-issued">Issued ${new Date(invoice.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}</div>
+      <div class="status-chip ${isPaid ? "chip-paid" : "chip-pending"}">${statusLabel}</div>
     </div>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Description</th>
-        <th style="text-align:center">Qty</th>
-        <th style="text-align:right">Unit Price</th>
-        <th style="text-align:right">Amount</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rows}
-      <tr class="total-row">
-        <td colspan="3" style="text-align:right;padding:12px;">Total</td>
-        <td style="text-align:right;padding:12px;">${formatAmount(invoice.total, invoice.currency)}</td>
-      </tr>
-    </tbody>
-  </table>
+  <div class="accent-bar"></div>
 
+  <!-- Party cards -->
+  <div class="party-row">
+    <div class="party-card pc-customer">
+      <div class="party-eyebrow">Customer</div>
+      <div class="party-field"><div class="party-key">Name</div><div class="party-val bold">${na(user?.fullName || user?.name)}</div></div>
+      <div class="party-field"><div class="party-key">Email</div><div class="party-val">${na(user?.email)}</div></div>
+      <div class="party-field"><div class="party-key">Phone</div><div class="party-val">${na(user?.phone)}</div></div>
+    </div>
+    <div class="party-card pc-company">
+      <div class="party-eyebrow">Issuing Company</div>
+      <div class="party-field"><div class="party-key">Company</div><div class="party-val bold">NORA AI Ltd</div></div>
+      <div class="party-field"><div class="party-key">Address</div><div class="party-val small">50 Ebitu Ukiwe St, Jabi, Abuja</div></div>
+      <div class="party-field"><div class="party-key">Email</div><div class="party-val">hello@nora.io</div></div>
+      <div class="party-field"><div class="party-key">Socials</div><div class="party-val small">@noraai · in/nora-ai · x.com/noraai</div></div>
+    </div>
+    <div class="party-card pc-icart">
+      <div class="party-eyebrow">iCart Reference</div>
+      <div class="party-field"><div class="party-key">Context</div><div class="party-val bold">${ctx.type}</div></div>
+      <div class="party-field"><div class="party-key">Reference</div><div class="party-val">${ctx.ref}</div></div>
+      <div class="party-field"><div class="party-key">Invoice No.</div><div class="party-val">#${invoice.id.slice(0, 8).toUpperCase()}</div></div>
+      ${invoice.paymentReference ? `<div class="party-field"><div class="party-key">Pay Ref</div><div class="party-val small" style="word-break:break-all;font-size:9.5px">${invoice.paymentReference}</div></div>` : ""}
+    </div>
+  </div>
+
+  <!-- Meta strip -->
+  <div class="meta-strip">
+    <div class="meta-cell"><div class="meta-key">Issue Date</div><div class="meta-val">${formatDate(invoice.createdAt)}</div></div>
+    <div class="meta-cell"><div class="meta-key">Due Date</div><div class="meta-val">${formatDate(invoice.dueDate)}</div></div>
+    ${invoice.paidAt ? `<div class="meta-cell"><div class="meta-key">Paid On</div><div class="meta-val">${formatDate(invoice.paidAt)}</div></div>` : ""}
+    ${invoice.paymentMethod ? `<div class="meta-cell"><div class="meta-key">Method</div><div class="meta-val">${invoice.paymentMethod.charAt(0).toUpperCase() + invoice.paymentMethod.slice(1)}</div></div>` : ""}
+    <div class="meta-cell"><div class="meta-key">Currency</div><div class="meta-val">${cur}</div></div>
+  </div>
+
+  <!-- Line items -->
+  <div class="items-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th style="text-align:center">Qty</th>
+          <th style="text-align:right">Unit</th>
+          <th style="text-align:right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemRows}
+        ${discountRow}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Total -->
+  <div class="total-box">
+    <div class="total-label">Total Amount</div>
+    <div class="total-amount">${cur} ${Number(invoice.total).toLocaleString()}</div>
+  </div>
+
+  <!-- Footer -->
   <div class="footer">
-    This is an official payment receipt · Generated by NORA iCart Platform · ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
+    <div class="footer-left">
+      <strong>NORA AI Ltd</strong> · 50 Ebitu Ukiwe Street, Jabi, Abuja<br/>
+      Sustainable Urban Mobility · hello@nora.io<br/>
+      This is an official receipt — please retain for your records.
+    </div>
+    <div class="footer-right">
+      <div class="footer-mono">Generated ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
+      <div class="footer-mono">Ref: <span class="hl">${invoice.paymentReference || invoice.id}</span></div>
+    </div>
   </div>
+
+</div>
 </body>
 </html>`;
 }
 
 function downloadReceipt(invoice) {
   const html = generateReceiptHTML(invoice);
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `receipt-${invoice.id.slice(0, 8).toUpperCase()}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  toast.success("Receipt downloaded");
+  const win = window.open("", "_blank");
+  if (!win) {
+    toast.error("Please allow pop-ups to download the receipt");
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+  // Use only one trigger — onload if available, otherwise a single timeout fallback
+  let printed = false;
+  const doPrint = () => {
+    if (printed) return;
+    printed = true;
+    win.focus();
+    win.print();
+  };
+  win.onload = doPrint;
+  setTimeout(doPrint, 800);
+  toast.success("Receipt ready — select 'Save as PDF' in the print dialog");
 }
 
 /* ── Invoice Detail Modal ── */
