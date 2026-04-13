@@ -24,6 +24,7 @@ import {
   MdStorefront,
   MdCheckBox,
   MdCheckBoxOutlineBlank,
+  MdFileOpen,
 } from "react-icons/md";
 import { LuShoppingCart } from "react-icons/lu";
 import { TbGridDots } from "react-icons/tb";
@@ -32,21 +33,21 @@ import { TbGridDots } from "react-icons/tb";
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "—";
 
 function StatusBadge({ status }) {
   const map = {
-    PENDING:     { bg: "rgba(234,179,8,0.1)",   color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
-    IN_PROGRESS: { bg: "rgba(59,130,246,0.1)",  color: "#3b82f6", border: "rgba(59,130,246,0.25)" },
-    COMPLETED:   { bg: "rgba(34,197,94,0.1)",   color: "#16a34a", border: "rgba(34,197,94,0.25)" },
-    MISSED:      { bg: "rgba(239,68,68,0.1)",   color: "#ef4444", border: "rgba(239,68,68,0.25)" },
-    SUBMITTED:   { bg: "rgba(168,85,247,0.1)",  color: "#a855f7", border: "rgba(168,85,247,0.25)" },
-    CREATED:     { bg: "rgba(107,114,128,0.1)", color: "#6b7280", border: "rgba(107,114,128,0.25)" },
-    ACTIVE:      { bg: "rgba(34,197,94,0.1)",   color: "#16a34a", border: "rgba(34,197,94,0.25)" },
+    PENDING: { bg: "rgba(234,179,8,0.1)", color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
+    IN_PROGRESS: { bg: "rgba(59,130,246,0.1)", color: "#3b82f6", border: "rgba(59,130,246,0.25)" },
+    COMPLETED: { bg: "rgba(34,197,94,0.1)", color: "#16a34a", border: "rgba(34,197,94,0.25)" },
+    MISSED: { bg: "rgba(239,68,68,0.1)", color: "#ef4444", border: "rgba(239,68,68,0.25)" },
+    SUBMITTED: { bg: "rgba(168,85,247,0.1)", color: "#a855f7", border: "rgba(168,85,247,0.25)" },
+    CREATED: { bg: "rgba(107,114,128,0.1)", color: "#6b7280", border: "rgba(107,114,128,0.25)" },
+    ACTIVE: { bg: "rgba(34,197,94,0.1)", color: "#16a34a", border: "rgba(34,197,94,0.25)" },
   };
   const s = map[status] || map.CREATED;
   return (
@@ -126,11 +127,11 @@ function CartDetailsPanel({ cart }) {
           {/* Quick stats grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
             {[
-              { label: "Menu Items",  value: cart.menuItems?.length > 0 ? String(cart.menuItems.length) : null },
-              { label: "Operators",   value: cart.operators?.length > 0 ? String(cart.operators.length) : null },
-              { label: "Concepts",    value: cart.concepts?.length > 0 ? String(cart.concepts.length) : null },
-              { label: "Reports",     value: cart.reports?.length > 0 ? String(cart.reports.length) : null },
-              { label: "Contract",    value: cart.contract?.status || null },
+              { label: "Menu Items", value: cart.menuItems?.length > 0 ? String(cart.menuItems.length) : null },
+              { label: "Operators", value: cart.operators?.length > 0 ? String(cart.operators.length) : null },
+              // { label: "Concepts",    value: cart.concepts?.length > 0 ? String(cart.concepts.length) : null },
+              { label: "Reports", value: cart.reports?.length > 0 ? String(cart.reports.length) : null },
+              { label: "Contract", value: cart.contract?.status || null },
             ].filter((m) => m.value).map((m) => (
               <div key={m.label} style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 10, padding: "9px 12px" }}>
                 <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>{m.label}</div>
@@ -192,7 +193,7 @@ function CartDetailsPanel({ cart }) {
       )}
 
       {/* ── Concepts ── */}
-      {cart.concepts?.length > 0 && (
+      {/* {cart.concepts?.length > 0 && (
         <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: "14px 16px" }}>
           <div style={{ fontSize: "0.6rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: 10 }}>
             Concepts · {cart.concepts.length}
@@ -213,7 +214,7 @@ function CartDetailsPanel({ cart }) {
             ))}
           </div>
         </div>
-      )}
+      )} */}
 
       {/* ── Menu items ── */}
       {cart.menuItems?.length > 0 && (
@@ -395,7 +396,7 @@ function TaskCard({ task }) {
 }
 
 function TasksPanel({ cartId }) {
-  const [tasks, setTasks]     = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadTasks = async () => {
@@ -446,20 +447,20 @@ function TasksPanel({ cartId }) {
 
 /* ── Tab config ── */
 const TABS = [
-  { key: "details",     label: "Details",     icon: <MdInfo size={14} /> },
-  { key: "tasks",       label: "Tasks",       icon: <MdTask size={14} /> },
-  { key: "maintenance", label: "Maintenance", icon: <MdBuild size={14} /> },
+  { key: "details", label: "Details", icon: <MdInfo size={14} /> },
+  { key: "tasks", label: "Tasks", icon: <MdTask size={14} /> },
+  { key: "maintenance", label: "Reports", icon: <MdFileOpen size={14} /> },
 ];
 
 /* ═══════════════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════════════ */
 export default function AggregatorPage() {
-  const [serial, setSerial]       = useState("");
+  const [serial, setSerial] = useState("");
   const [searching, setSearching] = useState(false);
-  const [cart, setCart]           = useState(null);
+  const [cart, setCart] = useState(null);
   const [activeTab, setActiveTab] = useState("details");
-  const [notFound, setNotFound]   = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
   const handleSearch = async () => {
     const q = serial.trim().toUpperCase();
@@ -617,8 +618,8 @@ export default function AggregatorPage() {
             })}
           </div>
 
-          {activeTab === "details"     && <CartDetailsPanel cart={cart} />}
-          {activeTab === "tasks"       && <TasksPanel cartId={cart.id} />}
+          {activeTab === "details" && <CartDetailsPanel cart={cart} />}
+          {activeTab === "tasks" && <TasksPanel cartId={cart.id} />}
           {activeTab === "maintenance" && (
             <MaintenanceTab cartId={cart.id} canUpdateStatus={true} />
           )}

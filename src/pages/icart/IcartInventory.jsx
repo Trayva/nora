@@ -1861,7 +1861,7 @@ function SupplyRequestRow({ req, onRefresh }) {
   const [receiving, setReceiving] = useState(false);
 
   const fmt = (n) =>
-    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
 
   // Normalise ingredient items and machinery items into one unified list
   const ingItems = (req.items || []).map((it) => ({

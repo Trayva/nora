@@ -8,10 +8,26 @@ import "./Invoice.css";
 import { useLocation, useSearchParams } from "react-router-dom";
 
 const statusColors = {
-  PENDING:   { bg: "rgba(234,179,8,0.1)",   color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
-  PAID:      { bg: "rgba(34,197,94,0.1)",   color: "#16a34a", border: "rgba(34,197,94,0.25)" },
-  OVERDUE:   { bg: "rgba(239,68,68,0.1)",   color: "#ef4444", border: "rgba(239,68,68,0.25)" },
-  CANCELLED: { bg: "rgba(107,114,128,0.1)", color: "#6b7280", border: "rgba(107,114,128,0.25)" },
+  PENDING: {
+    bg: "rgba(234,179,8,0.1)",
+    color: "#ca8a04",
+    border: "rgba(234,179,8,0.25)",
+  },
+  PAID: {
+    bg: "rgba(34,197,94,0.1)",
+    color: "#16a34a",
+    border: "rgba(34,197,94,0.25)",
+  },
+  OVERDUE: {
+    bg: "rgba(239,68,68,0.1)",
+    color: "#ef4444",
+    border: "rgba(239,68,68,0.25)",
+  },
+  CANCELLED: {
+    bg: "rgba(107,114,128,0.1)",
+    color: "#6b7280",
+    border: "rgba(107,114,128,0.25)",
+  },
 };
 
 const STATUS_FILTERS = ["ALL", "PENDING", "PAID", "OVERDUE", "CANCELLED"];
@@ -21,7 +37,11 @@ function StatusBadge({ status }) {
   return (
     <span
       className="invoice_status_badge"
-      style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}
+      style={{
+        background: s.bg,
+        color: s.color,
+        border: `1px solid ${s.border}`,
+      }}
     >
       {status}
     </span>
@@ -30,7 +50,9 @@ function StatusBadge({ status }) {
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 }
 
@@ -41,14 +63,18 @@ function formatAmount(amount, currency) {
 /* ── PDF Receipt Generator ── */
 function generateReceiptHTML(invoice) {
   const items = invoice.items || [];
-  const rows = items.map((item) => `
+  const rows = items
+    .map(
+      (item) => `
     <tr>
       <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;">${item.title || "—"}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:center;">${item.quantity}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right;">${invoice.currency} ${Number(item.amount || 0).toLocaleString()}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;">${invoice.currency} ${Number((item.amount || 0) * item.quantity).toLocaleString()}</td>
     </tr>
-  `).join("");
+  `,
+    )
+    .join("");
 
   return `<!DOCTYPE html>
 <html>
@@ -100,16 +126,24 @@ function generateReceiptHTML(invoice) {
       <div class="meta-label">Due Date</div>
       <div class="meta-value">${formatDate(invoice.dueDate)}</div>
     </div>
-    ${invoice.paidAt ? `
+    ${
+      invoice.paidAt
+        ? `
     <div class="meta-box">
       <div class="meta-label">Paid On</div>
       <div class="meta-value">${formatDate(invoice.paidAt)}</div>
-    </div>` : ""}
-    ${invoice.paymentMethod ? `
+    </div>`
+        : ""
+    }
+    ${
+      invoice.paymentMethod
+        ? `
     <div class="meta-box">
       <div class="meta-label">Payment Method</div>
       <div class="meta-value">${invoice.paymentMethod}</div>
-    </div>` : ""}
+    </div>`
+        : ""
+    }
     <div class="meta-box">
       <div class="meta-label">Currency</div>
       <div class="meta-value">${invoice.currency}</div>
@@ -164,7 +198,10 @@ function InvoiceModal({ invoice, onClose, onPay }) {
 
   const items = invoice.items || [];
   const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
-  const pagedItems = items.slice(itemPage * ITEMS_PER_PAGE, (itemPage + 1) * ITEMS_PER_PAGE);
+  const pagedItems = items.slice(
+    itemPage * ITEMS_PER_PAGE,
+    (itemPage + 1) * ITEMS_PER_PAGE,
+  );
 
   const handlePay = async (method) => {
     setPaying(method);
@@ -181,7 +218,15 @@ function InvoiceModal({ invoice, onClose, onPay }) {
     >
       <div className="modal-body">
         {/* Status + currency + download */}
-        <div className="invoice_modal_status_row" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <div
+          className="invoice_modal_status_row"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 14,
+          }}
+        >
           <StatusBadge status={invoice.status} />
           <span className="invoice_modal_currency">{invoice.currency}</span>
           {invoice.status === "PAID" && (
@@ -189,12 +234,19 @@ function InvoiceModal({ invoice, onClose, onPay }) {
               onClick={() => downloadReceipt(invoice)}
               style={{
                 marginLeft: "auto",
-                display: "inline-flex", alignItems: "center", gap: 5,
-                height: 30, padding: "0 12px", borderRadius: 7,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                height: 30,
+                padding: "0 12px",
+                borderRadius: 7,
                 border: "1px solid rgba(34,197,94,0.3)",
-                background: "rgba(34,197,94,0.08)", color: "#16a34a",
-                cursor: "pointer", fontFamily: "inherit",
-                fontSize: "0.74rem", fontWeight: 700,
+                background: "rgba(34,197,94,0.08)",
+                color: "#16a34a",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: "0.74rem",
+                fontWeight: 700,
               }}
             >
               <MdDownload size={14} /> Download Receipt
@@ -204,10 +256,23 @@ function InvoiceModal({ invoice, onClose, onPay }) {
 
         {/* Items — paginated */}
         <div className="invoice_items">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 8,
+            }}
+          >
             <span className="invoice_section_label">Items</span>
             {totalPages > 1 && (
-              <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>
+              <span
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 600,
+                }}
+              >
                 {itemPage + 1} / {totalPages}
               </span>
             )}
@@ -232,14 +297,28 @@ function InvoiceModal({ invoice, onClose, onPay }) {
 
           {/* Pagination controls */}
           {totalPages > 1 && (
-            <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 10 }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 6,
+                justifyContent: "center",
+                marginTop: 10,
+              }}
+            >
               <button
                 onClick={() => setItemPage((p) => Math.max(0, p - 1))}
                 disabled={itemPage === 0}
                 style={{
-                  height: 28, padding: "0 12px", borderRadius: 6, border: "1px solid var(--border)",
-                  background: "var(--bg-hover)", color: "var(--text-muted)", cursor: "pointer",
-                  fontSize: "0.72rem", fontWeight: 700, fontFamily: "inherit",
+                  height: 28,
+                  padding: "0 12px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-hover)",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  fontFamily: "inherit",
                   opacity: itemPage === 0 ? 0.4 : 1,
                 }}
               >
@@ -250,23 +329,39 @@ function InvoiceModal({ invoice, onClose, onPay }) {
                   key={i}
                   onClick={() => setItemPage(i)}
                   style={{
-                    width: 28, height: 28, borderRadius: 6,
+                    width: 28,
+                    height: 28,
+                    borderRadius: 6,
                     border: `1px solid ${itemPage === i ? "var(--accent)" : "var(--border)"}`,
-                    background: itemPage === i ? "var(--bg-active)" : "var(--bg-hover)",
-                    color: itemPage === i ? "var(--accent)" : "var(--text-muted)",
-                    cursor: "pointer", fontSize: "0.72rem", fontWeight: 700, fontFamily: "inherit",
+                    background:
+                      itemPage === i ? "var(--bg-active)" : "var(--bg-hover)",
+                    color:
+                      itemPage === i ? "var(--accent)" : "var(--text-muted)",
+                    cursor: "pointer",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    fontFamily: "inherit",
                   }}
                 >
                   {i + 1}
                 </button>
               ))}
               <button
-                onClick={() => setItemPage((p) => Math.min(totalPages - 1, p + 1))}
+                onClick={() =>
+                  setItemPage((p) => Math.min(totalPages - 1, p + 1))
+                }
                 disabled={itemPage === totalPages - 1}
                 style={{
-                  height: 28, padding: "0 12px", borderRadius: 6, border: "1px solid var(--border)",
-                  background: "var(--bg-hover)", color: "var(--text-muted)", cursor: "pointer",
-                  fontSize: "0.72rem", fontWeight: 700, fontFamily: "inherit",
+                  height: 28,
+                  padding: "0 12px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-hover)",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  fontFamily: "inherit",
                   opacity: itemPage === totalPages - 1 ? 0.4 : 1,
                 }}
               >
@@ -279,10 +374,14 @@ function InvoiceModal({ invoice, onClose, onPay }) {
         {/* Meta grid */}
         <div className="invoice_meta_grid">
           {[
-            { label: "Created",  value: formatDate(invoice.createdAt) },
+            { label: "Created", value: formatDate(invoice.createdAt) },
             { label: "Due Date", value: formatDate(invoice.dueDate) },
-            ...(invoice.paidAt        ? [{ label: "Paid At", value: formatDate(invoice.paidAt) }] : []),
-            ...(invoice.paymentMethod ? [{ label: "Method",  value: invoice.paymentMethod }] : []),
+            ...(invoice.paidAt
+              ? [{ label: "Paid At", value: formatDate(invoice.paidAt) }]
+              : []),
+            ...(invoice.paymentMethod
+              ? [{ label: "Method", value: invoice.paymentMethod }]
+              : []),
           ].map((m) => (
             <div key={m.label} className="invoice_meta_item">
               <span className="icart_meta_label">{m.label}</span>
@@ -301,7 +400,10 @@ function InvoiceModal({ invoice, onClose, onPay }) {
 
         {/* Payment actions */}
         {invoice.status === "PENDING" && (
-          <div className="modal-footer" style={{ flexDirection: "column", gap: 10 }}>
+          <div
+            className="modal-footer"
+            style={{ flexDirection: "column", gap: 10 }}
+          >
             {showMethods ? (
               <>
                 <div className="invoice_method_btns">
@@ -312,7 +414,12 @@ function InvoiceModal({ invoice, onClose, onPay }) {
                     disabled={!!paying}
                   >
                     <span className="btn_text">Pay with Wallet</span>
-                    {paying === "wallet" && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
+                    {paying === "wallet" && (
+                      <span
+                        className="btn_loader"
+                        style={{ width: 18, height: 18 }}
+                      />
+                    )}
                   </button>
                   <button
                     className={`app_btn app_btn_confirm ${paying === "online" ? "btn_loading" : ""}`}
@@ -321,7 +428,12 @@ function InvoiceModal({ invoice, onClose, onPay }) {
                     disabled={!!paying}
                   >
                     <span className="btn_text">Pay Online</span>
-                    {paying === "online" && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
+                    {paying === "online" && (
+                      <span
+                        className="btn_loader"
+                        style={{ width: 18, height: 18 }}
+                      />
+                    )}
                   </button>
                 </div>
                 <button
@@ -351,17 +463,17 @@ function InvoiceModal({ invoice, onClose, onPay }) {
 
 /* ── Main Page ── */
 export default function Invoices() {
-  const [invoices, setInvoices]     = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [selected, setSelected]     = useState(null);
-  const location                    = useLocation();
-  const [searchParams]              = useSearchParams();
-  const openId                      = searchParams.get("open_id");
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const openId = searchParams.get("open_id");
 
-  const [search, setSearch]         = useState("");
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [dateFrom, setDateFrom]     = useState("");
-  const [dateTo, setDateTo]         = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const fetchInvoices = async () => {
     try {
@@ -370,7 +482,10 @@ export default function Invoices() {
       setInvoices(list);
       if (openId) {
         const inv = list.find((i) => i.id === openId);
-        if (inv) { setSelected(inv); window.history.replaceState({}, "", "/app/invoices"); }
+        if (inv) {
+          setSelected(inv);
+          window.history.replaceState({}, "", "/app/invoices");
+        }
       } else if (location.state?.openLatest && list.length > 0) {
         setSelected(list[0]);
       }
@@ -381,24 +496,38 @@ export default function Invoices() {
     }
   };
 
-  useEffect(() => { fetchInvoices(); }, [location.state]);
+  useEffect(() => {
+    fetchInvoices();
+  }, [location.state]);
 
-  const filtered = useMemo(() => invoices.filter((inv) => {
-    if (statusFilter !== "ALL" && inv.status !== statusFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      if (!inv.id.toLowerCase().includes(q) &&
-          !(inv.items || []).some((it) => it.title?.toLowerCase().includes(q))) return false;
-    }
-    if (dateFrom && new Date(inv.dueDate) < new Date(dateFrom)) return false;
-    if (dateTo   && new Date(inv.dueDate) > new Date(dateTo))   return false;
-    return true;
-  }), [invoices, search, statusFilter, dateFrom, dateTo]);
+  const filtered = useMemo(
+    () =>
+      invoices.filter((inv) => {
+        if (statusFilter !== "ALL" && inv.status !== statusFilter) return false;
+        if (search) {
+          const q = search.toLowerCase();
+          if (
+            !inv.id.toLowerCase().includes(q) &&
+            !(inv.items || []).some((it) => it.title?.toLowerCase().includes(q))
+          )
+            return false;
+        }
+        if (dateFrom && new Date(inv.dueDate) < new Date(dateFrom))
+          return false;
+        if (dateTo && new Date(inv.dueDate) > new Date(dateTo)) return false;
+        return true;
+      }),
+    [invoices, search, statusFilter, dateFrom, dateTo],
+  );
 
-  const hasActiveFilters = search || statusFilter !== "ALL" || dateFrom || dateTo;
+  const hasActiveFilters =
+    search || statusFilter !== "ALL" || dateFrom || dateTo;
 
   const clearFilters = () => {
-    setSearch(""); setStatusFilter("ALL"); setDateFrom(""); setDateTo("");
+    setSearch("");
+    setStatusFilter("ALL");
+    setDateFrom("");
+    setDateTo("");
   };
 
   const handlePay = async (method, invoice, setPaying) => {
@@ -427,7 +556,9 @@ export default function Invoices() {
   if (loading) {
     return (
       <div className="page_wrapper">
-        <div className="page_loader"><div className="page_loader_spinner" /></div>
+        <div className="page_loader">
+          <div className="page_loader_spinner" />
+        </div>
       </div>
     );
   }
@@ -448,18 +579,31 @@ export default function Invoices() {
             onChange={(e) => setSearch(e.target.value)}
           />
           {search && (
-            <button className="invoice_search_clear" onClick={() => setSearch("")}>
+            <button
+              className="invoice_search_clear"
+              onClick={() => setSearch("")}
+            >
               <LuX size={12} />
             </button>
           )}
         </div>
         <div className="invoice_date_wrap">
           <label className="invoice_date_label">From</label>
-          <input type="date" className="invoice_date_input" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          <input
+            type="date"
+            className="invoice_date_input"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
         </div>
         <div className="invoice_date_wrap">
           <label className="invoice_date_label">To</label>
-          <input type="date" className="invoice_date_input" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          <input
+            type="date"
+            className="invoice_date_input"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
         </div>
         {hasActiveFilters && (
           <button className="invoice_clear_btn" onClick={clearFilters}>
@@ -493,9 +637,17 @@ export default function Invoices() {
       {filtered.length === 0 ? (
         <div className="invoices_empty">
           <MdReceiptLong size={28} style={{ opacity: 0.3, marginBottom: 6 }} />
-          <p>{hasActiveFilters ? "No invoices match your filters." : "No invoices found."}</p>
+          <p>
+            {hasActiveFilters
+              ? "No invoices match your filters."
+              : "No invoices found."}
+          </p>
           {hasActiveFilters && (
-            <button className="invoice_clear_btn" style={{ margin: "8px auto 0" }} onClick={clearFilters}>
+            <button
+              className="invoice_clear_btn"
+              style={{ margin: "8px auto 0" }}
+              onClick={clearFilters}
+            >
               <LuX size={12} /> Clear filters
             </button>
           )}
@@ -511,18 +663,33 @@ export default function Invoices() {
               <div className="invoice_card_row">
                 <div className="invoice_card_left">
                   <div className="invoice_id_row">
-                    <span className="invoice_id">#{invoice.id.slice(0, 8).toUpperCase()}</span>
+                    <span className="invoice_id">
+                      #{invoice.id.slice(0, 8).toUpperCase()}
+                    </span>
                     <StatusBadge status={invoice.status} />
                     {invoice.status === "PAID" && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.62rem", fontWeight: 700, color: "#16a34a" }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 3,
+                          fontSize: "0.62rem",
+                          fontWeight: 700,
+                          color: "#16a34a",
+                        }}
+                      >
                         <MdCheck size={11} /> Receipt
                       </span>
                     )}
                   </div>
-                  <span className="invoice_date">Due {formatDate(invoice.dueDate)}</span>
+                  <span className="invoice_date">
+                    Due {formatDate(invoice.dueDate)}
+                  </span>
                 </div>
                 <div className="invoice_card_right">
-                  <span className="invoice_total">{formatAmount(invoice.total, invoice.currency)}</span>
+                  <span className="invoice_total">
+                    {formatAmount(invoice.total, invoice.currency)}
+                  </span>
                   <span className="invoice_chevron">›</span>
                 </div>
               </div>

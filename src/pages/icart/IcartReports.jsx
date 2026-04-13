@@ -9,28 +9,29 @@ import {
   MdExpandLess,
   MdCheck,
   MdPerson,
+  MdFileCopy,
 } from "react-icons/md";
 
 /* ── helpers ──────────────────────────────────────────────── */
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
     : "—";
 
 /* actual statuses returned by the API */
 const STATUS_OPTIONS = ["PENDING", "IN_PROGRESS", "RESOLVED", "CLOSED"];
 
 const statusStyle = {
-  PENDING:     { bg: "rgba(234,179,8,0.1)",   color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
-  IN_PROGRESS: { bg: "rgba(59,130,246,0.1)",  color: "#3b82f6", border: "rgba(59,130,246,0.25)" },
-  RESOLVED:    { bg: "rgba(34,197,94,0.1)",   color: "#16a34a", border: "rgba(34,197,94,0.25)" },
-  CLOSED:      { bg: "rgba(107,114,128,0.1)", color: "#6b7280", border: "rgba(107,114,128,0.25)" },
+  PENDING: { bg: "rgba(234,179,8,0.1)", color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
+  IN_PROGRESS: { bg: "rgba(59,130,246,0.1)", color: "#3b82f6", border: "rgba(59,130,246,0.25)" },
+  RESOLVED: { bg: "rgba(34,197,94,0.1)", color: "#16a34a", border: "rgba(34,197,94,0.25)" },
+  CLOSED: { bg: "rgba(107,114,128,0.1)", color: "#6b7280", border: "rgba(107,114,128,0.25)" },
 };
 
 function StatusBadge({ status }) {
@@ -56,8 +57,8 @@ function StatusBadge({ status }) {
 
 /* ── Single Report Row ────────────────────────────────────── */
 function ReportRow({ report, canUpdateStatus, onStatusChanged }) {
-  const [expanded, setExpanded]     = useState(false);
-  const [updating, setUpdating]     = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [localStatus, setLocalStatus] = useState(report.status);
 
   const reporter = report.user;
@@ -216,7 +217,9 @@ function ReportRow({ report, canUpdateStatus, onStatusChanged }) {
           </div>
         </div>
 
-        <StatusBadge status={localStatus} />
+        {report.responses?.find((r) => r.isIssue) && (
+          <StatusBadge status={localStatus} />
+        )}
         {expanded ? (
           <MdExpandLess
             size={16}
@@ -354,37 +357,67 @@ function ReportRow({ report, canUpdateStatus, onStatusChanged }) {
                 Checklist
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {report.responses.map((r, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      padding: "9px 12px",
-                      background: "var(--bg-hover)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 9,
-                    }}
-                  >
+                {report.responses.map((r, i) => {
+                  const aLower = r.a?.toLowerCase();
+                  const isYes = aLower === "yes";
+                  const isNo = aLower === "no";
+                  return (
                     <div
+                      key={i}
                       style={{
-                        fontSize: "0.7rem",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        marginBottom: 3,
+                        padding: "9px 12px",
+                        background: "var(--bg-hover)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 9,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
                       }}
                     >
-                      {r.q}
+                      {(isYes || isNo) && (
+                        <div
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: "50%",
+                            background: isYes
+                              ? "rgba(34,197,94,0.1)"
+                              : "rgba(239,68,68,0.1)",
+                            color: isYes ? "#16a34a" : "#ef4444",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isYes ? <MdCheck size={12} /> : <MdClose size={12} />}
+                        </div>
+                      )}
+                      <div style={{ flex: 1, display: "flex", flexDirection: r.isIssue ? "column-reverse" : "column" }}>
+                        <div
+                          style={{
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                            marginBottom: r.isIssue ? 0 : 1,
+                            marginTop: r.isIssue ? 2 : 0,
+                          }}
+                        >
+                          {r.q}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.82rem",
+                            fontWeight: 600,
+                            color: r.isIssue ? "#ef4444" : "var(--text-body)",
+                          }}
+                        >
+                          {r.a}
+                        </div>
+                      </div>
                     </div>
-                    <div
-                      style={{
-                        fontSize: "0.82rem",
-                        fontWeight: 600,
-                        color: "var(--text-body)",
-                      }}
-                    >
-                      {r.a}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -443,7 +476,7 @@ function ReportRow({ report, canUpdateStatus, onStatusChanged }) {
                   fontWeight: 600,
                 }}
               >
-                <MdBuild size={12} style={{ color: "var(--text-muted)" }} />
+                <MdFileCopy size={12} style={{ color: "var(--text-muted)" }} />
                 {report.cart.serialNumber}
                 <span
                   style={{
@@ -526,9 +559,9 @@ function ReportRow({ report, canUpdateStatus, onStatusChanged }) {
 
 /* ── Create Report Form ───────────────────────────────────── */
 function CreateReportForm({ cartId, onCreated, onCancel }) {
-  const [reportText, setReportText]   = useState("");
-  const [responses, setResponses]     = useState([]);
-  const [submitting, setSubmitting]   = useState(false);
+  const [reportText, setReportText] = useState("");
+  const [responses, setResponses] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
 
   const addResponse = () =>
     setResponses((p) => [...p, { q: "", a: "" }]);
@@ -722,10 +755,10 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
    MAIN EXPORT  —  drop-in tab component for IcartDrawer
    ═══════════════════════════════════════════════════════════ */
 export default function IcartReports({ cart, canUpdateStatus = true }) {
-  const [reports, setReports]   = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [total, setTotal]       = useState(0);
+  const [total, setTotal] = useState(0);
 
   const fetchReports = async () => {
     if (!cart?.id) return;
@@ -772,7 +805,7 @@ export default function IcartReports({ cart, canUpdateStatus = true }) {
               color: "var(--text-heading)",
             }}
           >
-            Maintenance Reports
+            General Reports
           </span>
           {total > 0 && (
             <span
@@ -790,7 +823,7 @@ export default function IcartReports({ cart, canUpdateStatus = true }) {
             </span>
           )}
         </div>
-        <button
+        {/* <button
           className={`app_btn${showForm ? " app_btn_cancel" : " app_btn_confirm"}`}
           style={{
             height: 34,
@@ -812,7 +845,7 @@ export default function IcartReports({ cart, canUpdateStatus = true }) {
               <MdAdd size={13} /> Report Issue
             </>
           )}
-        </button>
+        </button> */}
       </div>
 
       {/* ── Create form ── */}
@@ -836,7 +869,7 @@ export default function IcartReports({ cart, canUpdateStatus = true }) {
       ) : reports.length === 0 && !showForm ? (
         <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
           <MdBuild size={28} style={{ opacity: 0.3 }} />
-          <span>No maintenance reports yet</span>
+          <span>No reports yet</span>
         </div>
       ) : (
         reports.map((r) => (
