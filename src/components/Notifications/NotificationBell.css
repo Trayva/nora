@@ -19,7 +19,7 @@
 }
 
 .notification-bell-btn:hover {
-  background-color: rgba(0,0,0,0.05);
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .bell-icon {
@@ -46,7 +46,8 @@
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  width: 320px;
+  width: 420px;
+  max-width: calc(100vw - 30px);
   background: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border-radius: 8px;
@@ -152,35 +153,44 @@
 
 /* Dark mode overrides */
 .dark-theme .notification-bell-btn:hover {
-  background-color: rgba(255,255,255,0.1);
+  background-color: rgba(255, 255, 255, 0.1);
 }
+
 .dark-theme .bell-icon {
   color: #eee;
 }
+
 .dark-theme .notification-dropdown {
   background: #2a2a2a;
   border-color: #3a3a3a;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
+
 .dark-theme .notification-header {
   background-color: #222;
   border-color: #3a3a3a;
 }
+
 .dark-theme .notification-header h4 {
   color: #eee;
 }
+
 .dark-theme .notification-item {
   border-color: #3a3a3a;
 }
+
 .dark-theme .notification-item:hover {
   background-color: #333;
 }
+
 .dark-theme .notification-item.unread {
   background-color: #1a2a40;
 }
+
 .dark-theme .notif-title {
   color: #f1f1f1;
 }
+
 .dark-theme .notif-message {
   color: #bdc3c7;
 }

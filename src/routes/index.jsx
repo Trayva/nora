@@ -180,6 +180,7 @@ import ShopCheckoutPage from "../pages/website/ShopCheckoutPage";
 import ShopOrderPage from "../pages/website/ShopOrderPage";
 import { getDefaultRoute } from "../utils/AuthHelpers";
 import AggregatorPage from "../pages/app/Aggregator/AggregatorPage";
+import NotificationBell from "../components/Notifications/NotificationBell";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -255,6 +256,9 @@ export default function Routes() {
       path: "/app",
       element: (
         <ProtectedRoute>
+          <div className="desktop-notification" style={{ position: "fixed", top: 20, right: 20, zIndex: 10 }}>
+            <NotificationBell />
+          </div>
           <AppIndex />
         </ProtectedRoute>
       ),
