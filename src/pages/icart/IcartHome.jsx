@@ -19,6 +19,7 @@ import {
   MdLocationOn,
 } from "react-icons/md";
 import { LuShoppingCart } from "react-icons/lu";
+import NotificationBell from "../../components/Notifications/NotificationBell";
 
 const icartStatusColors = {
   PURCHASED: {
@@ -147,7 +148,7 @@ export default function IcartHome() {
           </p>
         </div>
         <button
-          className="app_btn app_btn_confirm"
+          className="app_btn app_btn_confirm shift-right"
           style={{ height: 40, display: "flex", alignItems: "center", gap: 6 }}
           onClick={() => navigate("/app/purchase-icart")}
         >

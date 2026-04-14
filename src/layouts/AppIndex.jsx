@@ -7,6 +7,7 @@ import { MdOutlineSettings } from "react-icons/md";
 import nora_logo_white from "../assets/nora_white.png";
 import nora_logo_dark from "../assets/nora_dark.png";
 import "./AppIndex.css";
+import NotificationBell from "../components/Notifications/NotificationBell";
 
 export default function AppIndex() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -47,13 +48,7 @@ export default function AppIndex() {
           alt="Nora"
           className="mobile-navbar-logo"
         />
-        <button
-          className="mobile-nav-action"
-          onClick={() => navigate("/app/settings")}
-          aria-label="Settings"
-        >
-          <MdOutlineSettings size={22} />
-        </button>
+        <NotificationBell />
       </header>
 
       {/* Backdrop (mobile only) */}

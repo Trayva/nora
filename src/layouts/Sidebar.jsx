@@ -290,8 +290,8 @@ import {
 } from "react-icons/md";
 import nora_logo_white from "../assets/nora_white.png";
 import nora_icon_white from "../assets/nora_white - icon.png";
-import nora_logo_dark  from "../assets/nora_dark.png";
-import nora_icon_dark  from "../assets/nora_dark - icon.png";
+import nora_logo_dark from "../assets/nora_dark.png";
+import nora_icon_dark from "../assets/nora_dark - icon.png";
 import { RxBarChart } from "react-icons/rx";
 import { PiTruck } from "react-icons/pi";
 import { TbGridDots } from "react-icons/tb";
@@ -318,18 +318,18 @@ import { getPrimaryRole } from "../utils/AuthHelpers";
 */
 
 const ALL_NAV_ITEMS = [
-  { id: "admin",      label: "Admin",       icon: MdAdminPanelSettings, path: "/app/admin",      forRoles: ["ADMIN"] },
-  { id: "finance",    label: "Finance",     icon: RxBarChart,           path: "/app/finance",    forRoles: ["ALL"] },
-  { id: "icart",      label: "iCarts",      icon: MdOutlineKitchen,     path: "/app/icart-home", forRoles: ["ADMIN", "VENDOR", "SUPPLIER", "OPERATOR", "CUSTOMER"] },
-  { id: "mybusiness", label: "My Business", icon: BsShop,               path: "/app/business",   forRoles: ["ADMIN", "VENDOR"] },
-  { id: "supplier",   label: "Supplier",    icon: PiTruck,              path: "/app/supplier",   forRoles: ["ADMIN", "SUPPLIER"] },
-  { id: "operator",   label: "Operator",    icon: MdOutlineBadge,       path: "/app/operator",   forRoles: ["ADMIN", "OPERATOR"] },
-  { id: "aggregator", label: "Aggregator",  icon: TbGridDots,           path: "/app/aggregator", forRoles: ["ADMIN", "AGGREGATOR"] },
+  { id: "admin", label: "Admin", icon: MdAdminPanelSettings, path: "/app/admin", forRoles: ["ADMIN"] },
+  { id: "finance", label: "Finance", icon: RxBarChart, path: "/app/finance", forRoles: ["ALL"] },
+  { id: "icart", label: "iCarts", icon: MdOutlineKitchen, path: "/app/icart-home", forRoles: ["ADMIN", "VENDOR", "SUPPLIER", "OPERATOR", "CUSTOMER"] },
+  { id: "mybusiness", label: "My Business", icon: BsShop, path: "/app/business", forRoles: ["ADMIN", "VENDOR"] },
+  { id: "supplier", label: "Supplier", icon: PiTruck, path: "/app/supplier", forRoles: ["ADMIN", "SUPPLIER"] },
+  { id: "operator", label: "Operator", icon: MdOutlineBadge, path: "/app/operator", forRoles: ["ADMIN", "OPERATOR"] },
+  { id: "aggregator", label: "Aggregator", icon: TbGridDots, path: "/app/aggregator", forRoles: ["ADMIN", "AGGREGATOR"] },
 ];
 
 const BOTTOM_ITEMS = [
   { id: "settings", label: "Settings", icon: MdOutlineSettings, path: "/app/settings" },
-  { id: "profile",  label: "Profile",  icon: MdOutlinePerson,   path: "/app/profile" },
+  { id: "profile", label: "Profile", icon: MdOutlinePerson, path: "/app/profile" },
 ];
 
 function getVisibleItems(user) {
@@ -349,13 +349,13 @@ function getVisibleItems(user) {
 }
 
 export default function Sidebar({ mobileOpen = false, onMobileClose }) {
-  const { theme, toggle }           = useTheme();
+  const { theme, toggle } = useTheme();
   const { states, selectedState, changeState } = useAppState();
-  const { user }                    = useAuth();
-  const [collapsed, setCollapsed]   = useState(false);
+  const { user } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const visibleNavItems = useMemo(() => getVisibleItems(user), [user]);
 
@@ -472,7 +472,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
             >
               {theme === "dark"
                 ? <MdOutlineLightMode className="sidebar-icon" />
-                : <MdOutlineDarkMode  className="sidebar-icon" />
+                : <MdOutlineDarkMode className="sidebar-icon" />
               }
               {!collapsed && (
                 <span className="sidebar-label">{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>

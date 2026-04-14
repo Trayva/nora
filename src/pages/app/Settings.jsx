@@ -9,6 +9,7 @@ import Button from "../../components/Button";
 import { MdOutlineMailOutline, MdOutlinePhone } from "react-icons/md";
 import { BsPersonCheck, BsPersonVcard } from "react-icons/bs";
 import ButtonLoader from "../../components/ButtonLoader";
+import NotificationSettingsForm from "../../components/Notifications/NotificationSettingsForm";
 
 const resetPasswordSchema = Yup.object().shape({
   newPassword: Yup.string()
@@ -90,6 +91,10 @@ export default function Settings() {
 
       <hr className="" />
 
+      <NotificationSettingsForm />
+      <br />
+      <br />
+
       {/* Session Management */}
       <section className="">
         <h3 className="page_title_big m-0">Sessions</h3>
@@ -125,6 +130,10 @@ export default function Settings() {
           </button>
         </div>
       </section>
+
+      <hr className="mt-4 mb-4" />
+
+      {/* Notification Preferences */}
     </div>
   );
 }
