@@ -30,7 +30,11 @@ import {
   MdLocalShipping,
 } from "react-icons/md";
 import api from "../../api/axios";
-import { SupplierPicker, useMachinerySupplierPrices, PriceTag } from "../../components/SupplierPicker";
+import {
+  SupplierPicker,
+  useMachinerySupplierPrices,
+  PriceTag,
+} from "../../components/SupplierPicker";
 import { useAppState } from "../../contexts/StateContext";
 import Modal from "../../components/Modal";
 
@@ -1427,174 +1431,39 @@ const VENDOR_PAGE_SIZE = 8;
 
 /* ── Menu Detail Tabs Drawer ──────────────────────────────────── */
 /* ── Ingredient Supply Modal ──────────────────────────────────── */
-function IngredientSupplyModal({ cart, selectedIngItems, onClose, onSubmitted }) {
+function IngredientSupplyModal({
+  isOpen,
+  cart,
+  selectedIngItems,
+  onClose,
+  onSubmitted,
+}) {
   const [suppliers, setSuppliers] = useState([]);
   const [suppliersLoading, setSuppliersLoading] = useState(true);
   const [supplierId, setSupplierId] = useState("");
-  const [quantities, setQuantities] = useState(() =>
-    Object.fromEntries(selectedIngItems.map((m) => [m.id, "1"]))
-  );
-  const [units, setUnits] = useState(() =>
-    Object.fromEntries(selectedIngItems.map((m) => [m.id, m.unit?.toLowerCase() === "ml" || m.unit?.toLowerCase() === "l" ? "ml" : "g"]))
-  );
+  const [quantities, setQuantities] = useState({});
+  const [units, setUnits] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
+  // Reset state when opening
   useEffect(() => {
-    const stateId = cart?.location?.stateId || cart?.location?.state?.id || "";
-    const url = stateId ? `/supplier?stateId=${stateId}` : "/supplier";
-    api.get(url)
-      .then((r) => {
-        const d = r.data.data;
-        setSuppliers(Array.isArray(d) ? d : d?.items || d?.suppliers || []);
-      })
-      .catch(() => toast.error("Failed to load suppliers"))
-      .finally(() => setSuppliersLoading(false));
-  }, [cart]);
-
-  const toBaseQty = (val, unit) => {
-    const n = Number(val);
-    if (unit === "kg") return n * 1000;
-    if (unit === "L") return n * 1000;
-    return n;
-  };
-
-  const getUnitOpts = (baseUnit) => {
-    if (!baseUnit) return ["g", "kg"];
-    const u = baseUnit.toLowerCase();
-    if (u === "g" || u === "kg") return ["g", "kg"];
-    if (u === "ml" || u === "l") return ["ml", "L"];
-    return ["unit"];
-  };
-
-  const handleSubmit = async () => {
-    if (!supplierId) return toast.error("Select a supplier");
-    const valid = selectedIngItems.filter(
-      (m) => quantities[m.id] && Number(quantities[m.id]) > 0
-    );
-    if (!valid.length) return toast.error("Enter quantity for at least one item");
-    setSubmitting(true);
-    try {
-      await api.post("/icart/supply", {
-        cartId: cart?.id,
-        supplierId,
-        items: valid.map((m) => ({
-          ingredientId: m.id,
-          quantity: toBaseQty(quantities[m.id], units[m.id] || "g"),
-        })),
-      });
-      onSubmitted();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to create supply request");
-    } finally {
-      setSubmitting(false);
+    if (isOpen) {
+      setQuantities(
+        Object.fromEntries((selectedIngItems || []).map((m) => [m.id, "1"])),
+      );
+      setUnits(
+        Object.fromEntries(
+          (selectedIngItems || []).map((m) => [
+            m.id,
+            m.unit?.toLowerCase() === "ml" || m.unit?.toLowerCase() === "l"
+              ? "ml"
+              : "g",
+          ]),
+        ),
+      );
+      setSupplierId("");
     }
-  };
-
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1500, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div onClick={!submitting ? onClose : undefined} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(3px)" }} />
-      <div style={{ position: "relative", zIndex: 1, width: "min(460px, 95vw)", background: "var(--bg-card)", borderRadius: 18, overflow: "hidden", boxShadow: "0 16px 48px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", maxHeight: "88vh" }}>
-        {/* Header */}
-        <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <MdLocalShipping size={17} style={{ color: "#16a34a" }} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--text-heading)" }}>Request Ingredient Supply</div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{selectedIngItems.length} ingredient{selectedIngItems.length !== 1 ? "s" : ""}</div>
-          </div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, background: "var(--bg-hover)", border: "1px solid var(--border)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
-            <MdClose size={14} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div style={{ overflowY: "auto", flex: 1, padding: "16px 20px" }}>
-          <div className="form-field">
-            <label className="modal-label">Supplier *</label>
-            <SupplierPicker suppliers={suppliers} suppliersLoading={suppliersLoading} value={supplierId} onChange={setSupplierId} />
-          </div>
-
-          <div style={{ marginTop: 4 }}>
-            <label className="modal-label" style={{ marginBottom: 10, display: "block" }}>Items & Quantities *</label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {selectedIngItems.map((m) => {
-                const uOpts = getUnitOpts(m.unit);
-                return (
-                  <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 11 }}>
-                    {m.image ? (
-                      <img src={m.image} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
-                    ) : (
-                      <div style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <MdOutlineInventory2 size={15} style={{ color: "#16a34a" }} />
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: "0.84rem", fontWeight: 700, color: "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
-                      <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Ingredient{m.unit ? ` · ${m.unit}` : ""}</div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-                      <input
-                        className="modal-input"
-                        type="number"
-                        min="1"
-                        value={quantities[m.id] ?? "1"}
-                        onChange={(e) => setQuantities((p) => ({ ...p, [m.id]: e.target.value }))}
-                        style={{ width: 64, height: 34, textAlign: "center", marginBottom: 0, fontSize: "0.88rem", fontWeight: 700 }}
-                      />
-                      {uOpts.length > 1 ? (
-                        <select
-                          className="modal-input"
-                          value={units[m.id] || uOpts[0]}
-                          onChange={(e) => setUnits((p) => ({ ...p, [m.id]: e.target.value }))}
-                          style={{ width: 58, height: 34, marginBottom: 0, fontSize: "0.78rem", paddingLeft: 4 }}
-                        >
-                          {uOpts.map((u) => <option key={u} value={u}>{u}</option>)}
-                        </select>
-                      ) : (
-                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", minWidth: 28 }}>{uOpts[0] || "g"}</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{ padding: "14px 20px 20px", borderTop: "1px solid var(--border)", display: "flex", gap: 8, flexShrink: 0 }}>
-          <button className="app_btn app_btn_cancel" style={{ flex: 1, height: 42 }} onClick={onClose} disabled={submitting}>Cancel</button>
-          <button
-            className={`app_btn app_btn_confirm${submitting ? " btn_loading" : ""}`}
-            style={{ flex: 2, height: 42, position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-            onClick={handleSubmit}
-            disabled={submitting || !supplierId}
-          >
-            <span className="btn_text"><MdLocalShipping size={15} /> Submit Request</span>
-            {submitting && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Machinery Supply Modal ──────────────────────────────────── */
-function MachinerySupplyModal({ cart, selectedMachItems, onClose, onSubmitted }) {
-  const [suppliers, setSuppliers] = useState([]);
-  const [suppliersLoading, setSuppliersLoading] = useState(true);
-  const [supplierId, setSupplierId] = useState("");
-  const [quantities, setQuantities] = useState(() =>
-    Object.fromEntries(selectedMachItems.map((m) => [m.id, "1"]))
-  );
-  const [submitting, setSubmitting] = useState(false);
-
-  // Cache of machinery prices for the selected supplier: Map<machineryId, price>
-  const { prices: machPrices, loading: machPricesLoading } = useMachinerySupplierPrices(
-    supplierId,
-    cart?.location?.stateId || cart?.location?.state?.id || ""
-  );
+  }, [isOpen]);
 
   useEffect(() => {
     const stateId = cart?.location?.stateId || cart?.location?.state?.id || "";
@@ -1609,39 +1478,58 @@ function MachinerySupplyModal({ cart, selectedMachItems, onClose, onSubmitted })
       .finally(() => setSuppliersLoading(false));
   }, [cart]);
 
+  const toBaseQty = (val, unit) => {
+    const n = Number(val);
+    if (unit === "kg") return n * 1000;
+    if (unit === "L") return n * 1000;
+    return n;
+  };
+  const getUnitOpts = (baseUnit) => {
+    if (!baseUnit) return ["g", "kg"];
+    const u = baseUnit.toLowerCase();
+    if (u === "g" || u === "kg") return ["g", "kg"];
+    if (u === "ml" || u === "l") return ["ml", "L"];
+    return ["unit"];
+  };
+
   const handleSubmit = async () => {
     if (!supplierId) return toast.error("Select a supplier");
-    const valid = selectedMachItems.filter(
-      (m) => quantities[m.id] && Number(quantities[m.id]) > 0
+    const valid = (selectedIngItems || []).filter(
+      (m) => quantities[m.id] && Number(quantities[m.id]) > 0,
     );
-    if (!valid.length) return toast.error("Enter quantity for at least one item");
+    if (!valid.length)
+      return toast.error("Enter quantity for at least one item");
     setSubmitting(true);
     try {
       await api.post("/icart/supply", {
         cartId: cart?.id,
         supplierId,
-        machineryItems: valid.map((m) => ({
-          machineryId: m.id,
-          quantity: Number(quantities[m.id]),
+        items: valid.map((m) => ({
+          ingredientId: m.id,
+          quantity: toBaseQty(quantities[m.id], units[m.id] || "g"),
         })),
       });
       onSubmitted();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to create supply request");
+      toast.error(
+        err.response?.data?.message || "Failed to create supply request",
+      );
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 1500,
+        zIndex: 1600,
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        alignItems: "stretch",
+        justifyContent: "flex-end",
       }}
     >
       <div
@@ -1649,7 +1537,7 @@ function MachinerySupplyModal({ cart, selectedMachItems, onClose, onSubmitted })
         style={{
           position: "absolute",
           inset: 0,
-          background: "rgba(0,0,0,0.65)",
+          background: "rgba(0,0,0,0.55)",
           backdropFilter: "blur(3px)",
         }}
       />
@@ -1657,25 +1545,24 @@ function MachinerySupplyModal({ cart, selectedMachItems, onClose, onSubmitted })
         style={{
           position: "relative",
           zIndex: 1,
-          width: "min(440px, 95vw)",
+          width: "min(560px, 100vw)",
           background: "var(--bg-card)",
-          borderRadius: 18,
-          overflow: "hidden",
-          boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
           display: "flex",
           flexDirection: "column",
-          maxHeight: "88vh",
+          boxShadow: "-8px 0 40px rgba(0,0,0,0.25)",
+          height: "100vh",
+          overflow: "hidden",
         }}
       >
         {/* Header */}
         <div
           style={{
-            padding: "18px 20px 14px",
+            flexShrink: 0,
             borderBottom: "1px solid var(--border)",
+            padding: "18px 22px",
             display: "flex",
             alignItems: "center",
             gap: 12,
-            flexShrink: 0,
           }}
         >
           <div
@@ -1683,22 +1570,29 @@ function MachinerySupplyModal({ cart, selectedMachItems, onClose, onSubmitted })
               width: 36,
               height: 36,
               borderRadius: 10,
-              background: "rgba(203,108,220,0.1)",
-              border: "1px solid rgba(203,108,220,0.2)",
+              background: "rgba(34,197,94,0.1)",
+              border: "1px solid rgba(34,197,94,0.2)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
             }}
           >
-            <MdLocalShipping size={17} style={{ color: "var(--accent)" }} />
+            <MdLocalShipping size={17} style={{ color: "#16a34a" }} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--text-heading)" }}>
-              Request Supply
+            <div
+              style={{
+                fontSize: "0.95rem",
+                fontWeight: 900,
+                color: "var(--text-heading)",
+              }}
+            >
+              Request Ingredient Supply
             </div>
             <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-              {selectedMachItems.length} machinery item{selectedMachItems.length !== 1 ? "s" : ""}
+              {(selectedIngItems || []).length} ingredient
+              {(selectedIngItems || []).length !== 1 ? "s" : ""} selected
             </div>
           </div>
           <button
@@ -1719,10 +1613,17 @@ function MachinerySupplyModal({ cart, selectedMachItems, onClose, onSubmitted })
             <MdClose size={14} />
           </button>
         </div>
-
         {/* Body */}
-        <div style={{ overflowY: "auto", flex: 1, padding: "16px 20px" }}>
-          {/* Supplier */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "16px 22px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
+        >
           <div className="form-field">
             <label className="modal-label">Supplier *</label>
             <SupplierPicker
@@ -1732,14 +1633,461 @@ function MachinerySupplyModal({ cart, selectedMachItems, onClose, onSubmitted })
               onChange={setSupplierId}
             />
           </div>
-
-          {/* Machinery items + quantities */}
-          <div style={{ marginTop: 4 }}>
-            <label className="modal-label" style={{ marginBottom: 10, display: "block" }}>
+          <div>
+            <label
+              className="modal-label"
+              style={{ marginBottom: 10, display: "block" }}
+            >
               Items & Quantities *
             </label>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {selectedMachItems.map((m) => (
+              {(selectedIngItems || []).map((m) => {
+                const uOpts = getUnitOpts(m.unit);
+                return (
+                  <div
+                    key={m.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "10px 12px",
+                      background: "var(--bg-hover)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 11,
+                    }}
+                  >
+                    {m.image ? (
+                      <img
+                        src={m.image}
+                        alt=""
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 8,
+                          objectFit: "cover",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 8,
+                          background: "rgba(34,197,94,0.08)",
+                          border: "1px solid rgba(34,197,94,0.2)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <MdOutlineInventory2
+                          size={16}
+                          style={{ color: "#16a34a" }}
+                        />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: "0.86rem",
+                          fontWeight: 700,
+                          color: "var(--text-body)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {m.name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.65rem",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        Ingredient{m.unit ? ` · ${m.unit}` : ""}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-end",
+                        gap: 5,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          border: "1px solid var(--border)",
+                          borderRadius: 9,
+                          overflow: "hidden",
+                          height: 34,
+                        }}
+                      >
+                        <button
+                          onClick={() =>
+                            setQuantities((p) => ({
+                              ...p,
+                              [m.id]: String(
+                                Math.max(1, Number(p[m.id] || 1) - 1),
+                              ),
+                            }))
+                          }
+                          style={{
+                            width: 30,
+                            height: 34,
+                            background: "var(--bg-card)",
+                            border: "none",
+                            borderRight: "1px solid var(--border)",
+                            cursor: "pointer",
+                            fontSize: "1.1rem",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          −
+                        </button>
+                        <input
+                          className="modal-input"
+                          type="number"
+                          min="1"
+                          value={quantities[m.id] ?? "1"}
+                          onChange={(e) =>
+                            setQuantities((p) => ({
+                              ...p,
+                              [m.id]: e.target.value,
+                            }))
+                          }
+                          style={{
+                            width: 70,
+                            height: 34,
+                            textAlign: "center",
+                            marginBottom: 0,
+                            fontSize: "0.88rem",
+                            fontWeight: 700,
+                            border: "none",
+                            borderRadius: 0,
+                          }}
+                        />
+                        <button
+                          onClick={() =>
+                            setQuantities((p) => ({
+                              ...p,
+                              [m.id]: String(Number(p[m.id] || 1) + 1),
+                            }))
+                          }
+                          style={{
+                            width: 30,
+                            height: 34,
+                            background: "var(--bg-card)",
+                            border: "none",
+                            borderLeft: "1px solid var(--border)",
+                            cursor: "pointer",
+                            fontSize: "1.1rem",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                      {uOpts.length > 1 && (
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {uOpts.map((u) => (
+                            <button
+                              key={u}
+                              onClick={() =>
+                                setUnits((p) => ({ ...p, [m.id]: u }))
+                              }
+                              style={{
+                                height: 24,
+                                padding: "0 8px",
+                                borderRadius: 6,
+                                border: `1px solid ${(units[m.id] || uOpts[0]) === u ? "var(--accent)" : "var(--border)"}`,
+                                background:
+                                  (units[m.id] || uOpts[0]) === u
+                                    ? "var(--bg-active)"
+                                    : "var(--bg-hover)",
+                                color:
+                                  (units[m.id] || uOpts[0]) === u
+                                    ? "var(--accent)"
+                                    : "var(--text-muted)",
+                                cursor: "pointer",
+                                fontSize: "0.68rem",
+                                fontWeight: 700,
+                                fontFamily: "inherit",
+                              }}
+                            >
+                              {u}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {uOpts.length === 1 && (
+                        <span
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "var(--text-muted)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {uOpts[0]}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        {/* Footer */}
+        <div
+          style={{
+            flexShrink: 0,
+            borderTop: "1px solid var(--border)",
+            padding: "14px 22px 20px",
+            display: "flex",
+            gap: 8,
+          }}
+        >
+          <button
+            className="app_btn app_btn_cancel"
+            style={{ flex: 1, height: 44 }}
+            onClick={onClose}
+            disabled={submitting}
+          >
+            Cancel
+          </button>
+          <button
+            className={`app_btn app_btn_confirm${submitting ? " btn_loading" : ""}`}
+            style={{
+              flex: 2,
+              height: 44,
+              position: "relative",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+            }}
+            onClick={handleSubmit}
+            disabled={submitting || !supplierId}
+          >
+            <span className="btn_text">
+              <MdLocalShipping size={15} /> Submit Request
+            </span>
+            {submitting && (
+              <span className="btn_loader" style={{ width: 14, height: 14 }} />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MachinerySupplyModal({
+  isOpen,
+  cart,
+  selectedMachItems,
+  onClose,
+  onSubmitted,
+}) {
+  const [suppliers, setSuppliers] = useState([]);
+  const [suppliersLoading, setSuppliersLoading] = useState(true);
+  const [supplierId, setSupplierId] = useState("");
+  const [quantities, setQuantities] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const { prices: machPrices, loading: machPricesLoading } =
+    useMachinerySupplierPrices(
+      supplierId,
+      cart?.location?.stateId || cart?.location?.state?.id || "",
+    );
+
+  useEffect(() => {
+    if (isOpen) {
+      setQuantities(
+        Object.fromEntries((selectedMachItems || []).map((m) => [m.id, "1"])),
+      );
+      setSupplierId("");
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const stateId = cart?.location?.stateId || cart?.location?.state?.id || "";
+    const url = stateId ? `/supplier?stateId=${stateId}` : "/supplier";
+    api
+      .get(url)
+      .then((r) => {
+        const d = r.data.data;
+        setSuppliers(Array.isArray(d) ? d : d?.items || d?.suppliers || []);
+      })
+      .catch(() => toast.error("Failed to load suppliers"))
+      .finally(() => setSuppliersLoading(false));
+  }, [cart]);
+
+  const handleSubmit = async () => {
+    if (!supplierId) return toast.error("Select a supplier");
+    const valid = (selectedMachItems || []).filter(
+      (m) => quantities[m.id] && Number(quantities[m.id]) > 0,
+    );
+    if (!valid.length)
+      return toast.error("Enter quantity for at least one item");
+    setSubmitting(true);
+    try {
+      await api.post("/icart/supply", {
+        cartId: cart?.id,
+        supplierId,
+        machineryItems: valid.map((m) => ({
+          machineryId: m.id,
+          quantity: Number(quantities[m.id]),
+        })),
+      });
+      onSubmitted();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to create supply request",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1600,
+        display: "flex",
+        alignItems: "stretch",
+        justifyContent: "flex-end",
+      }}
+    >
+      <div
+        onClick={!submitting ? onClose : undefined}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(0,0,0,0.55)",
+          backdropFilter: "blur(3px)",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          width: "min(560px, 100vw)",
+          background: "var(--bg-card)",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "-8px 0 40px rgba(0,0,0,0.25)",
+          height: "100vh",
+          overflow: "hidden",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            flexShrink: 0,
+            borderBottom: "1px solid var(--border)",
+            padding: "18px 22px",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: "rgba(203,108,220,0.1)",
+              border: "1px solid rgba(203,108,220,0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <MdLocalShipping size={17} style={{ color: "var(--accent)" }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                fontSize: "0.95rem",
+                fontWeight: 900,
+                color: "var(--text-heading)",
+              }}
+            >
+              Request Machinery Supply
+            </div>
+            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+              {(selectedMachItems || []).length} item
+              {(selectedMachItems || []).length !== 1 ? "s" : ""} selected
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 7,
+              background: "var(--bg-hover)",
+              border: "1px solid var(--border)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--text-muted)",
+            }}
+          >
+            <MdClose size={14} />
+          </button>
+        </div>
+        {/* Body */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "16px 22px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
+        >
+          <div className="form-field">
+            <label className="modal-label">Supplier *</label>
+            <SupplierPicker
+              suppliers={suppliers}
+              suppliersLoading={suppliersLoading}
+              value={supplierId}
+              onChange={setSupplierId}
+            />
+          </div>
+          <div>
+            <label
+              className="modal-label"
+              style={{ marginBottom: 10, display: "block" }}
+            >
+              Items & Quantities *
+            </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {(selectedMachItems || []).map((m) => (
                 <div
                   key={m.id}
                   style={{
@@ -1756,27 +2104,54 @@ function MachinerySupplyModal({ cart, selectedMachItems, onClose, onSubmitted })
                     <img
                       src={m.image}
                       alt=""
-                      style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 8,
+                        objectFit: "cover",
+                        flexShrink: 0,
+                      }}
                     />
                   ) : (
                     <div
                       style={{
-                        width: 36, height: 36, borderRadius: 8,
-                        background: "rgba(203,108,220,0.08)", border: "1px solid rgba(203,108,220,0.2)",
-                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                        width: 40,
+                        height: 40,
+                        borderRadius: 8,
+                        background: "rgba(203,108,220,0.08)",
+                        border: "1px solid rgba(203,108,220,0.2)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
                       }}
                     >
-                      <MdBuild size={15} style={{ color: "var(--accent)" }} />
+                      <MdBuild size={16} style={{ color: "var(--accent)" }} />
                     </div>
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "0.84rem", fontWeight: 700, color: "var(--text-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div
+                      style={{
+                        fontSize: "0.86rem",
+                        fontWeight: 700,
+                        color: "var(--text-body)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {m.name}
                     </div>
-                    <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Machinery</div>
-                    {/* Price for selected supplier */}
+                    <div
+                      style={{
+                        fontSize: "0.65rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      Machinery
+                    </div>
                     {supplierId && (
-                      <div style={{ marginTop: 4 }}>
+                      <div style={{ marginTop: 3 }}>
                         <PriceTag
                           price={machPrices.get(m.id) ?? null}
                           loading={machPricesLoading && !!supplierId}
@@ -1786,28 +2161,103 @@ function MachinerySupplyModal({ cart, selectedMachItems, onClose, onSubmitted })
                       </div>
                     )}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      border: "1px solid var(--border)",
+                      borderRadius: 9,
+                      overflow: "hidden",
+                      height: 34,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <button
+                      onClick={() =>
+                        setQuantities((p) => ({
+                          ...p,
+                          [m.id]: String(Math.max(1, Number(p[m.id] || 1) - 1)),
+                        }))
+                      }
+                      style={{
+                        width: 30,
+                        height: 34,
+                        background: "var(--bg-card)",
+                        border: "none",
+                        borderRight: "1px solid var(--border)",
+                        cursor: "pointer",
+                        fontSize: "1.1rem",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      −
+                    </button>
                     <input
                       className="modal-input"
                       type="number"
                       min="1"
                       value={quantities[m.id] ?? "1"}
-                      onChange={(e) => setQuantities((p) => ({ ...p, [m.id]: e.target.value }))}
-                      style={{ width: 64, height: 34, textAlign: "center", marginBottom: 0, fontSize: "0.88rem", fontWeight: 700 }}
+                      onChange={(e) =>
+                        setQuantities((p) => ({ ...p, [m.id]: e.target.value }))
+                      }
+                      style={{
+                        width: 70,
+                        height: 34,
+                        textAlign: "center",
+                        marginBottom: 0,
+                        fontSize: "0.88rem",
+                        fontWeight: 700,
+                        border: "none",
+                        borderRadius: 0,
+                      }}
                     />
-                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>unit</span>
+                    <button
+                      onClick={() =>
+                        setQuantities((p) => ({
+                          ...p,
+                          [m.id]: String(Number(p[m.id] || 1) + 1),
+                        }))
+                      }
+                      style={{
+                        width: 30,
+                        height: 34,
+                        background: "var(--bg-card)",
+                        border: "none",
+                        borderLeft: "1px solid var(--border)",
+                        cursor: "pointer",
+                        fontSize: "1.1rem",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
         </div>
-
         {/* Footer */}
-        <div style={{ padding: "14px 20px 20px", borderTop: "1px solid var(--border)", display: "flex", gap: 8, flexShrink: 0 }}>
+        <div
+          style={{
+            flexShrink: 0,
+            borderTop: "1px solid var(--border)",
+            padding: "14px 22px 20px",
+            display: "flex",
+            gap: 8,
+          }}
+        >
           <button
             className="app_btn app_btn_cancel"
-            style={{ flex: 1, height: 42 }}
+            style={{ flex: 1, height: 44 }}
             onClick={onClose}
             disabled={submitting}
           >
@@ -1815,14 +2265,24 @@ function MachinerySupplyModal({ cart, selectedMachItems, onClose, onSubmitted })
           </button>
           <button
             className={`app_btn app_btn_confirm${submitting ? " btn_loading" : ""}`}
-            style={{ flex: 2, height: 42, position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+            style={{
+              flex: 2,
+              height: 44,
+              position: "relative",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+            }}
             onClick={handleSubmit}
             disabled={submitting || !supplierId}
           >
             <span className="btn_text">
               <MdLocalShipping size={15} /> Submit Request
             </span>
-            {submitting && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
+            {submitting && (
+              <span className="btn_loader" style={{ width: 14, height: 14 }} />
+            )}
           </button>
         </div>
       </div>
@@ -1857,7 +2317,10 @@ function MenuDetailDrawer({
     setSelectedIngIds((prev) => {
       const exists = prev.find((m) => m.id === ing.id);
       if (exists) return prev.filter((m) => m.id !== ing.id);
-      return [...prev, { id: ing.id, name: ing.name, image: ing.image, unit: ing.unit }];
+      return [
+        ...prev,
+        { id: ing.id, name: ing.name, image: ing.image, unit: ing.unit },
+      ];
     });
   };
 
@@ -1872,7 +2335,9 @@ function MenuDetailDrawer({
   // Fix drawer scroll: lock body when open
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, []);
 
   useEffect(() => {
@@ -1936,1258 +2401,1383 @@ function MenuDetailDrawer({
 
   return (
     <>
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1400,
-        display: "flex",
-        alignItems: "stretch",
-        justifyContent: "flex-end",
-      }}
-    >
       <div
-        onClick={onClose}
         style={{
-          position: "absolute",
+          position: "fixed",
           inset: 0,
-          background: "rgba(0,0,0,0.55)",
-          backdropFilter: "blur(3px)",
-        }}
-      />
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          width: "min(680px, 100vw)",
-          background: "var(--bg-card)",
+          zIndex: 1400,
           display: "flex",
-          flexDirection: "column",
-          boxShadow: "-8px 0 40px rgba(0,0,0,0.25)",
-          height: "100vh",
-          overflowY: "hidden",
+          alignItems: "stretch",
+          justifyContent: "flex-end",
         }}
       >
-        {/* Header */}
+        <div
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(3px)",
+          }}
+        />
         <div
           style={{
-            position: "sticky",
-            top: 0,
-            zIndex: 2,
+            position: "relative",
+            zIndex: 1,
+            width: "min(680px, 100vw)",
             background: "var(--bg-card)",
-            borderBottom: "1px solid var(--border)",
-            padding: "18px 24px",
             display: "flex",
-            alignItems: "center",
-            gap: 14,
-            flexShrink: 0,
+            flexDirection: "column",
+            boxShadow: "-8px 0 40px rgba(0,0,0,0.25)",
+            height: "100vh",
+            overflowY: "hidden",
           }}
         >
-          <button
-            onClick={onClose}
+          {/* Header */}
+          <div
             style={{
-              width: 34,
-              height: 34,
-              borderRadius: 9,
-              background: "var(--bg-hover)",
-              border: "1px solid var(--border)",
-              cursor: "pointer",
+              position: "sticky",
+              top: 0,
+              zIndex: 2,
+              background: "var(--bg-card)",
+              borderBottom: "1px solid var(--border)",
+              padding: "18px 24px",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              color: "var(--text-muted)",
+              gap: 14,
               flexShrink: 0,
             }}
           >
-            <MdArrowBack size={16} />
-          </button>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
+            <button
+              onClick={onClose}
               style={{
-                fontSize: "1rem",
-                fontWeight: 900,
-                color: "var(--text-heading)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                width: 34,
+                height: 34,
+                borderRadius: 9,
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--text-muted)",
+                flexShrink: 0,
               }}
             >
-              {menuName}
+              <MdArrowBack size={16} />
+            </button>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 900,
+                  color: "var(--text-heading)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {menuName}
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                Menu item details
+              </div>
             </div>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-              Menu item details
-            </div>
+            <button
+              onClick={onToggleSelect}
+              disabled={atLimit}
+              style={{
+                height: 38,
+                padding: "0 18px",
+                borderRadius: 10,
+                cursor: atLimit ? "not-allowed" : "pointer",
+                fontFamily: "inherit",
+                fontWeight: 800,
+                fontSize: "0.82rem",
+                flexShrink: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 7,
+                transition: "all 0.15s",
+                border: `1.5px solid ${isSelected ? "rgba(34,197,94,0.5)" : atLimit ? "var(--border)" : "rgba(203,108,220,0.4)"}`,
+                background: isSelected
+                  ? "rgba(34,197,94,0.1)"
+                  : atLimit
+                    ? "var(--bg-hover)"
+                    : "var(--bg-active)",
+                color: isSelected
+                  ? "#16a34a"
+                  : atLimit
+                    ? "var(--text-muted)"
+                    : "var(--accent)",
+                opacity: atLimit ? 0.5 : 1,
+              }}
+            >
+              {isSelected ? (
+                <>
+                  <MdCheck size={15} /> Selected
+                </>
+              ) : atLimit ? (
+                "Limit reached"
+              ) : (
+                <>
+                  <MdAdd size={15} /> Select
+                </>
+              )}
+            </button>
           </div>
-          <button
-            onClick={onToggleSelect}
-            disabled={atLimit}
+
+          {/* Tab bar */}
+          <div
             style={{
-              height: 38,
-              padding: "0 18px",
-              borderRadius: 10,
-              cursor: atLimit ? "not-allowed" : "pointer",
-              fontFamily: "inherit",
-              fontWeight: 800,
-              fontSize: "0.82rem",
+              display: "flex",
+              borderBottom: "1px solid var(--border)",
+              overflowX: "auto",
+              scrollbarWidth: "none",
+              background: "var(--bg-card)",
               flexShrink: 0,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 7,
-              transition: "all 0.15s",
-              border: `1.5px solid ${isSelected ? "rgba(34,197,94,0.5)" : atLimit ? "var(--border)" : "rgba(203,108,220,0.4)"}`,
-              background: isSelected
-                ? "rgba(34,197,94,0.1)"
-                : atLimit
-                  ? "var(--bg-hover)"
-                  : "var(--bg-active)",
-              color: isSelected
-                ? "#16a34a"
-                : atLimit
-                  ? "var(--text-muted)"
-                  : "var(--accent)",
-              opacity: atLimit ? 0.5 : 1,
             }}
           >
-            {isSelected ? (
-              <>
-                <MdCheck size={15} /> Selected
-              </>
-            ) : atLimit ? (
-              "Limit reached"
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setActiveTab(t.key)}
+                style={{
+                  padding: "12px 18px",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: `2px solid ${activeTab === t.key ? "var(--accent)" : "transparent"}`,
+                  color:
+                    activeTab === t.key ? "var(--accent)" : "var(--text-muted)",
+                  fontSize: "0.8rem",
+                  fontWeight: activeTab === t.key ? 700 : 500,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  fontFamily: "inherit",
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Scrollable content */}
+          <div style={{ flex: 1, padding: "20px 24px", overflowY: "auto" }}>
+            {loading ? (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  padding: "48px 0",
+                }}
+              >
+                <div
+                  className="page_loader_spinner"
+                  style={{ width: 28, height: 28 }}
+                />
+              </div>
+            ) : !summary ? (
+              <div className="icart_empty_inline" style={{ padding: "48px 0" }}>
+                <MdRestaurantMenu size={28} style={{ opacity: 0.25 }} />
+                <span>No details available</span>
+              </div>
             ) : (
               <>
-                <MdAdd size={15} /> Select
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Tab bar */}
-        <div
-          style={{
-            display: "flex",
-            borderBottom: "1px solid var(--border)",
-            overflowX: "auto",
-            scrollbarWidth: "none",
-            background: "var(--bg-card)",
-            flexShrink: 0,
-          }}
-        >
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
-              style={{
-                padding: "12px 18px",
-                background: "transparent",
-                border: "none",
-                borderBottom: `2px solid ${activeTab === t.key ? "var(--accent)" : "transparent"}`,
-                color:
-                  activeTab === t.key ? "var(--accent)" : "var(--text-muted)",
-                fontSize: "0.8rem",
-                fontWeight: activeTab === t.key ? 700 : 500,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                fontFamily: "inherit",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Scrollable content */}
-        <div style={{ flex: 1, padding: "20px 24px", overflowY: "auto" }}>
-          {loading ? (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                padding: "48px 0",
-              }}
-            >
-              <div
-                className="page_loader_spinner"
-                style={{ width: 28, height: 28 }}
-              />
-            </div>
-          ) : !summary ? (
-            <div className="icart_empty_inline" style={{ padding: "48px 0" }}>
-              <MdRestaurantMenu size={28} style={{ opacity: 0.25 }} />
-              <span>No details available</span>
-            </div>
-          ) : (
-            <>
-              {activeTab === "overview" && (
-                <div>
-                  {item?.image && (
-                    <div
-                      style={{
-                        position: "relative",
-                        borderRadius: 16,
-                        overflow: "hidden",
-                        marginBottom: 20,
-                      }}
-                    >
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        style={{
-                          width: "100%",
-                          height: 200,
-                          objectFit: "cover",
-                          display: "block",
-                        }}
-                      />
+                {activeTab === "overview" && (
+                  <div>
+                    {item?.image && (
                       <div
                         style={{
-                          position: "absolute",
-                          inset: 0,
-                          background:
-                            "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7))",
-                        }}
-                      />
-                      <div
-                        style={{
-                          position: "absolute",
-                          bottom: 16,
-                          left: 18,
-                          right: 18,
+                          position: "relative",
+                          borderRadius: 16,
+                          overflow: "hidden",
+                          marginBottom: 20,
                         }}
                       >
-                        <div
+                        <img
+                          src={item.image}
+                          alt={item.name}
                           style={{
-                            fontSize: "1.2rem",
-                            fontWeight: 900,
-                            color: "#fff",
-                            marginBottom: 4,
+                            width: "100%",
+                            height: 200,
+                            objectFit: "cover",
+                            display: "block",
                           }}
-                        >
-                          {item.name}
-                        </div>
-                        <div
-                          style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
-                        >
-                          {item.ticketTime > 0 && (
-                            <span
-                              style={{
-                                fontSize: "0.65rem",
-                                fontWeight: 700,
-                                padding: "2px 8px",
-                                borderRadius: 5,
-                                background: "rgba(0,0,0,0.5)",
-                                color: "rgba(255,255,255,0.9)",
-                              }}
-                            >
-                              ⏱ {item.ticketTime} min
-                            </span>
-                          )}
-                          {displayServeTo && (
-                            <span
-                              style={{
-                                fontSize: "0.65rem",
-                                fontWeight: 700,
-                                padding: "2px 8px",
-                                borderRadius: 5,
-                                background: "rgba(0,0,0,0.5)",
-                                color: "rgba(255,255,255,0.9)",
-                              }}
-                            >
-                              👥 {displayServeTo}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {summary?.vendor?.businessName && (
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        flexWrap: "wrap",
-                        marginBottom: 14,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: "0.72rem",
-                          fontWeight: 700,
-                          padding: "4px 11px",
-                          borderRadius: 999,
-                          background: "var(--bg-hover)",
-                          color: "var(--text-muted)",
-                          border: "1px solid var(--border)",
-                        }}
-                      >
-                        🏷 {summary.vendor.businessName}
-                      </span>
-                    </div>
-                  )}
-                  {displayDescription && (
-                    <p
-                      style={{
-                        fontSize: "0.85rem",
-                        color: "var(--text-muted)",
-                        lineHeight: 1.65,
-                        marginBottom: 20,
-                      }}
-                    >
-                      {displayDescription}
-                    </p>
-                  )}
-
-                  {(menuPrice != null || baseCost != null) && (
-                    <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-                      {menuPrice != null && (
+                        />
                         <div
                           style={{
-                            flex: 1,
-                            background: "var(--bg-active)",
-                            border: "1px solid rgba(203,108,220,0.2)",
-                            borderRadius: 12,
-                            padding: "12px 14px",
+                            position: "absolute",
+                            inset: 0,
+                            background:
+                              "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7))",
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: 16,
+                            left: 18,
+                            right: 18,
                           }}
                         >
                           <div
                             style={{
-                              fontSize: "0.6rem",
-                              fontWeight: 700,
-                              color: "var(--text-muted)",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.05em",
-                              marginBottom: 3,
-                            }}
-                          >
-                            Selling Price
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "1.1rem",
+                              fontSize: "1.2rem",
                               fontWeight: 900,
-                              color: "var(--accent)",
-                            }}
-                          >
-                            ₦{fmt(menuPrice)}
-                          </div>
-                        </div>
-                      )}
-                      {baseCost != null && (
-                        <div
-                          style={{
-                            flex: 1,
-                            background: "var(--bg-hover)",
-                            border: "1px solid var(--border)",
-                            borderRadius: 12,
-                            padding: "12px 14px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontSize: "0.6rem",
-                              fontWeight: 700,
-                              color: "var(--text-muted)",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.05em",
-                              marginBottom: 3,
-                            }}
-                          >
-                            Recipe Cost
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "1.1rem",
-                              fontWeight: 900,
-                              color: "var(--text-heading)",
-                            }}
-                          >
-                            ₦{fmt(baseCost)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fill, minmax(130px, 1fr))",
-                      gap: 10,
-                      marginBottom: 20,
-                    }}
-                  >
-                    {[
-                      {
-                        label: "Selling Price",
-                        value:
-                          menuPrice != null
-                            ? `₦${fmt(menuPrice)}`
-                            : item?.sellingPrice > 0
-                              ? `₦${fmt(item.sellingPrice)}`
-                              : null,
-                        accent: true,
-                      },
-                      {
-                        label: "Recipe Cost",
-                        value:
-                          baseCost != null
-                            ? `₦${fmt(baseCost)}`
-                            : item?.recipeCost > 0
-                              ? `₦${fmt(item.recipeCost)}`
-                              : null,
-                      },
-                      {
-                        label: "Ticket Time",
-                        value:
-                          item?.ticketTime > 0
-                            ? `${item.ticketTime} min`
-                            : null,
-                      },
-                      { label: "Serves", value: displayServeTo || null },
-                      { label: "Origin", value: displayOrigin || null },
-                      {
-                        label: "Ingredients",
-                        value:
-                          ingredients.length > 0
-                            ? String(ingredients.length)
-                            : null,
-                      },
-                      {
-                        label: "Prep Items",
-                        value:
-                          prepItems.length > 0
-                            ? String(prepItems.length)
-                            : null,
-                      },
-                      {
-                        label: "Tools",
-                        value:
-                          machineries.length > 0
-                            ? String(machineries.length)
-                            : null,
-                      },
-                    ]
-                      .filter((s) => s.value)
-                      .map((s) => (
-                        <div
-                          key={s.label}
-                          style={{
-                            background: s.accent
-                              ? "var(--bg-active)"
-                              : "var(--bg-hover)",
-                            border: `1px solid ${s.accent ? "rgba(203,108,220,0.2)" : "var(--border)"}`,
-                            borderRadius: 12,
-                            padding: "12px 14px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontSize: "0.62rem",
-                              fontWeight: 700,
-                              color: "var(--text-muted)",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.05em",
+                              color: "#fff",
                               marginBottom: 4,
                             }}
                           >
-                            {s.label}
+                            {item.name}
                           </div>
                           <div
                             style={{
-                              fontSize: "0.95rem",
-                              fontWeight: 900,
-                              color: s.accent
-                                ? "var(--accent)"
-                                : "var(--text-heading)",
+                              display: "flex",
+                              gap: 6,
+                              flexWrap: "wrap",
                             }}
                           >
-                            {s.value}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-
-                  {displayPackaging && (
-                    <div
-                      style={{
-                        background: "var(--bg-hover)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 12,
-                        padding: "14px 16px",
-                        marginBottom: 16,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: "0.62rem",
-                          fontWeight: 700,
-                          color: "var(--text-muted)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          marginBottom: 8,
-                        }}
-                      >
-                        Packaging
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 12,
-                          alignItems: "flex-start",
-                        }}
-                      >
-                        {displayPackagingImage && (
-                          <img
-                            src={displayPackagingImage}
-                            alt=""
-                            style={{
-                              width: 52,
-                              height: 52,
-                              borderRadius: 8,
-                              objectFit: "cover",
-                              flexShrink: 0,
-                            }}
-                          />
-                        )}
-                        <p
-                          style={{
-                            margin: 0,
-                            fontSize: "0.82rem",
-                            color: "var(--text-body)",
-                            lineHeight: 1.6,
-                          }}
-                        >
-                          {displayPackaging}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {item?.tutorialVideo && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div
-                        style={{
-                          fontSize: "0.62rem",
-                          fontWeight: 700,
-                          color: "var(--text-muted)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          marginBottom: 8,
-                        }}
-                      >
-                        Tutorial Video
-                      </div>
-                      {(() => {
-                        const src = item.tutorialVideo;
-                        const vimeoMatch = src.match(/vimeo\.com\/(\d+)/);
-                        const ytMatch = src.match(
-                          /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-                        );
-                        const embedUrl = vimeoMatch
-                          ? `https://player.vimeo.com/video/${vimeoMatch[1]}`
-                          : ytMatch
-                            ? `https://www.youtube.com/embed/${ytMatch[1]}`
-                            : null;
-                        return embedUrl ? (
-                          <div
-                            style={{
-                              position: "relative",
-                              width: "100%",
-                              aspectRatio: "16/9",
-                              borderRadius: 12,
-                              overflow: "hidden",
-                            }}
-                          >
-                            <iframe
-                              src={embedUrl}
-                              allow="autoplay; fullscreen"
-                              allowFullScreen
-                              style={{
-                                position: "absolute",
-                                inset: 0,
-                                width: "100%",
-                                height: "100%",
-                                border: "none",
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          <video
-                            src={src}
-                            controls
-                            style={{
-                              width: "100%",
-                              borderRadius: 12,
-                              maxHeight: 260,
-                            }}
-                          />
-                        );
-                      })()}
-                    </div>
-                  )}
-
-                  {(summary?.variants || item?.variants)?.length > 0 && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div
-                        style={{
-                          fontSize: "0.62rem",
-                          fontWeight: 700,
-                          color: "var(--text-muted)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          marginBottom: 10,
-                        }}
-                      >
-                        Variants
-                      </div>
-                      <div
-                        style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
-                      >
-                        {(summary?.variants || item?.variants).map((v, i) => (
-                          <span
-                            key={v.id || i}
-                            style={{
-                              fontSize: "0.78rem",
-                              fontWeight: 700,
-                              padding: "6px 14px",
-                              borderRadius: 999,
-                              background: "var(--bg-hover)",
-                              border: "1px solid var(--border)",
-                              color: "var(--text-body)",
-                            }}
-                          >
-                            {v.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {recipe.length > 0 && (
-                    <div>
-                      <div
-                        style={{
-                          fontSize: "0.62rem",
-                          fontWeight: 700,
-                          color: "var(--text-muted)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          marginBottom: 10,
-                        }}
-                      >
-                        Recipe Steps
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 0,
-                        }}
-                      >
-                        {recipe.map((step, i) => {
-                          const ing = step.ingredient || step.prepItem;
-                          return (
-                            <div
-                              key={step.id || i}
-                              style={{
-                                display: "flex",
-                                gap: 12,
-                                padding: "10px 0",
-                                borderBottom: "1px solid var(--border)",
-                                alignItems: "center",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: 22,
-                                  height: 22,
-                                  borderRadius: "50%",
-                                  background: "var(--bg-active)",
-                                  border: "1px solid rgba(203,108,220,0.3)",
-                                  color: "var(--accent)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontSize: "0.62rem",
-                                  fontWeight: 900,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {i + 1}
-                              </div>
-                              {ing?.image ? (
-                                <img
-                                  src={ing.image}
-                                  alt=""
-                                  style={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: 7,
-                                    objectFit: "cover",
-                                    flexShrink: 0,
-                                  }}
-                                />
-                              ) : null}
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div
-                                  style={{
-                                    fontSize: "0.82rem",
-                                    fontWeight: 700,
-                                    color: "var(--text-body)",
-                                  }}
-                                >
-                                  {ing?.name || step.type}
-                                </div>
-                                {step.quantity != null && (
-                                  <div
-                                    style={{
-                                      fontSize: "0.68rem",
-                                      color: "var(--accent)",
-                                      fontWeight: 700,
-                                    }}
-                                  >
-                                    {step.quantity}
-                                    {ing?.unit || ""}
-                                  </div>
-                                )}
-                                {step.instruction && (
-                                  <div
-                                    style={{
-                                      fontSize: "0.72rem",
-                                      color: "var(--text-muted)",
-                                      marginTop: 2,
-                                    }}
-                                  >
-                                    {step.instruction}
-                                  </div>
-                                )}
-                              </div>
+                            {item.ticketTime > 0 && (
                               <span
                                 style={{
-                                  fontSize: "0.6rem",
-                                  fontWeight: 800,
-                                  padding: "2px 6px",
-                                  borderRadius: 4,
-                                  background:
-                                    step.type === "prep"
-                                      ? "rgba(59,130,246,0.1)"
-                                      : "rgba(34,197,94,0.1)",
-                                  color:
-                                    step.type === "prep"
-                                      ? "#3b82f6"
-                                      : "#16a34a",
-                                  border: `1px solid ${step.type === "prep" ? "rgba(59,130,246,0.25)" : "rgba(34,197,94,0.25)"}`,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {step.type}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === "machinery" && (
-                <div style={{ paddingBottom: selectedMachIds.length > 0 ? 80 : 0 }}>
-                  {machineries.length === 0 ? (
-                    <div
-                      className="icart_empty_inline"
-                      style={{ padding: "40px 0" }}
-                    >
-                      <MdBuild size={26} style={{ opacity: 0.25 }} />
-                      <span>No machineries listed</span>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Hint text */}
-                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                        <MdLocalShipping size={13} style={{ flexShrink: 0 }} />
-                        Tap the + on any item to add it to a supply request
-                      </div>
-                      {machineries.map((m, i) => {
-                        const mach = m.machinery || m;
-                        const isSel = selectedMachIds.some((s) => s.id === mach.id);
-                        return (
-                          <div
-                            key={m.id || i}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 12,
-                              padding: "11px 12px",
-                              borderRadius: 12,
-                              marginBottom: 6,
-                              background: isSel ? "var(--bg-active)" : "var(--bg-hover)",
-                              border: `1.5px solid ${isSel ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                              transition: "all 0.12s",
-                            }}
-                          >
-                            {mach.image ? (
-                              <img
-                                src={mach.image}
-                                alt=""
-                                style={{
-                                  width: 44,
-                                  height: 44,
-                                  borderRadius: 10,
-                                  objectFit: "cover",
-                                  flexShrink: 0,
-                                }}
-                              />
-                            ) : (
-                              <div
-                                style={{
-                                  width: 44,
-                                  height: 44,
-                                  borderRadius: 10,
-                                  background: isSel ? "rgba(203,108,220,0.15)" : "var(--bg-card)",
-                                  border: `1px solid ${isSel ? "rgba(203,108,220,0.3)" : "var(--border)"}`,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <MdBuild
-                                  size={18}
-                                  style={{ color: isSel ? "var(--accent)" : "var(--text-muted)" }}
-                                />
-                              </div>
-                            )}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div
-                                style={{
-                                  fontSize: "0.88rem",
+                                  fontSize: "0.65rem",
                                   fontWeight: 700,
-                                  color: isSel ? "var(--accent)" : "var(--text-body)",
+                                  padding: "2px 8px",
+                                  borderRadius: 5,
+                                  background: "rgba(0,0,0,0.5)",
+                                  color: "rgba(255,255,255,0.9)",
                                 }}
                               >
-                                {mach.name}
-                              </div>
-                              {mach.manufacturer && (
-                                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                                  {mach.manufacturer}
-                                </div>
-                              )}
-                            </div>
-                            {m.quantity > 0 && (
-                              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", flexShrink: 0 }}>
-                                × {m.quantity}
+                                ⏱ {item.ticketTime} min
                               </span>
                             )}
-                            {/* Select for order button */}
-                            <button
-                              onClick={() => toggleMachSelection(mach)}
-                              title={isSel ? "Remove from order" : "Add to order"}
-                              style={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: 8,
-                                border: `1px solid ${isSel ? "var(--accent)" : "var(--border)"}`,
-                                background: isSel ? "var(--accent)" : "var(--bg-card)",
-                                color: isSel ? "#fff" : "var(--text-muted)",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0,
-                              }}
-                            >
-                              {isSel ? <MdCheck size={15} /> : <MdAdd size={15} />}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </>
-                  )}
-
-                  {/* Sticky bottom bar when items selected */}
-                  {selectedMachIds.length > 0 && (
-                    <div
-                      style={{
-                        position: "sticky",
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        padding: "12px 0 4px",
-                        background: "linear-gradient(to bottom, transparent, var(--bg-card) 30%)",
-                      }}
-                    >
-                      <button
-                        className="app_btn app_btn_confirm"
-                        style={{
-                          width: "100%",
-                          height: 44,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 8,
-                          fontSize: "0.88rem",
-                          fontWeight: 800,
-                        }}
-                        onClick={() => setShowMachSupply(true)}
-                      >
-                        <MdLocalShipping size={16} />
-                        Request Supply · {selectedMachIds.length} item{selectedMachIds.length !== 1 ? "s" : ""}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === "ingredients" && (
-                <div style={{ paddingBottom: selectedIngIds.length > 0 ? 80 : 0 }}>
-                  {ingredients.length === 0 ? (
-                    <div
-                      className="icart_empty_inline"
-                      style={{ padding: "40px 0" }}
-                    >
-                      <MdOutlineInventory2
-                        size={26}
-                        style={{ opacity: 0.25 }}
-                      />
-                      <span>No ingredients listed</span>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Hint text */}
-                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                        <MdLocalShipping size={13} style={{ flexShrink: 0 }} />
-                        Tap the + on any item to add it to a supply request
-                      </div>
-                      {ingredients.map((ing, i) => {
-                        const isSel = selectedIngIds.some((s) => s.id === ing.id);
-                        return (
-                          <div
-                            key={ing.id || i}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 12,
-                              padding: "11px 12px",
-                              borderRadius: 12,
-                              marginBottom: 6,
-                              background: isSel ? "var(--bg-active)" : "var(--bg-hover)",
-                              border: `1.5px solid ${isSel ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                              transition: "all 0.12s",
-                            }}
-                          >
-                            {ing.image ? (
-                              <img
-                                src={ing.image}
-                                alt=""
+                            {displayServeTo && (
+                              <span
                                 style={{
-                                  width: 44,
-                                  height: 44,
-                                  borderRadius: 10,
-                                  objectFit: "cover",
-                                  flexShrink: 0,
-                                }}
-                              />
-                            ) : (
-                              <div
-                                style={{
-                                  width: 44,
-                                  height: 44,
-                                  borderRadius: 10,
-                                  background: isSel ? "rgba(203,108,220,0.15)" : "var(--bg-card)",
-                                  border: `1px solid ${isSel ? "rgba(203,108,220,0.3)" : "var(--border)"}`,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <MdOutlineInventory2
-                                  size={18}
-                                  style={{ color: isSel ? "var(--accent)" : "var(--text-muted)" }}
-                                />
-                              </div>
-                            )}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div
-                                style={{
-                                  fontSize: "0.88rem",
+                                  fontSize: "0.65rem",
                                   fontWeight: 700,
-                                  color: isSel ? "var(--accent)" : "var(--text-body)",
+                                  padding: "2px 8px",
+                                  borderRadius: 5,
+                                  background: "rgba(0,0,0,0.5)",
+                                  color: "rgba(255,255,255,0.9)",
                                 }}
                               >
-                                {ing.name}
-                              </div>
-                              {ing.unit && (
-                                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                                  {ing.unit}
-                                  {ing.totalQuantity != null && ` · Total: ${ing.totalQuantity}${ing.unit}`}
-                                </div>
-                              )}
-                              {ing.usedIn?.length > 0 && (
-                                <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                                  {ing.usedIn.map((u) => `${u.source}: ${u.quantity}${ing.unit || ""}`).join(" · ")}
-                                </div>
-                              )}
-                            </div>
-                            {ing.cost != null && (
-                              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--text-heading)" }}>
-                                  ₦{fmt(ing.cost)}
-                                </div>
-                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
-                                  {ing.unit}
-                                </div>
-                              </div>
+                                👥 {displayServeTo}
+                              </span>
                             )}
-                            {/* Select for supply button */}
-                            <button
-                              onClick={() => toggleIngSelection(ing)}
-                              title={isSel ? "Remove from order" : "Add to order"}
-                              style={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: 8,
-                                border: `1px solid ${isSel ? "var(--accent)" : "var(--border)"}`,
-                                background: isSel ? "var(--accent)" : "var(--bg-card)",
-                                color: isSel ? "#fff" : "var(--text-muted)",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0,
-                              }}
-                            >
-                              {isSel ? <MdCheck size={15} /> : <MdAdd size={15} />}
-                            </button>
                           </div>
-                        );
-                      })}
-                    </>
-                  )}
+                        </div>
+                      </div>
+                    )}
 
-                  {/* Sticky bottom bar when items selected */}
-                  {selectedIngIds.length > 0 && (
-                    <div style={{
-                      position: "sticky",
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      padding: "12px 0 4px",
-                      background: "linear-gradient(to bottom, transparent, var(--bg-card) 30%)",
-                    }}>
-                      <button
-                        className="app_btn app_btn_confirm"
-                        style={{
-                          width: "100%",
-                          height: 44,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 8,
-                          fontSize: "0.88rem",
-                          fontWeight: 800,
-                        }}
-                        onClick={() => setShowIngSupply(true)}
-                      >
-                        <MdLocalShipping size={16} />
-                        Request Supply · {selectedIngIds.length} item{selectedIngIds.length !== 1 ? "s" : ""}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === "preps" && (
-                <div>
-                  {prepItems.length === 0 ? (
-                    <div
-                      className="icart_empty_inline"
-                      style={{ padding: "40px 0" }}
-                    >
-                      <MdRestaurantMenu size={26} style={{ opacity: 0.25 }} />
-                      <span>No prep items listed</span>
-                    </div>
-                  ) : (
-                    prepItems.map((prep, i) => (
+                    {summary?.vendor?.businessName && (
                       <div
-                        key={prep.id || i}
                         style={{
                           display: "flex",
-                          alignItems: "center",
-                          gap: 12,
-                          padding: "12px 0",
-                          borderBottom: "1px solid var(--border)",
+                          gap: 8,
+                          flexWrap: "wrap",
+                          marginBottom: 14,
                         }}
                       >
-                        <div
+                        <span
                           style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 10,
-                            background:
-                              "linear-gradient(135deg, rgba(203,108,220,0.15), rgba(203,108,220,0.05))",
-                            border: "1px solid rgba(203,108,220,0.2)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            padding: "4px 11px",
+                            borderRadius: 999,
+                            background: "var(--bg-hover)",
+                            color: "var(--text-muted)",
+                            border: "1px solid var(--border)",
                           }}
                         >
-                          <MdRestaurantMenu
-                            size={18}
-                            style={{ color: "var(--accent)" }}
-                          />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                          🏷 {summary.vendor.businessName}
+                        </span>
+                      </div>
+                    )}
+                    {displayDescription && (
+                      <p
+                        style={{
+                          fontSize: "0.85rem",
+                          color: "var(--text-muted)",
+                          lineHeight: 1.65,
+                          marginBottom: 20,
+                        }}
+                      >
+                        {displayDescription}
+                      </p>
+                    )}
+
+                    {(menuPrice != null || baseCost != null) && (
+                      <div
+                        style={{ display: "flex", gap: 10, marginBottom: 14 }}
+                      >
+                        {menuPrice != null && (
                           <div
                             style={{
-                              fontSize: "0.88rem",
-                              fontWeight: 700,
-                              color: "var(--text-body)",
+                              flex: 1,
+                              background: "var(--bg-active)",
+                              border: "1px solid rgba(203,108,220,0.2)",
+                              borderRadius: 12,
+                              padding: "12px 14px",
                             }}
                           >
-                            {prep.name}
-                          </div>
-                          {prep.unit && (
                             <div
                               style={{
-                                fontSize: "0.72rem",
+                                fontSize: "0.6rem",
+                                fontWeight: 700,
                                 color: "var(--text-muted)",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.05em",
+                                marginBottom: 3,
                               }}
                             >
-                              {prep.unit}
+                              Selling Price
                             </div>
-                          )}
-                          {prep.usedIn?.length > 0 && (
                             <div
                               style={{
-                                display: "flex",
-                                flexWrap: "wrap",
-                                gap: 4,
-                                marginTop: 4,
+                                fontSize: "1.1rem",
+                                fontWeight: 900,
+                                color: "var(--accent)",
                               }}
                             >
-                              {prep.usedIn.map((u, j) => (
-                                <span
-                                  key={j}
-                                  style={{
-                                    fontSize: "0.62rem",
-                                    padding: "1px 6px",
-                                    borderRadius: 4,
-                                    background:
-                                      u.source === "extra"
-                                        ? "rgba(168,85,247,0.1)"
-                                        : "var(--bg-hover)",
-                                    border: `1px solid ${u.source === "extra" ? "rgba(168,85,247,0.25)" : "var(--border)"}`,
-                                    color:
-                                      u.source === "extra"
-                                        ? "#a855f7"
-                                        : "var(--text-muted)",
-                                  }}
-                                >
-                                  {u.source} · {u.quantity}
-                                  {prep.unit || ""}
-                                </span>
-                              ))}
+                              ₦{fmt(menuPrice)}
                             </div>
-                          )}
-                        </div>
-                        {prep.cost != null && (
+                          </div>
+                        )}
+                        {baseCost != null && (
                           <div
                             style={{
-                              fontSize: "0.82rem",
-                              fontWeight: 800,
-                              color: "var(--text-heading)",
-                              flexShrink: 0,
+                              flex: 1,
+                              background: "var(--bg-hover)",
+                              border: "1px solid var(--border)",
+                              borderRadius: 12,
+                              padding: "12px 14px",
                             }}
                           >
-                            ₦{fmt(prep.cost)}
+                            <div
+                              style={{
+                                fontSize: "0.6rem",
+                                fontWeight: 700,
+                                color: "var(--text-muted)",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.05em",
+                                marginBottom: 3,
+                              }}
+                            >
+                              Recipe Cost
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "1.1rem",
+                                fontWeight: 900,
+                                color: "var(--text-heading)",
+                              }}
+                            >
+                              ₦{fmt(baseCost)}
+                            </div>
                           </div>
                         )}
                       </div>
-                    ))
-                  )}
-                </div>
-              )}
+                    )}
 
-              {activeTab === "sops" && (
-                <div>
-                  {sops.length === 0 ? (
                     <div
-                      className="icart_empty_inline"
-                      style={{ padding: "40px 0" }}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fill, minmax(130px, 1fr))",
+                        gap: 10,
+                        marginBottom: 20,
+                      }}
                     >
-                      <MdMenuBook size={26} style={{ opacity: 0.25 }} />
-                      <span>No SOPs defined</span>
+                      {[
+                        {
+                          label: "Selling Price",
+                          value:
+                            menuPrice != null
+                              ? `₦${fmt(menuPrice)}`
+                              : item?.sellingPrice > 0
+                                ? `₦${fmt(item.sellingPrice)}`
+                                : null,
+                          accent: true,
+                        },
+                        {
+                          label: "Recipe Cost",
+                          value:
+                            baseCost != null
+                              ? `₦${fmt(baseCost)}`
+                              : item?.recipeCost > 0
+                                ? `₦${fmt(item.recipeCost)}`
+                                : null,
+                        },
+                        {
+                          label: "Ticket Time",
+                          value:
+                            item?.ticketTime > 0
+                              ? `${item.ticketTime} min`
+                              : null,
+                        },
+                        { label: "Serves", value: displayServeTo || null },
+                        { label: "Origin", value: displayOrigin || null },
+                        {
+                          label: "Ingredients",
+                          value:
+                            ingredients.length > 0
+                              ? String(ingredients.length)
+                              : null,
+                        },
+                        {
+                          label: "Prep Items",
+                          value:
+                            prepItems.length > 0
+                              ? String(prepItems.length)
+                              : null,
+                        },
+                        {
+                          label: "Tools",
+                          value:
+                            machineries.length > 0
+                              ? String(machineries.length)
+                              : null,
+                        },
+                      ]
+                        .filter((s) => s.value)
+                        .map((s) => (
+                          <div
+                            key={s.label}
+                            style={{
+                              background: s.accent
+                                ? "var(--bg-active)"
+                                : "var(--bg-hover)",
+                              border: `1px solid ${s.accent ? "rgba(203,108,220,0.2)" : "var(--border)"}`,
+                              borderRadius: 12,
+                              padding: "12px 14px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: "0.62rem",
+                                fontWeight: 700,
+                                color: "var(--text-muted)",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.05em",
+                                marginBottom: 4,
+                              }}
+                            >
+                              {s.label}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "0.95rem",
+                                fontWeight: 900,
+                                color: s.accent
+                                  ? "var(--accent)"
+                                  : "var(--text-heading)",
+                              }}
+                            >
+                              {s.value}
+                            </div>
+                          </div>
+                        ))}
                     </div>
-                  ) : (
-                    sops.map((sop, i) => (
+
+                    {displayPackaging && (
                       <div
-                        key={sop.id || i}
                         style={{
                           background: "var(--bg-hover)",
                           border: "1px solid var(--border)",
                           borderRadius: 12,
                           padding: "14px 16px",
-                          marginBottom: 10,
+                          marginBottom: 16,
                         }}
                       >
                         <div
                           style={{
-                            fontSize: "0.88rem",
-                            fontWeight: 800,
-                            color: "var(--text-heading)",
-                            marginBottom: 6,
+                            fontSize: "0.62rem",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            marginBottom: 8,
                           }}
                         >
-                          {sop.title || sop.name || `Step ${i + 1}`}
+                          Packaging
                         </div>
-                        {sop.description && (
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 12,
+                            alignItems: "flex-start",
+                          }}
+                        >
+                          {displayPackagingImage && (
+                            <img
+                              src={displayPackagingImage}
+                              alt=""
+                              style={{
+                                width: 52,
+                                height: 52,
+                                borderRadius: 8,
+                                objectFit: "cover",
+                                flexShrink: 0,
+                              }}
+                            />
+                          )}
                           <p
                             style={{
                               margin: 0,
                               fontSize: "0.82rem",
-                              color: "var(--text-muted)",
-                              lineHeight: 1.65,
+                              color: "var(--text-body)",
+                              lineHeight: 1.6,
                             }}
                           >
-                            {sop.description}
+                            {displayPackaging}
                           </p>
-                        )}
-                        {sop.steps?.length > 0 && (
-                          <ol style={{ margin: "10px 0 0", paddingLeft: 20 }}>
-                            {sop.steps.map((step, j) => (
-                              <li
-                                key={j}
+                        </div>
+                      </div>
+                    )}
+
+                    {item?.tutorialVideo && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div
+                          style={{
+                            fontSize: "0.62rem",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            marginBottom: 8,
+                          }}
+                        >
+                          Tutorial Video
+                        </div>
+                        {(() => {
+                          const src = item.tutorialVideo;
+                          const vimeoMatch = src.match(/vimeo\.com\/(\d+)/);
+                          const ytMatch = src.match(
+                            /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+                          );
+                          const embedUrl = vimeoMatch
+                            ? `https://player.vimeo.com/video/${vimeoMatch[1]}`
+                            : ytMatch
+                              ? `https://www.youtube.com/embed/${ytMatch[1]}`
+                              : null;
+                          return embedUrl ? (
+                            <div
+                              style={{
+                                position: "relative",
+                                width: "100%",
+                                aspectRatio: "16/9",
+                                borderRadius: 12,
+                                overflow: "hidden",
+                              }}
+                            >
+                              <iframe
+                                src={embedUrl}
+                                allow="autoplay; fullscreen"
+                                allowFullScreen
                                 style={{
-                                  fontSize: "0.8rem",
-                                  color: "var(--text-body)",
-                                  lineHeight: 1.6,
-                                  marginBottom: 4,
+                                  position: "absolute",
+                                  inset: 0,
+                                  width: "100%",
+                                  height: "100%",
+                                  border: "none",
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <video
+                              src={src}
+                              controls
+                              style={{
+                                width: "100%",
+                                borderRadius: 12,
+                                maxHeight: 260,
+                              }}
+                            />
+                          );
+                        })()}
+                      </div>
+                    )}
+
+                    {(summary?.variants || item?.variants)?.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div
+                          style={{
+                            fontSize: "0.62rem",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            marginBottom: 10,
+                          }}
+                        >
+                          Variants
+                        </div>
+                        <div
+                          style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
+                        >
+                          {(summary?.variants || item?.variants).map((v, i) => (
+                            <span
+                              key={v.id || i}
+                              style={{
+                                fontSize: "0.78rem",
+                                fontWeight: 700,
+                                padding: "6px 14px",
+                                borderRadius: 999,
+                                background: "var(--bg-hover)",
+                                border: "1px solid var(--border)",
+                                color: "var(--text-body)",
+                              }}
+                            >
+                              {v.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {recipe.length > 0 && (
+                      <div>
+                        <div
+                          style={{
+                            fontSize: "0.62rem",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            marginBottom: 10,
+                          }}
+                        >
+                          Recipe Steps
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 0,
+                          }}
+                        >
+                          {recipe.map((step, i) => {
+                            const ing = step.ingredient || step.prepItem;
+                            return (
+                              <div
+                                key={step.id || i}
+                                style={{
+                                  display: "flex",
+                                  gap: 12,
+                                  padding: "10px 0",
+                                  borderBottom: "1px solid var(--border)",
+                                  alignItems: "center",
                                 }}
                               >
-                                {step}
-                              </li>
-                            ))}
-                          </ol>
-                        )}
+                                <div
+                                  style={{
+                                    width: 22,
+                                    height: 22,
+                                    borderRadius: "50%",
+                                    background: "var(--bg-active)",
+                                    border: "1px solid rgba(203,108,220,0.3)",
+                                    color: "var(--accent)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "0.62rem",
+                                    fontWeight: 900,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {i + 1}
+                                </div>
+                                {ing?.image ? (
+                                  <img
+                                    src={ing.image}
+                                    alt=""
+                                    style={{
+                                      width: 32,
+                                      height: 32,
+                                      borderRadius: 7,
+                                      objectFit: "cover",
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                ) : null}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div
+                                    style={{
+                                      fontSize: "0.82rem",
+                                      fontWeight: 700,
+                                      color: "var(--text-body)",
+                                    }}
+                                  >
+                                    {ing?.name || step.type}
+                                  </div>
+                                  {step.quantity != null && (
+                                    <div
+                                      style={{
+                                        fontSize: "0.68rem",
+                                        color: "var(--accent)",
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      {step.quantity}
+                                      {ing?.unit || ""}
+                                    </div>
+                                  )}
+                                  {step.instruction && (
+                                    <div
+                                      style={{
+                                        fontSize: "0.72rem",
+                                        color: "var(--text-muted)",
+                                        marginTop: 2,
+                                      }}
+                                    >
+                                      {step.instruction}
+                                    </div>
+                                  )}
+                                </div>
+                                <span
+                                  style={{
+                                    fontSize: "0.6rem",
+                                    fontWeight: 800,
+                                    padding: "2px 6px",
+                                    borderRadius: 4,
+                                    background:
+                                      step.type === "prep"
+                                        ? "rgba(59,130,246,0.1)"
+                                        : "rgba(34,197,94,0.1)",
+                                    color:
+                                      step.type === "prep"
+                                        ? "#3b82f6"
+                                        : "#16a34a",
+                                    border: `1px solid ${step.type === "prep" ? "rgba(59,130,246,0.25)" : "rgba(34,197,94,0.25)"}`,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {step.type}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </>
-          )}
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "machinery" && (
+                  <div
+                    style={{
+                      paddingBottom: selectedMachIds.length > 0 ? 80 : 0,
+                    }}
+                  >
+                    {machineries.length === 0 ? (
+                      <div
+                        className="icart_empty_inline"
+                        style={{ padding: "40px 0" }}
+                      >
+                        <MdBuild size={26} style={{ opacity: 0.25 }} />
+                        <span>No machineries listed</span>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Hint text */}
+                        <div
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "var(--text-muted)",
+                            marginBottom: 12,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <MdLocalShipping
+                            size={13}
+                            style={{ flexShrink: 0 }}
+                          />
+                          Tap the + on any item to add it to a supply request
+                        </div>
+                        {machineries.map((m, i) => {
+                          const mach = m.machinery || m;
+                          const isSel = selectedMachIds.some(
+                            (s) => s.id === mach.id,
+                          );
+                          return (
+                            <div
+                              key={m.id || i}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 12,
+                                padding: "11px 12px",
+                                borderRadius: 12,
+                                marginBottom: 6,
+                                background: isSel
+                                  ? "var(--bg-active)"
+                                  : "var(--bg-hover)",
+                                border: `1.5px solid ${isSel ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                                transition: "all 0.12s",
+                              }}
+                            >
+                              {mach.image ? (
+                                <img
+                                  src={mach.image}
+                                  alt=""
+                                  style={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: 10,
+                                    objectFit: "cover",
+                                    flexShrink: 0,
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  style={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: 10,
+                                    background: isSel
+                                      ? "rgba(203,108,220,0.15)"
+                                      : "var(--bg-card)",
+                                    border: `1px solid ${isSel ? "rgba(203,108,220,0.3)" : "var(--border)"}`,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <MdBuild
+                                    size={18}
+                                    style={{
+                                      color: isSel
+                                        ? "var(--accent)"
+                                        : "var(--text-muted)",
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontSize: "0.88rem",
+                                    fontWeight: 700,
+                                    color: isSel
+                                      ? "var(--accent)"
+                                      : "var(--text-body)",
+                                  }}
+                                >
+                                  {mach.name}
+                                </div>
+                                {mach.manufacturer && (
+                                  <div
+                                    style={{
+                                      fontSize: "0.72rem",
+                                      color: "var(--text-muted)",
+                                    }}
+                                  >
+                                    {mach.manufacturer}
+                                  </div>
+                                )}
+                              </div>
+                              {m.quantity > 0 && (
+                                <span
+                                  style={{
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    color: "var(--text-muted)",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  × {m.quantity}
+                                </span>
+                              )}
+                              {/* Select for order button */}
+                              <button
+                                onClick={() => toggleMachSelection(mach)}
+                                title={
+                                  isSel ? "Remove from order" : "Add to order"
+                                }
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 8,
+                                  border: `1px solid ${isSel ? "var(--accent)" : "var(--border)"}`,
+                                  background: isSel
+                                    ? "var(--accent)"
+                                    : "var(--bg-card)",
+                                  color: isSel ? "#fff" : "var(--text-muted)",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {isSel ? (
+                                  <MdCheck size={15} />
+                                ) : (
+                                  <MdAdd size={15} />
+                                )}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {/* Sticky bottom bar when items selected */}
+                    {selectedMachIds.length > 0 && (
+                      <div
+                        style={{
+                          position: "sticky",
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          padding: "12px 0 4px",
+                          background:
+                            "linear-gradient(to bottom, transparent, var(--bg-card) 30%)",
+                        }}
+                      >
+                        <button
+                          className="app_btn app_btn_confirm"
+                          style={{
+                            width: "100%",
+                            height: 44,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 8,
+                            fontSize: "0.88rem",
+                            fontWeight: 800,
+                          }}
+                          onClick={() => setShowMachSupply(true)}
+                        >
+                          <MdLocalShipping size={16} />
+                          Request Supply · {selectedMachIds.length} item
+                          {selectedMachIds.length !== 1 ? "s" : ""}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "ingredients" && (
+                  <div
+                    style={{
+                      paddingBottom: selectedIngIds.length > 0 ? 80 : 0,
+                    }}
+                  >
+                    {ingredients.length === 0 ? (
+                      <div
+                        className="icart_empty_inline"
+                        style={{ padding: "40px 0" }}
+                      >
+                        <MdOutlineInventory2
+                          size={26}
+                          style={{ opacity: 0.25 }}
+                        />
+                        <span>No ingredients listed</span>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Hint text */}
+                        <div
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "var(--text-muted)",
+                            marginBottom: 12,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <MdLocalShipping
+                            size={13}
+                            style={{ flexShrink: 0 }}
+                          />
+                          Tap the + on any item to add it to a supply request
+                        </div>
+                        {ingredients.map((ing, i) => {
+                          const isSel = selectedIngIds.some(
+                            (s) => s.id === ing.id,
+                          );
+                          return (
+                            <div
+                              key={ing.id || i}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 12,
+                                padding: "11px 12px",
+                                borderRadius: 12,
+                                marginBottom: 6,
+                                background: isSel
+                                  ? "var(--bg-active)"
+                                  : "var(--bg-hover)",
+                                border: `1.5px solid ${isSel ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                                transition: "all 0.12s",
+                              }}
+                            >
+                              {ing.image ? (
+                                <img
+                                  src={ing.image}
+                                  alt=""
+                                  style={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: 10,
+                                    objectFit: "cover",
+                                    flexShrink: 0,
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  style={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: 10,
+                                    background: isSel
+                                      ? "rgba(203,108,220,0.15)"
+                                      : "var(--bg-card)",
+                                    border: `1px solid ${isSel ? "rgba(203,108,220,0.3)" : "var(--border)"}`,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <MdOutlineInventory2
+                                    size={18}
+                                    style={{
+                                      color: isSel
+                                        ? "var(--accent)"
+                                        : "var(--text-muted)",
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontSize: "0.88rem",
+                                    fontWeight: 700,
+                                    color: isSel
+                                      ? "var(--accent)"
+                                      : "var(--text-body)",
+                                  }}
+                                >
+                                  {ing.name}
+                                </div>
+                                {ing.unit && (
+                                  <div
+                                    style={{
+                                      fontSize: "0.7rem",
+                                      color: "var(--text-muted)",
+                                    }}
+                                  >
+                                    {ing.unit}
+                                    {ing.totalQuantity != null &&
+                                      ` · Total: ${ing.totalQuantity}${ing.unit}`}
+                                  </div>
+                                )}
+                                {ing.usedIn?.length > 0 && (
+                                  <div
+                                    style={{
+                                      fontSize: "0.68rem",
+                                      color: "var(--text-muted)",
+                                    }}
+                                  >
+                                    {ing.usedIn
+                                      .map(
+                                        (u) =>
+                                          `${u.source}: ${u.quantity}${ing.unit || ""}`,
+                                      )
+                                      .join(" · ")}
+                                  </div>
+                                )}
+                              </div>
+                              {ing.cost != null && (
+                                <div
+                                  style={{ textAlign: "right", flexShrink: 0 }}
+                                >
+                                  <div
+                                    style={{
+                                      fontSize: "0.82rem",
+                                      fontWeight: 800,
+                                      color: "var(--text-heading)",
+                                    }}
+                                  >
+                                    ₦{fmt(ing.cost)}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: "0.65rem",
+                                      color: "var(--text-muted)",
+                                    }}
+                                  >
+                                    {ing.unit}
+                                  </div>
+                                </div>
+                              )}
+                              {/* Select for supply button */}
+                              <button
+                                onClick={() => toggleIngSelection(ing)}
+                                title={
+                                  isSel ? "Remove from order" : "Add to order"
+                                }
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 8,
+                                  border: `1px solid ${isSel ? "var(--accent)" : "var(--border)"}`,
+                                  background: isSel
+                                    ? "var(--accent)"
+                                    : "var(--bg-card)",
+                                  color: isSel ? "#fff" : "var(--text-muted)",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {isSel ? (
+                                  <MdCheck size={15} />
+                                ) : (
+                                  <MdAdd size={15} />
+                                )}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {/* Sticky bottom bar when items selected */}
+                    {selectedIngIds.length > 0 && (
+                      <div
+                        style={{
+                          position: "sticky",
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          padding: "12px 0 4px",
+                          background:
+                            "linear-gradient(to bottom, transparent, var(--bg-card) 30%)",
+                        }}
+                      >
+                        <button
+                          className="app_btn app_btn_confirm"
+                          style={{
+                            width: "100%",
+                            height: 44,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 8,
+                            fontSize: "0.88rem",
+                            fontWeight: 800,
+                          }}
+                          onClick={() => setShowIngSupply(true)}
+                        >
+                          <MdLocalShipping size={16} />
+                          Request Supply · {selectedIngIds.length} item
+                          {selectedIngIds.length !== 1 ? "s" : ""}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "preps" && (
+                  <div>
+                    {prepItems.length === 0 ? (
+                      <div
+                        className="icart_empty_inline"
+                        style={{ padding: "40px 0" }}
+                      >
+                        <MdRestaurantMenu size={26} style={{ opacity: 0.25 }} />
+                        <span>No prep items listed</span>
+                      </div>
+                    ) : (
+                      prepItems.map((prep, i) => (
+                        <div
+                          key={prep.id || i}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                            padding: "12px 0",
+                            borderBottom: "1px solid var(--border)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 44,
+                              height: 44,
+                              borderRadius: 10,
+                              background:
+                                "linear-gradient(135deg, rgba(203,108,220,0.15), rgba(203,108,220,0.05))",
+                              border: "1px solid rgba(203,108,220,0.2)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <MdRestaurantMenu
+                              size={18}
+                              style={{ color: "var(--accent)" }}
+                            />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontSize: "0.88rem",
+                                fontWeight: 700,
+                                color: "var(--text-body)",
+                              }}
+                            >
+                              {prep.name}
+                            </div>
+                            {prep.unit && (
+                              <div
+                                style={{
+                                  fontSize: "0.72rem",
+                                  color: "var(--text-muted)",
+                                }}
+                              >
+                                {prep.unit}
+                              </div>
+                            )}
+                            {prep.usedIn?.length > 0 && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: 4,
+                                  marginTop: 4,
+                                }}
+                              >
+                                {prep.usedIn.map((u, j) => (
+                                  <span
+                                    key={j}
+                                    style={{
+                                      fontSize: "0.62rem",
+                                      padding: "1px 6px",
+                                      borderRadius: 4,
+                                      background:
+                                        u.source === "extra"
+                                          ? "rgba(168,85,247,0.1)"
+                                          : "var(--bg-hover)",
+                                      border: `1px solid ${u.source === "extra" ? "rgba(168,85,247,0.25)" : "var(--border)"}`,
+                                      color:
+                                        u.source === "extra"
+                                          ? "#a855f7"
+                                          : "var(--text-muted)",
+                                    }}
+                                  >
+                                    {u.source} · {u.quantity}
+                                    {prep.unit || ""}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {prep.cost != null && (
+                            <div
+                              style={{
+                                fontSize: "0.82rem",
+                                fontWeight: 800,
+                                color: "var(--text-heading)",
+                                flexShrink: 0,
+                              }}
+                            >
+                              ₦{fmt(prep.cost)}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "sops" && (
+                  <div>
+                    {sops.length === 0 ? (
+                      <div
+                        className="icart_empty_inline"
+                        style={{ padding: "40px 0" }}
+                      >
+                        <MdMenuBook size={26} style={{ opacity: 0.25 }} />
+                        <span>No SOPs defined</span>
+                      </div>
+                    ) : (
+                      sops.map((sop, i) => (
+                        <div
+                          key={sop.id || i}
+                          style={{
+                            background: "var(--bg-hover)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 12,
+                            padding: "14px 16px",
+                            marginBottom: 10,
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "0.88rem",
+                              fontWeight: 800,
+                              color: "var(--text-heading)",
+                              marginBottom: 6,
+                            }}
+                          >
+                            {sop.title || sop.name || `Step ${i + 1}`}
+                          </div>
+                          {sop.description && (
+                            <p
+                              style={{
+                                margin: 0,
+                                fontSize: "0.82rem",
+                                color: "var(--text-muted)",
+                                lineHeight: 1.65,
+                              }}
+                            >
+                              {sop.description}
+                            </p>
+                          )}
+                          {sop.steps?.length > 0 && (
+                            <ol style={{ margin: "10px 0 0", paddingLeft: 20 }}>
+                              {sop.steps.map((step, j) => (
+                                <li
+                                  key={j}
+                                  style={{
+                                    fontSize: "0.8rem",
+                                    color: "var(--text-body)",
+                                    lineHeight: 1.6,
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  {step}
+                                </li>
+                              ))}
+                            </ol>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
-    </div>
 
-    {/* ── Machinery Supply Request Modal ── */}
-    {showMachSupply && (
+      {/* ── Machinery Supply Request Drawer ── */}
       <MachinerySupplyModal
+        isOpen={showMachSupply}
         cart={cart}
         selectedMachItems={selectedMachIds}
         onClose={() => setShowMachSupply(false)}
@@ -3197,11 +3787,10 @@ function MenuDetailDrawer({
           toast.success("Supply request created!");
         }}
       />
-    )}
 
-    {/* ── Ingredient Supply Request Modal ── */}
-    {showIngSupply && (
+      {/* ── Ingredient Supply Request Drawer ── */}
       <IngredientSupplyModal
+        isOpen={showIngSupply}
         cart={cart}
         selectedIngItems={selectedIngIds}
         onClose={() => setShowIngSupply(false)}
@@ -3211,7 +3800,6 @@ function MenuDetailDrawer({
           toast.success("Ingredient supply request created!");
         }}
       />
-    )}
     </>
   );
 }
@@ -3246,7 +3834,9 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
   // Fix drawer scroll: lock body when open
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, []);
 
   const fmt = (n) =>
@@ -3280,14 +3870,18 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
     Promise.allSettled(
       brands.map((brand) =>
         api
-          .get(`/icart/available-slots?${baseParams.join("&")}&vendorId=${brand.id}`)
+          .get(
+            `/icart/available-slots?${baseParams.join("&")}&vendorId=${brand.id}`,
+          )
           .then((r) => ({ id: brand.id, slots: r.data?.data?.slots }))
-          .catch(() => ({ id: brand.id, slots: null }))
-      )
+          .catch(() => ({ id: brand.id, slots: null })),
+      ),
     ).then((results) => {
       const map = {};
       results.forEach((r) => {
-        if (r.status === "fulfilled") map[r.value.id] = r.value.slots != null ? Number(r.value.slots) : null;
+        if (r.status === "fulfilled")
+          map[r.value.id] =
+            r.value.slots != null ? Number(r.value.slots) : null;
       });
       setBrandSlots(map);
     });
@@ -3515,7 +4109,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
             </div>
 
             {/* Available slots indicator */}
-            {view === "brands" && (cart.location?.latitude) && (
+            {view === "brands" && cart.location?.latitude && (
               <div
                 style={{
                   display: "flex",
@@ -3523,30 +4117,37 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                   gap: 5,
                   padding: "5px 10px",
                   borderRadius: 8,
-                  background: availableSlots === 0
-                    ? "rgba(239,68,68,0.08)"
-                    : availableSlots != null && availableSlots <= 2
-                      ? "rgba(234,179,8,0.08)"
-                      : "rgba(34,197,94,0.08)",
-                  border: `1px solid ${availableSlots === 0
-                    ? "rgba(239,68,68,0.2)"
-                    : availableSlots != null && availableSlots <= 2
-                      ? "rgba(234,179,8,0.2)"
-                      : "rgba(34,197,94,0.2)"}`,
+                  background:
+                    availableSlots === 0
+                      ? "rgba(239,68,68,0.08)"
+                      : availableSlots != null && availableSlots <= 2
+                        ? "rgba(234,179,8,0.08)"
+                        : "rgba(34,197,94,0.08)",
+                  border: `1px solid ${
+                    availableSlots === 0
+                      ? "rgba(239,68,68,0.2)"
+                      : availableSlots != null && availableSlots <= 2
+                        ? "rgba(234,179,8,0.2)"
+                        : "rgba(34,197,94,0.2)"
+                  }`,
                   flexShrink: 0,
                 }}
               >
                 {slotsLoading ? (
-                  <div className="page_loader_spinner" style={{ width: 11, height: 11 }} />
+                  <div
+                    className="page_loader_spinner"
+                    style={{ width: 11, height: 11 }}
+                  />
                 ) : (
                   <MdSignalCellularAlt
                     size={12}
                     style={{
-                      color: availableSlots === 0
-                        ? "#ef4444"
-                        : availableSlots != null && availableSlots <= 2
-                          ? "#ca8a04"
-                          : "#16a34a",
+                      color:
+                        availableSlots === 0
+                          ? "#ef4444"
+                          : availableSlots != null && availableSlots <= 2
+                            ? "#ca8a04"
+                            : "#16a34a",
                     }}
                   />
                 )}
@@ -3554,11 +4155,12 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                   style={{
                     fontSize: "0.68rem",
                     fontWeight: 800,
-                    color: availableSlots === 0
-                      ? "#ef4444"
-                      : availableSlots != null && availableSlots <= 2
-                        ? "#ca8a04"
-                        : "#16a34a",
+                    color:
+                      availableSlots === 0
+                        ? "#ef4444"
+                        : availableSlots != null && availableSlots <= 2
+                          ? "#ca8a04"
+                          : "#16a34a",
                   }}
                 >
                   {slotsLoading
@@ -3896,40 +4498,46 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                                   marginTop: 4,
                                   padding: "2px 7px",
                                   borderRadius: 5,
-                                  background: brandSlots[brand.id] === 0
-                                    ? "rgba(239,68,68,0.08)"
-                                    : brandSlots[brand.id] <= 2
-                                      ? "rgba(234,179,8,0.08)"
-                                      : "rgba(34,197,94,0.08)",
-                                  border: `1px solid ${brandSlots[brand.id] === 0
-                                    ? "rgba(239,68,68,0.2)"
-                                    : brandSlots[brand.id] <= 2
-                                      ? "rgba(234,179,8,0.2)"
-                                      : "rgba(34,197,94,0.2)"}`,
+                                  background:
+                                    brandSlots[brand.id] === 0
+                                      ? "rgba(239,68,68,0.08)"
+                                      : brandSlots[brand.id] <= 2
+                                        ? "rgba(234,179,8,0.08)"
+                                        : "rgba(34,197,94,0.08)",
+                                  border: `1px solid ${
+                                    brandSlots[brand.id] === 0
+                                      ? "rgba(239,68,68,0.2)"
+                                      : brandSlots[brand.id] <= 2
+                                        ? "rgba(234,179,8,0.2)"
+                                        : "rgba(34,197,94,0.2)"
+                                  }`,
                                 }}
                               >
                                 <MdSignalCellularAlt
                                   size={10}
                                   style={{
-                                    color: brandSlots[brand.id] === 0
-                                      ? "#ef4444"
-                                      : brandSlots[brand.id] <= 2
-                                        ? "#ca8a04"
-                                        : "#16a34a",
+                                    color:
+                                      brandSlots[brand.id] === 0
+                                        ? "#ef4444"
+                                        : brandSlots[brand.id] <= 2
+                                          ? "#ca8a04"
+                                          : "#16a34a",
                                   }}
                                 />
                                 <span
                                   style={{
                                     fontSize: "0.62rem",
                                     fontWeight: 800,
-                                    color: brandSlots[brand.id] === 0
-                                      ? "#ef4444"
-                                      : brandSlots[brand.id] <= 2
-                                        ? "#ca8a04"
-                                        : "#16a34a",
+                                    color:
+                                      brandSlots[brand.id] === 0
+                                        ? "#ef4444"
+                                        : brandSlots[brand.id] <= 2
+                                          ? "#ca8a04"
+                                          : "#16a34a",
                                   }}
                                 >
-                                  {brandSlots[brand.id]} slot{brandSlots[brand.id] !== 1 ? "s" : ""}
+                                  {brandSlots[brand.id]} slot
+                                  {brandSlots[brand.id] !== 1 ? "s" : ""}
                                 </span>
                               </div>
                             )}
@@ -4977,7 +5585,8 @@ function BrandIdleCard({
               const img = item.image || item.menuItem?.image;
               const price =
                 item.sellingPrice || item.menuItem?.sellingPrice || 0;
-              const ticketTime = item.ticketTime || item.menuItem?.ticketTime || 0;
+              const ticketTime =
+                item.ticketTime || item.menuItem?.ticketTime || 0;
               return (
                 <div
                   key={item.id || idx}
@@ -5042,7 +5651,10 @@ function BrandIdleCard({
                       justifyContent: "center",
                     }}
                   >
-                    <MdOpenInNew size={10} style={{ color: "rgba(255,255,255,0.85)" }} />
+                    <MdOpenInNew
+                      size={10}
+                      style={{ color: "rgba(255,255,255,0.85)" }}
+                    />
                   </div>
                   <div style={{ padding: "7px 8px" }}>
                     <div
@@ -5057,7 +5669,14 @@ function BrandIdleCard({
                     >
                       {name}
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        marginTop: 2,
+                      }}
+                    >
                       {price > 0 && (
                         <div
                           style={{
@@ -5159,7 +5778,9 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
   // Fix drawer scroll
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, []);
 
   useEffect(() => {
@@ -5372,7 +5993,8 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                   const img = item.image || item.menuItem?.image;
                   const price =
                     item.sellingPrice || item.menuItem?.sellingPrice || 0;
-                  const ticketTime = item.ticketTime || item.menuItem?.ticketTime || 0;
+                  const ticketTime =
+                    item.ticketTime || item.menuItem?.ticketTime || 0;
                   return (
                     <div
                       key={item.id}
@@ -5445,7 +6067,14 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                         >
                           {name}
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            marginTop: 2,
+                          }}
+                        >
                           {price > 0 && (
                             <div
                               style={{
@@ -5481,7 +6110,11 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                       {/* Clickable indicator */}
                       <MdOpenInNew
                         size={13}
-                        style={{ color: "var(--text-muted)", opacity: 0.5, flexShrink: 0 }}
+                        style={{
+                          color: "var(--text-muted)",
+                          opacity: 0.5,
+                          flexShrink: 0,
+                        }}
                       />
                       <span
                         style={{
@@ -5644,7 +6277,14 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                           >
                             {item.name}
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              marginTop: 2,
+                            }}
+                          >
                             {item.sellingPrice > 0 && (
                               <div
                                 style={{
@@ -5680,7 +6320,11 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                         {/* Clickable indicator */}
                         <MdOpenInNew
                           size={13}
-                          style={{ color: "var(--text-muted)", opacity: 0.4, flexShrink: 0 }}
+                          style={{
+                            color: "var(--text-muted)",
+                            opacity: 0.4,
+                            flexShrink: 0,
+                          }}
                         />
                         {added ? (
                           <span
@@ -6084,6 +6728,10 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
   const [savingRadius, setSavingRadius] = useState(false);
   const [showLocationForm, setShowLocationForm] = useState(false);
   const [showLiveStream, setShowLiveStream] = useState(false);
+  const [editingHours, setEditingHours] = useState(false);
+  const [opHours, setOpHours] = useState(cart.operatingHours || "");
+  const [opDays, setOpDays] = useState(cart.operatingDays || "");
+  const [savingHours, setSavingHours] = useState(false);
 
   const handleToggleOnline = async () => {
     setTogglingOnline(true);
@@ -6131,6 +6779,27 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
       toast.error("Failed to update radius");
     } finally {
       setSavingRadius(false);
+    }
+  };
+
+  const handleSaveHours = async () => {
+    setSavingHours(true);
+    try {
+      await api.patch(`/icart/${cart.id}/operating-hours`, {
+        ...(opHours.trim() && { operatingHours: opHours.trim() }),
+        ...(opDays.trim() && { operatingDays: opDays.trim() }),
+      });
+      onUpdate({
+        ...cart,
+        operatingHours: opHours.trim() || null,
+        operatingDays: opDays.trim() || null,
+      });
+      toast.success("Operating hours updated");
+      setEditingHours(false);
+    } catch {
+      toast.error("Failed to update operating hours");
+    } finally {
+      setSavingHours(false);
     }
   };
 
@@ -6254,6 +6923,149 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
           )}
         </div>
       </div>
+
+      {/* ── Operating Hours ── */}
+      <div className="drawer_section_title" style={{ marginTop: 20 }}>
+        <span>Operating Hours</span>
+        <button
+          className="icart_icon_action_btn"
+          style={{ marginLeft: "auto" }}
+          onClick={() => setEditingHours((v) => !v)}
+          title="Edit operating hours"
+        >
+          <MdEdit size={14} />
+        </button>
+      </div>
+      {editingHours ? (
+        <div
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: 12,
+            padding: "14px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <div className="form-field" style={{ marginBottom: 0 }}>
+            <label className="modal-label">Operating Hours</label>
+            <select
+              className="modal-input"
+              value={opHours}
+              onChange={(e) => setOpHours(e.target.value)}
+              style={{ marginBottom: 0 }}
+            >
+              <option value="">Select hours…</option>
+              {[
+                "06:00 – 18:00",
+                "06:00 – 20:00",
+                "06:00 – 22:00",
+                "07:00 – 18:00",
+                "07:00 – 20:00",
+                "07:00 – 22:00",
+                "08:00 – 17:00",
+                "08:00 – 18:00",
+                "08:00 – 20:00",
+                "08:00 – 22:00",
+                "09:00 – 17:00",
+                "09:00 – 18:00",
+                "09:00 – 20:00",
+                "09:00 – 21:00",
+                "09:00 – 22:00",
+                "10:00 – 18:00",
+                "10:00 – 20:00",
+                "10:00 – 22:00",
+                "11:00 – 21:00",
+                "11:00 – 22:00",
+                "12:00 – 22:00",
+                "12:00 – 23:00",
+                "18:00 – 02:00",
+                "24 Hours",
+              ].map((h) => (
+                <option key={h} value={h}>
+                  {h}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-field" style={{ marginBottom: 0 }}>
+            <label className="modal-label">Operating Days</label>
+            <select
+              className="modal-input"
+              value={opDays}
+              onChange={(e) => setOpDays(e.target.value)}
+              style={{ marginBottom: 0 }}
+            >
+              <option value="">Select days…</option>
+              {[
+                "Monday – Friday",
+                "Monday – Saturday",
+                "Monday – Sunday",
+                "Tuesday – Saturday",
+                "Tuesday – Sunday",
+                "Wednesday – Sunday",
+                "Thursday – Sunday",
+                "Friday – Sunday",
+                "Saturday – Sunday",
+                "Weekdays Only",
+                "Weekends Only",
+                "Everyday",
+              ].map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button
+              className="app_btn app_btn_cancel"
+              style={{ flex: 1, height: 38 }}
+              onClick={() => {
+                setEditingHours(false);
+                setOpHours(cart.operatingHours || "");
+                setOpDays(cart.operatingDays || "");
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className={`app_btn app_btn_confirm${savingHours ? " btn_loading" : ""}`}
+              style={{ flex: 2, height: 38, position: "relative" }}
+              onClick={handleSaveHours}
+              disabled={savingHours}
+            >
+              <span className="btn_text">Save</span>
+              {savingHours && (
+                <span
+                  className="btn_loader"
+                  style={{ width: 14, height: 14 }}
+                />
+              )}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="icart_item_meta" style={{ marginBottom: 0 }}>
+          <div className="icart_meta_row">
+            <span className="icart_meta_key">Hours</span>
+            <span className="icart_meta_val">
+              {cart.operatingHours || (
+                <span className="icart_meta_muted">Not set</span>
+              )}
+            </span>
+          </div>
+          <div className="icart_meta_row">
+            <span className="icart_meta_key">Days</span>
+            <span className="icart_meta_val">
+              {cart.operatingDays || (
+                <span className="icart_meta_muted">Not set</span>
+              )}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* ── Kitchen Info ── */}
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
