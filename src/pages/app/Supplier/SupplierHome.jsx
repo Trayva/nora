@@ -795,11 +795,15 @@ function InlineMachineryPrice({ machineryId, stateId, supplierId }) {
         const list = Array.isArray(d) ? d : d?.data || [];
         // Multiple entries can exist per machine; pick the most recently created one
         const matches = list.filter((p) => p.machineryId === machineryId);
-        // Use the specific record we last saved, otherwise take last in array
+        // Use the specific record we last saved (by id) if available,
+        // otherwise pick the entry with the highest price as best approximation
+        // (backend creates duplicate records; no createdAt available to sort by)
         const entry = latestIdRef.current
           ? (matches.find((p) => p.id === latestIdRef.current) ??
-            matches[matches.length - 1])
-          : matches[matches.length - 1];
+            matches.reduce((a, b) => (b.price > a.price ? b : a), matches[0]))
+          : matches.length > 0
+            ? matches.reduce((a, b) => (b.price > a.price ? b : a), matches[0])
+            : null;
         const p = entry?.price != null ? Number(entry.price) : null;
         setPrice(p);
         if (p != null) setVal(String(p));
@@ -963,9 +967,17 @@ function InlineMachineryPrice({ machineryId, stateId, supplierId }) {
 
 /* ── Review Panel ── */
 function ReviewPanel({ req, onDone, onCancel }) {
-  const [qtys, setQtys] = useState(() =>
+  const ingredientItems = req.items || [];
+  const machineryItems = req.supplyRequestMachineryItems || [];
+
+  const [ingQtys, setIngQtys] = useState(() =>
     Object.fromEntries(
-      (req.items || []).map((it) => [it.id, it.quantity?.toString() || ""]),
+      ingredientItems.map((it) => [it.id, it.quantity?.toString() || ""]),
+    ),
+  );
+  const [machQtys, setMachQtys] = useState(() =>
+    Object.fromEntries(
+      machineryItems.map((it) => [it.id, it.quantity?.toString() || ""]),
     ),
   );
   const [cannotSupply, setCannotSupply] = useState(false);
@@ -973,19 +985,31 @@ function ReviewPanel({ req, onDone, onCancel }) {
 
   const submit = async () => {
     if (!cannotSupply) {
-      const invalid = (req.items || []).some(
-        (it) => isNaN(Number(qtys[it.id])) || Number(qtys[it.id]) < 0,
+      const ingInvalid = ingredientItems.some(
+        (it) => isNaN(Number(ingQtys[it.id])) || Number(ingQtys[it.id]) < 0,
       );
-      if (invalid) return toast.error("Enter valid quantities for all items");
+      const machInvalid = machineryItems.some(
+        (it) => isNaN(Number(machQtys[it.id])) || Number(machQtys[it.id]) < 0,
+      );
+      if (ingInvalid || machInvalid)
+        return toast.error("Enter valid quantities for all items");
     }
     setSubmitting(true);
     try {
-      await api.patch(`/icart/supply/${req.id}/review`, {
-        items: (req.items || []).map((it) => ({
+      const payload = {};
+      if (ingredientItems.length > 0) {
+        payload.items = ingredientItems.map((it) => ({
           itemId: it.id,
-          suppliedQuantity: cannotSupply ? 0 : Number(qtys[it.id] || 0),
-        })),
-      });
+          suppliedQuantity: cannotSupply ? 0 : Number(ingQtys[it.id] || 0),
+        }));
+      }
+      if (machineryItems.length > 0) {
+        payload.machineryItems = machineryItems.map((it) => ({
+          itemId: it.id,
+          suppliedQuantity: cannotSupply ? 0 : Number(machQtys[it.id] || 0),
+        }));
+      }
+      await api.patch(`/icart/supply/${req.id}/review`, payload);
       toast.success(
         cannotSupply ? "Submitted — 0 supplied" : "Review submitted!",
       );
@@ -996,6 +1020,8 @@ function ReviewPanel({ req, onDone, onCancel }) {
       setSubmitting(false);
     }
   };
+
+  const hasItems = ingredientItems.length > 0 || machineryItems.length > 0;
 
   return (
     <div
@@ -1042,6 +1068,7 @@ function ReviewPanel({ req, onDone, onCancel }) {
           {cannotSupply ? "✕ Can't supply" : "Can't supply?"}
         </button>
       </div>
+
       {cannotSupply ? (
         <div
           style={{
@@ -1057,78 +1084,173 @@ function ReviewPanel({ req, onDone, onCancel }) {
           Will submit 0 as supplied quantity for all items
         </div>
       ) : (
-        (req.items || []).map((it) => (
-          <div
-            key={it.id}
-            style={{
-              background: "var(--bg-hover)",
-              borderRadius: 10,
-              padding: "10px 12px",
-            }}
-          >
+        <>
+          {/* Ingredient items */}
+          {ingredientItems.map((it) => (
             <div
+              key={it.id}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 8,
+                background: "var(--bg-hover)",
+                borderRadius: 10,
+                padding: "10px 12px",
               }}
             >
-              {it.ingredient?.image ? (
-                <img
-                  src={it.ingredient.image}
-                  alt=""
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 6,
-                    objectFit: "cover",
-                    flexShrink: 0,
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 6,
-                    background: "var(--bg-card)",
-                    flexShrink: 0,
-                  }}
-                />
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: "0.78rem",
-                    fontWeight: 700,
-                    color: "var(--text-body)",
-                  }}
-                >
-                  {it.ingredient?.name || "Item"}
-                </div>
-                <div
-                  style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
-                >
-                  Requested: {it.quantity?.toLocaleString()}
-                  {it.ingredient?.unit || ""}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                {it.ingredient?.image ? (
+                  <img
+                    src={it.ingredient.image}
+                    alt=""
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      objectFit: "cover",
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: "var(--bg-card)",
+                      border: "1px solid var(--border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdOutlineInventory2
+                      size={13}
+                      style={{ color: "var(--text-muted)" }}
+                    />
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                    }}
+                  >
+                    {it.ingredient?.name || "Ingredient"}
+                  </div>
+                  <div
+                    style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
+                  >
+                    Requested: {it.quantity?.toLocaleString()}
+                    {it.ingredient?.unit || ""}
+                  </div>
                 </div>
               </div>
+              <input
+                className="modal-input"
+                type="number"
+                min="0"
+                style={{ marginBottom: 0 }}
+                placeholder={`Qty to supply (of ${it.quantity?.toLocaleString()}${it.ingredient?.unit || ""})`}
+                value={ingQtys[it.id] || ""}
+                onChange={(e) =>
+                  setIngQtys((p) => ({ ...p, [it.id]: e.target.value }))
+                }
+              />
             </div>
-            <input
-              className="modal-input"
-              type="number"
-              min="0"
-              style={{ marginBottom: 0 }}
-              placeholder={`Qty to supply (of ${it.quantity?.toLocaleString()}${it.ingredient?.unit || ""})`}
-              value={qtys[it.id] || ""}
-              onChange={(e) =>
-                setQtys((p) => ({ ...p, [it.id]: e.target.value }))
-              }
-            />
-          </div>
-        ))
+          ))}
+
+          {/* Machinery items */}
+          {machineryItems.map((it) => (
+            <div
+              key={it.id}
+              style={{
+                background: "var(--bg-hover)",
+                borderRadius: 10,
+                padding: "10px 12px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                {it.machinery?.image ? (
+                  <img
+                    src={it.machinery.image}
+                    alt=""
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      objectFit: "cover",
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: "rgba(203,108,220,0.08)",
+                      border: "1px solid rgba(203,108,220,0.2)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdBuild size={13} style={{ color: "var(--accent)" }} />
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                    }}
+                  >
+                    {it.machinery?.name || "Machinery"}
+                  </div>
+                  <div
+                    style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
+                  >
+                    Requested: {it.quantity?.toLocaleString()} unit
+                    {it.quantity !== 1 ? "s" : ""}
+                    {it.machinery?.manufacturer
+                      ? ` · ${it.machinery.manufacturer}`
+                      : ""}
+                  </div>
+                </div>
+              </div>
+              <input
+                className="modal-input"
+                type="number"
+                min="0"
+                style={{ marginBottom: 0 }}
+                placeholder={`Qty to supply (of ${it.quantity?.toLocaleString()})`}
+                value={machQtys[it.id] || ""}
+                onChange={(e) =>
+                  setMachQtys((p) => ({ ...p, [it.id]: e.target.value }))
+                }
+              />
+            </div>
+          ))}
+        </>
       )}
+
       <div style={{ display: "flex", gap: 8 }}>
         <button
           className="app_btn app_btn_cancel"
@@ -1155,7 +1277,6 @@ function ReviewPanel({ req, onDone, onCancel }) {
   );
 }
 
-/* ── Request Card ── */
 function RequestCard({ req, onClick }) {
   const loc = req.cart?.location;
   const ingredientCount = req.items?.length || 0;
@@ -2556,7 +2677,7 @@ function IngredientPricesTab({ profile }) {
   const [ingOpen, setIngOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [newForm, setNewForm] = useState({ name: "", unit: "" });
+  const [newForm, setNewForm] = useState({ name: "", unit: "", image: null });
   const [price, setPrice] = useState("");
   const [saving, setSaving] = useState(false);
   const debRef = useRef(null);
@@ -2630,13 +2751,16 @@ function IngredientPricesTab({ profile }) {
       const fd = new FormData();
       fd.append("name", newForm.name.trim());
       fd.append("unit", newForm.unit.trim());
-      const res = await api.post("/library/ingredient", fd);
+      if (newForm.image) fd.append("image", newForm.image);
+      const res = await api.post("/library/ingredient", fd, {
+        headers: { "Content-Type": undefined },
+      });
       const created = res.data.data;
       setIngredient(created);
       setIngSearch(created.name);
       setIngOpen(false);
       setShowCreate(false);
-      setNewForm({ name: "", unit: "" });
+      setNewForm({ name: "", unit: "", image: null });
       toast.success(`${created.name} created`);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to create");
@@ -2958,15 +3082,93 @@ function IngredientPricesTab({ profile }) {
                         }
                         style={{ marginBottom: 0 }}
                       />
-                      <input
+                      <select
                         className="modal-input"
-                        placeholder="Unit * (e.g. g, ml, kg)"
                         value={newForm.unit}
                         onChange={(e) =>
                           setNewForm((p) => ({ ...p, unit: e.target.value }))
                         }
                         style={{ marginBottom: 0 }}
-                      />
+                      >
+                        <option value="">Unit *</option>
+                        {[
+                          "g",
+                          "kg",
+                          "ml",
+                          "L",
+                          "cl",
+                          "oz",
+                          "lb",
+                          "piece",
+                          "dozen",
+                          "pack",
+                          "bag",
+                          "bottle",
+                          "can",
+                          "carton",
+                          "sachet",
+                        ].map((u) => (
+                          <option key={u} value={u}>
+                            {u}
+                          </option>
+                        ))}
+                      </select>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 7,
+                          height: 32,
+                          padding: "0 10px",
+                          background: "var(--bg-hover)",
+                          border: `1px dashed ${newForm.image ? "rgba(203,108,220,0.5)" : "var(--border)"}`,
+                          borderRadius: 8,
+                          cursor: "pointer",
+                          fontSize: "0.75rem",
+                          color: "var(--text-muted)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {newForm.image ? (
+                          <>
+                            <img
+                              src={URL.createObjectURL(newForm.image)}
+                              alt=""
+                              style={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: 4,
+                                objectFit: "cover",
+                                flexShrink: 0,
+                              }}
+                            />
+                            <span
+                              style={{
+                                color: "var(--text-body)",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {newForm.image.name}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <MdImage size={14} style={{ flexShrink: 0 }} />
+                            <span>Image (optional)</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: "none" }}
+                          onChange={(e) => {
+                            const f = e.target.files[0];
+                            if (f) setNewForm((p) => ({ ...p, image: f }));
+                          }}
+                        />
+                      </label>
                       <button
                         className={`app_btn app_btn_confirm${creating ? " btn_loading" : ""}`}
                         onClick={handleCreate}
@@ -3217,7 +3419,11 @@ function MachineryPricesTab({ profile }) {
   const [machOpen, setMachOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [newForm, setNewForm] = useState({ name: "", description: "" });
+  const [newForm, setNewForm] = useState({
+    name: "",
+    description: "",
+    image: null,
+  });
   const [price, setPrice] = useState("");
   const [saving, setSaving] = useState(false);
   const debRef = useRef(null);
@@ -3230,9 +3436,14 @@ function MachineryPricesTab({ profile }) {
       const r = await api.get(url);
       const d = r.data.data;
       const rawList = Array.isArray(d) ? d : d?.data || [];
-      // Deduplicate: keep only the latest entry per machineryId
+      // Deduplicate: keep the highest-priced entry per machineryId
+      // (backend creates duplicates on every save; no createdAt to sort by)
       const seen = new Map();
-      rawList.forEach((item) => seen.set(item.machineryId, item));
+      rawList.forEach((item) => {
+        const existing = seen.get(item.machineryId);
+        if (!existing || item.price > existing.price)
+          seen.set(item.machineryId, item);
+      });
       const list = Array.from(seen.values());
       setAllPrices(list);
       setTotal(list.length);
@@ -3289,13 +3500,16 @@ function MachineryPricesTab({ profile }) {
       fd.append("name", newForm.name.trim());
       if (newForm.description)
         fd.append("description", newForm.description.trim());
-      const res = await api.post("/library/machinery", fd);
+      if (newForm.image) fd.append("image", newForm.image);
+      const res = await api.post("/library/machinery", fd, {
+        headers: { "Content-Type": undefined },
+      });
       const created = res.data.data;
       setMachinery(created);
       setMachSearch(created.name);
       setMachOpen(false);
       setShowCreate(false);
-      setNewForm({ name: "", description: "" });
+      setNewForm({ name: "", description: "", image: null });
       toast.success(`${created.name} created`);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to create");
@@ -3630,6 +3844,62 @@ function MachineryPricesTab({ profile }) {
                         }
                         style={{ marginBottom: 0 }}
                       />
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 7,
+                          height: 32,
+                          padding: "0 10px",
+                          background: "var(--bg-hover)",
+                          border: `1px dashed ${newForm.image ? "rgba(203,108,220,0.5)" : "var(--border)"}`,
+                          borderRadius: 8,
+                          cursor: "pointer",
+                          fontSize: "0.75rem",
+                          color: "var(--text-muted)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {newForm.image ? (
+                          <>
+                            <img
+                              src={URL.createObjectURL(newForm.image)}
+                              alt=""
+                              style={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: 4,
+                                objectFit: "cover",
+                                flexShrink: 0,
+                              }}
+                            />
+                            <span
+                              style={{
+                                color: "var(--text-body)",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {newForm.image.name}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <MdImage size={14} style={{ flexShrink: 0 }} />
+                            <span>Image (optional)</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: "none" }}
+                          onChange={(e) => {
+                            const f = e.target.files[0];
+                            if (f) setNewForm((p) => ({ ...p, image: f }));
+                          }}
+                        />
+                      </label>
                       <button
                         className={`app_btn app_btn_confirm${creating ? " btn_loading" : ""}`}
                         onClick={handleCreate}

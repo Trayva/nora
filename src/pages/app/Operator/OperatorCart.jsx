@@ -39,7 +39,6 @@ import {
   CartesianGrid,
 } from "recharts";
 
-/* ── helpers ──────────────────────────────────────────────── */
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
@@ -126,9 +125,7 @@ const TABS = [
   { key: "orders", label: "Orders", icon: <MdOutlineShoppingBag size={15} /> },
 ];
 
-/* ════════════════════════════════════════════════════════════
-   TAB: TASKS
-   ════════════════════════════════════════════════════════════ */
+/* TASKS */
 function TaskSubmitForm({ task, onSubmitted }) {
   const schema = task.template?.schema?.fields || [];
   const [formData, setFormData] = useState(
@@ -137,7 +134,6 @@ function TaskSubmitForm({ task, onSubmitted }) {
     ),
   );
   const [submitting, setSubmitting] = useState(false);
-
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
@@ -150,7 +146,6 @@ function TaskSubmitForm({ task, onSubmitted }) {
       setSubmitting(false);
     }
   };
-
   return (
     <div
       style={{
@@ -208,7 +203,6 @@ function TaskCard({ task, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
   const [showSubmit, setShowSubmit] = useState(false);
   const isPending = task.status === "PENDING" || task.status === "IN_PROGRESS";
-
   return (
     <div
       style={{
@@ -323,7 +317,6 @@ function TaskCard({ task, onRefresh }) {
 export function TasksTab({ cartId }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const fetchTasks = async () => {
     setLoading(true);
     try {
@@ -335,18 +328,15 @@ export function TasksTab({ cartId }) {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchTasks();
   }, [cartId]);
-
   if (loading)
     return (
       <div className="drawer_loading">
         <div className="page_loader_spinner" />
       </div>
     );
-
   return tasks.length === 0 ? (
     <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
       <MdTask size={28} style={{ opacity: 0.3 }} />
@@ -361,478 +351,22 @@ export function TasksTab({ cartId }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════
-   TAB: INVENTORY
-   ════════════════════════════════════════════════════════════ */
+/* INVENTORY */
 const SEARCH_URL = (q) =>
   `/library/ingredient?returnPrep=true&search=${encodeURIComponent(q)}&limit=8`;
 const REASON_OPTIONS = ["Usage", "Waste", "Damage", "Correction", "Other"];
-
 function toBase(val, unit) {
   const n = Number(val);
   if (unit === "kg") return n * 1000;
   if (unit === "L") return n * 1000;
   return n;
 }
-
 function getUnitOptions(baseUnit) {
   if (!baseUnit) return ["g", "kg", "ml", "L"];
   const u = baseUnit.toLowerCase();
   if (u === "g" || u === "kg") return ["g", "kg"];
   if (u === "ml" || u === "l" || u === "liter") return ["ml", "L"];
   return ["unit"];
-}
-
-/* ── Supply Request Row (expanded, iCart-style) ─────────────── */
-function SupplyRequestRow({ req }) {
-  const [expanded, setExpanded] = useState(false);
-  const fmt = (n) =>
-    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
-  const fmtQty = (q, unit) => {
-    if (!unit) return q?.toLocaleString() || "—";
-    const u = unit.toLowerCase();
-    if ((u === "g" || u === "kg") && q >= 1000)
-      return `${(q / 1000).toLocaleString()} kg`;
-    if ((u === "ml" || u === "l" || u === "liter") && q >= 1000)
-      return `${(q / 1000).toLocaleString()} L`;
-    return `${q?.toLocaleString() || "—"} ${unit}`;
-  };
-
-  const statusColors = {
-    PENDING: {
-      bg: "rgba(234,179,8,0.1)",
-      color: "#ca8a04",
-      border: "rgba(234,179,8,0.25)",
-    },
-    SUPPLIER_REVIEWED: {
-      bg: "rgba(59,130,246,0.1)",
-      color: "#3b82f6",
-      border: "rgba(59,130,246,0.25)",
-    },
-    SHIPPED: {
-      bg: "rgba(168,85,247,0.1)",
-      color: "#a855f7",
-      border: "rgba(168,85,247,0.25)",
-    },
-    RECEIVED: {
-      bg: "rgba(34,197,94,0.1)",
-      color: "#16a34a",
-      border: "rgba(34,197,94,0.25)",
-    },
-    CANCELLED: {
-      bg: "rgba(239,68,68,0.1)",
-      color: "#ef4444",
-      border: "rgba(239,68,68,0.25)",
-    },
-  };
-  const sc = statusColors[req.status] || statusColors.PENDING;
-  const invoiceSc =
-    req.invoice?.status === "PAID"
-      ? {
-          bg: "rgba(34,197,94,0.1)",
-          color: "#16a34a",
-          border: "rgba(34,197,94,0.25)",
-        }
-      : {
-          bg: "rgba(234,179,8,0.1)",
-          color: "#ca8a04",
-          border: "rgba(234,179,8,0.25)",
-        };
-
-  return (
-    <div
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        borderRadius: 14,
-        overflow: "hidden",
-        marginBottom: 10,
-      }}
-    >
-      {/* Header row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "13px 14px",
-          cursor: "pointer",
-        }}
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <div className="icart_task_icon">
-          <MdLocalShipping size={14} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="icart_task_name">
-            {req.supplier?.businessName || "Supply Request"}
-          </div>
-          <div className="icart_task_meta">
-            <span>
-              {req.items?.length || 0} ingredient
-              {req.items?.length !== 1 ? "s" : ""}
-            </span>
-            <span className="contract_row_dot">·</span>
-            <span>{fmtDate(req.createdAt)}</span>
-            {req.totalAmount > 0 && (
-              <>
-                <span className="contract_row_dot">·</span>
-                <span style={{ color: "var(--accent)", fontWeight: 700 }}>
-                  ₦{fmt(req.totalAmount)}
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-        <span
-          style={{
-            fontSize: "0.65rem",
-            fontWeight: 800,
-            padding: "3px 9px",
-            borderRadius: 999,
-            background: sc.bg,
-            color: sc.color,
-            border: `1px solid ${sc.border}`,
-            flexShrink: 0,
-          }}
-        >
-          {req.status}
-        </span>
-        {expanded ? (
-          <MdExpandLess
-            size={16}
-            style={{ color: "var(--text-muted)", flexShrink: 0 }}
-          />
-        ) : (
-          <MdExpandMore
-            size={16}
-            style={{ color: "var(--text-muted)", flexShrink: 0 }}
-          />
-        )}
-      </div>
-
-      {expanded && (
-        <div style={{ borderTop: "1px solid var(--border)" }}>
-          {/* Meta info chips */}
-          <div
-            style={{
-              padding: "12px 14px",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 8,
-              borderBottom: "1px solid var(--border)",
-            }}
-          >
-            {req.supplier && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "5px 10px",
-                  background: "var(--bg-hover)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                }}
-              >
-                <MdLocalShipping
-                  size={13}
-                  style={{ color: "var(--text-muted)" }}
-                />
-                <div>
-                  <div
-                    style={{
-                      fontSize: "0.65rem",
-                      color: "var(--text-muted)",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Supplier
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      color: "var(--text-body)",
-                    }}
-                  >
-                    {req.supplier.businessName}
-                  </div>
-                </div>
-              </div>
-            )}
-            {req.requester && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "5px 10px",
-                  background: "var(--bg-hover)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                }}
-              >
-                {req.requester.image ? (
-                  <img
-                    src={req.requester.image}
-                    alt=""
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                      flexShrink: 0,
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: "50%",
-                      background: "var(--bg-active)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "0.62rem",
-                        fontWeight: 900,
-                        color: "var(--accent)",
-                      }}
-                    >
-                      {req.requester.fullName?.[0]?.toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <div>
-                  <div
-                    style={{
-                      fontSize: "0.65rem",
-                      color: "var(--text-muted)",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Requested by
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      color: "var(--text-body)",
-                    }}
-                  >
-                    {req.requester.fullName}
-                  </div>
-                </div>
-              </div>
-            )}
-            {req.invoice && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "5px 10px",
-                  background: "var(--bg-hover)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      fontSize: "0.65rem",
-                      color: "var(--text-muted)",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Invoice
-                  </div>
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 5 }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "0.78rem",
-                        fontWeight: 700,
-                        color: "var(--text-body)",
-                      }}
-                    >
-                      ₦{fmt(req.invoice.total)}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "0.62rem",
-                        fontWeight: 700,
-                        padding: "1px 6px",
-                        borderRadius: 4,
-                        background: invoiceSc.bg,
-                        color: invoiceSc.color,
-                        border: `1px solid ${invoiceSc.border}`,
-                      }}
-                    >
-                      {req.invoice.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Ingredients list */}
-          <div style={{ padding: "10px 14px 14px" }}>
-            <div
-              style={{
-                fontSize: "0.62rem",
-                fontWeight: 900,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "var(--text-muted)",
-                marginBottom: 8,
-              }}
-            >
-              Items
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {req.items?.map((item) => {
-                const ing = item.ingredient;
-                const supplied =
-                  item.suppliedQuantity != null &&
-                  item.suppliedQuantity !== item.quantity;
-                return (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "9px 12px",
-                      background: "var(--bg-hover)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 10,
-                    }}
-                  >
-                    {ing?.image ? (
-                      <img
-                        src={ing.image}
-                        alt={ing.name}
-                        style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: 7,
-                          objectFit: "cover",
-                          flexShrink: 0,
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: 7,
-                          background: "var(--bg-card)",
-                          border: "1px solid var(--border)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <MdInventory2
-                          size={14}
-                          style={{ color: "var(--text-muted)" }}
-                        />
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: "0.82rem",
-                          fontWeight: 700,
-                          color: "var(--text-body)",
-                        }}
-                      >
-                        {ing?.name || "Ingredient"}
-                      </div>
-                      <div className="icart_task_meta">
-                        <span>Ordered: {fmtQty(item.quantity, ing?.unit)}</span>
-                        {supplied && (
-                          <>
-                            <span className="contract_row_dot">·</span>
-                            <span style={{ color: "#16a34a" }}>
-                              Supplied:{" "}
-                              {fmtQty(item.suppliedQuantity, ing?.unit)}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {item.priceAtTime > 0 && (
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <div
-                          style={{
-                            fontSize: "0.68rem",
-                            color: "var(--text-muted)",
-                          }}
-                        >
-                          @ ₦{fmt(item.priceAtTime)}/{ing?.unit || "unit"}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "0.82rem",
-                            fontWeight: 800,
-                            color: "var(--text-heading)",
-                          }}
-                        >
-                          ₦{fmt(item.priceAtTime * item.quantity)}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            {req.totalAmount > 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginTop: 10,
-                  paddingTop: 10,
-                  borderTop: "1px solid var(--border)",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "0.78rem",
-                    fontWeight: 700,
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  Total
-                </span>
-                <span
-                  style={{
-                    fontSize: "1rem",
-                    fontWeight: 900,
-                    color: "var(--accent)",
-                  }}
-                >
-                  ₦{fmt(req.totalAmount)}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 export function InventoryTab({ cartId }) {
@@ -868,7 +402,6 @@ export function InventoryTab({ cartId }) {
       setLoading(false);
     }
   };
-
   const fetchSupply = async () => {
     setLoading(true);
     try {
@@ -882,7 +415,6 @@ export function InventoryTab({ cartId }) {
       setLoading(false);
     }
   };
-
   const fetchHistory = async () => {
     setLoading(true);
     try {
@@ -894,13 +426,11 @@ export function InventoryTab({ cartId }) {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (view === "stock") fetchStock();
     else if (view === "supply") fetchSupply();
     else if (view === "history") fetchHistory();
   }, [view]);
-
   useEffect(() => {
     api
       .get("/supplier")
@@ -945,13 +475,14 @@ export function InventoryTab({ cartId }) {
     try {
       const r = await api.get(SEARCH_URL(q));
       const d = r.data.data;
-      // API returns paginated wrapper: { data: [...], total, ... }
       const rawList = Array.isArray(d) ? d : d?.data || d?.ingredient || [];
-      const items = rawList.map((i) => ({
-        ...i,
-        _type: i._type || (i.unit ? "INGREDIENT" : "PREP_ITEM"),
+      setSearchResults((p) => ({
+        ...p,
+        [idx]: rawList.map((i) => ({
+          ...i,
+          _type: i._type || (i.unit ? "INGREDIENT" : "PREP_ITEM"),
+        })),
       }));
-      setSearchResults((p) => ({ ...p, [idx]: items }));
     } catch {
       setSearchResults((p) => ({ ...p, [idx]: [] }));
     } finally {
@@ -1023,263 +554,235 @@ export function InventoryTab({ cartId }) {
           </button>
         )}
       </div>
-
       {loading ? (
         <div className="drawer_loading">
           <div className="page_loader_spinner" />
         </div>
       ) : view === "stock" ? (
-        <>
-          {inventory.length === 0 ? (
-            <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
-              <MdInventory2 size={28} style={{ opacity: 0.3 }} />
-              <span>No inventory items</span>
-            </div>
-          ) : (
-            inventory.map((item) => {
-              const name =
-                item.ingredient?.name ||
-                item.prepItem?.name ||
-                item.menuItem?.name ||
-                "Item";
-              const img =
-                item.ingredient?.image || item.prepItem?.image || null;
-              const isActive = usageItem?.id === item.id;
-              const isLow = item.quantity < 5;
-              return (
+        inventory.length === 0 ? (
+          <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+            <MdInventory2 size={28} style={{ opacity: 0.3 }} />
+            <span>No inventory items</span>
+          </div>
+        ) : (
+          inventory.map((item) => {
+            const name = item.ingredient?.name || item.prepItem?.name || "Item";
+            const img = item.ingredient?.image || item.prepItem?.image || null;
+            const isActive = usageItem?.id === item.id;
+            const isLow = item.quantity < 5;
+            return (
+              <div
+                key={item.id}
+                style={{
+                  background: "var(--bg-card)",
+                  border: `1px solid ${isLow ? "rgba(239,68,68,0.3)" : "var(--border)"}`,
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  marginBottom: 8,
+                }}
+              >
                 <div
-                  key={item.id}
                   style={{
-                    background: "var(--bg-card)",
-                    border: `1px solid ${isLow ? "rgba(239,68,68,0.3)" : "var(--border)"}`,
-                    borderRadius: 12,
-                    overflow: "hidden",
-                    marginBottom: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "12px 14px",
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "12px 14px",
-                    }}
-                  >
-                    {img ? (
-                      <img
-                        src={img}
-                        alt={name}
-                        style={{
-                          width: 38,
-                          height: 38,
-                          borderRadius: 8,
-                          objectFit: "cover",
-                          flexShrink: 0,
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 38,
-                          height: 38,
-                          borderRadius: 8,
-                          background: "var(--bg-hover)",
-                          border: "1px solid var(--border)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <MdInventory2
-                          size={16}
-                          style={{ color: "var(--text-muted)" }}
-                        />
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="icart_task_name">{name}</div>
-                      <div className="icart_task_meta">
-                        <span>{item.type?.replace("_", " ")}</span>
-                        {isLow && (
-                          <span style={{ color: "#ef4444", fontWeight: 700 }}>
-                            · ⚠ LOW
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div
+                  {img ? (
+                    <img
+                      src={img}
+                      alt={name}
                       style={{
-                        textAlign: "right",
+                        width: 38,
+                        height: 38,
+                        borderRadius: 8,
+                        objectFit: "cover",
                         flexShrink: 0,
-                        marginRight: 8,
                       }}
-                    >
-                      <div
-                        style={{
-                          fontSize: "0.95rem",
-                          fontWeight: 800,
-                          color: "var(--text-heading)",
-                        }}
-                      >
-                        {item.quantity?.toLocaleString()}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.68rem",
-                          color: "var(--text-muted)",
-                        }}
-                      >
-                        {item.ingredient?.unit || "units"}
-                      </div>
-                    </div>
-                    <button
-                      className="icart_icon_action_btn"
-                      title="Record usage"
-                      style={{
-                        color: isActive ? "var(--accent)" : undefined,
-                        borderColor: isActive
-                          ? "rgba(203,108,220,0.4)"
-                          : undefined,
-                      }}
-                      onClick={() => {
-                        setUsageItem(isActive ? null : item);
-                        setUsageQty("");
-                        setUsageNotes("");
-                      }}
-                    >
-                      <MdRemoveCircleOutline size={14} />
-                    </button>
-                  </div>
-                  {isActive && (
+                    />
+                  ) : (
                     <div
                       style={{
-                        padding: "0 14px 14px",
-                        borderTop: "1px solid var(--border)",
+                        width: 38,
+                        height: 38,
+                        borderRadius: 8,
+                        background: "var(--bg-hover)",
+                        border: "1px solid var(--border)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
                       }}
                     >
-                      <div
-                        style={{
-                          paddingTop: 10,
-                          paddingBottom: 8,
-                          fontSize: "0.72rem",
-                          fontWeight: 700,
-                          color: "var(--text-muted)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                        }}
-                      >
-                        Record Usage
-                      </div>
-                      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                        <input
-                          className="modal-input"
-                          type="number"
-                          style={{ flex: 1 }}
-                          placeholder="Quantity used"
-                          value={usageQty}
-                          onChange={(e) => setUsageQty(e.target.value)}
-                        />
-                        {(() => {
-                          const uOpts = getUnitOptions(
-                            item.ingredient?.unit || item.prepItem?.unit,
-                          );
-                          return uOpts.length > 1 ? (
-                            <select
-                              className="modal-input"
-                              style={{ width: 76 }}
-                              value={usageUnit}
-                              onChange={(e) => setUsageUnit(e.target.value)}
-                            >
-                              {uOpts.map((u) => (
-                                <option key={u}>{u}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <div
-                              className="modal-input"
-                              style={{
-                                width: 76,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: "var(--text-muted)",
-                                fontSize: "0.82rem",
-                              }}
-                            >
-                              {uOpts[0] || "unit"}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                      {(usageUnit === "kg" || usageUnit === "L") &&
-                        usageQty && (
-                          <div
-                            style={{
-                              fontSize: "0.72rem",
-                              color: "var(--accent)",
-                              fontWeight: 600,
-                              marginBottom: 8,
-                            }}
-                          >
-                            → {toBase(usageQty, usageUnit).toLocaleString()}{" "}
-                            {usageUnit === "kg" ? "g" : "ml"} will be recorded
-                          </div>
-                        )}
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: 8,
-                          marginBottom: 10,
-                        }}
-                      >
-                        <select
-                          className="modal-input"
-                          value={usageReason}
-                          onChange={(e) => setUsageReason(e.target.value)}
-                        >
-                          {REASON_OPTIONS.map((r) => (
-                            <option key={r}>{r}</option>
-                          ))}
-                        </select>
-                        <input
-                          className="modal-input"
-                          placeholder="Notes (optional)"
-                          value={usageNotes}
-                          onChange={(e) => setUsageNotes(e.target.value)}
-                        />
-                      </div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button
-                          className="app_btn app_btn_cancel"
-                          style={{ flex: 1, height: 36 }}
-                          onClick={() => setUsageItem(null)}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
-                          style={{ flex: 2, height: 36, position: "relative" }}
-                          onClick={handleRecordUsage}
-                          disabled={saving}
-                        >
-                          <span className="btn_text">Record</span>
-                          {saving && (
-                            <span
-                              className="btn_loader"
-                              style={{ width: 12, height: 12 }}
-                            />
-                          )}
-                        </button>
-                      </div>
+                      <MdInventory2
+                        size={16}
+                        style={{ color: "var(--text-muted)" }}
+                      />
                     </div>
                   )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="icart_task_name">{name}</div>
+                    <div className="icart_task_meta">
+                      <span>{item.type?.replace("_", " ")}</span>
+                      {isLow && (
+                        <span style={{ color: "#ef4444", fontWeight: 700 }}>
+                          · ⚠ LOW
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      textAlign: "right",
+                      flexShrink: 0,
+                      marginRight: 8,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "0.95rem",
+                        fontWeight: 800,
+                        color: "var(--text-heading)",
+                      }}
+                    >
+                      {item.quantity?.toLocaleString()}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.68rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      {item.ingredient?.unit || "units"}
+                    </div>
+                  </div>
+                  <button
+                    className="icart_icon_action_btn"
+                    title="Record usage"
+                    style={{ color: isActive ? "var(--accent)" : undefined }}
+                    onClick={() => {
+                      setUsageItem(isActive ? null : item);
+                      setUsageQty("");
+                      setUsageNotes("");
+                    }}
+                  >
+                    <MdRemoveCircleOutline size={14} />
+                  </button>
                 </div>
-              );
-            })
-          )}
-        </>
+                {isActive && (
+                  <div
+                    style={{
+                      padding: "0 14px 14px",
+                      borderTop: "1px solid var(--border)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        paddingTop: 10,
+                        paddingBottom: 8,
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Record Usage
+                    </div>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                      <input
+                        className="modal-input"
+                        type="number"
+                        style={{ flex: 1 }}
+                        placeholder="Quantity used"
+                        value={usageQty}
+                        onChange={(e) => setUsageQty(e.target.value)}
+                      />
+                      {(() => {
+                        const uOpts = getUnitOptions(
+                          item.ingredient?.unit || item.prepItem?.unit,
+                        );
+                        return uOpts.length > 1 ? (
+                          <select
+                            className="modal-input"
+                            style={{ width: 76 }}
+                            value={usageUnit}
+                            onChange={(e) => setUsageUnit(e.target.value)}
+                          >
+                            {uOpts.map((u) => (
+                              <option key={u}>{u}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div
+                            className="modal-input"
+                            style={{
+                              width: 76,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "var(--text-muted)",
+                              fontSize: "0.82rem",
+                            }}
+                          >
+                            {uOpts[0] || "unit"}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 8,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <select
+                        className="modal-input"
+                        value={usageReason}
+                        onChange={(e) => setUsageReason(e.target.value)}
+                      >
+                        {REASON_OPTIONS.map((r) => (
+                          <option key={r}>{r}</option>
+                        ))}
+                      </select>
+                      <input
+                        className="modal-input"
+                        placeholder="Notes (optional)"
+                        value={usageNotes}
+                        onChange={(e) => setUsageNotes(e.target.value)}
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        className="app_btn app_btn_cancel"
+                        style={{ flex: 1, height: 36 }}
+                        onClick={() => setUsageItem(null)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+                        style={{ flex: 2, height: 36, position: "relative" }}
+                        onClick={handleRecordUsage}
+                        disabled={saving}
+                      >
+                        <span className="btn_text">Record</span>
+                        {saving && (
+                          <span
+                            className="btn_loader"
+                            style={{ width: 12, height: 12 }}
+                          />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )
       ) : view === "supply" ? (
         <>
           {showSupplyForm && (
@@ -1431,36 +934,6 @@ export function InventoryTab({ cartId }) {
                               (e.currentTarget.style.background = "transparent")
                             }
                           >
-                            {item.image ? (
-                              <img
-                                src={item.image}
-                                alt=""
-                                style={{
-                                  width: 28,
-                                  height: 28,
-                                  borderRadius: 6,
-                                  objectFit: "cover",
-                                }}
-                              />
-                            ) : (
-                              <div
-                                style={{
-                                  width: 28,
-                                  height: 28,
-                                  borderRadius: 6,
-                                  background: "var(--bg-hover)",
-                                  border: "1px solid var(--border)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <MdImage
-                                  size={13}
-                                  style={{ color: "var(--text-muted)" }}
-                                />
-                              </div>
-                            )}
                             <span
                               style={{
                                 fontSize: "0.8rem",
@@ -1565,7 +1038,55 @@ export function InventoryTab({ cartId }) {
               <span>No supply requests</span>
             </div>
           ) : (
-            supply.map((req) => <SupplyRequestRow key={req.id} req={req} />)
+            supply.map((req) => (
+              <div
+                key={req.id}
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  marginBottom: 10,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "13px 14px",
+                  }}
+                >
+                  <div className="icart_task_icon">
+                    <MdLocalShipping size={14} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="icart_task_name">
+                      {req.supplier?.businessName || "Supply Request"}
+                    </div>
+                    <div className="icart_task_meta">
+                      <span>{req.items?.length || 0} items</span>
+                      <span className="contract_row_dot">·</span>
+                      <span>{fmtDate(req.createdAt)}</span>
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "0.65rem",
+                      fontWeight: 800,
+                      padding: "3px 9px",
+                      borderRadius: 999,
+                      background: "rgba(234,179,8,0.1)",
+                      color: "#ca8a04",
+                      border: "1px solid rgba(234,179,8,0.25)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {req.status}
+                  </span>
+                </div>
+              </div>
+            ))
           )}
         </>
       ) : history.length === 0 ? (
@@ -1617,9 +1138,6 @@ export function InventoryTab({ cartId }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════
-   TAB: MENU  (shows cart.menuItems directly)
-   ════════════════════════════════════════════════════════════ */
 export function MenuTab({ menuItems }) {
   if (!menuItems?.length)
     return (
@@ -1628,7 +1146,6 @@ export function MenuTab({ menuItems }) {
         <span>No menu items assigned</span>
       </div>
     );
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {menuItems.map((item, idx) => {
@@ -1729,11 +1246,7 @@ export function MenuTab({ menuItems }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════
-   TAB: E-LEARNING  (menu-item based, uses /vendor/menu/:id/summary)
-   ════════════════════════════════════════════════════════════ */
-
-/* ── Video embed helper ──────────────────────────────────────── */
+/* E-LEARNING - all patches applied */
 function getEmbedUrl(src) {
   if (!src) return null;
   const vimeoMatch = src.match(/vimeo\.com\/(\d+)/);
@@ -1743,7 +1256,6 @@ function getEmbedUrl(src) {
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
   );
   if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
-  if (/\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(src)) return null;
   return null;
 }
 
@@ -1833,19 +1345,8 @@ function VideoBlock({ src, label, onWatched }) {
         alignItems: "center",
         justifyContent: "center",
         gap: 10,
-        position: "relative",
-        overflow: "hidden",
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          pointerEvents: "none",
-          backgroundImage:
-            "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.012) 3px,rgba(255,255,255,0.012) 6px)",
-        }}
-      />
       <div
         style={{
           width: 48,
@@ -1860,7 +1361,7 @@ function VideoBlock({ src, label, onWatched }) {
       >
         <MdPlayCircle size={26} style={{ color: "rgba(203,108,220,0.5)" }} />
       </div>
-      <div style={{ textAlign: "center", zIndex: 1 }}>
+      <div style={{ textAlign: "center" }}>
         <div
           style={{
             fontSize: "0.75rem",
@@ -1886,7 +1387,6 @@ function VideoBlock({ src, label, onWatched }) {
   );
 }
 
-/* ── Recipe Step ─────────────────────────────────────────────── */
 function LearnRecipeStep({ step, index }) {
   const ing = step.ingredient || step.prepItem;
   const typeColor =
@@ -1958,23 +1458,7 @@ function LearnRecipeStep({ step, index }) {
                   flexShrink: 0,
                 }}
               />
-            ) : (
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 6,
-                  background: "var(--bg-card)",
-                  border: "1px solid var(--border)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <MdImage size={12} style={{ color: "var(--text-muted)" }} />
-              </div>
-            )}
+            ) : null}
             <div>
               <span
                 style={{
@@ -2033,205 +1517,16 @@ function LearnRecipeStep({ step, index }) {
   );
 }
 
-/* ── Prep Item Card ──────────────────────────────────────────── */
-function LearnPrepItemCard({ prep }) {
-  const [open, setOpen] = useState(false);
-  const usedInDishes = [...new Set((prep.usedIn || []).map((u) => u.menuItem))];
-  return (
-    <div
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        borderRadius: 14,
-        overflow: "hidden",
-        marginBottom: 10,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "12px 14px",
-          cursor: "pointer",
-        }}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <div
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 9,
-            background:
-              "linear-gradient(135deg,rgba(203,108,220,0.15),rgba(203,108,220,0.05))",
-            border: "1px solid rgba(203,108,220,0.2)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <MdSchool size={16} style={{ color: "var(--accent)" }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: "0.88rem",
-              fontWeight: 800,
-              color: "var(--text-heading)",
-            }}
-          >
-            {prep.name}
-          </div>
-          <div className="icart_task_meta">
-            <span>{prep.unit}</span>
-            {prep.recipe?.length > 0 && (
-              <>
-                <span className="contract_row_dot">·</span>
-                <span>
-                  {prep.recipe.length} step{prep.recipe.length !== 1 ? "s" : ""}
-                </span>
-              </>
-            )}
-            {usedInDishes.length > 0 && (
-              <>
-                <span className="contract_row_dot">·</span>
-                <span>
-                  used in {usedInDishes.length} dish
-                  {usedInDishes.length !== 1 ? "es" : ""}
-                </span>
-              </>
-            )}
-            {prep.tutorialVideo && (
-              <>
-                <span className="contract_row_dot">·</span>
-                <span style={{ color: "#ef4444" }}>▶ video</span>
-              </>
-            )}
-          </div>
-        </div>
-        {open ? (
-          <MdExpandLess
-            size={16}
-            style={{ color: "var(--text-muted)", flexShrink: 0 }}
-          />
-        ) : (
-          <MdExpandMore
-            size={16}
-            style={{ color: "var(--text-muted)", flexShrink: 0 }}
-          />
-        )}
-      </div>
-      {open && (
-        <div
-          style={{
-            padding: "0 14px 14px",
-            borderTop: "1px solid var(--border)",
-          }}
-        >
-          {usedInDishes.length > 0 && (
-            <div style={{ paddingTop: 12, marginBottom: 14 }}>
-              <div
-                style={{
-                  fontSize: "0.62rem",
-                  fontWeight: 900,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "var(--text-muted)",
-                  marginBottom: 8,
-                }}
-              >
-                Used In
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {usedInDishes.map((d) => (
-                  <span
-                    key={d}
-                    style={{
-                      fontSize: "0.68rem",
-                      fontWeight: 700,
-                      padding: "3px 9px",
-                      borderRadius: 999,
-                      background: "var(--bg-hover)",
-                      border: "1px solid var(--border)",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    {d}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          <div style={{ marginBottom: prep.recipe?.length > 0 ? 14 : 0 }}>
-            <div
-              style={{
-                fontSize: "0.62rem",
-                fontWeight: 900,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "var(--accent)",
-                marginBottom: 8,
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-              }}
-            >
-              <span
-                style={{
-                  width: 3,
-                  height: 11,
-                  borderRadius: 2,
-                  background: "var(--accent)",
-                  display: "inline-block",
-                }}
-              />
-              Tutorial Video
-            </div>
-            <VideoBlock
-              src={prep.tutorialVideo}
-              label="Prep tutorial not yet uploaded"
-            />
-          </div>
-          {prep.recipe?.length > 0 && (
-            <div>
-              <div
-                style={{
-                  fontSize: "0.62rem",
-                  fontWeight: 900,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "var(--text-muted)",
-                  marginBottom: 8,
-                }}
-              >
-                Preparation Steps
-              </div>
-              {prep.recipe.map((step, i) => (
-                <LearnRecipeStep key={step.id || i} step={step} index={i} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Menu Item Summary View ──────────────────────────────────── */
 function MenuItemSummaryView({ summary, onVideoWatched, videoWatched }) {
   const [learnSection, setLearnSection] = useState("recipe");
   const [activeVariant, setActiveVariant] = useState(0);
-
   const item = summary.menuItem || summary;
   const recipe = summary.recipe || item.recipe || [];
   const extras = summary.extras || item.extras || [];
   const variants = summary.variants || item.variants || [];
   const prepItems = summary.prepItems || [];
-
   const currentRecipe =
     variants.length > 0 ? variants[activeVariant]?.recipe || recipe : recipe;
-
   const tabs = [
     { key: "recipe", label: "Recipe", count: currentRecipe.length },
     ...(extras.length > 0
@@ -2241,7 +1536,6 @@ function MenuItemSummaryView({ summary, onVideoWatched, videoWatched }) {
       ? [{ key: "prep", label: "Prep Items", count: prepItems.length }]
       : []),
   ];
-
   return (
     <div>
       {item.image && (
@@ -2275,63 +1569,13 @@ function MenuItemSummaryView({ summary, onVideoWatched, videoWatched }) {
             style={{ position: "absolute", bottom: 12, left: 14, right: 14 }}
           >
             <div
-              style={{
-                fontSize: "1.05rem",
-                fontWeight: 900,
-                color: "#fff",
-                marginBottom: 3,
-              }}
+              style={{ fontSize: "1.05rem", fontWeight: 900, color: "#fff" }}
             >
               {item.name}
-            </div>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-              {item.ticketTime > 0 && (
-                <span
-                  style={{
-                    fontSize: "0.62rem",
-                    fontWeight: 700,
-                    padding: "2px 7px",
-                    borderRadius: 5,
-                    background: "rgba(0,0,0,0.5)",
-                    color: "rgba(255,255,255,0.85)",
-                  }}
-                >
-                  ⏱ {item.ticketTime}min
-                </span>
-              )}
-              {item.tutorialVideo && (
-                <span
-                  style={{
-                    fontSize: "0.62rem",
-                    fontWeight: 700,
-                    padding: "2px 7px",
-                    borderRadius: 5,
-                    background: "rgba(239,68,68,0.7)",
-                    color: "#fff",
-                  }}
-                >
-                  ▶ Tutorial
-                </span>
-              )}
-              {variants.length > 1 && (
-                <span
-                  style={{
-                    fontSize: "0.62rem",
-                    fontWeight: 700,
-                    padding: "2px 7px",
-                    borderRadius: 5,
-                    background: "rgba(203,108,220,0.6)",
-                    color: "#fff",
-                  }}
-                >
-                  {variants.length} variants
-                </span>
-              )}
             </div>
           </div>
         </div>
       )}
-
       {item.description && (
         <p
           style={{
@@ -2344,8 +1588,6 @@ function MenuItemSummaryView({ summary, onVideoWatched, videoWatched }) {
           {item.description}
         </p>
       )}
-
-      {/* Tutorial video */}
       <div style={{ marginBottom: 16 }}>
         <div
           style={{
@@ -2412,51 +1654,6 @@ function MenuItemSummaryView({ summary, onVideoWatched, videoWatched }) {
           </div>
         )}
       </div>
-
-      {/* Variant selector */}
-      {variants.length > 1 && (
-        <div style={{ marginBottom: 14 }}>
-          <div
-            style={{
-              fontSize: "0.62rem",
-              fontWeight: 900,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "var(--text-muted)",
-              marginBottom: 8,
-            }}
-          >
-            Variants
-          </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {variants.map((v, i) => (
-              <button
-                key={v.id || i}
-                onClick={() => setActiveVariant(i)}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 8,
-                  border: `1px solid ${activeVariant === i ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                  background:
-                    activeVariant === i
-                      ? "var(--bg-active)"
-                      : "var(--bg-hover)",
-                  color:
-                    activeVariant === i ? "var(--accent)" : "var(--text-muted)",
-                  fontSize: "0.78rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                {v.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Section tabs */}
       {tabs.length > 1 && (
         <div
           style={{
@@ -2488,8 +1685,6 @@ function MenuItemSummaryView({ summary, onVideoWatched, videoWatched }) {
                 fontWeight: 700,
                 cursor: "pointer",
                 fontFamily: "inherit",
-                boxShadow:
-                  learnSection === t.key ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
               }}
             >
               {t.label} ({t.count})
@@ -2497,23 +1692,8 @@ function MenuItemSummaryView({ summary, onVideoWatched, videoWatched }) {
           ))}
         </div>
       )}
-
       {learnSection === "recipe" && (
         <div>
-          <div
-            style={{
-              fontSize: "0.62rem",
-              fontWeight: 900,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "var(--text-muted)",
-              marginBottom: 8,
-            }}
-          >
-            {variants.length > 1
-              ? `${variants[activeVariant]?.name || ""} Recipe`
-              : "Recipe Steps"}
-          </div>
           {!currentRecipe?.length ? (
             <div
               style={{
@@ -2532,159 +1712,14 @@ function MenuItemSummaryView({ summary, onVideoWatched, videoWatched }) {
           )}
         </div>
       )}
-
-      {learnSection === "extras" && extras.length > 0 && (
-        <div>
-          <div
-            style={{
-              fontSize: "0.62rem",
-              fontWeight: 900,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "var(--text-muted)",
-              marginBottom: 8,
-            }}
-          >
-            Add-ons & Extras
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {extras.map((ex, i) => (
-              <div
-                key={ex.id || i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "9px 12px",
-                  background: "var(--bg-hover)",
-                  borderRadius: 10,
-                  border: "1px solid var(--border)",
-                }}
-              >
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 6,
-                    background: "rgba(203,108,220,0.1)",
-                    border: "1px solid rgba(203,108,220,0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <MdRestaurantMenu
-                    size={13}
-                    style={{ color: "var(--accent)" }}
-                  />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: "0.8rem",
-                      fontWeight: 700,
-                      color: "var(--text-body)",
-                    }}
-                  >
-                    {ex.prepItem?.name || ex.name || "Extra"}
-                  </div>
-                  {ex.prepItem?.unit && (
-                    <div
-                      style={{
-                        fontSize: "0.66rem",
-                        color: "var(--text-muted)",
-                      }}
-                    >
-                      {ex.prepItem.unit}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {learnSection === "prep" && prepItems.length > 0 && (
-        <div>
-          {prepItems.map((prep) => (
-            <LearnPrepItemCard key={prep.id} prep={prep} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
 
-/**
- * PATCH FOR OperatorCart.jsx  — E-Learning: video gate + letter grades
- * ============================================================
- * STEP 1 — Replace VideoBlock function signature (adds onWatched prop):
- *
- *   FIND:    function VideoBlock({ src, label }) {
- *   REPLACE: function VideoBlock({ src, label, onWatched }) {
- *
- *   Then inside VideoBlock, on the iframe path add a "Mark as Watched" button:
- *   After the closing </div> of the iframe wrapper, insert:
- *
- *     {onWatched && (
- *       <button onClick={onWatched} style={{ marginTop: 8, width: "100%", height: 36,
- *         borderRadius: 9, border: "1px solid rgba(34,197,94,0.3)",
- *         background: "rgba(34,197,94,0.07)", color: "#16a34a",
- *         fontFamily: "inherit", fontWeight: 700, fontSize: "0.8rem",
- *         cursor: "pointer", display: "flex", alignItems: "center",
- *         justifyContent: "center", gap: 6 }}>
- *         <MdCheck size={15} /> Mark as Watched
- *       </button>
- *     )}
- *
- *   On the native <video> tag, add:  onEnded={onWatched}
- *
- * ─────────────────────────────────────────────────────────────
- * STEP 2 — Replace MenuItemSummaryView signature + Tutorial Video block:
- *
- *   FIND:    function MenuItemSummaryView({ summary }) {
- *   REPLACE: function MenuItemSummaryView({ summary, onVideoWatched, videoWatched }) {
- *
- *   FIND the tutorial VideoBlock call:
- *     <VideoBlock src={item.tutorialVideo} label="Tutorial not yet uploaded" />
- *   REPLACE WITH:
- *     <VideoBlock src={item.tutorialVideo} label="Tutorial not yet uploaded" onWatched={onVideoWatched} />
- *     {item.tutorialVideo && !videoWatched && (
- *       <div style={{ marginTop:8, padding:"8px 12px", background:"rgba(234,179,8,0.08)",
- *         border:"1px solid rgba(234,179,8,0.25)", borderRadius:8,
- *         fontSize:"0.74rem", color:"#ca8a04", fontWeight:600 }}>
- *         ⚠ Watch the full video then tap "Mark as Watched" to unlock the test
- *       </div>
- *     )}
- *     {item.tutorialVideo && videoWatched && (
- *       <div style={{ marginTop:8, padding:"8px 12px", background:"rgba(34,197,94,0.07)",
- *         border:"1px solid rgba(34,197,94,0.2)", borderRadius:8,
- *         fontSize:"0.74rem", color:"#16a34a", fontWeight:600,
- *         display:"flex", alignItems:"center", gap:5 }}>
- *         <MdCheck size={14} /> Tutorial watched — test is unlocked!
- *       </div>
- *     )}
- *
- * ─────────────────────────────────────────────────────────────
- * STEP 3 — Replace the entire ELearning section:
- *
- *   In OperatorCart.jsx, find the line:
- *       export function ELearningTab({ menuItems }) {
- *   DELETE everything from that line to its matching closing `}`.
- *   Also delete the ScoresView, TestResultView, ActiveTestView, StartTestView
- *   functions that appear just above it (they are replaced by the versions below).
- *
- *   Paste ALL of the code below immediately before `export function SalesTab`.
- * ============================================================
- */
-
-/* ── Scores history view ─────────────────────────────────────── */
+/* ── ScoresView — PATCHED: score IS already %, pass = 90 ── */
 function ScoresView({ onBack }) {
   const [scores, setScores] = useState([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     api
       .get("/library/elearning/scores")
@@ -2697,25 +1732,15 @@ function ScoresView({ onBack }) {
       .catch(() => toast.error("Failed to load scores"))
       .finally(() => setLoading(false));
   }, []);
-
-  const fmtDate = (d) =>
-    d
-      ? new Date(d).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
-      : "—";
-
+  // PATCH: pass threshold = 90
   const scoreColor = (pct) =>
-    pct >= 80 ? "#16a34a" : pct >= 50 ? "#ca8a04" : "#ef4444";
+    pct >= 90 ? "#16a34a" : pct >= 50 ? "#ca8a04" : "#ef4444";
   const scoreBg = (pct) =>
-    pct >= 80
+    pct >= 90
       ? "rgba(34,197,94,0.1)"
       : pct >= 50
         ? "rgba(234,179,8,0.1)"
         : "rgba(239,68,68,0.1)";
-
   return (
     <div>
       <button
@@ -2737,7 +1762,6 @@ function ScoresView({ onBack }) {
       >
         <MdArrowBack size={15} /> Back to Learning
       </button>
-
       <div
         style={{
           fontSize: "0.95rem",
@@ -2757,7 +1781,6 @@ function ScoresView({ onBack }) {
       >
         Your past e-learning test results
       </div>
-
       {loading ? (
         <div className="drawer_loading">
           <div className="page_loader_spinner" />
@@ -2770,12 +1793,9 @@ function ScoresView({ onBack }) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {scores.map((entry, i) => {
-            const pct =
-              entry.percentage ??
-              (entry.score != null && entry.total
-                ? Math.round((entry.score / entry.total) * 100)
-                : null);
-            const passed = entry.passed ?? (pct != null ? pct >= 50 : null);
+            // PATCH: API score IS already a percentage (0-100), pass = 90
+            const pct = entry.score != null ? Math.round(entry.score) : null;
+            const passed = pct != null ? pct >= 90 : null;
             return (
               <div
                 key={entry.id || i}
@@ -2826,13 +1846,13 @@ function ScoresView({ onBack }) {
                   >
                     {entry.menuItemName ||
                       entry.menuItem?.name ||
-                      entry.title ||
-                      `Test #${(entry.id || "").slice(0, 6).toUpperCase()}`}
+                      `Test · ${(entry.id || "").slice(0, 6).toUpperCase()}`}
                   </div>
                   <div className="icart_task_meta">
-                    {entry.score != null && entry.total != null && (
+                    {entry.menuIds?.length > 0 && (
                       <span>
-                        {entry.score}/{entry.total} correct
+                        {entry.menuIds.length} menu item
+                        {entry.menuIds.length !== 1 ? "s" : ""}
                       </span>
                     )}
                     {entry.createdAt && (
@@ -2870,17 +1890,14 @@ function ScoresView({ onBack }) {
   );
 }
 
-/* ── Test result view ────────────────────────────────────────── */
+/* ── TestResultView — PATCHED: pass=90, correct buttons, grade labels ── */
 function TestResultView({ result, onRetake, onDone }) {
-  const pct =
-    result.percentage ??
-    (result.score != null && result.total
-      ? Math.round((result.score / result.total) * 100)
-      : null);
-  const passed = result.passed ?? (pct != null ? pct >= 50 : null);
+  const pct = result.percentage != null ? Math.round(result.percentage) : null;
+  // PATCH: pass threshold = 90
+  const passed = result.passed ?? (pct != null ? pct >= 90 : null);
   const color =
     pct != null
-      ? pct >= 80
+      ? pct >= 90
         ? "#16a34a"
         : pct >= 50
           ? "#ca8a04"
@@ -2888,13 +1905,59 @@ function TestResultView({ result, onRetake, onDone }) {
       : "var(--text-muted)";
   const bg =
     pct != null
-      ? pct >= 80
+      ? pct >= 90
         ? "rgba(34,197,94,0.08)"
         : pct >= 50
           ? "rgba(234,179,8,0.08)"
           : "rgba(239,68,68,0.08)"
       : "var(--bg-hover)";
-
+  const grade =
+    pct == null
+      ? null
+      : pct >= 90
+        ? {
+            letter: "A",
+            label: "Distinction",
+            color: "#16a34a",
+            bg: "rgba(34,197,94,0.1)",
+            border: "rgba(34,197,94,0.3)",
+            range: "90–100%",
+          }
+        : pct >= 75
+          ? {
+              letter: "B",
+              label: "Credit",
+              color: "#3b82f6",
+              bg: "rgba(59,130,246,0.1)",
+              border: "rgba(59,130,246,0.3)",
+              range: "75–89%",
+            }
+          : pct >= 60
+            ? {
+                letter: "C",
+                label: "Merit",
+                color: "#ca8a04",
+                bg: "rgba(234,179,8,0.1)",
+                border: "rgba(234,179,8,0.3)",
+                range: "60–74%",
+              }
+            : pct >= 50
+              ? {
+                  letter: "D",
+                  label: "Pass",
+                  color: "#f97316",
+                  bg: "rgba(249,115,22,0.1)",
+                  border: "rgba(249,115,22,0.3)",
+                  range: "50–59%",
+                }
+              : {
+                  letter: "F",
+                  label: "Fail — Retake Required",
+                  color: "#ef4444",
+                  bg: "rgba(239,68,68,0.1)",
+                  border: "rgba(239,68,68,0.3)",
+                  range: "under 90%",
+                };
   return (
     <div
       style={{
@@ -2935,110 +1998,66 @@ function TestResultView({ result, onRetake, onDone }) {
           </span>
         )}
       </div>
-      {/* Letter grade badge */}
-      {(() => {
-        const g =
-          pct == null
-            ? null
-            : pct >= 90
-              ? {
-                  letter: "A",
-                  label: "Distinction",
-                  color: "#16a34a",
-                  bg: "rgba(34,197,94,0.1)",
-                  border: "rgba(34,197,94,0.3)",
-                }
-              : pct >= 75
-                ? {
-                    letter: "B",
-                    label: "Credit",
-                    color: "#3b82f6",
-                    bg: "rgba(59,130,246,0.1)",
-                    border: "rgba(59,130,246,0.3)",
-                  }
-                : pct >= 60
-                  ? {
-                      letter: "C",
-                      label: "Merit",
-                      color: "#ca8a04",
-                      bg: "rgba(234,179,8,0.1)",
-                      border: "rgba(234,179,8,0.3)",
-                    }
-                  : pct >= 50
-                    ? {
-                        letter: "D",
-                        label: "Pass",
-                        color: "#f97316",
-                        bg: "rgba(249,115,22,0.1)",
-                        border: "rgba(249,115,22,0.3)",
-                      }
-                    : {
-                        letter: "F",
-                        label: "Fail",
-                        color: "#ef4444",
-                        bg: "rgba(239,68,68,0.1)",
-                        border: "rgba(239,68,68,0.3)",
-                      };
-        if (!g) return null;
-        return (
+      {grade && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 14,
+            padding: "10px 18px",
+            background: grade.bg,
+            border: `1.5px solid ${grade.border}`,
+            borderRadius: 14,
+            width: "100%",
+          }}
+        >
           <div
             style={{
+              width: 52,
+              height: 52,
+              borderRadius: 14,
+              background: "rgba(255,255,255,0.12)",
               display: "flex",
               alignItems: "center",
-              gap: 12,
-              marginBottom: 12,
-              padding: "10px 18px",
-              background: g.bg,
-              border: `1.5px solid ${g.border}`,
-              borderRadius: 14,
+              justifyContent: "center",
+              flexShrink: 0,
             }}
           >
-            <div
+            <span
               style={{
-                width: 52,
-                height: 52,
-                borderRadius: 14,
-                background: "rgba(255,255,255,0.12)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                fontSize: "1.8rem",
+                fontWeight: 900,
+                color: grade.color,
+                lineHeight: 1,
               }}
             >
-              <span
-                style={{
-                  fontSize: "1.8rem",
-                  fontWeight: 900,
-                  color: g.color,
-                  lineHeight: 1,
-                }}
-              >
-                {g.letter}
-              </span>
+              {grade.letter}
+            </span>
+          </div>
+          <div>
+            <div
+              style={{
+                fontSize: "1.05rem",
+                fontWeight: 900,
+                color: grade.color,
+              }}
+            >
+              {grade.label}
             </div>
-            <div>
-              <div
-                style={{ fontSize: "1.05rem", fontWeight: 900, color: g.color }}
-              >
-                {g.label}
-              </div>
-              <div
-                style={{
-                  fontSize: "0.72rem",
-                  color: "var(--text-muted)",
-                  marginTop: 1,
-                }}
-              >
-                {g.letter === "A" && "Excellent · 90–100%"}
-                {g.letter === "B" && "Credit · 75–89%"}
-                {g.letter === "C" && "Merit · 60–74%"}
-                {g.letter === "D" && "Pass · 50–59%"}
-                {g.letter === "F" && "Below pass · under 50%"}
-              </div>
+            <div
+              style={{
+                fontSize: "0.72rem",
+                color: "var(--text-muted)",
+                marginTop: 1,
+              }}
+            >
+              {grade.range}
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
+      {/* PATCH: passed uses 90 threshold, messages updated */}
       <div
         style={{
           fontSize: "1.1rem",
@@ -3047,28 +2066,21 @@ function TestResultView({ result, onRetake, onDone }) {
           marginBottom: 6,
         }}
       >
-        {passed === true
-          ? "🎉 Passed!"
-          : passed === false
-            ? "Try Again"
-            : "Test Complete"}
+        {passed ? "🎉 Passed!" : "Try Again"}
       </div>
       <div
         style={{
           fontSize: "0.82rem",
           color: "var(--text-muted)",
-          marginBottom: 24,
+          marginBottom: 20,
           textAlign: "center",
-          maxWidth: 280,
+          maxWidth: 300,
         }}
       >
-        {passed === true
-          ? "Great work! You've demonstrated solid knowledge of this menu item."
-          : passed === false
-            ? "Review the learning materials and try again to improve your score."
-            : "Your test has been submitted."}
+        {passed
+          ? "Excellent! You've demonstrated solid knowledge of this menu item."
+          : "You need 90% or above to pass. Review the tutorial video and try again."}
       </div>
-
       {result.answers?.length > 0 && (
         <div style={{ width: "100%", marginBottom: 20 }}>
           <div
@@ -3154,9 +2166,9 @@ function TestResultView({ result, onRetake, onDone }) {
           </div>
         </div>
       )}
-
+      {/* PATCH: Retake only shown when failed; button text contextual */}
       <div style={{ display: "flex", gap: 8, width: "100%" }}>
-        {onRetake && (
+        {!passed && onRetake && (
           <button
             className="app_btn app_btn_cancel"
             style={{ flex: 1, height: 42 }}
@@ -3167,28 +2179,26 @@ function TestResultView({ result, onRetake, onDone }) {
         )}
         <button
           className="app_btn app_btn_confirm"
-          style={{ flex: 2, height: 42 }}
+          style={{ flex: !passed && onRetake ? 2 : 1, height: 42 }}
           onClick={onDone}
         >
-          Done
+          {passed ? "Continue" : "Back to Learning"}
         </button>
       </div>
     </div>
   );
 }
 
-/* ── Active test ─────────────────────────────────────────────── */
+/* ── ActiveTestView — PATCHED: normalise API response ── */
 function ActiveTestView({ test, onSubmit, onCancel }) {
   const questions = test.questions || [];
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
-
   const q = questions[current];
   const totalQ = questions.length;
   const answered = Object.keys(answers).length;
   const progress = totalQ > 0 ? Math.round((answered / totalQ) * 100) : 0;
-
   const selectAnswer = (questionId, answer) =>
     setAnswers((p) => ({ ...p, [questionId]: answer }));
 
@@ -3208,7 +2218,26 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
           answer,
         })),
       });
-      onSubmit(res.data.data);
+      // PATCH: normalise API response to TestResultView shape
+      // API returns: { score (0-100 %), questions: [{id, question, isCorrect, correctAnswer, userAnswer}] }
+      const raw = res.data.data;
+      const pct = typeof raw.score === "number" ? Math.round(raw.score) : null;
+      const qs = raw.questions || [];
+      const correct = qs.filter((q) => q.isCorrect).length;
+      const normalised = {
+        percentage: pct,
+        score: correct,
+        total: qs.length,
+        passed: pct != null ? pct >= 90 : null,
+        answers: qs.map((q) => ({
+          questionId: q.id,
+          question: q.question,
+          answer: q.userAnswer,
+          correctAnswer: q.correctAnswer,
+          correct: q.isCorrect,
+        })),
+      };
+      onSubmit(normalised);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to submit test");
     } finally {
@@ -3216,22 +2245,18 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
     }
   };
 
-  if (!q) {
+  if (!q)
     return (
       <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
         <MdSchool size={28} style={{ opacity: 0.3 }} />
         <span>No questions in this test</span>
       </div>
     );
-  }
-
   const options = q.options || q.choices || [];
   const isWritten = q.type === "WRITTEN" || options.length === 0;
   const selectedAnswer = answers[q.id];
-
   return (
     <div>
-      {/* Progress header */}
       <div
         style={{
           display: "flex",
@@ -3302,8 +2327,6 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
           {answered}/{totalQ}
         </div>
       </div>
-
-      {/* Question */}
       <div
         style={{
           background: "var(--bg-card)",
@@ -3352,7 +2375,6 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
             {q.question || q.text || q.prompt || "Question"}
           </p>
         </div>
-
         {!isWritten ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {options.map((opt, oi) => {
@@ -3422,8 +2444,6 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
           />
         )}
       </div>
-
-      {/* Prev / Next / Submit */}
       <div style={{ display: "flex", gap: 8 }}>
         <button
           className="app_btn app_btn_cancel"
@@ -3470,8 +2490,6 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
           </button>
         )}
       </div>
-
-      {/* Question dot navigator */}
       {totalQ > 1 && (
         <div
           style={{
@@ -3517,18 +2535,16 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
   );
 }
 
-/* ── Start test view ─────────────────────────────────────────── */
+/* ── StartTestView — PATCHED: 90% threshold mention ── */
 function StartTestView({ menuItems, onStarted, onCancel }) {
   const [selectedIds, setSelectedIds] = useState(
     menuItems.length === 1 ? [menuItems[0].id] : [],
   );
   const [starting, setStarting] = useState(false);
-
   const toggle = (id) =>
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
-
   const handleStart = async () => {
     if (!selectedIds.length)
       return toast.error("Select at least one menu item");
@@ -3544,7 +2560,6 @@ function StartTestView({ menuItems, onStarted, onCancel }) {
       setStarting(false);
     }
   };
-
   return (
     <div>
       <button
@@ -3566,12 +2581,10 @@ function StartTestView({ menuItems, onStarted, onCancel }) {
       >
         <MdArrowBack size={15} /> Back to Learning
       </button>
-
-      {/* Hero */}
       <div
         style={{
           background:
-            "linear-gradient(135deg, rgba(203,108,220,0.12) 0%, rgba(203,108,220,0.04) 100%)",
+            "linear-gradient(135deg,rgba(203,108,220,0.12),rgba(203,108,220,0.04))",
           border: "1px solid rgba(203,108,220,0.2)",
           borderRadius: 16,
           padding: "20px 18px",
@@ -3607,6 +2620,7 @@ function StartTestView({ menuItems, onStarted, onCancel }) {
           >
             Knowledge Test
           </div>
+          {/* PATCH: mention 90% threshold */}
           <div
             style={{
               fontSize: "0.78rem",
@@ -3614,12 +2628,11 @@ function StartTestView({ menuItems, onStarted, onCancel }) {
               lineHeight: 1.55,
             }}
           >
-            Select the menu items you want to be tested on. Questions will cover
-            ingredients, preparation steps, and techniques.
+            Select the menu items you want to be tested on. You need 90% or
+            above to pass.
           </div>
         </div>
       </div>
-
       <div
         style={{
           fontSize: "0.62rem",
@@ -3632,7 +2645,6 @@ function StartTestView({ menuItems, onStarted, onCancel }) {
       >
         Select Menu Items ({selectedIds.length} selected)
       </div>
-
       <div
         style={{
           display: "flex",
@@ -3712,17 +2724,6 @@ function StartTestView({ menuItems, onStarted, onCancel }) {
                 >
                   {name}
                 </div>
-                {item.ticketTime > 0 && (
-                  <div
-                    style={{
-                      fontSize: "0.68rem",
-                      color: "var(--text-muted)",
-                      marginTop: 1,
-                    }}
-                  >
-                    ⏱ {item.ticketTime} min prep
-                  </div>
-                )}
               </div>
               <div
                 style={{
@@ -3743,7 +2744,6 @@ function StartTestView({ menuItems, onStarted, onCancel }) {
           );
         })}
       </div>
-
       <button
         className={`app_btn app_btn_confirm${starting ? " btn_loading" : ""}`}
         style={{
@@ -3763,7 +2763,7 @@ function StartTestView({ menuItems, onStarted, onCancel }) {
         <span className="btn_text">
           <MdSchool size={16} /> Start Test
           {selectedIds.length > 0 &&
-            ` · ${selectedIds.length} item${selectedIds.length !== 1 ? "s" : ""}`}
+            ` \u00B7 ${selectedIds.length} item${selectedIds.length !== 1 ? "s" : ""}`}
         </span>
         {starting && (
           <span className="btn_loader" style={{ width: 15, height: 15 }} />
@@ -3773,18 +2773,23 @@ function StartTestView({ menuItems, onStarted, onCancel }) {
   );
 }
 
-/* ── Main E-Learning Tab ─────────────────────────────────────── */
+/* ── ELearningTab — PATCHED: unmarkWatched + onRetake re-locks tutorial ── */
 export function ELearningTab({ menuItems }) {
-  const [mode, setMode] = useState("learn"); // "learn" | "start-test" | "active-test" | "result" | "scores"
+  const [mode, setMode] = useState("learn");
   const [selectedId, setSelectedId] = useState(null);
   const [summary, setSummary] = useState(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [activeTest, setActiveTest] = useState(null);
   const [testResult, setTestResult] = useState(null);
-
-  // Track which items' tutorials have been watched
   const [watchedIds, setWatchedIds] = useState(new Set());
   const markWatched = (id) => setWatchedIds((prev) => new Set([...prev, id]));
+  // PATCH: unmark so tutorial must be re-watched after failed test
+  const unmarkWatched = (id) =>
+    setWatchedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
 
   const loadSummary = async (menuItemId) => {
     setSelectedId(menuItemId);
@@ -3794,7 +2799,6 @@ export function ELearningTab({ menuItems }) {
       const res = await api.get(`/vendor/menu/${menuItemId}/summary`);
       const data = res.data.data;
       setSummary(data);
-      // Auto-unlock items with no tutorial video
       const item = data?.menuItem || data;
       if (!item?.tutorialVideo) markWatched(menuItemId);
     } catch {
@@ -3808,18 +2812,15 @@ export function ELearningTab({ menuItems }) {
     if (menuItems?.length > 0 && !selectedId) loadSummary(menuItems[0].id);
   }, [menuItems]);
 
-  if (!menuItems?.length) {
+  if (!menuItems?.length)
     return (
       <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
         <MdSchool size={28} style={{ opacity: 0.3 }} />
         <span>No menu items available</span>
       </div>
     );
-  }
-
   if (mode === "scores") return <ScoresView onBack={() => setMode("learn")} />;
-
-  if (mode === "start-test") {
+  if (mode === "start-test")
     return (
       <StartTestView
         menuItems={menuItems}
@@ -3830,9 +2831,7 @@ export function ELearningTab({ menuItems }) {
         onCancel={() => setMode("learn")}
       />
     );
-  }
-
-  if (mode === "active-test" && activeTest) {
+  if (mode === "active-test" && activeTest)
     return (
       <ActiveTestView
         test={activeTest}
@@ -3850,17 +2849,21 @@ export function ELearningTab({ menuItems }) {
         }}
       />
     );
-  }
-
-  if (mode === "result" && testResult) {
+  if (mode === "result" && testResult)
     return (
       <TestResultView
         result={testResult}
-        onRetake={() => {
-          setActiveTest(null);
-          setTestResult(null);
-          setMode("start-test");
-        }}
+        // PATCH: onRetake re-locks tutorial so user must re-watch before retaking
+        onRetake={
+          !testResult.passed
+            ? () => {
+                setActiveTest(null);
+                setTestResult(null);
+                if (selectedId) unmarkWatched(selectedId);
+                setMode("learn");
+              }
+            : undefined
+        }
         onDone={() => {
           setActiveTest(null);
           setTestResult(null);
@@ -3868,12 +2871,9 @@ export function ELearningTab({ menuItems }) {
         }}
       />
     );
-  }
 
-  /* ── Default: learn mode ── */
   return (
     <div>
-      {/* Test action bar */}
       <div
         style={{
           display: "flex",
@@ -3898,6 +2898,7 @@ export function ELearningTab({ menuItems }) {
               ? "Ready to be tested?"
               : "Watch the tutorial first"}
           </div>
+          {/* PATCH: subtitle mentions 90% threshold */}
           <div
             style={{
               fontSize: "0.7rem",
@@ -3906,7 +2907,7 @@ export function ELearningTab({ menuItems }) {
             }}
           >
             {watchedIds.has(selectedId)
-              ? "Test your knowledge of the menu"
+              ? "Score 90% or above to pass"
               : "Finish the video below to unlock the test"}
           </div>
         </div>
@@ -3947,18 +2948,11 @@ export function ELearningTab({ menuItems }) {
             opacity: watchedIds.has(selectedId) ? 1 : 0.45,
             cursor: watchedIds.has(selectedId) ? "pointer" : "not-allowed",
           }}
-          title={
-            !watchedIds.has(selectedId)
-              ? "Watch the tutorial video first"
-              : undefined
-          }
         >
           <MdSchool size={14} />{" "}
-          {watchedIds.has(selectedId) ? "Take Test" : "🔒 Locked"}
+          {watchedIds.has(selectedId) ? "Take Test" : "\uD83D\uDD12 Locked"}
         </button>
       </div>
-
-      {/* Item selector pills */}
       {menuItems.length > 1 && (
         <div
           style={{
@@ -4025,7 +3019,6 @@ export function ELearningTab({ menuItems }) {
           })}
         </div>
       )}
-
       {loadingSummary && (
         <div className="drawer_loading">
           <div className="page_loader_spinner" />
@@ -4042,9 +3035,7 @@ export function ELearningTab({ menuItems }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════
-   TAB: SALES  (menu-item based, no concepts)
-   ════════════════════════════════════════════════════════════ */
+/* SALES */
 const pmColors = {
   CASH: {
     bg: "rgba(34,197,94,0.1)",
@@ -4067,7 +3058,6 @@ const pmColors = {
     border: "rgba(107,114,128,0.2)",
   },
 };
-
 function PaymentBadge({ method }) {
   const c = pmColors[method] || pmColors.OTHER;
   return (
@@ -4090,10 +3080,8 @@ function PaymentBadge({ method }) {
   );
 }
 
-/* ── Item Customiser sheet ───────────────────────────────────── */
 function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
   const hasVariants = item.variants?.length > 0;
-  const hasExtras = item.extras?.length > 0;
   const [selectedVariant, setSelectedVariant] = useState(
     hasVariants ? item.variants[0].id : null,
   );
@@ -4101,7 +3089,8 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
   const [qty, setQty] = useState(1);
   const [price, setPrice] = useState(item.sellingPrice || 0);
   const [fetchingPrice, setFetchingPrice] = useState(false);
-
+  const fmt = (n) =>
+    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
   useEffect(() => {
     setFetchingPrice(true);
     api
@@ -4123,15 +3112,11 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
       .catch(() => setPrice(item.sellingPrice || 0))
       .finally(() => setFetchingPrice(false));
   }, [selectedVariant, selectedExtras.join(",")]);
-
   const toggleExtra = (id) =>
     setSelectedExtras((p) =>
       p.includes(id) ? p.filter((e) => e !== id) : [...p, id],
     );
-  const fmt = (n) =>
-    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
   const totalPrice = price * qty;
-
   const confirm = () => {
     const variantObj =
       item.variants?.find((v) => v.id === selectedVariant) || null;
@@ -4148,7 +3133,6 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
     });
     onClose();
   };
-
   return (
     <div
       style={{
@@ -4276,7 +3260,7 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
                     Calculating…
                   </span>
                 ) : price > 0 ? (
-                  `₦${fmt(price)}`
+                  `\u20A6${fmt(price)}`
                 ) : (
                   "Price TBD"
                 )}
@@ -4369,108 +3353,7 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
                             color: "var(--text-muted)",
                           }}
                         >
-                          +₦{fmt(v.priceAddition)}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {hasExtras && (
-            <div style={{ marginBottom: 20 }}>
-              <div
-                style={{
-                  fontSize: "0.72rem",
-                  fontWeight: 800,
-                  color: "var(--text-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  marginBottom: 10,
-                }}
-              >
-                Extras{" "}
-                <span
-                  style={{
-                    fontSize: "0.65rem",
-                    fontWeight: 500,
-                    textTransform: "none",
-                    letterSpacing: 0,
-                  }}
-                >
-                  (optional)
-                </span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                {item.extras.map((ex) => {
-                  const active = selectedExtras.includes(ex.id);
-                  return (
-                    <button
-                      key={ex.id}
-                      onClick={() => toggleExtra(ex.id)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "11px 14px",
-                        borderRadius: 11,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        background: active
-                          ? "var(--bg-active)"
-                          : "var(--bg-hover)",
-                        border: `1px solid ${active ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                        transition: "all 0.12s",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 18,
-                            height: 18,
-                            borderRadius: 5,
-                            border: `2px solid ${active ? "var(--accent)" : "var(--border)"}`,
-                            background: active
-                              ? "var(--accent)"
-                              : "transparent",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {active && (
-                            <MdCheck size={12} style={{ color: "#fff" }} />
-                          )}
-                        </div>
-                        <span
-                          style={{
-                            fontSize: "0.85rem",
-                            fontWeight: active ? 700 : 500,
-                            color: active
-                              ? "var(--accent)"
-                              : "var(--text-body)",
-                          }}
-                        >
-                          {ex.name}
-                        </span>
-                      </div>
-                      {ex.price > 0 && (
-                        <span
-                          style={{
-                            fontSize: "0.75rem",
-                            fontWeight: 700,
-                            color: "var(--text-muted)",
-                          }}
-                        >
-                          +₦{fmt(ex.price)}
+                          +\u20A6{fmt(v.priceAddition)}
                         </span>
                       )}
                     </button>
@@ -4561,25 +3444,13 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
                 fontWeight: 800,
               }}
             >
-              <MdAdd size={17} />
-              Add to Order
+              <MdAdd size={17} /> Add to Order{" "}
               {!fetchingPrice && totalPrice > 0 && (
-                <span style={{ opacity: 0.85 }}>· ₦{fmt(totalPrice)}</span>
-              )}
-              {fetchingPrice && (
-                <span
-                  style={{
-                    width: 13,
-                    height: 13,
-                    border: "2px solid rgba(255,255,255,0.3)",
-                    borderTopColor: "#fff",
-                    borderRadius: "50%",
-                    animation: "saleSpin 0.7s linear infinite",
-                  }}
-                />
+                <span style={{ opacity: 0.85 }}>
+                  \u00B7 \u20A6{fmt(totalPrice)}
+                </span>
               )}
             </button>
-            <style>{`@keyframes saleSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
           </div>
         </div>
       </div>
@@ -4587,7 +3458,6 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
   );
 }
 
-/* ── Record Sale Form  (menu-item based, no concepts) ────────── */
 function RecordSaleForm({ cartId, menuItems, onSaved }) {
   const fmt = (n) =>
     Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
@@ -4595,7 +3465,6 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
   const [customising, setCustomising] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [saving, setSaving] = useState(false);
-
   const addToCart = ({
     item,
     qty,
@@ -4624,7 +3493,6 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
     }));
     toast.success(`${item.name} added`, { autoClose: 800 });
   };
-
   const removeFromCart = (key) =>
     setCart((prev) => {
       const n = { ...prev };
@@ -4643,14 +3511,12 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
       }
       return { ...prev, [key]: { ...e, qty: newQty } };
     });
-
   const cartEntries = Object.entries(cart);
   const cartTotal = cartEntries.reduce(
     (s, [, e]) => s + (e.unitPrice || 0) * e.qty,
     0,
   );
   const cartCount = cartEntries.reduce((s, [, e]) => s + e.qty, 0);
-
   const handleSubmit = async () => {
     if (!cartEntries.length) return toast.error("Add at least one item");
     setSaving(true);
@@ -4673,7 +3539,6 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
       setSaving(false);
     }
   };
-
   return (
     <div
       style={{
@@ -4684,7 +3549,6 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
         marginBottom: 16,
       }}
     >
-      {/* Header */}
       <div
         style={{
           padding: "14px 16px",
@@ -4733,7 +3597,6 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
                   fontWeight: 700,
                   fontSize: "0.66rem",
                   fontFamily: "inherit",
-                  transition: "all 0.15s",
                 }}
               >
                 {m}
@@ -4742,10 +3605,8 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
           })}
         </div>
       </div>
-
-      {/* Menu items grid */}
       <div style={{ padding: "12px 16px", maxHeight: 320, overflowY: "auto" }}>
-        {!menuItems || menuItems.length === 0 ? (
+        {!menuItems?.length ? (
           <div className="icart_empty_inline" style={{ padding: "24px 0" }}>
             <MdRestaurantMenu size={22} style={{ opacity: 0.3 }} />
             <span>No menu items</span>
@@ -4779,7 +3640,6 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
                     cursor: "pointer",
                     fontFamily: "inherit",
                     textAlign: "left",
-                    transition: "all 0.15s",
                     position: "relative",
                   }}
                 >
@@ -4838,7 +3698,7 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
                     }}
                   >
                     {price > 0
-                      ? `₦${Number(price).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`
+                      ? `\u20A6${Number(price).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`
                       : "—"}
                   </div>
                   {inCart > 0 && (
@@ -4868,24 +3728,10 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
           </div>
         )}
       </div>
-
-      {/* Order summary */}
       {cartEntries.length > 0 && (
         <div
           style={{ borderTop: "1px solid var(--border)", padding: "12px 16px" }}
         >
-          <div
-            style={{
-              fontSize: "0.68rem",
-              fontWeight: 800,
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              marginBottom: 10,
-            }}
-          >
-            Order ({cartCount} item{cartCount !== 1 ? "s" : ""})
-          </div>
           <div
             style={{
               display: "flex",
@@ -4947,18 +3793,6 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
                   >
                     {entry.item.name}
                   </div>
-                  {(entry.variantLabel || entry.extrasLabels?.length > 0) && (
-                    <div
-                      style={{
-                        fontSize: "0.64rem",
-                        color: "var(--text-muted)",
-                      }}
-                    >
-                      {[entry.variantLabel, ...(entry.extrasLabels || [])]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </div>
-                  )}
                 </div>
                 <div
                   style={{
@@ -5027,7 +3861,7 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
                   }}
                 >
                   {entry.unitPrice > 0
-                    ? `₦${fmt(entry.unitPrice * entry.qty)}`
+                    ? `\u20A6${fmt(entry.unitPrice * entry.qty)}`
                     : "—"}
                 </div>
                 <button
@@ -5070,7 +3904,7 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
                   color: "var(--accent)",
                 }}
               >
-                ₦{fmt(cartTotal)}
+                \u20A6{fmt(cartTotal)}
               </div>
             </div>
             <button
@@ -5113,7 +3947,6 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
   );
 }
 
-/* ── Sale Row ─────────────────────────────────────────────── */
 function SaleRow({ sale }) {
   const [expanded, setExpanded] = useState(false);
   return (
@@ -5165,7 +3998,7 @@ function SaleRow({ sale }) {
               {sale.items?.length || 0} item
               {sale.items?.length !== 1 ? "s" : ""}
             </span>
-            <span className="contract_row_dot">·</span>
+            <span className="contract_row_dot">\u00B7</span>
             <span>{fmtDate(sale.createdAt)}</span>
           </div>
         </div>
@@ -5177,7 +4010,7 @@ function SaleRow({ sale }) {
             textAlign: "right",
           }}
         >
-          ₦
+          \u20A6
           {Number(sale.totalAmount || 0).toLocaleString(undefined, {
             maximumFractionDigits: 0,
           })}
@@ -5215,35 +4048,6 @@ function SaleRow({ sale }) {
                     : "none",
               }}
             >
-              {item.menuItem?.image ? (
-                <img
-                  src={item.menuItem.image}
-                  alt=""
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 6,
-                    objectFit: "cover",
-                    flexShrink: 0,
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 6,
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <MdImage size={12} style={{ color: "var(--text-muted)" }} />
-                </div>
-              )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
@@ -5266,7 +4070,7 @@ function SaleRow({ sale }) {
                   flexShrink: 0,
                 }}
               >
-                ₦
+                \u20A6
                 {Number(item.priceAtTime || 0).toLocaleString(undefined, {
                   maximumFractionDigits: 0,
                 })}
@@ -5284,13 +4088,11 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-
   const fetchSales = () => {
     setLoading(true);
-    const q = `?cartId=${cartId}`;
     Promise.allSettled([
-      api.get(`/icart/sale${q}`),
-      api.get(`/icart/sale/analytics${q}`),
+      api.get(`/icart/sale?cartId=${cartId}`),
+      api.get(`/icart/sale/analytics?cartId=${cartId}`),
     ])
       .then(([salesRes, analyticsRes]) => {
         if (salesRes.status === "fulfilled") {
@@ -5302,12 +4104,9 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
       })
       .finally(() => setLoading(false));
   };
-
   useEffect(() => {
     fetchSales();
   }, [cartId]);
-
-  const totalRevenue = sales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
   const chartData = (analytics?.chartData || []).map((d) => ({
     ...d,
     sales: Math.round(d.sales),
@@ -5320,8 +4119,7 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
           month: "short",
         })
       : "";
-  const fmtTick = (v) => `₦${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`;
-
+  const fmtTick = (v) => `\u20A6${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`;
   return (
     <div>
       {analytics?.totals && (
@@ -5336,12 +4134,12 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
           {[
             {
               label: "Revenue",
-              value: `₦${Number(analytics.totals.totalSales || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+              value: `\u20A6${Number(analytics.totals.totalSales || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
               accent: false,
             },
             {
               label: "Profit",
-              value: `₦${Number(analytics.totals.totalProfit || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+              value: `\u20A6${Number(analytics.totals.totalProfit || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
               accent: true,
             },
           ].map((s) => (
@@ -5381,55 +4179,6 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
       )}
       {chartData.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginBottom: 10,
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.72rem",
-                fontWeight: 700,
-                color: "var(--text-muted)",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-              }}
-            >
-              Sales Trend
-            </span>
-            <div style={{ marginLeft: "auto", display: "flex", gap: 10 }}>
-              {[
-                { color: "var(--accent)", label: "Revenue" },
-                { color: "#22c55e", label: "Profit" },
-              ].map((l) => (
-                <div
-                  key={l.label}
-                  style={{ display: "flex", alignItems: "center", gap: 4 }}
-                >
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: l.color,
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: "0.68rem",
-                      fontWeight: 600,
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    {l.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
           <ResponsiveContainer width="100%" height={150}>
             <AreaChart
               data={chartData}
@@ -5483,7 +4232,7 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
               />
               <Tooltip
                 formatter={(v, name) => [
-                  `₦${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                  `\u20A6${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
                   name === "sales" ? "Revenue" : "Profit",
                 ]}
                 labelFormatter={fmtChartDate}
@@ -5514,46 +4263,6 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
               />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
-      )}
-      {sales.length > 0 && (
-        <div className="icart_summary_row" style={{ marginBottom: 16 }}>
-          <div className="icart_summary_chip">
-            <MdPointOfSale size={12} />
-            {sales.length} sale{sales.length !== 1 ? "s" : ""}
-          </div>
-          <div
-            className="icart_summary_chip"
-            style={{
-              color: "var(--accent)",
-              background: "var(--bg-active)",
-              borderColor: "rgba(203,108,220,0.2)",
-            }}
-          >
-            ₦
-            {totalRevenue.toLocaleString(undefined, {
-              maximumFractionDigits: 0,
-            })}{" "}
-            total
-          </div>
-          {["CASH", "POS", "TRANSFER"].map((m) => {
-            const count = sales.filter((s) => s.paymentMethod === m).length;
-            if (!count) return null;
-            const c = pmColors[m];
-            return (
-              <div
-                key={m}
-                className="icart_summary_chip"
-                style={{
-                  color: c.color,
-                  background: c.bg,
-                  borderColor: c.border,
-                }}
-              >
-                {m} · {count}
-              </div>
-            );
-          })}
         </div>
       )}
       {isOperator && (
@@ -5601,16 +4310,13 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════
-   MAIN PAGE
-   ════════════════════════════════════════════════════════════ */
+/* MAIN PAGE */
 export default function OperatorCartPage() {
   const { cartId } = useParams();
   const navigate = useNavigate();
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("tasks");
-
   useEffect(() => {
     api
       .get(`/icart/${cartId}`)
@@ -5618,7 +4324,6 @@ export default function OperatorCartPage() {
       .catch(() => toast.error("Failed to load cart"))
       .finally(() => setLoading(false));
   }, [cartId]);
-
   if (loading)
     return (
       <div className="page_wrapper">
@@ -5627,7 +4332,6 @@ export default function OperatorCartPage() {
         </div>
       </div>
     );
-
   if (!cart)
     return (
       <div className="page_wrapper">
@@ -5644,9 +4348,7 @@ export default function OperatorCartPage() {
         </div>
       </div>
     );
-
   const menuItems = cart.menuItems || [];
-
   return (
     <div className="page_wrapper">
       <button
@@ -5664,7 +4366,6 @@ export default function OperatorCartPage() {
           padding: 0,
           marginBottom: 16,
           fontFamily: "inherit",
-          transition: "color 0.15s",
         }}
         onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-body)")}
         onMouseLeave={(e) =>
@@ -5673,8 +4374,6 @@ export default function OperatorCartPage() {
       >
         <MdArrowBack size={16} /> Back to Operator
       </button>
-
-      {/* Cart hero */}
       <div
         style={{
           background: "var(--bg-card)",
@@ -5717,7 +4416,6 @@ export default function OperatorCartPage() {
                   fontWeight: 900,
                   color: "var(--text-heading)",
                   fontFamily: "monospace",
-                  letterSpacing: "0.02em",
                 }}
               >
                 {cart.serialNumber}
@@ -5762,7 +4460,7 @@ export default function OperatorCartPage() {
               >
                 <MdRestaurantMenu size={13} />
                 {cart.location.name}
-                {cart.location.city ? ` · ${cart.location.city}` : ""}
+                {cart.location.city ? ` \u00B7 ${cart.location.city}` : ""}
               </div>
             )}
           </div>
@@ -5791,8 +4489,6 @@ export default function OperatorCartPage() {
           </div>
         )}
       </div>
-
-      {/* Tab bar */}
       <div
         style={{
           display: "flex",
@@ -5824,7 +4520,6 @@ export default function OperatorCartPage() {
                 fontWeight: active ? 700 : 600,
                 cursor: "pointer",
                 whiteSpace: "nowrap",
-                transition: "color 0.15s, border-color 0.15s",
                 fontFamily: "inherit",
               }}
             >
@@ -5833,8 +4528,6 @@ export default function OperatorCartPage() {
           );
         })}
       </div>
-
-      {/* Tab content */}
       {activeTab === "tasks" && <TasksTab cartId={cartId} />}
       {activeTab === "inventory" && <InventoryTab cartId={cartId} />}
       {activeTab === "menu" && <MenuTab menuItems={menuItems} />}
