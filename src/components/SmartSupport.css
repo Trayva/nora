@@ -457,8 +457,8 @@
   border-color: var(--border);
 }
 
-/* ─── MOBILE ADAPTATION ─── */
-@media (max-width: 480px) {
+/* ─── MOBILE & TABLET ADAPTATION ─── */
+@media (max-width: 1024px) {
   .smart-support-container {
     bottom: 0px;
     right: 0px;
