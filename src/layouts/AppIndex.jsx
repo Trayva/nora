@@ -8,6 +8,7 @@ import nora_logo_white from "../assets/nora_white.png";
 import nora_logo_dark from "../assets/nora_dark.png";
 import "./AppIndex.css";
 import NotificationBell from "../components/Notifications/NotificationBell";
+import SmartSupport from "../components/SmartSupport";
 
 export default function AppIndex() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -66,6 +67,9 @@ export default function AppIndex() {
         <VerificationBanner />
         <Outlet />
       </main>
+
+      {/* AI Assistant FAB */}
+      <SmartSupport />
     </div>
   );
 }
