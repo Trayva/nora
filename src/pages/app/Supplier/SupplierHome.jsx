@@ -3422,6 +3422,9 @@ function MachineryPricesTab({ profile }) {
   const [newForm, setNewForm] = useState({
     name: "",
     description: "",
+    manufacturer: "",
+    modelNumber: "",
+    powerConsumption: "",
     image: null,
   });
   const [price, setPrice] = useState("");
@@ -3500,6 +3503,12 @@ function MachineryPricesTab({ profile }) {
       fd.append("name", newForm.name.trim());
       if (newForm.description)
         fd.append("description", newForm.description.trim());
+      if (newForm.manufacturer)
+        fd.append("manufacturer", newForm.manufacturer.trim());
+      if (newForm.modelNumber)
+        fd.append("modelNumber", newForm.modelNumber.trim());
+      if (newForm.powerConsumption)
+        fd.append("powerConsumption", newForm.powerConsumption.trim());
       if (newForm.image) fd.append("image", newForm.image);
       const res = await api.post("/library/machinery", fd, {
         headers: { "Content-Type": undefined },
@@ -3509,7 +3518,14 @@ function MachineryPricesTab({ profile }) {
       setMachSearch(created.name);
       setMachOpen(false);
       setShowCreate(false);
-      setNewForm({ name: "", description: "", image: null });
+      setNewForm({
+        name: "",
+        description: "",
+        manufacturer: "",
+        modelNumber: "",
+        powerConsumption: "",
+        image: null,
+      });
       toast.success(`${created.name} created`);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to create");
@@ -3840,6 +3856,50 @@ function MachineryPricesTab({ profile }) {
                           setNewForm((p) => ({
                             ...p,
                             description: e.target.value,
+                          }))
+                        }
+                        style={{ marginBottom: 0 }}
+                      />
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 6,
+                        }}
+                      >
+                        <input
+                          className="modal-input"
+                          placeholder="Manufacturer"
+                          value={newForm.manufacturer}
+                          onChange={(e) =>
+                            setNewForm((p) => ({
+                              ...p,
+                              manufacturer: e.target.value,
+                            }))
+                          }
+                          style={{ marginBottom: 0 }}
+                        />
+                        <input
+                          className="modal-input"
+                          placeholder="Model Number"
+                          value={newForm.modelNumber}
+                          onChange={(e) =>
+                            setNewForm((p) => ({
+                              ...p,
+                              modelNumber: e.target.value,
+                            }))
+                          }
+                          style={{ marginBottom: 0 }}
+                        />
+                      </div>
+                      <input
+                        className="modal-input"
+                        placeholder="Power Consumption (e.g. 1500W)"
+                        value={newForm.powerConsumption}
+                        onChange={(e) =>
+                          setNewForm((p) => ({
+                            ...p,
+                            powerConsumption: e.target.value,
                           }))
                         }
                         style={{ marginBottom: 0 }}
