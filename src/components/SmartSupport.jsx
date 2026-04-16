@@ -31,6 +31,7 @@ const SmartSupport = () => {
   const [isOnline, setIsOnline] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const messagesEndRef = useRef(null);
+  const windowRef = useRef(null);
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -40,6 +41,27 @@ const SmartSupport = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  // Handle Native Fullscreen
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      try {
+        await windowRef.current?.requestFullscreen();
+        setIsFullScreen(true);
+      } catch (err) {
+        console.error("Fullscreen entry failed", err);
+      }
+    } else {
+      await document.exitFullscreen();
+      setIsFullScreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handler = () => setIsFullScreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
 
   // Load sessions when opened
   useEffect(() => {
@@ -218,7 +240,10 @@ const SmartSupport = () => {
       </button>
 
       {/* Chat Window */}
-      <div className={`smart-support-window ${isOpen ? 'visible' : ''} ${isFullScreen ? 'full-screen' : ''}`}>
+      <div 
+        ref={windowRef}
+        className={`smart-support-window ${isOpen ? 'visible' : ''} ${isFullScreen ? 'full-screen' : ''}`}
+      >
         <div className="support-header">
           <div className="support-brand">
             <img src={nora_logo} alt="NORA" className="support-logo" />
@@ -242,7 +267,7 @@ const SmartSupport = () => {
             )}
             <button
               className="expand-btn"
-              onClick={() => setIsFullScreen(!isFullScreen)}
+              onClick={toggleFullscreen}
               title={isFullScreen ? "Exit Fullscreen" : "Expand to Fullscreen"}
             >
               {isFullScreen ? <BsArrowsAngleContract size={16} /> : <BsArrowsAngleExpand size={16} />}
@@ -251,7 +276,7 @@ const SmartSupport = () => {
               className="sparkle-icon" 
               onClick={() => setActiveView('landing')} 
               style={{ cursor: 'pointer' }}
-              title="Home"
+              title="Landing"
             />
             <button className="mobile-close-btn" onClick={() => setIsOpen(false)}>
               <BsXCircleFill size={20} />

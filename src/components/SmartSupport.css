@@ -69,15 +69,15 @@
 
 .smart-support-window.full-screen {
   position: fixed;
-  bottom: 5vh;
-  right: 5vw;
-  width: 90vw;
-  height: 90vh;
-  max-width: 1200px;
-  max-height: 90vh;
-  border-radius: 24px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
   z-index: 10002;
   transform-origin: bottom right;
+  background: var(--bg-main); /* Solid background for fullscreen to prevent dimming */
 }
 
 /* ─── HEADER ─── */
