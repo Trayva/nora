@@ -40,7 +40,6 @@ function parseLibraryResults(data) {
 }
 
 function parseMachineryResults(data) {
-  // API returns { data: [...], total, page, ... } — paginated wrapper
   const items =
     data?.data ||
     data?.items ||
@@ -52,10 +51,8 @@ function parseMachineryResults(data) {
 function getUnitOptions(baseUnit) {
   if (!baseUnit) return ["g", "kg", "ml", "L"];
   const u = baseUnit.toLowerCase();
-  if (u === "g") return ["g", "kg"];
-  if (u === "kg") return ["g", "kg"];
-  if (u === "ml") return ["ml", "L"];
-  if (u === "l") return ["ml", "L"];
+  if (u === "g" || u === "kg") return ["g", "kg"];
+  if (u === "ml" || u === "l") return ["ml", "L"];
   return ["unit"];
 }
 
@@ -106,6 +103,16 @@ const supplyStatusColors = {
     color: "#6b7280",
     border: "rgba(107,114,128,0.25)",
   },
+  SUPPLIER_REVIEWED: {
+    bg: "rgba(59,130,246,0.1)",
+    color: "#3b82f6",
+    border: "rgba(59,130,246,0.25)",
+  },
+  RECEIVED: {
+    bg: "rgba(34,197,94,0.1)",
+    color: "#16a34a",
+    border: "rgba(34,197,94,0.25)",
+  },
 };
 
 function StatusPill({ status }) {
@@ -148,7 +155,6 @@ function ItemSearchSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Reset query display when value changes externally (e.g. tab switch clears rows)
   useEffect(() => {
     if (!value) setQuery("");
   }, [value]);
@@ -177,7 +183,6 @@ function ItemSearchSelect({
     setQuery(item.name);
     setOpen(false);
   };
-
   const handleClear = () => {
     onChange(null);
     setQuery("");
@@ -240,7 +245,6 @@ function ItemSearchSelect({
           </button>
         )}
       </div>
-
       {open && query.length > 0 && (
         <div
           style={{
@@ -360,7 +364,6 @@ function ItemSearchSelect({
   );
 }
 
-/* Convenience wrappers */
 function IngredientSearchSelect({ value, onChange }) {
   return (
     <ItemSearchSelect
@@ -372,7 +375,6 @@ function IngredientSearchSelect({ value, onChange }) {
     />
   );
 }
-
 function MachinerySearchSelect({ value, onChange }) {
   return (
     <ItemSearchSelect
@@ -399,10 +401,15 @@ function AddInventoryForm({ cartId, onAdded }) {
     setTotalCost("");
     setUnit(getDefaultUnit(item?.unit));
   };
-
   const type = selectedItem?._type || "INGREDIENT";
-  const itemIdKey = type === "PREP_ITEM" ? "prepItemId" : "ingredientId";
-  const unitOpts = getUnitOptions(selectedItem?.unit);
+  const itemIdKey =
+    type === "PREP_ITEM"
+      ? "prepItemId"
+      : type === "MACHINERY"
+        ? "machineryId"
+        : "ingredientId";
+  const unitOpts =
+    type === "MACHINERY" ? ["unit"] : getUnitOptions(selectedItem?.unit);
   const baseQty = quantity ? toBaseQuantity(quantity, unit) : null;
   const unitCost =
     totalCost && quantity ? toUnitCost(totalCost, quantity, unit) : null;
@@ -504,18 +511,28 @@ function AddInventoryForm({ cartId, onAdded }) {
                     background:
                       type === "PREP_ITEM"
                         ? "rgba(59,130,246,0.1)"
-                        : "rgba(34,197,94,0.1)",
-                    color: type === "PREP_ITEM" ? "#3b82f6" : "#16a34a",
+                        : type === "MACHINERY"
+                          ? "rgba(203,108,220,0.1)"
+                          : "rgba(34,197,94,0.1)",
+                    color:
+                      type === "PREP_ITEM"
+                        ? "#3b82f6"
+                        : type === "MACHINERY"
+                          ? "var(--accent)"
+                          : "#16a34a",
                   }}
                 >
-                  {type === "PREP_ITEM" ? "Prep Item" : "Ingredient"}
+                  {type === "PREP_ITEM"
+                    ? "Prep Item"
+                    : type === "MACHINERY"
+                      ? "Machinery"
+                      : "Ingredient"}
                 </span>
               </div>
             </div>
           </div>
         )}
       </div>
-
       <div className="form-field">
         <label className="modal-label">Quantity *</label>
         <div style={{ display: "flex", gap: 8 }}>
@@ -571,7 +588,6 @@ function AddInventoryForm({ cartId, onAdded }) {
           </div>
         )}
       </div>
-
       <div className="form-field">
         <label className="modal-label">Total Cost (NGN) — optional</label>
         <input
@@ -595,7 +611,6 @@ function AddInventoryForm({ cartId, onAdded }) {
           </div>
         )}
       </div>
-
       <button
         className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
         style={{ width: "100%", height: 40, position: "relative" }}
@@ -612,8 +627,6 @@ function AddInventoryForm({ cartId, onAdded }) {
 }
 
 /* ── Supply Request Form ────────────────────────────────────── */
-
-// Default row factories
 const makeIngredientRow = () => ({
   item: null,
   query: "",
@@ -622,7 +635,6 @@ const makeIngredientRow = () => ({
 });
 const makeMachineryRow = () => ({ item: null, quantity: "", unit: "unit" });
 
-/* ── Inline price helpers for SupplyRequestForm ── */
 function IngredientPriceInline({
   ingredientId,
   supplierId,
@@ -637,7 +649,6 @@ function IngredientPriceInline({
   );
   return <PriceTag price={price} loading={loading} qty={qty} unit={unit} />;
 }
-
 function MachineryPriceInline({ machineryId, supplierId, stateId, qty }) {
   const { prices, loading } = useMachinerySupplierPrices(supplierId, stateId);
   const price = prices.get(machineryId) ?? null;
@@ -645,17 +656,12 @@ function MachineryPriceInline({ machineryId, supplierId, stateId, qty }) {
 }
 
 function SupplyRequestForm({ cartId, cart, onSubmitted }) {
-  // "ingredients" | "machinery"
   const [supplyTab, setSupplyTab] = useState("ingredients");
-
   const [suppliers, setSuppliers] = useState([]);
   const [suppliersLoading, setSuppliersLoading] = useState(true);
   const [supplierId, setSupplierId] = useState("");
-
-  // Separate row lists per tab
   const [ingRows, setIngRows] = useState([makeIngredientRow()]);
   const [machRows, setMachRows] = useState([makeMachineryRow()]);
-
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -673,36 +679,29 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
       .finally(() => setSuppliersLoading(false));
   }, [cart]);
 
-  /* ── Ingredient row helpers ── */
   const updateIngRow = (i, key, val) =>
     setIngRows((prev) => {
       const u = [...prev];
       u[i] = { ...u[i], [key]: val };
       return u;
     });
-
   const addIngRow = () => setIngRows((prev) => [...prev, makeIngredientRow()]);
   const removeIngRow = (i) =>
     setIngRows((prev) => prev.filter((_, idx) => idx !== i));
 
-  /* ── Machinery row helpers ── */
   const updateMachRow = (i, key, val) =>
     setMachRows((prev) => {
       const u = [...prev];
       u[i] = { ...u[i], [key]: val };
       return u;
     });
-
   const addMachRow = () => setMachRows((prev) => [...prev, makeMachineryRow()]);
   const removeMachRow = (i) =>
     setMachRows((prev) => prev.filter((_, idx) => idx !== i));
 
-  /* ── Submit ── */
   const handleSubmit = async () => {
     if (!supplierId) return toast.error("Select a supplier");
-
     const isIng = supplyTab === "ingredients";
-
     if (isIng) {
       const valid = ingRows.filter(
         (r) => r.item && r.quantity && Number(r.quantity) > 0,
@@ -719,12 +718,10 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
             quantity: toBaseQuantity(row.quantity, row.unit),
           })),
         });
-        toast.success(`Supply request${valid.length > 1 ? "s" : ""} created`);
+        toast.success("Supply request created");
         onSubmitted();
       } catch (err) {
-        toast.error(
-          err.response?.data?.message || "Failed to create supply request",
-        );
+        toast.error(err.response?.data?.message || "Failed");
       } finally {
         setSaving(false);
       }
@@ -744,23 +741,16 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
             quantity: Number(row.quantity),
           })),
         });
-        toast.success(
-          `Machinery request${valid.length > 1 ? "s" : ""} created`,
-        );
+        toast.success("Machinery request created");
         onSubmitted();
       } catch (err) {
-        toast.error(
-          err.response?.data?.message || "Failed to create machinery request",
-        );
+        toast.error(err.response?.data?.message || "Failed");
       } finally {
         setSaving(false);
       }
     }
   };
 
-  const selectedSupplier = suppliers.find((s) => s.id === supplierId);
-
-  /* ── Active rows / counts for summary ── */
   const activeIngCount = ingRows.filter((r) => r.item && r.quantity).length;
   const activeMachCount = machRows.filter((r) => r.item && r.quantity).length;
   const activeCount =
@@ -768,7 +758,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* ── Supply type tab switcher ── */}
       <div
         style={{
           display: "flex",
@@ -814,7 +803,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
           >
             {t.icon}
             {t.label}
-            {/* Show badge if rows have data */}
             {((t.key === "ingredients" && activeIngCount > 0) ||
               (t.key === "machinery" && activeMachCount > 0)) && (
               <span
@@ -838,8 +826,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
           </button>
         ))}
       </div>
-
-      {/* ── Supplier selector ── */}
       <div className="form-field">
         <label className="modal-label">Supplier *</label>
         <SupplierPicker
@@ -849,8 +835,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
           onChange={setSupplierId}
         />
       </div>
-
-      {/* ── INGREDIENTS TAB ── */}
       {supplyTab === "ingredients" && (
         <div>
           <label
@@ -873,7 +857,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
                   gap: 10,
                 }}
               >
-                {/* Row header */}
                 <div
                   style={{
                     display: "flex",
@@ -902,8 +885,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
                     </button>
                   )}
                 </div>
-
-                {/* Search */}
                 <IngredientSearchSelect
                   value={row.item}
                   onChange={(item) => {
@@ -922,8 +903,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
                     });
                   }}
                 />
-
-                {/* Qty + unit */}
                 {row.item && (
                   <div style={{ display: "flex", gap: 8 }}>
                     <input
@@ -972,8 +951,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
                     })()}
                   </div>
                 )}
-
-                {/* Conversion preview */}
                 {row.item &&
                   row.quantity &&
                   (row.unit === "kg" || row.unit === "L") && (
@@ -989,8 +966,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
                       {row.unit === "kg" ? "g" : "ml"} will be requested
                     </div>
                   )}
-
-                {/* Selected ingredient preview + price */}
                 {row.item && (
                   <div
                     style={{ display: "flex", alignItems: "center", gap: 8 }}
@@ -1069,8 +1044,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
               </div>
             ))}
           </div>
-
-          {/* Add ingredient — bottom */}
           <button
             onClick={addIngRow}
             style={{
@@ -1089,7 +1062,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
               cursor: "pointer",
               fontFamily: "inherit",
               justifyContent: "center",
-              transition: "border-color 0.15s",
             }}
             onMouseEnter={(e) =>
               (e.currentTarget.style.borderColor = "rgba(203,108,220,0.5)")
@@ -1102,8 +1074,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
           </button>
         </div>
       )}
-
-      {/* ── MACHINERY TAB ── */}
       {supplyTab === "machinery" && (
         <div>
           <label
@@ -1126,7 +1096,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
                   gap: 10,
                 }}
               >
-                {/* Row header */}
                 <div
                   style={{
                     display: "flex",
@@ -1158,8 +1127,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
                     </button>
                   )}
                 </div>
-
-                {/* Search */}
                 <MachinerySearchSelect
                   value={row.item}
                   onChange={(item) => {
@@ -1170,8 +1137,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
                     });
                   }}
                 />
-
-                {/* Quantity — machinery uses unit count */}
                 {row.item && (
                   <div
                     style={{ display: "flex", gap: 8, alignItems: "center" }}
@@ -1203,8 +1168,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
                     </div>
                   </div>
                 )}
-
-                {/* Selected machinery preview */}
                 {row.item && (
                   <div
                     style={{ display: "flex", alignItems: "center", gap: 8 }}
@@ -1286,8 +1249,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
               </div>
             ))}
           </div>
-
-          {/* Add machinery — bottom */}
           <button
             onClick={addMachRow}
             style={{
@@ -1306,7 +1267,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
               cursor: "pointer",
               fontFamily: "inherit",
               justifyContent: "center",
-              transition: "border-color 0.15s",
             }}
             onMouseEnter={(e) =>
               (e.currentTarget.style.borderColor = "rgba(203,108,220,0.5)")
@@ -1319,8 +1279,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
           </button>
         </div>
       )}
-
-      {/* Summary */}
       {activeCount > 0 && (
         <div
           style={{
@@ -1358,7 +1316,6 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
           </span>
         </div>
       )}
-
       <button
         className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
         style={{ width: "100%", height: 42, position: "relative" }}
@@ -1367,8 +1324,7 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
       >
         <span className="btn_text">
           Submit {supplyTab === "ingredients" ? "Ingredient" : "Machinery"}{" "}
-          Request
-          {activeCount > 1 ? "s" : ""}
+          Request{activeCount > 1 ? "s" : ""}
         </span>
         {saving && (
           <span className="btn_loader" style={{ width: 14, height: 14 }} />
@@ -1391,31 +1347,34 @@ const REASON_OPTIONS = [
 function InventoryItemRow({ item, onRefresh }) {
   const [editing, setEditing] = useState(false);
   const [recordingUsage, setRecordingUsage] = useState(false);
-
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("g");
   const [totalCost, setTotalCost] = useState("");
-
   const [usageQty, setUsageQty] = useState("");
   const [usageUnit, setUsageUnit] = useState("g");
   const [usageNotes, setUsageNotes] = useState("");
   const [usageReason, setUsageReason] = useState("Waste");
-
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const itemType = item.type || "INGREDIENT";
+  const isMachinery = itemType === "MACHINERY";
+
+  // ── FIX: include machinery in name/image resolution ──
   const itemName =
     item.ingredient?.name ||
     item.prepItem?.name ||
+    item.machinery?.name ||
     item.menuItem?.name ||
     item.ingredientId ||
     item.prepItemId ||
+    item.machineryId ||
     item.menuItemId ||
     "Item";
   const itemImage =
     item.ingredient?.image ||
     item.prepItem?.image ||
+    item.machinery?.image ||
     item.menuItem?.image ||
     null;
 
@@ -1426,13 +1385,20 @@ function InventoryItemRow({ item, onRefresh }) {
   const usageBaseQty = usageQty ? toBaseQuantity(usageQty, usageUnit) : null;
   const usageShowConv = (usageUnit === "kg" || usageUnit === "L") && usageQty;
 
+  // machinery unit options are just "unit"
+  const unitOpts = isMachinery
+    ? ["unit"]
+    : getUnitOptions(item.ingredient?.unit || item.prepItem?.unit);
+
   const handleUpdate = async () => {
     if (!quantity || isNaN(quantity) || Number(quantity) <= 0)
       return toast.error("Enter a valid quantity");
     setSaving(true);
     try {
       await api.patch(`/icart/inventory/${item.id}`, {
-        quantity: baseQty ?? Number(quantity),
+        quantity: isMachinery
+          ? Number(quantity)
+          : (baseQty ?? Number(quantity)),
         cost: unitCost ?? (totalCost ? Number(totalCost) : undefined),
       });
       toast.success("Updated");
@@ -1455,7 +1421,9 @@ function InventoryItemRow({ item, onRefresh }) {
     try {
       await api.post("/icart/inventory/record-usage", {
         itemId: item.id,
-        quantity: usageBaseQty ?? Number(usageQty),
+        quantity: isMachinery
+          ? Number(usageQty)
+          : (usageBaseQty ?? Number(usageQty)),
         notes: notesStr,
       });
       toast.success("Usage recorded");
@@ -1520,15 +1488,21 @@ function InventoryItemRow({ item, onRefresh }) {
               width: 40,
               height: 40,
               borderRadius: 9,
-              background: "var(--bg-hover)",
-              border: "1px solid var(--border)",
+              background: isMachinery
+                ? "rgba(203,108,220,0.08)"
+                : "var(--bg-hover)",
+              border: `1px solid ${isMachinery ? "rgba(203,108,220,0.2)" : "var(--border)"}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
             }}
           >
-            <MdInventory2 size={17} style={{ color: "var(--text-muted)" }} />
+            {isMachinery ? (
+              <MdBuild size={17} style={{ color: "var(--accent)" }} />
+            ) : (
+              <MdInventory2 size={17} style={{ color: "var(--text-muted)" }} />
+            )}
           </div>
         )}
         <div className="icart_inventory_info">
@@ -1537,9 +1511,11 @@ function InventoryItemRow({ item, onRefresh }) {
             <span
               className="icart_badge"
               style={{
-                background: "var(--bg-hover)",
-                color: "var(--text-muted)",
-                border: "1px solid var(--border)",
+                background: isMachinery
+                  ? "rgba(203,108,220,0.1)"
+                  : "var(--bg-hover)",
+                color: isMachinery ? "var(--accent)" : "var(--text-muted)",
+                border: `1px solid ${isMachinery ? "rgba(203,108,220,0.2)" : "var(--border)"}`,
                 fontSize: "0.62rem",
               }}
             >
@@ -1576,7 +1552,12 @@ function InventoryItemRow({ item, onRefresh }) {
             >
               {item.quantity?.toLocaleString()}
             </div>
-            {item.cost != null && (
+            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+              {isMachinery
+                ? "unit"
+                : item.ingredient?.unit || item.prepItem?.unit || "units"}
+            </div>
+            {item.cost != null && !isMachinery && (
               <div
                 style={{
                   fontSize: "0.7rem",
@@ -1649,29 +1630,37 @@ function InventoryItemRow({ item, onRefresh }) {
                 onChange={(e) => setQuantity(e.target.value)}
               />
             </div>
-            {itemType !== "MENU_ITEM" && (
-              <div
-                className="form-field"
-                style={{ width: 76, marginBottom: 0 }}
-              >
-                <label className="modal-label">Unit</label>
+            <div className="form-field" style={{ width: 76, marginBottom: 0 }}>
+              <label className="modal-label">Unit</label>
+              {unitOpts.length > 1 ? (
                 <select
                   className="modal-input"
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
                 >
-                  {getUnitOptions(
-                    item.ingredient?.unit || item.prepItem?.unit,
-                  ).map((u) => (
+                  {unitOpts.map((u) => (
                     <option key={u} value={u}>
                       {u}
                     </option>
                   ))}
                 </select>
-              </div>
-            )}
+              ) : (
+                <div
+                  className="modal-input"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--text-muted)",
+                    fontSize: "0.82rem",
+                  }}
+                >
+                  {unitOpts[0] || "unit"}
+                </div>
+              )}
+            </div>
           </div>
-          {showConv && (
+          {showConv && !isMachinery && (
             <div
               style={{
                 fontSize: "0.72rem",
@@ -1684,29 +1673,31 @@ function InventoryItemRow({ item, onRefresh }) {
               server
             </div>
           )}
-          <div className="form-field">
-            <label className="modal-label">Total Cost (NGN) — optional</label>
-            <input
-              className="modal-input"
-              type="number"
-              placeholder={`e.g. 4000 for ${quantity || "10"} ${unit}`}
-              value={totalCost}
-              onChange={(e) => setTotalCost(e.target.value)}
-            />
-            {unitCost != null && unitCost > 0 && (
-              <div
-                style={{
-                  fontSize: "0.72rem",
-                  color: "var(--accent)",
-                  marginTop: 5,
-                  fontWeight: 600,
-                }}
-              >
-                → ₦{unitCost.toFixed(4)} per{" "}
-                {unit === "kg" ? "g" : unit === "L" ? "ml" : unit}
-              </div>
-            )}
-          </div>
+          {!isMachinery && (
+            <div className="form-field">
+              <label className="modal-label">Total Cost (NGN) — optional</label>
+              <input
+                className="modal-input"
+                type="number"
+                placeholder={`e.g. 4000 for ${quantity || "10"} ${unit}`}
+                value={totalCost}
+                onChange={(e) => setTotalCost(e.target.value)}
+              />
+              {unitCost != null && unitCost > 0 && (
+                <div
+                  style={{
+                    fontSize: "0.72rem",
+                    color: "var(--accent)",
+                    marginTop: 5,
+                    fontWeight: 600,
+                  }}
+                >
+                  → ₦{unitCost.toFixed(4)} per{" "}
+                  {unit === "kg" ? "g" : unit === "L" ? "ml" : unit}
+                </div>
+              )}
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button
               className="app_btn app_btn_cancel"
@@ -1764,29 +1755,37 @@ function InventoryItemRow({ item, onRefresh }) {
                 onChange={(e) => setUsageQty(e.target.value)}
               />
             </div>
-            {itemType !== "MENU_ITEM" && (
-              <div
-                className="form-field"
-                style={{ width: 76, marginBottom: 0 }}
-              >
-                <label className="modal-label">Unit</label>
+            <div className="form-field" style={{ width: 76, marginBottom: 0 }}>
+              <label className="modal-label">Unit</label>
+              {unitOpts.length > 1 ? (
                 <select
                   className="modal-input"
                   value={usageUnit}
                   onChange={(e) => setUsageUnit(e.target.value)}
                 >
-                  {getUnitOptions(
-                    item.ingredient?.unit || item.prepItem?.unit,
-                  ).map((u) => (
+                  {unitOpts.map((u) => (
                     <option key={u} value={u}>
                       {u}
                     </option>
                   ))}
                 </select>
-              </div>
-            )}
+              ) : (
+                <div
+                  className="modal-input"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--text-muted)",
+                    fontSize: "0.82rem",
+                  }}
+                >
+                  {unitOpts[0] || "unit"}
+                </div>
+              )}
+            </div>
           </div>
-          {usageShowConv && (
+          {usageShowConv && !isMachinery && (
             <div
               style={{
                 fontSize: "0.72rem",
@@ -1859,11 +1858,9 @@ function InventoryItemRow({ item, onRefresh }) {
 function SupplyRequestRow({ req, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
   const [receiving, setReceiving] = useState(false);
-
   const fmt = (n) =>
     Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
 
-  // Normalise ingredient items and machinery items into one unified list
   const ingItems = (req.items || []).map((it) => ({
     id: it.id,
     entity: it.ingredient,
@@ -1903,7 +1900,7 @@ function SupplyRequestRow({ req, onRefresh }) {
       toast.success("Supply marked as received");
       onRefresh?.();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to mark as received");
+      toast.error(err.response?.data?.message || "Failed");
     } finally {
       setReceiving(false);
     }
@@ -1989,7 +1986,6 @@ function SupplyRequestRow({ req, onRefresh }) {
           )}
         </div>
       </div>
-
       {expanded && (
         <div className="icart_task_expanded">
           {allItems.map((it) => (
@@ -2091,7 +2087,6 @@ function SupplyRequestRow({ req, onRefresh }) {
               )}
             </div>
           ))}
-
           <div className="icart_task_data" style={{ marginTop: 8 }}>
             {req.invoice && (
               <div className="icart_task_data_row">
@@ -2171,8 +2166,7 @@ export default function IcartInventory({ cart }) {
     try {
       const res = await api.get(`/icart/supply?cartId=${cart.id}`);
       const d = res.data.data;
-      const all = d?.requests || d?.items || (Array.isArray(d) ? d : []);
-      setSupplyRequests(all);
+      setSupplyRequests(d?.requests || d?.items || (Array.isArray(d) ? d : []));
     } catch {
       toast.error("Failed to load supply requests");
     } finally {
@@ -2322,52 +2316,98 @@ export default function IcartInventory({ cart }) {
           </div>
         ) : (
           <div className="icart_tasks_list">
-            {history.map((entry, i) => (
-              <div key={entry.id || i} className="icart_history_row">
-                <div className="icart_task_icon">
-                  {entry.delta > 0 ? (
-                    <MdAdd size={13} style={{ color: "#22c55e" }} />
-                  ) : (
-                    <MdDelete size={13} style={{ color: "#ef4444" }} />
-                  )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="icart_task_name">
-                    {entry.ingredient?.name || entry.item?.name || "Item"}
+            {history.map((entry, i) => {
+              const delta = entry.quantityChange ?? entry.delta ?? 0;
+              // ── FIX: include prepItem and machinery in name resolution ──
+              const entryName =
+                entry.ingredient?.name ||
+                entry.prepItem?.name ||
+                entry.machinery?.name ||
+                entry.item?.name ||
+                "Item";
+              const entryImg =
+                entry.ingredient?.image ||
+                entry.prepItem?.image ||
+                entry.machinery?.image ||
+                null;
+              const isMach = entry.type === "MACHINERY";
+              return (
+                <div key={entry.id || i} className="icart_history_row">
+                  <div
+                    className="icart_task_icon"
+                    style={{
+                      background: isMach ? "rgba(203,108,220,0.08)" : undefined,
+                      border: isMach
+                        ? "1px solid rgba(203,108,220,0.2)"
+                        : undefined,
+                    }}
+                  >
+                    {isMach ? (
+                      <MdBuild size={13} style={{ color: "var(--accent)" }} />
+                    ) : delta > 0 ? (
+                      <MdAdd size={13} style={{ color: "#22c55e" }} />
+                    ) : (
+                      <MdDelete size={13} style={{ color: "#ef4444" }} />
+                    )}
                   </div>
-                  <div className="icart_task_meta">
-                    {entry.action || (entry.delta > 0 ? "Added" : "Removed")}
-                    {entry.notes && <> · {entry.notes}</>}
-                    {entry.performedBy?.name && (
-                      <> · {entry.performedBy.name}</>
+                  <div
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    {entryImg && (
+                      <img
+                        src={entryImg}
+                        alt=""
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 6,
+                          objectFit: "cover",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="icart_task_name">{entryName}</div>
+                      <div className="icart_task_meta">
+                        {entry.action || (delta > 0 ? "Added" : "Removed")}
+                        {entry.notes && <> · {entry.notes}</>}
+                        {entry.user?.fullName && <> · {entry.user.fullName}</>}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "0.88rem",
+                        fontWeight: 800,
+                        color: delta > 0 ? "#22c55e" : "#ef4444",
+                      }}
+                    >
+                      {delta > 0 ? "+" : ""}
+                      {delta ?? entry.quantity}
+                    </div>
+                    {entry.timestamp && (
+                      <div className="icart_operator_meta">
+                        {new Date(entry.timestamp).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                        })}
+                      </div>
                     )}
                   </div>
                 </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div
-                    style={{
-                      fontSize: "0.88rem",
-                      fontWeight: 800,
-                      color: entry.delta > 0 ? "#22c55e" : "#ef4444",
-                    }}
-                  >
-                    {entry.delta > 0 ? "+" : ""}
-                    {entry.delta ?? entry.quantity}
-                  </div>
-                  {entry.createdAt && (
-                    <div className="icart_operator_meta">
-                      {new Date(entry.createdAt).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )
       ) : null}
     </div>
   );
 }
+  
