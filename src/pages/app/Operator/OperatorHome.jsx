@@ -22,8 +22,8 @@ import {
   MdOpenInNew,
   MdChevronRight,
 } from "react-icons/md";
-import { LuShoppingCart } from "react-icons/lu";
-import OperatorCartDrawer from "./OperatorCartDrawer";
+import { LuStore } from "react-icons/lu";
+import OperatorKioskDrawer from "./OperatorKioskDrawer";
 
 /* ── Duration options ───────────────────────────────────────── */
 const DURATION_OPTIONS = [
@@ -96,7 +96,7 @@ function StatusBadge({ status, colors }) {
   const s = colors[status] || Object.values(colors)[0];
   return (
     <span
-      className="icart_status_badge"
+      className="kiosk_status_badge"
       style={{
         background: s.bg,
         color: s.color,
@@ -147,7 +147,7 @@ function CreateProfileForm({ states, onCreated, submitting, setSubmitting }) {
       const fd = new FormData();
       if (stateId) fd.append("stateId", stateId);
       if (certFile) fd.append("certification", certFile);
-      await api.post("/icart/operator/profile", fd);
+      await api.post("/kiosk/operator/profile", fd);
       toast.success("Operator profile created!");
       onCreated();
     } catch (err) {
@@ -164,7 +164,7 @@ function CreateProfileForm({ states, onCreated, submitting, setSubmitting }) {
       </div>
       <h3 className="op_create_profile_title">Become an Operator</h3>
       <p className="op_create_profile_sub">
-        Create your operator profile to receive job offers from iCart owners.
+        Create your operator profile to receive job offers from Kiosk owners.
       </p>
 
       <div className="op_create_profile_form">
@@ -295,7 +295,7 @@ function RenewModal({ offer, onClose, onDone }) {
       DURATION_OPTIONS.find((d) => d.key === renewDuration)?.days || 30;
     setSaving(true);
     try {
-      await api.patch(`/icart/operator/job-offers/${offer.id}/renew`, {
+      await api.patch(`/kiosk/operator/job-offers/${offer.id}/renew`, {
         durationDays: days,
       });
       toast.success("Contract renewed!");
@@ -430,7 +430,7 @@ function JobOfferCard({ offer, onAction }) {
   const handleRespond = async (status) => {
     setActioning(status);
     try {
-      await api.patch(`/icart/operator/job-offers/${offer.id}/respond`, {
+      await api.patch(`/kiosk/operator/job-offers/${offer.id}/respond`, {
         status,
       });
       toast.success(`Offer ${status.toLowerCase()}!`);
@@ -446,7 +446,7 @@ function JobOfferCard({ offer, onAction }) {
     if (!window.confirm("Terminate this contract?")) return;
     setActioning("TERMINATE");
     try {
-      await api.patch(`/icart/operator/job-offers/${offer.id}/terminate`);
+      await api.patch(`/kiosk/operator/job-offers/${offer.id}/terminate`);
       toast.success("Contract terminated.");
       onAction();
     } catch (err) {
@@ -457,10 +457,10 @@ function JobOfferCard({ offer, onAction }) {
   };
 
   // Cart name / serial — try several possible shapes
-  // cart info comes directly on offer.cart
-  const cartLabel =
-    offer.cart?.serialNumber ||
-    (offer.cartId ? `#${offer.cartId.slice(0, 8).toUpperCase()}` : "—");
+  // kiosk info comes directly on offer.kiosk
+  const kioskLabel =
+    offer.kiosk?.serialNumber ||
+    (offer.kioskId ? `#${offer.kioskId.slice(0, 8).toUpperCase()}` : "—");
 
   // who sent the offer — offeredBy.fullName
   const ownerLabel =
@@ -489,7 +489,7 @@ function JobOfferCard({ offer, onAction }) {
         )}
 
         <div style={{ padding: "14px 16px" }}>
-          {/* Top row: cart icon + serial + from + status badge */}
+          {/* Top row: kiosk icon + serial + from + status badge */}
           <div
             style={{
               display: "flex",
@@ -512,7 +512,7 @@ function JobOfferCard({ offer, onAction }) {
                 flexShrink: 0,
               }}
             >
-              <LuShoppingCart size={15} />
+              <LuStore size={15} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
@@ -523,7 +523,7 @@ function JobOfferCard({ offer, onAction }) {
                   fontFamily: "monospace",
                 }}
               >
-                {cartLabel}
+                {kioskLabel}
               </div>
               {ownerLabel !== "—" && (
                 <div
@@ -574,7 +574,7 @@ function JobOfferCard({ offer, onAction }) {
             }}
           >
             <div
-              className="icart_meta_row"
+              className="kiosk_meta_row"
               style={{
                 background: "var(--bg-hover)",
                 border: "1px solid var(--border)",
@@ -732,7 +732,7 @@ function JobOfferCard({ offer, onAction }) {
                 </span>
               </div>
             )}
-            {(offer.cart?.location?.name || offer.cart?.locationId) && (
+            {(offer.kiosk?.location?.name || offer.kiosk?.locationId) && (
               <div
                 style={{
                   background: "var(--bg-hover)",
@@ -755,7 +755,7 @@ function JobOfferCard({ offer, onAction }) {
                     color: "var(--text-body)",
                   }}
                 >
-                  {offer.cart?.location?.name || `Location assigned`}
+                  {offer.kiosk?.location?.name || `Location assigned`}
                 </span>
               </div>
             )}
@@ -919,8 +919,8 @@ export default function OperatorHome() {
   const fetchAll = async () => {
     try {
       const [profileRes, offersRes] = await Promise.allSettled([
-        api.get("/icart/operator/profile/me"),
-        api.get("/icart/operator/job-offers"),
+        api.get("/kiosk/operator/profile/me"),
+        api.get("/kiosk/operator/job-offers"),
       ]);
 
       if (profileRes.status === "fulfilled") {
@@ -974,15 +974,15 @@ export default function OperatorHome() {
     );
   }
 
-  // Deduplicate active carts from active offers
+  // Deduplicate active kiosks from active offers
   const activeCarts = activeOffers.reduce((acc, offer) => {
-    const id = offer.cartId || offer.cart?.id;
+    const id = offer.kioskId || offer.kiosk?.id;
     if (id && !acc.find((c) => c.id === id)) {
       acc.push({
         id,
-        serialNumber: offer.cart?.serialNumber || id.slice(0, 8).toUpperCase(),
-        location: offer.cart?.location,
-        isOnline: offer.cart?.isOnline,
+        serialNumber: offer.kiosk?.serialNumber || id.slice(0, 8).toUpperCase(),
+        location: offer.kiosk?.location,
+        isOnline: offer.kiosk?.isOnline,
         offerId: offer.id,
         salary: offer.salary,
         workingHours: offer.workingHours,
@@ -995,7 +995,7 @@ export default function OperatorHome() {
   return (
     <div className="page_wrapper">
       {/* Header */}
-      <div className="icart_page_header">
+      <div className="kiosk_page_header">
         <div>
           <h2 className="page_title_big m-0">Operator</h2>
           <p className="welcome_message" style={{ marginBottom: 0 }}>
@@ -1031,7 +1031,7 @@ export default function OperatorHome() {
             }}
           >
             <div
-              className="icart_operator_avatar"
+              className="kiosk_operator_avatar"
               style={{
                 width: 44,
                 height: 44,
@@ -1073,10 +1073,10 @@ export default function OperatorHome() {
               </div>
             )}
           </div>
-          <div className="icart_item_meta" style={{ marginBottom: 0 }}>
+          <div className="kiosk_item_meta" style={{ marginBottom: 0 }}>
             {profile.certification && (
-              <div className="icart_meta_row">
-                <span className="icart_meta_key">Certification</span>
+              <div className="kiosk_meta_row">
+                <span className="kiosk_meta_key">Certification</span>
                 <a
                   href={profile.certification}
                   target="_blank"
@@ -1096,24 +1096,24 @@ export default function OperatorHome() {
               </div>
             )}
             {profile.state?.name && (
-              <div className="icart_meta_row">
-                <span className="icart_meta_key">State</span>
-                <span className="icart_meta_val">
+              <div className="kiosk_meta_row">
+                <span className="kiosk_meta_key">State</span>
+                <span className="kiosk_meta_val">
                   {profile.state.name}
                   {profile.state.country ? `, ${profile.state.country}` : ""}
                 </span>
               </div>
             )}
             {profile.createdAt && (
-              <div className="icart_meta_row">
-                <span className="icart_meta_key">Joined</span>
-                <span className="icart_meta_val">
+              <div className="kiosk_meta_row">
+                <span className="kiosk_meta_key">Joined</span>
+                <span className="kiosk_meta_val">
                   {formatDate(profile.createdAt)}
                 </span>
               </div>
             )}
             {!profile.isApproved && (
-              <div className="icart_meta_row">
+              <div className="kiosk_meta_row">
                 <span
                   style={{
                     fontSize: "0.75rem",
@@ -1130,12 +1130,12 @@ export default function OperatorHome() {
         </div>
       )}
 
-      {/* ── My iCart(s) ── */}
+      {/* ── My Kiosk(s) ── */}
       {profile && activeCarts.length > 0 && (
         <>
-          <div className="icart_section_label_row" style={{ marginBottom: 12 }}>
-            <span className="icart_section_label">My iCart</span>
-            <span className="icart_section_count">{activeCarts.length}</span>
+          <div className="kiosk_section_label_row" style={{ marginBottom: 12 }}>
+            <span className="kiosk_section_label">My Kiosk</span>
+            <span className="kiosk_section_count">{activeCarts.length}</span>
           </div>
           <div
             style={{
@@ -1295,11 +1295,11 @@ export default function OperatorHome() {
       {profile && (
         <>
           <div
-            className="icart_section_label_row icart_section_label_row_clickable"
+            className="kiosk_section_label_row kiosk_section_label_row_clickable"
             onClick={() => setOffersOpen((v) => !v)}
           >
-            <span className="icart_section_label">Job Offers</span>
-            <span className="icart_section_count">{offers.length}</span>
+            <span className="kiosk_section_label">Job Offers</span>
+            <span className="kiosk_section_count">{offers.length}</span>
             {pendingOffers.length > 0 && (
               <span
                 style={{
@@ -1315,7 +1315,7 @@ export default function OperatorHome() {
                 {pendingOffers.length} pending
               </span>
             )}
-            <span className="icart_section_chevron">
+            <span className="kiosk_section_chevron">
               {offersOpen ? (
                 <MdExpandLess size={18} />
               ) : (
@@ -1328,15 +1328,15 @@ export default function OperatorHome() {
             <>
               {offers.length === 0 ? (
                 <div
-                  className="icart_empty_state"
+                  className="kiosk_empty_state"
                   style={{ padding: "32px 0" }}
                 >
                   <MdWork size={28} style={{ opacity: 0.3 }} />
-                  <p className="icart_empty_title">No job offers yet</p>
-                  <p className="icart_empty_sub">
+                  <p className="kiosk_empty_title">No job offers yet</p>
+                  <p className="kiosk_empty_sub">
                     {profile.isApproved
-                      ? "iCart owners can send you offers once your profile is approved."
-                      : "Once approved, job offers from iCart owners will appear here."}
+                      ? "Kiosk owners can send you offers once your profile is approved."
+                      : "Once approved, job offers from Kiosk owners will appear here."}
                   </p>
                 </div>
               ) : (
@@ -1404,9 +1404,10 @@ export default function OperatorHome() {
         </>
       )}
 
-      <OperatorCartDrawer
-        cartId={openCartId}
-        onClose={() => setOpenCartId(null)}
+      <OperatorKioskDrawer
+        kioskId={selectedKioskId}
+        onClose={() => setSelectedKioskId(null)}
+        onUpdate={fetchData}
       />
     </div>
   );

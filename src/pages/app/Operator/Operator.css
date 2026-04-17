@@ -1,5 +1,5 @@
 /* ── Operator Page ────────────────────────────────────────────────────────────
-   Append to Icart.css (or create a separate Operator.css and import it)
+   Append to Kiosk.css (or create a separate Operator.css and import it)
    ──────────────────────────────────────────────────────────────────────────── */
 
 /* Create profile hero card */
@@ -86,7 +86,7 @@
 }
 
 /* ── Operator avatar ── */
-.icart_operator_avatar {
+.kiosk_operator_avatar {
   width: 44px;
   height: 44px;
   border-radius: 12px;
@@ -100,19 +100,19 @@
 }
 
 /* ── Section label row ── */
-.icart_section_label_row {
+.kiosk_section_label_row {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
 }
 
-.icart_section_label_row_clickable {
+.kiosk_section_label_row_clickable {
   cursor: pointer;
   user-select: none;
 }
 
-.icart_section_chevron {
+.kiosk_section_chevron {
   margin-left: auto;
   color: var(--text-muted);
   display: flex;
@@ -120,7 +120,7 @@
 }
 
 /* ── Status badge (operator) ── */
-.icart_status_badge {
+.kiosk_status_badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -133,19 +133,19 @@
 }
 
 /* ── Meta rows ── */
-.icart_item_meta {
+.kiosk_item_meta {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.icart_meta_row {
+.kiosk_meta_row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.icart_meta_key {
+.kiosk_meta_key {
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-muted);
@@ -153,14 +153,14 @@
   flex-shrink: 0;
 }
 
-.icart_meta_val {
+.kiosk_meta_val {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--text-body);
 }
 
 /* ── Empty state ── */
-.icart_empty_state {
+.kiosk_empty_state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -169,14 +169,14 @@
   text-align: center;
 }
 
-.icart_empty_title {
+.kiosk_empty_title {
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--text-body);
   margin: 0;
 }
 
-.icart_empty_sub {
+.kiosk_empty_sub {
   font-size: 0.78rem;
   color: var(--text-muted);
   margin: 0;
@@ -184,7 +184,7 @@
 }
 
 /* ── Section label ── */
-.icart_section_label {
+.kiosk_section_label {
   font-size: 0.82rem;
   font-weight: 800;
   color: var(--text-heading);
@@ -192,7 +192,7 @@
   letter-spacing: 0.04em;
 }
 
-.icart_section_count {
+.kiosk_section_count {
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 8px;
@@ -203,7 +203,7 @@
 }
 
 /* ── Icon action button ── */
-.icart_icon_action_btn {
+.kiosk_icon_action_btn {
   width: 30px;
   height: 30px;
   border-radius: 8px;
@@ -218,7 +218,7 @@
   transition: background 0.15s, color 0.15s;
 }
 
-.icart_icon_action_btn:hover {
+.kiosk_icon_action_btn:hover {
   background: var(--bg-active);
   color: var(--accent);
   border-color: rgba(203, 108, 220, 0.3);
@@ -246,13 +246,13 @@
 }
 
 /* ── Sub nav ── */
-.icart_sub_nav {
+.kiosk_sub_nav {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.icart_sub_nav_btn {
+.kiosk_sub_nav_btn {
   height: 32px;
   padding: 0 14px;
   border-radius: 8px;
@@ -266,12 +266,12 @@
   transition: all 0.15s;
 }
 
-.icart_sub_nav_btn:hover {
+.kiosk_sub_nav_btn:hover {
   border-color: rgba(203, 108, 220, 0.3);
   color: var(--text-body);
 }
 
-.icart_sub_nav_active {
+.kiosk_sub_nav_active {
   background: var(--bg-active);
   color: var(--accent);
   border-color: rgba(203, 108, 220, 0.4);

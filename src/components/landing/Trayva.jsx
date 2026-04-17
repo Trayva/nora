@@ -1,4 +1,4 @@
-import img from "../../assets/icart4.png";
+import img from "../../assets/kiosk4.png";
 
 function Trayva() {
   return (

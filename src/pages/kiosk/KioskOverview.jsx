@@ -54,17 +54,17 @@ const BLANK_LOCATION = {
 
 function ToggleRow({ icon, label, value, loading, onToggle }) {
   return (
-    <div className="icart_toggle_row">
-      <div className="icart_toggle_left">
+    <div className="kiosk_toggle_row">
+      <div className="kiosk_toggle_left">
         <span className="profile_phone_date_icon">{icon}</span>
-        <span className="icart_toggle_label">{label}</span>
+        <span className="kiosk_toggle_label">{label}</span>
       </div>
       <button
-        className={`icart_toggle_switch ${value ? "icart_toggle_on" : ""}`}
+        className={`kiosk_toggle_switch ${value ? "kiosk_toggle_on" : ""}`}
         onClick={onToggle}
         disabled={loading}
       >
-        <span className="icart_toggle_knob" />
+        <span className="kiosk_toggle_knob" />
       </button>
     </div>
   );
@@ -72,10 +72,10 @@ function ToggleRow({ icon, label, value, loading, onToggle }) {
 
 function InfoRow({ label, value }) {
   return (
-    <div className="icart_meta_row">
-      <span className="icart_meta_key">{label}</span>
-      <span className="icart_meta_val">
-        {value || <span className="icart_meta_muted">—</span>}
+    <div className="kiosk_meta_row">
+      <span className="kiosk_meta_key">{label}</span>
+      <span className="kiosk_meta_val">
+        {value || <span className="kiosk_meta_muted">—</span>}
       </span>
     </div>
   );
@@ -542,7 +542,7 @@ function MapPicker({ lat, lng, onPick }) {
 }
 
 /* ── Location Form ─────────────────────────────────────────── */
-function LocationForm({ cartId, onSaved, onCancel }) {
+function LocationForm({ kioskId, onSaved, onCancel }) {
   const [form, setForm] = useState(BLANK_LOCATION);
   const [saving, setSaving] = useState(false);
   const [states, setStates] = useState([]);
@@ -686,7 +686,7 @@ function LocationForm({ cartId, onSaved, onCancel }) {
     if (!form._selectedStateId) return toast.error("Please select a state");
     setSaving(true);
     try {
-      const locRes = await api.post("/icart/location", {
+      const locRes = await api.post("/kiosk/location", {
         name: form.name.trim(),
         address: form.address.trim(),
         city: form.city.trim(),
@@ -700,7 +700,7 @@ function LocationForm({ cartId, onSaved, onCancel }) {
       });
       const locationId = locRes.data.data?.id;
       if (!locationId) throw new Error("No location ID returned");
-      await api.post(`/icart/${cartId}/change-location`, { locationId });
+      await api.post(`/kiosk/${kioskId}/change-location`, { locationId });
       toast.success("Location created and assigned");
       onSaved(locRes.data.data);
     } catch (err) {
@@ -713,8 +713,8 @@ function LocationForm({ cartId, onSaved, onCancel }) {
   };
 
   return (
-    <div className="icart_location_form">
-      <div className="icart_location_form_grid">
+    <div className="kiosk_location_form">
+      <div className="kiosk_location_form_grid">
         <div className="form-field" style={{ gridColumn: "1 / -1" }}>
           <label className="modal-label">Location Name *</label>
           <input
@@ -1501,8 +1501,8 @@ function IngredientSupplyModal({
       return toast.error("Enter quantity for at least one item");
     setSubmitting(true);
     try {
-      await api.post("/icart/supply", {
-        cartId: cart?.id,
+      await api.post("/kiosk/supply", {
+        kioskId: cart?.id,
         supplierId,
         items: valid.map((m) => ({
           ingredientId: m.id,
@@ -1947,8 +1947,8 @@ function MachinerySupplyModal({
       return toast.error("Enter quantity for at least one item");
     setSubmitting(true);
     try {
-      await api.post("/icart/supply", {
-        cartId: cart?.id,
+      await api.post("/kiosk/supply", {
+        kioskId: cart?.id,
         supplierId,
         machineryItems: valid.map((m) => ({
           machineryId: m.id,
@@ -2577,7 +2577,7 @@ function MenuDetailDrawer({
                 />
               </div>
             ) : !summary ? (
-              <div className="icart_empty_inline" style={{ padding: "48px 0" }}>
+              <div className="kiosk_empty_inline" style={{ padding: "48px 0" }}>
                 <MdRestaurantMenu size={28} style={{ opacity: 0.25 }} />
                 <span>No details available</span>
               </div>
@@ -3172,7 +3172,7 @@ function MenuDetailDrawer({
                   >
                     {machineries.length === 0 ? (
                       <div
-                        className="icart_empty_inline"
+                        className="kiosk_empty_inline"
                         style={{ padding: "40px 0" }}
                       >
                         <MdBuild size={26} style={{ opacity: 0.25 }} />
@@ -3370,7 +3370,7 @@ function MenuDetailDrawer({
                   >
                     {ingredients.length === 0 ? (
                       <div
-                        className="icart_empty_inline"
+                        className="kiosk_empty_inline"
                         style={{ padding: "40px 0" }}
                       >
                         <MdOutlineInventory2
@@ -3594,7 +3594,7 @@ function MenuDetailDrawer({
                   <div>
                     {prepItems.length === 0 ? (
                       <div
-                        className="icart_empty_inline"
+                        className="kiosk_empty_inline"
                         style={{ padding: "40px 0" }}
                       >
                         <MdRestaurantMenu size={26} style={{ opacity: 0.25 }} />
@@ -3707,7 +3707,7 @@ function MenuDetailDrawer({
                   <div>
                     {sops.length === 0 ? (
                       <div
-                        className="icart_empty_inline"
+                        className="kiosk_empty_inline"
                         style={{ padding: "40px 0" }}
                       >
                         <MdMenuBook size={26} style={{ opacity: 0.25 }} />
@@ -3858,7 +3858,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
 
     // Fetch global slots
     api
-      .get(`/icart/available-slots?${baseParams.join("&")}`)
+      .get(`/kiosk/available-slots?${baseParams.join("&")}`)
       .then((r) => {
         const slots = r.data?.data?.slots;
         setAvailableSlots(slots != null ? Number(slots) : null);
@@ -3871,7 +3871,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
       brands.map((brand) =>
         api
           .get(
-            `/icart/available-slots?${baseParams.join("&")}&vendorId=${brand.id}`,
+            `/kiosk/available-slots?${baseParams.join("&")}&vendorId=${brand.id}`,
           )
           .then((r) => ({ id: brand.id, slots: r.data?.data?.slots }))
           .catch(() => ({ id: brand.id, slots: null })),
@@ -3950,7 +3950,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
     setTermsLoading(true);
     api
       .get(
-        `/icartVendorApplication/settings/country/${encodeURIComponent(country)}`,
+        `/kioskVendorApplication/settings/country/${encodeURIComponent(country)}`,
       )
       .then((r) => setTermsData(r.data.data))
       .catch((err) =>
@@ -3970,7 +3970,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
     }
     setConfirming(true);
     try {
-      const res = await api.post(`/icart/${cart.id}/change-vendor`, {
+      const res = await api.post(`/kiosk/${cart.id}/change-vendor`, {
         vendorId: selectedBrandId,
         menuIds: selectedMenuIds,
       });
@@ -3994,7 +3994,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
   const handlePaid = async () => {
     if (selectedMenuIds.length > 0) {
       try {
-        await api.post(`/icart/${cart.id}/menu-items`, {
+        await api.post(`/kiosk/${cart.id}/menu-items`, {
           items: selectedMenuIds.map((id) => ({ id, markup: 0 })),
         });
       } catch {
@@ -4372,7 +4372,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                 </div>
               ) : filteredBrands.length === 0 ? (
                 <div
-                  className="icart_empty_inline"
+                  className="kiosk_empty_inline"
                   style={{ padding: "40px 0" }}
                 >
                   <MdStorefront size={28} style={{ opacity: 0.25 }} />
@@ -4601,7 +4601,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                               </div>
                             ) : !menus?.items?.length ? (
                               <div
-                                className="icart_empty_inline"
+                                className="kiosk_empty_inline"
                                 style={{ padding: "24px 0" }}
                               >
                                 <MdRestaurantMenu
@@ -5014,7 +5014,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                     fontWeight: 600,
                   }}
                 >
-                  {cart.location?.country || "No location set on this iCart"}
+                  {cart.location?.country || "No location set on this Kiosk"}
                 </span>
               </div>
 
@@ -5038,7 +5038,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                 >
                   {cart.location?.country
                     ? `No brand settings found for ${cart.location.country}.`
-                    : "Set a location on this iCart first to load terms."}
+                    : "Set a location on this Kiosk first to load terms."}
                 </div>
               )}
 
@@ -5377,7 +5377,7 @@ function BrandIdleCard({
             No Brand Selected
           </div>
           <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
-            Tap to choose a brand and menu items for this iCart
+            Tap to choose a brand and menu items for this Kiosk
           </div>
         </div>
         <button
@@ -5823,7 +5823,7 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
     if (!pendingAdd.length) return;
     setSaving(true);
     try {
-      await api.post(`/icart/${cart.id}/menu-items`, {
+      await api.post(`/kiosk/${cart.id}/menu-items`, {
         items: pendingAdd.map((p) => ({
           id: p.id,
           markup: Number(markupValues[p.id] || 0),
@@ -5834,7 +5834,7 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
       );
       setPendingAdd([]);
       setMarkupValues({});
-      const refreshed = await api.get(`/icart/${cart.id}`);
+      const refreshed = await api.get(`/kiosk/${cart.id}`);
       setCartMenuItems(refreshed.data.data?.menuItems || []);
       onRefresh();
     } catch (err) {
@@ -5848,7 +5848,7 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
     if (!confirmRemove) return;
     setRemoving(true);
     try {
-      await api.delete(`/icart/${cart.id}/menu-items`, {
+      await api.delete(`/kiosk/${cart.id}/menu-items`, {
         data: { ids: [confirmRemove.id || confirmRemove.menuItemId] },
       });
       toast.success("Item removed");
@@ -6193,7 +6193,7 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
               <div className="page_loader_spinner" />
             </div>
           ) : vendorMenuItems.length === 0 ? (
-            <div className="icart_empty_inline">
+            <div className="kiosk_empty_inline">
               <MdRestaurantMenu size={18} style={{ opacity: 0.3 }} />
               <span>No menu items available</span>
             </div>
@@ -6494,7 +6494,7 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
         isOpen={!!confirmRemove}
         onClose={() => setConfirmRemove(null)}
         title="Remove Menu Item"
-        description={`Remove "${confirmRemove?.name || confirmRemove?.menuItem?.name}" from this iCart?`}
+        description={`Remove "${confirmRemove?.name || confirmRemove?.menuItem?.name}" from this Kiosk?`}
       >
         <div className="modal-body">
           <div className="modal-footer">
@@ -6556,7 +6556,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
   const handleRemoveBrand = async () => {
     setRemovingBrand(true);
     try {
-      await api.delete(`/icart/${cart.id}/remove-vendor`);
+      await api.delete(`/kiosk/${cart.id}/remove-vendor`);
       toast.success("Brand removed");
       setConfirmRemoveBrand(false);
       onRefresh();
@@ -6580,7 +6580,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
         <span>Brands</span>
         <button
-          className="icart_icon_action_btn"
+          className="kiosk_icon_action_btn"
           style={{ marginLeft: "auto" }}
           title="Change / Add Brand"
           onClick={() => setShowBrandDrawer(true)}
@@ -6681,7 +6681,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
                 marginBottom: 20,
               }}
             >
-              This will remove the brand and all menu items from this iCart.
+              This will remove the brand and all menu items from this Kiosk.
               This cannot be undone.
             </div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -6720,7 +6720,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
 }
 
 /* ── Main Component ─────────────────────────────────────────── */
-export default function IcartOverview({ cart, onUpdate, onRefresh }) {
+export default function KioskOverview({ cart, onUpdate, onRefresh }) {
   const [togglingOnline, setTogglingOnline] = useState(false);
   const [togglingLock, setTogglingLock] = useState(false);
   const [editingRadius, setEditingRadius] = useState(false);
@@ -6736,7 +6736,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
   const handleToggleOnline = async () => {
     setTogglingOnline(true);
     try {
-      const res = await api.patch(`/icart/${cart.id}/status/online`);
+      const res = await api.patch(`/kiosk/${cart.id}/status/online`);
       onUpdate({
         ...cart,
         isOnline: res.data.data?.isOnline ?? !cart.isOnline,
@@ -6752,7 +6752,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
   const handleToggleLock = async () => {
     setTogglingLock(true);
     try {
-      const res = await api.patch(`/icart/${cart.id}/status/lock`);
+      const res = await api.patch(`/kiosk/${cart.id}/status/lock`);
       onUpdate({
         ...cart,
         isLocked: res.data.data?.isLocked ?? !cart.isLocked,
@@ -6769,7 +6769,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
     if (!radius || isNaN(radius)) return toast.error("Enter a valid radius");
     setSavingRadius(true);
     try {
-      await api.patch(`/icart/service-radius/${cart.id}`, {
+      await api.patch(`/kiosk/service-radius/${cart.id}`, {
         serviceRadius: Number(radius),
       });
       onUpdate({ ...cart, serviceRadius: Number(radius) });
@@ -6785,7 +6785,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
   const handleSaveHours = async () => {
     setSavingHours(true);
     try {
-      await api.patch(`/icart/${cart.id}/operating-hours`, {
+      await api.patch(`/kiosk/${cart.id}/operating-hours`, {
         ...(opHours.trim() && { operatingHours: opHours.trim() }),
         ...(opDays.trim() && { operatingDays: opDays.trim() }),
       });
@@ -6809,10 +6809,10 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
   };
 
   return (
-    <div className="icart_tab_content" style={{ paddingBottom: 80 }}>
+    <div className="kiosk_tab_content" style={{ paddingBottom: 80 }}>
       {/* ── Kitchen Controls ── */}
       <div className="drawer_section_title">Kitchen Controls</div>
-      <div className="icart_toggles_block">
+      <div className="kiosk_toggles_block">
         <ToggleRow
           icon={cart.isOnline ? <MdWifi size={15} /> : <MdWifiOff size={15} />}
           label="Online Status"
@@ -6828,15 +6828,15 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
           onToggle={handleToggleLock}
         />
         <div
-          className="icart_toggle_row"
+          className="kiosk_toggle_row"
           style={{ cursor: "pointer" }}
           onClick={() => setShowLiveStream(true)}
         >
-          <div className="icart_toggle_left">
+          <div className="kiosk_toggle_left">
             <span className="profile_phone_date_icon">
               <MdVideocam size={15} />
             </span>
-            <span className="icart_toggle_label">Live Stream</span>
+            <span className="kiosk_toggle_label">Live Stream</span>
           </div>
           <span
             style={{
@@ -6858,14 +6858,14 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
         Service Radius
       </div>
-      <div className="icart_radius_block">
-        <div className="icart_radius_row">
+      <div className="kiosk_radius_block">
+        <div className="kiosk_radius_row">
           <span className="profile_phone_date_icon">
             <MdSignalCellularAlt size={15} />
           </span>
-          <span className="icart_toggle_label">Radius</span>
+          <span className="kiosk_toggle_label">Radius</span>
           {editingRadius ? (
-            <div className="icart_radius_edit">
+            <div className="kiosk_radius_edit">
               <input
                 className="modal-input"
                 style={{
@@ -6905,16 +6905,16 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
               </button>
             </div>
           ) : (
-            <div className="icart_radius_display">
-              <span className="icart_meta_val">
+            <div className="kiosk_radius_display">
+              <span className="kiosk_meta_val">
                 {cart.serviceRadius ? (
                   `${cart.serviceRadius} km`
                 ) : (
-                  <span className="icart_meta_muted">Not set</span>
+                  <span className="kiosk_meta_muted">Not set</span>
                 )}
               </span>
               <button
-                className="icart_icon_action_btn"
+                className="kiosk_icon_action_btn"
                 onClick={() => setEditingRadius(true)}
               >
                 <MdEdit size={14} />
@@ -6928,7 +6928,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
         <span>Operating Hours</span>
         <button
-          className="icart_icon_action_btn"
+          className="kiosk_icon_action_btn"
           style={{ marginLeft: "auto" }}
           onClick={() => setEditingHours((v) => !v)}
           title="Edit operating hours"
@@ -7047,20 +7047,20 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
           </div>
         </div>
       ) : (
-        <div className="icart_item_meta" style={{ marginBottom: 0 }}>
-          <div className="icart_meta_row">
-            <span className="icart_meta_key">Hours</span>
-            <span className="icart_meta_val">
+        <div className="kiosk_item_meta" style={{ marginBottom: 0 }}>
+          <div className="kiosk_meta_row">
+            <span className="kiosk_meta_key">Hours</span>
+            <span className="kiosk_meta_val">
               {cart.operatingHours || (
-                <span className="icart_meta_muted">Not set</span>
+                <span className="kiosk_meta_muted">Not set</span>
               )}
             </span>
           </div>
-          <div className="icart_meta_row">
-            <span className="icart_meta_key">Days</span>
-            <span className="icart_meta_val">
+          <div className="kiosk_meta_row">
+            <span className="kiosk_meta_key">Days</span>
+            <span className="kiosk_meta_val">
               {cart.operatingDays || (
-                <span className="icart_meta_muted">Not set</span>
+                <span className="kiosk_meta_muted">Not set</span>
               )}
             </span>
           </div>
@@ -7071,7 +7071,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
         Kitchen Info
       </div>
-      <div className="icart_item_meta" style={{ marginBottom: 0 }}>
+      <div className="kiosk_item_meta" style={{ marginBottom: 0 }}>
         <InfoRow label="Serial Number" value={cart.serialNumber} />
         <InfoRow label="Status" value={cart.status} />
         <InfoRow label="Owner" value={cart.owner?.name || cart.owner?.email} />
@@ -7081,7 +7081,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
         <span>Location</span>
         <button
-          className="icart_icon_action_btn"
+          className="kiosk_icon_action_btn"
           style={{ marginLeft: "auto" }}
           title={cart.location ? "Change location" : "Add location"}
           onClick={() => setShowLocationForm((v) => !v)}
@@ -7092,38 +7092,38 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
 
       {showLocationForm ? (
         <LocationForm
-          cartId={cart.id}
+          kioskId={cart.id}
           onSaved={handleLocationSaved}
           onCancel={() => setShowLocationForm(false)}
         />
       ) : cart.location ? (
-        <div className="icart_location_card">
-          <div className="icart_location_icon_wrap">
+        <div className="kiosk_location_card">
+          <div className="kiosk_location_icon_wrap">
             <MdLocationOn size={18} />
           </div>
-          <div className="icart_location_info">
-            <div className="icart_location_name">{cart.location.name}</div>
+          <div className="kiosk_location_info">
+            <div className="kiosk_location_name">{cart.location.name}</div>
             {cart.location.address && (
-              <div className="icart_location_address">
+              <div className="kiosk_location_address">
                 {cart.location.address}
               </div>
             )}
             {(cart.location.lga || cart.location.city) && (
-              <div className="icart_location_address">
+              <div className="kiosk_location_address">
                 {[cart.location.lga, cart.location.city]
                   .filter(Boolean)
                   .join(", ")}
               </div>
             )}
             {cart.location.country && (
-              <div className="icart_location_address">
+              <div className="kiosk_location_address">
                 {cart.location.country}
               </div>
             )}
           </div>
         </div>
       ) : (
-        <div className="icart_empty_inline">
+        <div className="kiosk_empty_inline">
           <MdLocationOn size={18} style={{ opacity: 0.3 }} />
           <span>No location assigned</span>
         </div>
@@ -7139,7 +7139,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
       {/* ── Operators ── */}
       <div className="drawer_section_title" style={{ marginTop: 24 }}>
         Operators
-        <span className="icart_section_count" style={{ marginLeft: 8 }}>
+        <span className="kiosk_section_count" style={{ marginLeft: 8 }}>
           {cart.operators?.length || 0}
         </span>
       </div>
@@ -7165,7 +7165,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
                 }}
               >
                 <div
-                  className="icart_operator_avatar"
+                  className="kiosk_operator_avatar"
                   style={{ flexShrink: 0 }}
                 >
                   {name[0].toUpperCase()}
@@ -7174,7 +7174,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
                   <div
                     style={{ display: "flex", alignItems: "center", gap: 6 }}
                   >
-                    <span className="icart_operator_name">{name}</span>
+                    <span className="kiosk_operator_name">{name}</span>
                     {op.isApproved && (
                       <MdVerified
                         size={14}
@@ -7182,7 +7182,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
                       />
                     )}
                   </div>
-                  <div className="icart_operator_meta">
+                  <div className="kiosk_operator_meta">
                     {op.user?.email && <span>{op.user.email}</span>}
                     {op.state?.name && (
                       <span style={{ marginLeft: op.user?.email ? 6 : 0 }}>
@@ -7224,7 +7224,7 @@ export default function IcartOverview({ cart, onUpdate, onRefresh }) {
           })}
         </div>
       ) : (
-        <div className="icart_empty_inline">
+        <div className="kiosk_empty_inline">
           <MdPerson size={18} style={{ opacity: 0.3 }} />
           <span>No operators assigned</span>
         </div>

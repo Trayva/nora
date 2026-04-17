@@ -72,7 +72,7 @@ function ApplicationDrawer({ app, onClose, onStatusUpdated, onDeleted }) {
   const handleStatus = async (newStatus) => {
     setUpdatingStatus(true);
     try {
-      await api.patch(`/icartVendorApplication/${app.id}/status`, {
+      await api.patch(`/kioskVendorApplication/${app.id}/status`, {
         status: newStatus,
       });
       toast.success(`Status updated to ${newStatus}`);
@@ -87,7 +87,7 @@ function ApplicationDrawer({ app, onClose, onStatusUpdated, onDeleted }) {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await api.delete(`/icartVendorApplication/${app.id}`);
+      await api.delete(`/kioskVendorApplication/${app.id}`);
       toast.success("Application deleted");
       setConfirmDelete(false);
       onDeleted();
@@ -166,31 +166,31 @@ function ApplicationDrawer({ app, onClose, onStatusUpdated, onDeleted }) {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {(user?.fullName || user?.name) && (
-                <div className="icart_meta_row">
-                  <span className="icart_meta_key">Name</span>
-                  <span className="icart_meta_val">
+                <div className="kiosk_meta_row">
+                  <span className="kiosk_meta_key">Name</span>
+                  <span className="kiosk_meta_val">
                     {user.fullName || user.name}
                   </span>
                 </div>
               )}
               {user?.email && (
-                <div className="icart_meta_row">
-                  <span className="icart_meta_key">Email</span>
-                  <span className="icart_meta_val">{user.email}</span>
+                <div className="kiosk_meta_row">
+                  <span className="kiosk_meta_key">Email</span>
+                  <span className="kiosk_meta_val">{user.email}</span>
                 </div>
               )}
               {app.vendor?.businessName && (
-                <div className="icart_meta_row">
-                  <span className="icart_meta_key">Business</span>
-                  <span className="icart_meta_val">
+                <div className="kiosk_meta_row">
+                  <span className="kiosk_meta_key">Business</span>
+                  <span className="kiosk_meta_val">
                     {app.vendor.businessName}
                   </span>
                 </div>
               )}
               {app.country && (
-                <div className="icart_meta_row">
-                  <span className="icart_meta_key">Country</span>
-                  <span className="icart_meta_val">{app.country}</span>
+                <div className="kiosk_meta_row">
+                  <span className="kiosk_meta_key">Country</span>
+                  <span className="kiosk_meta_val">{app.country}</span>
                 </div>
               )}
             </div>
@@ -249,14 +249,14 @@ function ApplicationDrawer({ app, onClose, onStatusUpdated, onDeleted }) {
                   typeof app[k] !== "object",
               )
               .map(([k, v]) => (
-                <div key={k} className="icart_meta_row">
+                <div key={k} className="kiosk_meta_row">
                   <span
-                    className="icart_meta_key"
+                    className="kiosk_meta_key"
                     style={{ textTransform: "capitalize" }}
                   >
                     {k.replace(/([A-Z])/g, " $1").trim()}
                   </span>
-                  <span className="icart_meta_val">{String(v)}</span>
+                  <span className="kiosk_meta_val">{String(v)}</span>
                 </div>
               ))}
           </div>
@@ -395,7 +395,7 @@ export default function AdminVendorApplicationSettings() {
   const fetchSettings = async () => {
     setSettingsLoading(true);
     try {
-      const r = await api.get("/icartVendorApplication/settings/all");
+      const r = await api.get("/kioskVendorApplication/settings/all");
       setSettings(r.data.data || []);
     } catch {
       toast.error("Failed to load vendor settings");
@@ -407,7 +407,7 @@ export default function AdminVendorApplicationSettings() {
   const fetchApplications = async () => {   
     setAppsLoading(true);
     try {
-      const r = await api.get("/icartVendorApplication");
+      const r = await api.get("/kioskVendorApplication");
       const d = r.data.data;
       setApplications(Array.isArray(d) ? d : d?.items || d?.applications || []);
     } catch {
@@ -473,10 +473,10 @@ export default function AdminVendorApplicationSettings() {
       };
       if (editingSetting)
         await api.patch(
-          `/icartVendorApplication/settings/${editingSetting.id}`,
+          `/kioskVendorApplication/settings/${editingSetting.id}`,
           body,
         );
-      else await api.post("/icartVendorApplication/settings", body);
+      else await api.post("/kioskVendorApplication/settings", body);
       toast.success(editingSetting ? "Updated" : "Created");
       setSettingsOpen(false);
       fetchSettings();
@@ -492,7 +492,7 @@ export default function AdminVendorApplicationSettings() {
     setDeletingSetting(confirmDeleteSetting.id);
     try {
       await api.delete(
-        `/icartVendorApplication/settings/${confirmDeleteSetting.id}`,
+        `/kioskVendorApplication/settings/${confirmDeleteSetting.id}`,
       );
       toast.success("Deleted");
       setConfirmDeleteSetting(null);

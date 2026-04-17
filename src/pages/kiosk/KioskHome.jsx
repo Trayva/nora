@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import ContractDrawer from "./ContractDrawer";
-import IcartDrawer from "./IcartDrawer";
+import KioskDrawer from "./KioskDrawer";
 import api from "../../api/axios";
-import "./Icart.css";
+import "./Kiosk.css";
 import {
   MdCircle,
   MdLock,
@@ -18,10 +18,9 @@ import {
   MdExpandLess,
   MdLocationOn,
 } from "react-icons/md";
-import { LuShoppingCart } from "react-icons/lu";
-import NotificationBell from "../../components/Notifications/NotificationBell";
+import { LuStore } from "react-icons/lu"; // Changed icon to LuStore for Kiosk
 
-const icartStatusColors = {
+const kioskStatusColors = {
   PURCHASED: {
     bg: "rgba(203,108,220,0.1)",
     color: "var(--accent)",
@@ -89,7 +88,7 @@ function StatusBadge({ status, colors }) {
   const s = colors[status] || Object.values(colors)[0];
   return (
     <span
-      className="icart_status_badge"
+      className="kiosk_status_badge"
       style={{
         background: s.bg,
         color: s.color,
@@ -102,27 +101,27 @@ function StatusBadge({ status, colors }) {
   );
 }
 
-export default function IcartHome() {
+export default function KioskHome() {
   const navigate = useNavigate();
-  const [icarts, setIcarts] = useState([]);
+  const [kiosks, setKiosks] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedContract, setSelectedContract] = useState(null);
-  const [selectedCartId, setSelectedCartId] = useState(null);
-  const [icartsOpen, setIcartsOpen] = useState(true);
+  const [selectedKioskId, setSelectedKioskId] = useState(null);
+  const [kiosksOpen, setKiosksOpen] = useState(true);
   const [contractsOpen, setContractsOpen] = useState(true);
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [icartsRes, contractsRes] = await Promise.all([
-          api.get("/icart/vendor"),
+        const [kiosksRes, contractsRes] = await Promise.all([
+          api.get("/kiosk/vendor"),
           api.get("/contract/application"),
         ]);
-        setIcarts(icartsRes.data.data.items || []);
+        setKiosks(kiosksRes.data.data.items || []);
         setContracts(contractsRes.data.data.items || []);
       } catch {
-        toast.error("Failed to load iCart data");
+        toast.error("Failed to load Kiosk data");
       } finally {
         setLoading(false);
       }
@@ -130,30 +129,30 @@ export default function IcartHome() {
     fetchAll();
   }, []);
 
-  // When a cart is updated from inside the drawer, sync it back to the list
-  const handleCartUpdate = (updatedCart) => {
-    setIcarts((prev) =>
-      prev.map((c) => (c.id === updatedCart.id ? { ...c, ...updatedCart } : c)),
+  // When a kiosk is updated from inside the drawer, sync it back to the list
+  const handleKioskUpdate = (updatedKiosk) => {
+    setKiosks((prev) =>
+      prev.map((k) => (k.id === updatedKiosk.id ? { ...k, ...updatedKiosk } : k)),
     );
   };
 
   return (
     <div className="page_wrapper">
       {/* Page header */}
-      <div className="icart_page_header">
+      <div className="kiosk_page_header">
         <div>
-          <h2 className="page_title_big m-0">iCart</h2>
+          <h2 className="page_title_big m-0">Kiosk</h2>
           <p className="welcome_message" style={{ marginBottom: 0 }}>
-            Purchase and manage your iCarts
+            Purchase and manage your Kiosks
           </p>
         </div>
         <button
           className="app_btn app_btn_confirm shift-right"
           style={{ height: 40, display: "flex", alignItems: "center", gap: 6 }}
-          onClick={() => navigate("/app/purchase-icart")}
+          onClick={() => navigate("/app/purchase-kiosk")}
         >
           <MdAdd size={17} />
-          Purchase iCart
+          Purchase Kiosk
         </button>
       </div>
 
@@ -163,15 +162,15 @@ export default function IcartHome() {
         </div>
       ) : (
         <>
-          {/* ── iCarts ── */}
+          {/* ── Kiosks ── */}
           <div
-            className="icart_section_label_row icart_section_label_row_clickable"
-            onClick={() => setIcartsOpen((v) => !v)}
+            className="kiosk_section_label_row kiosk_section_label_row_clickable"
+            onClick={() => setKiosksOpen((v) => !v)}
           >
-            <span className="icart_section_label">My iCarts</span>
-            <span className="icart_section_count">{icarts.length}</span>
-            <span className="icart_section_chevron">
-              {icartsOpen ? (
+            <span className="kiosk_section_label">My Kiosks</span>
+            <span className="kiosk_section_count">{kiosks.length}</span>
+            <span className="kiosk_section_chevron">
+              {kiosksOpen ? (
                 <MdExpandLess size={18} />
               ) : (
                 <MdExpandMore size={18} />
@@ -179,113 +178,113 @@ export default function IcartHome() {
             </span>
           </div>
 
-          {icartsOpen &&
-            (icarts.length === 0 ? (
+          {kiosksOpen &&
+            (kiosks.length === 0 ? (
               <div
-                className="icart_empty_state"
+                className="kiosk_empty_state"
                 style={{ padding: "32px 0", marginBottom: 32 }}
               >
-                <LuShoppingCart size={32} style={{ opacity: 0.3 }} />
-                <p className="icart_empty_title">No iCarts yet</p>
-                <p className="icart_empty_sub">
-                  Your purchased iCarts will appear here.
+                <LuStore size={32} style={{ opacity: 0.3 }} />
+                <p className="kiosk_empty_title">No Kiosks yet</p>
+                <p className="kiosk_empty_sub">
+                  Your purchased Kiosks will appear here.
                 </p>
               </div>
             ) : (
               <>
-                <div className="icart_summary_row">
-                  <div className="icart_summary_chip">
-                    <LuShoppingCart size={13} />
-                    {icarts.length} iCart{icarts.length !== 1 ? "s" : ""}
+                <div className="kiosk_summary_row">
+                  <div className="kiosk_summary_chip">
+                    <LuStore size={13} />
+                    {kiosks.length} Kiosk{kiosks.length !== 1 ? "s" : ""}
                   </div>
-                  <div className="icart_summary_chip">
+                  <div className="kiosk_summary_chip">
                     <MdCircle size={7} style={{ color: "#22c55e" }} />
-                    {icarts.filter((c) => c.isOnline).length} Online
+                    {kiosks.filter((k) => k.isOnline).length} Online
                   </div>
-                  <div className="icart_summary_chip">
+                  <div className="kiosk_summary_chip">
                     <MdLockOpen size={13} />
-                    {icarts.filter((c) => !c.isLocked).length} Unlocked
+                    {kiosks.filter((k) => !k.isLocked).length} Unlocked
                   </div>
                 </div>
 
-                <div className="icart_grid" style={{ marginBottom: 36 }}>
-                  {icarts.map((cart) => (
+                <div className="kiosk_grid" style={{ marginBottom: 36 }}>
+                  {kiosks.map((kiosk) => (
                     <div
-                      key={cart.id}
-                      className="icart_item_card"
+                      key={kiosk.id}
+                      className="kiosk_item_card"
                       style={{ cursor: "pointer" }}
-                      onClick={() => setSelectedCartId(cart.id)}
+                      onClick={() => setSelectedKioskId(kiosk.id)}
                     >
-                      <div className="icart_item_top">
-                        <div className="icart_item_icon">
-                          <LuShoppingCart size={17} />
+                      <div className="kiosk_item_top">
+                        <div className="kiosk_item_icon">
+                          <LuStore size={17} />
                         </div>
                         <StatusBadge
-                          status={cart.status}
-                          colors={icartStatusColors}
+                          status={kiosk.status}
+                          colors={kioskStatusColors}
                         />
                       </div>
 
-                      <div className="icart_item_serial">
-                        {cart.serialNumber}
+                      <div className="kiosk_item_serial">
+                        {kiosk.serialNumber}
                       </div>
 
-                      <div className="icart_item_indicators">
+                      <div className="kiosk_item_indicators">
                         <span
-                          className={`icart_indicator ${cart.isOnline ? "icart_ind_on" : "icart_ind_off"}`}
+                          className={`kiosk_indicator ${kiosk.isOnline ? "kiosk_ind_on" : "kiosk_ind_off"}`}
                         >
-                          {cart.isOnline ? (
+                          {kiosk.isOnline ? (
                             <MdWifi size={12} />
                           ) : (
                             <MdWifiOff size={12} />
                           )}
-                          {cart.isOnline ? "Online" : "Offline"}
+                          {kiosk.isOnline ? "Online" : "Offline"}
                         </span>
                         <span
-                          className={`icart_indicator ${cart.isLocked ? "icart_ind_locked" : "icart_ind_unlocked"}`}
+                          className={`kiosk_indicator ${kiosk.isLocked ? "kiosk_ind_locked" : "kiosk_ind_unlocked"}`}
                         >
-                          {cart.isLocked ? (
+                          {kiosk.isLocked ? (
                             <MdLock size={11} />
                           ) : (
                             <MdLockOpen size={11} />
                           )}
-                          {cart.isLocked ? "Locked" : "Unlocked"}
+                          {kiosk.isLocked ? "Locked" : "Unlocked"}
                         </span>
                       </div>
 
-                      <div className="icart_item_meta">
-                        {cart?.status !== "PURCHASED" ? (
-                          <div className="icart_meta_row">
-                            <span className="icart_meta_key">Contract</span>
-                            <span className="icart_meta_val">
-                              {cart.contract?.contractStatus || (
-                                <span className="icart_meta_muted">
+                      <div className="kiosk_item_meta">
+                        {kiosk?.status !== "PURCHASED" ? (
+                          <div className="kiosk_meta_row">
+                            <span className="kiosk_meta_key">Contract</span>
+                            <span className="kiosk_meta_val">
+                              {kiosk.contract?.contractStatus || (
+                                <span className="kiosk_meta_muted">
                                   Not started
                                 </span>
                               )}
                             </span>
                           </div>
                         ) : null}
-                        <div className="icart_meta_row">
-                          <span className="icart_meta_key">Brand</span>
-                          <span className="icart_meta_val">
-                            {cart.vendor ? (
-                              cart.vendor.businessName
+                        <div className="kiosk_meta_row">
+                          <span className="kiosk_meta_key">Brand</span>
+                          <span className="kiosk_meta_val">
+                            {kiosk.vendor ? (
+                              kiosk.vendor.businessName
                             ) : (
-                              <span className="icart_meta_muted">None</span>
+                              <span className="kiosk_meta_muted">None</span>
                             )}
                           </span>
                         </div>
-                        <div className="icart_meta_row">
-                          <span className="icart_meta_key">Location</span>
-                          <span className="icart_meta_val">
-                            {cart.location?.name ? (
-                              <span className="icart_location_val">
+                        <div className="kiosk_meta_row">
+                          <span className="kiosk_meta_key">Location</span>
+                          <span className="kiosk_meta_val">
+                            {kiosk.location?.name ? (
+                              <span className="kiosk_location_val">
                                 <MdLocationOn size={12} />
-                                {cart.location.name}
+                                {kiosk.location.name}
                               </span>
                             ) : (
-                              <span className="icart_meta_muted">
+                              <span className="kiosk_meta_muted">
                                 Not assigned
                               </span>
                             )}
@@ -293,11 +292,11 @@ export default function IcartHome() {
                         </div>
                       </div>
 
-                      {cart.contractDetails?.invoices?.length > 0 && (
-                        <div className="icart_item_invoices">
+                      {kiosk.contractDetails?.invoices?.length > 0 && (
+                        <div className="kiosk_item_invoices">
                           <MdReceiptLong size={13} />
-                          {cart.contractDetails.invoices.length} invoice
-                          {cart.contractDetails.invoices.length !== 1
+                          {kiosk.contractDetails.invoices.length} invoice
+                          {kiosk.contractDetails.invoices.length !== 1
                             ? "s"
                             : ""}
                         </div>
@@ -310,12 +309,12 @@ export default function IcartHome() {
 
           {/* ── Contract Applications ── */}
           <div
-            className="icart_section_label_row icart_section_label_row_clickable"
+            className="kiosk_section_label_row kiosk_section_label_row_clickable"
             onClick={() => setContractsOpen((v) => !v)}
           >
-            <span className="icart_section_label">Contract Applications</span>
-            <span className="icart_section_count">{contracts.length}</span>
-            <span className="icart_section_chevron">
+            <span className="kiosk_section_label">Contract Applications</span>
+            <span className="kiosk_section_count">{contracts.length}</span>
+            <span className="kiosk_section_chevron">
               {contractsOpen ? (
                 <MdExpandLess size={18} />
               ) : (
@@ -326,9 +325,9 @@ export default function IcartHome() {
 
           {contractsOpen &&
             (contracts.length === 0 ? (
-              <div className="icart_empty_state" style={{ padding: "32px 0" }}>
+              <div className="kiosk_empty_state" style={{ padding: "32px 0" }}>
                 <MdReceiptLong size={28} style={{ opacity: 0.3 }} />
-                <p className="icart_empty_sub" style={{ margin: 0 }}>
+                <p className="kiosk_empty_sub" style={{ margin: 0 }}>
                   No contract applications yet.
                 </p>
               </div>
@@ -359,7 +358,7 @@ export default function IcartHome() {
                               #{contract.id.slice(0, 8).toUpperCase()}
                             </span>
                             <span
-                              className="icart_status_badge"
+                              className="kiosk_status_badge"
                               style={{
                                 background: cs.bg,
                                 color: cs.color,
@@ -374,8 +373,8 @@ export default function IcartHome() {
                             <span>{contract.type}</span>
                             <span className="contract_row_dot">·</span>
                             <span>
-                              {contract.numberOfCarts} iCart
-                              {contract.numberOfCarts !== 1 ? "s" : ""}
+                              {contract.numberOfKiosks} Kiosk
+                              {contract.numberOfKiosks !== 1 ? "s" : ""}
                             </span>
                             <span className="contract_row_dot">·</span>
                             <span>
@@ -399,7 +398,7 @@ export default function IcartHome() {
                               {Number(invoice.total).toLocaleString()}
                             </span>
                             <span
-                              className="icart_status_badge"
+                              className="kiosk_status_badge"
                               style={{
                                 background: is.bg,
                                 color: is.color,
@@ -430,11 +429,11 @@ export default function IcartHome() {
         onClose={() => setSelectedContract(null)}
       />
 
-      {/* iCart detail drawer */}
-      <IcartDrawer
-        cartId={selectedCartId}
-        onClose={() => setSelectedCartId(null)}
-        onUpdate={handleCartUpdate}
+      {/* Kiosk detail drawer */}
+      <KioskDrawer
+        kioskId={selectedKioskId}
+        onClose={() => setSelectedKioskId(null)}
+        onUpdate={handleKioskUpdate}
       />
     </div>
   );

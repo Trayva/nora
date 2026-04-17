@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
 import Drawer from "../../components/Drawer";
-import IcartOverview from "./IcartOverview";
-import IcartTasks from "./IcartTasks";
-import IcartWorkforce from "./IcartWorkforce";
-import IcartInventory from "./IcartInventory";
-import IcartSales from "./IcartSales";
-import IcartOrders from "./IcartOrders";
-import IcartReports from "./IcartReports"; // ← new
+import KioskOverview from "./KioskOverview";
+import KioskTasks from "./KioskTasks";
+import KioskWorkforce from "./KioskWorkforce";
+import KioskInventory from "./KioskInventory";
+import KioskSales from "./KioskSales";
+import KioskOrders from "./KioskOrders";
+import KioskReports from "./KioskReports"; // ← new
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -20,32 +20,32 @@ const TABS = [
   { key: "reports", label: "Reports" }, // ← new
 ];
 
-export default function IcartDrawer({ cartId, onClose, onUpdate }) {
+export default function KioskDrawer({ kioskId, onClose, onUpdate }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const fetchCart = async () => {
-    if (!cartId) return;
+    if (!kioskId) return;
     setLoading(true);
     try {
-      const res = await api.get(`/icart/${cartId}`);
+      const res = await api.get(`/kiosk/${kioskId}`);
       setCart(res.data.data);
     } catch {
-      toast.error("Failed to load iCart details");
+      toast.error("Failed to load Kiosk details");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (cartId) {
+    if (kioskId) {
       setActiveTab("overview");
       fetchCart();
     } else {
       setCart(null);
     }
-  }, [cartId]);
+  }, [kioskId]);
 
   const handleCartUpdate = (updatedCart) => {
     setCart(updatedCart);
@@ -54,9 +54,9 @@ export default function IcartDrawer({ cartId, onClose, onUpdate }) {
 
   return (
     <Drawer
-      isOpen={!!cartId}
+      isOpen={!!kioskId}
       onClose={onClose}
-      title={cart ? cart.serialNumber : "iCart Details"}
+      title={cart ? cart.serialNumber : "Kiosk Details"}
       description={cart ? cart.location?.name || "No location assigned" : ""}
       width={520}
     >
@@ -81,21 +81,21 @@ export default function IcartDrawer({ cartId, onClose, onUpdate }) {
       ) : !cart ? null : (
         <>
           {activeTab === "overview" && (
-            <IcartOverview
+            <KioskOverview
               cart={cart}
               onUpdate={handleCartUpdate}
               onRefresh={fetchCart}
             />
           )}
-          {activeTab === "tasks" && <IcartTasks cart={cart} />}
+          {activeTab === "tasks" && <KioskTasks cart={cart} />}
           {activeTab === "workforce" && (
-            <IcartWorkforce cart={cart} onRefresh={fetchCart} />
+            <KioskWorkforce cart={cart} onRefresh={fetchCart} />
           )}
-          {activeTab === "inventory" && <IcartInventory cart={cart} />}
-          {activeTab === "sales" && <IcartSales cart={cart} />}
-          {activeTab === "orders" && <IcartOrders cartId={cart.id} />}
+          {activeTab === "inventory" && <KioskInventory cart={cart} />}
+          {activeTab === "sales" && <KioskSales cart={cart} />}
+          {activeTab === "orders" && <KioskOrders kioskId={cart.id} />}
           {activeTab === "reports" && (
-            <IcartReports cart={cart} canUpdateStatus={true} />
+            <KioskReports cart={cart} canUpdateStatus={true} />
           )}
         </>
       )}

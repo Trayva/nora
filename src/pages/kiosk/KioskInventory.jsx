@@ -119,7 +119,7 @@ function StatusPill({ status }) {
   const s = supplyStatusColors[status] || supplyStatusColors.PENDING;
   return (
     <span
-      className="icart_status_badge"
+      className="kiosk_status_badge"
       style={{
         background: s.bg,
         color: s.color,
@@ -191,7 +191,7 @@ function ItemSearchSelect({
 
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
-      <div className="icart_search_wrap" style={{ height: 42 }}>
+      <div className="kiosk_search_wrap" style={{ height: 42 }}>
         {value?.image ? (
           <img
             src={value.image}
@@ -388,7 +388,7 @@ function MachinerySearchSelect({ value, onChange }) {
 }
 
 /* ── Add Inventory Form ─────────────────────────────────────── */
-function AddInventoryForm({ cartId, onAdded }) {
+function AddInventoryForm({ kioskId, onAdded }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("g");
@@ -421,8 +421,8 @@ function AddInventoryForm({ cartId, onAdded }) {
       return toast.error("Enter a valid quantity");
     setSaving(true);
     try {
-      await api.post("/icart/inventory", {
-        cartId,
+      await api.post("/kiosk/inventory", {
+        kioskId,
         type,
         [itemIdKey]: selectedItem.id,
         quantity: baseQty ?? Number(quantity),
@@ -438,7 +438,7 @@ function AddInventoryForm({ cartId, onAdded }) {
   };
 
   return (
-    <div className="icart_template_builder">
+    <div className="kiosk_template_builder">
       <div className="form-field">
         <label className="modal-label">Search & Select Item *</label>
         <IngredientSearchSelect value={selectedItem} onChange={handleSelect} />
@@ -655,7 +655,7 @@ function MachineryPriceInline({ machineryId, supplierId, stateId, qty }) {
   return <PriceTag price={price} loading={loading} qty={qty} unit="unit" />;
 }
 
-function SupplyRequestForm({ cartId, cart, onSubmitted }) {
+function SupplyRequestForm({ kioskId, cart, onSubmitted }) {
   const [supplyTab, setSupplyTab] = useState("ingredients");
   const [suppliers, setSuppliers] = useState([]);
   const [suppliersLoading, setSuppliersLoading] = useState(true);
@@ -710,8 +710,8 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
         return toast.error("Add at least one ingredient with a quantity");
       setSaving(true);
       try {
-        await api.post("/icart/supply", {
-          cartId,
+        await api.post("/kiosk/supply", {
+          kioskId,
           supplierId,
           items: valid.map((row) => ({
             ingredientId: row.item.id,
@@ -733,8 +733,8 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
         return toast.error("Add at least one machinery with a quantity");
       setSaving(true);
       try {
-        await api.post("/icart/supply", {
-          cartId,
+        await api.post("/kiosk/supply", {
+          kioskId,
           supplierId,
           machineryItems: valid.map((row) => ({
             machineryId: row.item.id,
@@ -877,7 +877,7 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
                   </span>
                   {ingRows.length > 1 && (
                     <button
-                      className="icart_icon_action_btn icart_icon_danger"
+                      className="kiosk_icon_action_btn kiosk_icon_danger"
                       onClick={() => removeIngRow(i)}
                       style={{ width: 24, height: 24 }}
                     >
@@ -1119,7 +1119,7 @@ function SupplyRequestForm({ cartId, cart, onSubmitted }) {
                   </span>
                   {machRows.length > 1 && (
                     <button
-                      className="icart_icon_action_btn icart_icon_danger"
+                      className="kiosk_icon_action_btn kiosk_icon_danger"
                       onClick={() => removeMachRow(i)}
                       style={{ width: 24, height: 24 }}
                     >
@@ -1395,7 +1395,7 @@ function InventoryItemRow({ item, onRefresh }) {
       return toast.error("Enter a valid quantity");
     setSaving(true);
     try {
-      await api.patch(`/icart/inventory/${item.id}`, {
+      await api.patch(`/kiosk/inventory/${item.id}`, {
         quantity: isMachinery
           ? Number(quantity)
           : (baseQty ?? Number(quantity)),
@@ -1419,7 +1419,7 @@ function InventoryItemRow({ item, onRefresh }) {
       : usageReason;
     setSaving(true);
     try {
-      await api.post("/icart/inventory/record-usage", {
+      await api.post("/kiosk/inventory/record-usage", {
         itemId: item.id,
         quantity: isMachinery
           ? Number(usageQty)
@@ -1440,7 +1440,7 @@ function InventoryItemRow({ item, onRefresh }) {
     if (!window.confirm("Remove this item from inventory?")) return;
     setDeleting(true);
     try {
-      await api.delete(`/icart/inventory/${item.id}`);
+      await api.delete(`/kiosk/inventory/${item.id}`);
       toast.success("Item removed");
       onRefresh();
     } catch {
@@ -1505,11 +1505,11 @@ function InventoryItemRow({ item, onRefresh }) {
             )}
           </div>
         )}
-        <div className="icart_inventory_info">
-          <div className="icart_task_name">{itemName}</div>
-          <div className="icart_task_meta">
+        <div className="kiosk_inventory_info">
+          <div className="kiosk_task_name">{itemName}</div>
+          <div className="kiosk_task_meta">
             <span
-              className="icart_badge"
+              className="kiosk_badge"
               style={{
                 background: isMachinery
                   ? "rgba(203,108,220,0.1)"
@@ -1570,7 +1570,7 @@ function InventoryItemRow({ item, onRefresh }) {
             )}
           </div>
           <button
-            className="icart_icon_action_btn"
+            className="kiosk_icon_action_btn"
             title="Edit quantity / cost"
             onClick={() => {
               setEditing((v) => !v);
@@ -1580,7 +1580,7 @@ function InventoryItemRow({ item, onRefresh }) {
             <MdEdit size={13} />
           </button>
           <button
-            className="icart_icon_action_btn"
+            className="kiosk_icon_action_btn"
             title="Record usage"
             onClick={() => {
               setRecordingUsage((v) => !v);
@@ -1590,7 +1590,7 @@ function InventoryItemRow({ item, onRefresh }) {
             <MdRemoveCircleOutline size={14} />
           </button>
           <button
-            className="icart_icon_action_btn icart_icon_danger"
+            className="kiosk_icon_action_btn kiosk_icon_danger"
             onClick={handleDelete}
             disabled={deleting}
           >
@@ -1896,7 +1896,7 @@ function SupplyRequestRow({ req, onRefresh }) {
     e.stopPropagation();
     setReceiving(true);
     try {
-      await api.post(`/icart/supply/${req.id}/receive`);
+      await api.post(`/kiosk/supply/${req.id}/receive`);
       toast.success("Supply marked as received");
       onRefresh?.();
     } catch (err) {
@@ -1907,21 +1907,21 @@ function SupplyRequestRow({ req, onRefresh }) {
   };
 
   return (
-    <div className="icart_task_card">
+    <div className="kiosk_task_card">
       <div
-        className="icart_task_card_top"
+        className="kiosk_task_card_top"
         onClick={() => setExpanded((v) => !v)}
       >
-        <div className="icart_task_card_left">
-          <div className="icart_task_icon">
+        <div className="kiosk_task_card_left">
+          <div className="kiosk_task_icon">
             {isMachOnly ? <MdBuild size={14} /> : <MdLocalShipping size={14} />}
           </div>
           <div>
-            <div className="icart_task_name">
+            <div className="kiosk_task_name">
               {title}
               {extraCount > 0 ? ` +${extraCount} more` : ""}
             </div>
-            <div className="icart_task_meta">
+            <div className="kiosk_task_meta">
               <span>{supplierName}</span>
               <span className="contract_row_dot">·</span>
               <span>
@@ -1987,7 +1987,7 @@ function SupplyRequestRow({ req, onRefresh }) {
         </div>
       </div>
       {expanded && (
-        <div className="icart_task_expanded">
+        <div className="kiosk_task_expanded">
           {allItems.map((it) => (
             <div
               key={it.id}
@@ -2087,12 +2087,12 @@ function SupplyRequestRow({ req, onRefresh }) {
               )}
             </div>
           ))}
-          <div className="icart_task_data" style={{ marginTop: 8 }}>
+          <div className="kiosk_task_data" style={{ marginTop: 8 }}>
             {req.invoice && (
-              <div className="icart_task_data_row">
-                <span className="icart_meta_key">Invoice</span>
+              <div className="kiosk_task_data_row">
+                <span className="kiosk_meta_key">Invoice</span>
                 <span
-                  className="icart_meta_val"
+                  className="kiosk_meta_val"
                   style={{ display: "flex", alignItems: "center", gap: 5 }}
                 >
                   <span
@@ -2117,15 +2117,15 @@ function SupplyRequestRow({ req, onRefresh }) {
               </div>
             )}
             {req.requester?.fullName && (
-              <div className="icart_task_data_row">
-                <span className="icart_meta_key">Requester</span>
-                <span className="icart_meta_val">{req.requester.fullName}</span>
+              <div className="kiosk_task_data_row">
+                <span className="kiosk_meta_key">Requester</span>
+                <span className="kiosk_meta_val">{req.requester.fullName}</span>
               </div>
             )}
             {req.createdAt && (
-              <div className="icart_task_data_row">
-                <span className="icart_meta_key">Date</span>
-                <span className="icart_meta_val">
+              <div className="kiosk_task_data_row">
+                <span className="kiosk_meta_key">Date</span>
+                <span className="kiosk_meta_val">
                   {new Date(req.createdAt).toLocaleDateString("en-GB", {
                     day: "2-digit",
                     month: "short",
@@ -2141,8 +2141,8 @@ function SupplyRequestRow({ req, onRefresh }) {
   );
 }
 
-/* ── Main IcartInventory ───────────────────────────────────── */
-export default function IcartInventory({ cart }) {
+/* ── Main KioskInventory ───────────────────────────────────── */
+export default function KioskInventory({ cart }) {
   const [view, setView] = useState("stock");
   const [inventory, setInventory] = useState([]);
   const [supplyRequests, setSupplyRequests] = useState([]);
@@ -2152,7 +2152,7 @@ export default function IcartInventory({ cart }) {
   const fetchInventory = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/icart/inventory/icart/${cart.id}`);
+      const res = await api.get(`/kiosk/inventory/kiosk/${cart.id}`);
       setInventory(res.data.data?.items || res.data.data || []);
     } catch {
       toast.error("Failed to load inventory");
@@ -2164,7 +2164,7 @@ export default function IcartInventory({ cart }) {
   const fetchSupply = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/icart/supply?cartId=${cart.id}`);
+      const res = await api.get(`/kiosk/supply?kioskId=${cart.id}`);
       const d = res.data.data;
       setSupplyRequests(d?.requests || d?.items || (Array.isArray(d) ? d : []));
     } catch {
@@ -2177,7 +2177,7 @@ export default function IcartInventory({ cart }) {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/icart/inventory/history?cartId=${cart.id}`);
+      const res = await api.get(`/kiosk/inventory/history?kioskId=${cart.id}`);
       setHistory(res.data.data?.items || res.data.data || []);
     } catch {
       toast.error("Failed to load history");
@@ -2199,16 +2199,16 @@ export default function IcartInventory({ cart }) {
   const lowStock = inventory.filter((i) => i.quantity < 5).length;
 
   return (
-    <div className="icart_tab_content">
+    <div className="kiosk_tab_content">
       {view === "stock" && inventory.length > 0 && (
-        <div className="icart_summary_row" style={{ marginBottom: 14 }}>
-          <div className="icart_summary_chip">
+        <div className="kiosk_summary_row" style={{ marginBottom: 14 }}>
+          <div className="kiosk_summary_chip">
             <MdInventory2 size={12} />
             {inventory.length} items
           </div>
           {lowStock > 0 && (
             <div
-              className="icart_summary_chip"
+              className="kiosk_summary_chip"
               style={{
                 color: "#ef4444",
                 background: "rgba(239,68,68,0.08)",
@@ -2219,14 +2219,14 @@ export default function IcartInventory({ cart }) {
             </div>
           )}
           {totalValue > 0 && (
-            <div className="icart_summary_chip">
+            <div className="kiosk_summary_chip">
               ₦{totalValue.toLocaleString()}
             </div>
           )}
         </div>
       )}
 
-      <div className="icart_sub_nav">
+      <div className="kiosk_sub_nav">
         {[
           { key: "stock", label: "Stock", icon: <MdInventory2 size={13} /> },
           {
@@ -2238,14 +2238,14 @@ export default function IcartInventory({ cart }) {
         ].map((sv) => (
           <button
             key={sv.key}
-            className={`icart_sub_nav_btn ${view === sv.key ? "icart_sub_nav_active" : ""}`}
+            className={`kiosk_sub_nav_btn ${view === sv.key ? "kiosk_sub_nav_active" : ""}`}
             onClick={() => setView(sv.key)}
           >
             {sv.icon} {sv.label}
           </button>
         ))}
         <button
-          className={`icart_sub_nav_btn ${view === "addItem" || view === "addSupply" ? "icart_sub_nav_active" : ""}`}
+          className={`kiosk_sub_nav_btn ${view === "addItem" || view === "addSupply" ? "kiosk_sub_nav_active" : ""}`}
           onClick={() => setView(view === "supply" ? "addSupply" : "addItem")}
           style={{ marginLeft: "auto" }}
         >
@@ -2259,7 +2259,7 @@ export default function IcartInventory({ cart }) {
         </div>
       ) : view === "addItem" ? (
         <AddInventoryForm
-          cartId={cart.id}
+          kioskId={cart.id}
           onAdded={() => {
             setView("stock");
             fetchInventory();
@@ -2267,7 +2267,7 @@ export default function IcartInventory({ cart }) {
         />
       ) : view === "addSupply" ? (
         <SupplyRequestForm
-          cartId={cart.id}
+          kioskId={cart.id}
           cart={cart}
           onSubmitted={() => {
             setView("supply");
@@ -2276,7 +2276,7 @@ export default function IcartInventory({ cart }) {
         />
       ) : view === "stock" ? (
         inventory.length === 0 ? (
-          <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
+          <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
             <MdInventory2 size={24} style={{ opacity: 0.3 }} />
             <span>No inventory items</span>
           </div>
@@ -2293,12 +2293,12 @@ export default function IcartInventory({ cart }) {
         )
       ) : view === "supply" ? (
         supplyRequests.length === 0 ? (
-          <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
+          <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
             <MdLocalShipping size={24} style={{ opacity: 0.3 }} />
             <span>No supply requests</span>
           </div>
         ) : (
-          <div className="icart_tasks_list">
+          <div className="kiosk_tasks_list">
             {supplyRequests.map((req) => (
               <SupplyRequestRow
                 key={req.id}
@@ -2310,12 +2310,12 @@ export default function IcartInventory({ cart }) {
         )
       ) : view === "history" ? (
         history.length === 0 ? (
-          <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
+          <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
             <MdHistory size={24} style={{ opacity: 0.3 }} />
             <span>No history yet</span>
           </div>
         ) : (
-          <div className="icart_tasks_list">
+          <div className="kiosk_tasks_list">
             {history.map((entry, i) => {
               const delta = entry.quantityChange ?? entry.delta ?? 0;
               // ── FIX: include prepItem and machinery in name resolution ──
@@ -2332,9 +2332,9 @@ export default function IcartInventory({ cart }) {
                 null;
               const isMach = entry.type === "MACHINERY";
               return (
-                <div key={entry.id || i} className="icart_history_row">
+                <div key={entry.id || i} className="kiosk_history_row">
                   <div
-                    className="icart_task_icon"
+                    className="kiosk_task_icon"
                     style={{
                       background: isMach ? "rgba(203,108,220,0.08)" : undefined,
                       border: isMach
@@ -2373,8 +2373,8 @@ export default function IcartInventory({ cart }) {
                       />
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="icart_task_name">{entryName}</div>
-                      <div className="icart_task_meta">
+                      <div className="kiosk_task_name">{entryName}</div>
+                      <div className="kiosk_task_meta">
                         {entry.action || (delta > 0 ? "Added" : "Removed")}
                         {entry.notes && <> · {entry.notes}</>}
                         {entry.user?.fullName && <> · {entry.user.fullName}</>}
@@ -2393,7 +2393,7 @@ export default function IcartInventory({ cart }) {
                       {delta ?? entry.quantity}
                     </div>
                     {entry.timestamp && (
-                      <div className="icart_operator_meta">
+                      <div className="kiosk_operator_meta">
                         {new Date(entry.timestamp).toLocaleDateString("en-GB", {
                           day: "2-digit",
                           month: "short",

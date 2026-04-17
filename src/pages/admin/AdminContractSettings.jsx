@@ -197,7 +197,7 @@ export default function AdminContractSettings() {
         </div>
       </div>
 
-      <Drawer isOpen={open} onClose={() => setOpen(false)} title={editing ? "Edit Contract Setting" : "New Contract Setting"} description="Define lease or purchase plans for iCart contracts" width={540}>
+      <Drawer isOpen={open} onClose={() => setOpen(false)} title={editing ? "Edit Contract Setting" : "New Contract Setting"} description="Define lease or purchase plans for Kiosk contracts" width={540}>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div className="admin_form_grid">
             <div className="form-field">

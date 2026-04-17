@@ -114,7 +114,7 @@ function OperatorDetail({ operator, onClose, onApprove }) {
 
   const buildQ = () => {
     const ps = [`operatorId=${operator.userId}`];
-    if (operator.cartId) ps.push(`cartId=${operator.cartId}`);
+    if (operator.kioskId) ps.push(`kioskId=${operator.kioskId}`);
     if (from)
       ps.push(`startDate=${encodeURIComponent(from + "T00:00:00.000Z")}`);
     if (to) ps.push(`endDate=${encodeURIComponent(to + "T23:59:59.999Z")}`);
@@ -125,8 +125,8 @@ function OperatorDetail({ operator, onClose, onApprove }) {
     setLoading(true);
     const q = buildQ();
     Promise.allSettled([
-      api.get(`/icart/sale${q}`),
-      api.get(`/icart/sale/analytics${q}`),
+      api.get(`/kiosk/sale${q}`),
+      api.get(`/kiosk/sale/analytics${q}`),
     ])
       .then(([sR, aR]) => {
         if (sR.status === "fulfilled") {
@@ -145,7 +145,7 @@ function OperatorDetail({ operator, onClose, onApprove }) {
   const handleApprove = async () => {
     setApproving(true);
     try {
-      await api.patch(`/icart/operator/${operator.id}/approve`, {});
+      await api.patch(`/kiosk/operator/${operator.id}/approve`, {});
       toast.success("Operator approved");
       onApprove?.();
     } catch (err) {
@@ -211,7 +211,7 @@ function OperatorDetail({ operator, onClose, onApprove }) {
             {st.country ? `, ${st.country}` : ""}
           </span>
         )}
-        {operator.cartId ? (
+        {operator.kioskId ? (
           <span className="admin_meta_chip" style={{ color: "#16a34a" }}>
             <MdOutlineShoppingCart size={11} /> Assigned to cart
           </span>
@@ -245,7 +245,7 @@ function OperatorDetail({ operator, onClose, onApprove }) {
       </div>
 
       {/* Current cart info */}
-      {operator.cartId && (
+      {operator.kioskId && (
         <div
           style={{
             background: "var(--bg-hover)",
@@ -291,7 +291,7 @@ function OperatorDetail({ operator, onClose, onApprove }) {
                 fontFamily: "monospace",
               }}
             >
-              {operator.cartId}
+              {operator.kioskId}
             </div>
           </div>
         </div>
@@ -720,7 +720,7 @@ export default function AdminOperators({ open, onClose }) {
       if (s.trim()) params.search = s.trim();
       if (sid) params.stateId = sid;
       if (ap !== "") params.isApproved = ap;
-      const r = await api.get("/icart/operator", { params });
+      const r = await api.get("/kiosk/operator", { params });
       const d = r.data.data;
       const list = Array.isArray(d) ? d : d?.operators || d?.items || [];
       setOperators(list);
@@ -769,7 +769,7 @@ export default function AdminOperators({ open, onClose }) {
         isOpen={open}
         onClose={onClose}
         title="Operators"
-        description="All iCart operators on the platform"
+        description="All Kiosk operators on the platform"
         width={540}
       >
         {/* Filters */}
@@ -885,7 +885,7 @@ export default function AdminOperators({ open, onClose }) {
                     <div className="admin_drawer_sub">
                       {u.email}
                       {st.name ? ` · ${st.name}` : ""}
-                      {op.cartId ? " · Assigned" : " · Unassigned"}
+                      {op.kioskId ? " · Assigned" : " · Unassigned"}
                     </div>
                   </div>
                   <div
@@ -918,7 +918,7 @@ export default function AdminOperators({ open, onClose }) {
                     >
                       {op.isApproved ? "APPROVED" : "PENDING"}
                     </span>
-                    {op.cartId && (
+                    {op.kioskId && (
                       <span
                         className="admin_meta_chip"
                         style={{ color: "#16a34a" }}

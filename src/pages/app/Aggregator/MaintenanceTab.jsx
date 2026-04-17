@@ -115,7 +115,7 @@ function ReportRow({ report, canUpdateStatus }) {
   const handleStatusChange = async (newStatus) => {
     setUpdating(true);
     try {
-      await api.patch(`/icart/maintenance/${report.id}/status`, {
+      await api.patch(`/kiosk/maintenance/${report.id}/status`, {
         status: newStatus,
       });
       setLocalStatus(newStatus);
@@ -718,7 +718,7 @@ function ReportRow({ report, canUpdateStatus }) {
 }
 
 /* ── Create Report Form ── */
-function CreateReportForm({ cartId, onCreated, onCancel }) {
+function CreateReportForm({ kioskId, onCreated, onCancel }) {
   const [reportText, setReportText] = useState("");
   const [responses, setResponses] = useState(() => {
     const initial = [];
@@ -754,7 +754,7 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
       const validResponses = responses.filter((r) => r.q.trim() && r.a.trim());
 
       const formData = new FormData();
-      formData.append("cartId", cartId);
+      formData.append("kioskId", kioskId);
       formData.append("reportText", reportText.trim());
 
       if (validResponses.length > 0) {
@@ -765,7 +765,7 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
         formData.append("images", img);
       });
 
-      const res = await api.post("/icart/maintenance", formData, {
+      const res = await api.post("/kiosk/maintenance", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
 
@@ -1056,17 +1056,17 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
 /* ═══════════════════════════════════════════════════════
    MAIN EXPORT — used in AggregatorPage
    ═══════════════════════════════════════════════════════ */
-export default function MaintenanceTab({ cartId, canUpdateStatus = false }) {
+export default function MaintenanceTab({ kioskId, canUpdateStatus = false }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [total, setTotal] = useState(0);
 
   const fetchReports = async () => {
-    if (!cartId) return;
+    if (!kioskId) return;
     setLoading(true);
     try {
-      const res = await api.get(`/icart/maintenance/icart/${cartId}`);
+      const res = await api.get(`/kiosk/maintenance/kiosk/${kioskId}`);
       const d = res.data.data;
       setReports(Array.isArray(d) ? d : d?.items || []);
       setTotal(d?.total ?? 0);
@@ -1078,8 +1078,8 @@ export default function MaintenanceTab({ cartId, canUpdateStatus = false }) {
   };
 
   useEffect(() => {
-    if (cartId) fetchReports();
-  }, [cartId]);
+    if (kioskId) fetchReports();
+  }, [kioskId]);
 
   return (
     <div>
@@ -1144,7 +1144,7 @@ export default function MaintenanceTab({ cartId, canUpdateStatus = false }) {
 
       {showForm && (
         <CreateReportForm
-          cartId={cartId}
+          kioskId={kioskId}
           onCreated={(newReport) => {
             setReports((p) => [newReport, ...p]);
             setTotal((t) => t + 1);
@@ -1159,7 +1159,7 @@ export default function MaintenanceTab({ cartId, canUpdateStatus = false }) {
           <div className="page_loader_spinner" />
         </div>
       ) : reports.length === 0 && !showForm ? (
-        <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+        <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
           <MdBuild size={28} style={{ opacity: 0.3 }} />
           <span>No reports yet</span>
         </div>

@@ -175,7 +175,7 @@ function SaleRow({ sale }) {
         }}
         onClick={() => setExpanded((v) => !v)}
       >
-        <div className="icart_task_icon">
+        <div className="kiosk_task_icon">
           <MdPointOfSale size={13} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -199,7 +199,7 @@ function SaleRow({ sale }) {
             </span>
             <PaymentBadge method={sale.paymentMethod} />
           </div>
-          <div className="icart_task_meta">
+          <div className="kiosk_task_meta">
             <span>
               {sale.items?.length || 0} item
               {sale.items?.length !== 1 ? "s" : ""}
@@ -327,7 +327,7 @@ const PRESETS = [
 
 const toISODate = (d) => d.toISOString().split("T")[0];
 
-export default function IcartSales({ cart }) {
+export default function KioskSales({ cart }) {
   const [sales, setSales] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -357,8 +357,8 @@ export default function IcartSales({ cart }) {
   };
 
   const buildQuery = () => {
-    // Always include cartId so analytics is scoped to this cart
-    const params = [`cartId=${cart.id}`];
+    // Always include kioskId so analytics is scoped to this cart
+    const params = [`kioskId=${cart.id}`];
     if (from)
       params.push(`startDate=${encodeURIComponent(from + "T00:00:00.000Z")}`);
     if (to) params.push(`endDate=${encodeURIComponent(to + "T23:59:59.999Z")}`);
@@ -369,13 +369,13 @@ export default function IcartSales({ cart }) {
     setLoading(true);
     const q = buildQuery();
     Promise.allSettled([
-      api.get(`/icart/sale${q}`),
-      api.get(`/icart/sale/analytics${q}`),
+      api.get(`/kiosk/sale${q}`),
+      api.get(`/kiosk/sale/analytics${q}`),
     ])
       .then(([salesRes, analyticsRes]) => {
         if (salesRes.status === "fulfilled") {
           const d = salesRes.value.data.data;
-          // Server filters by cartId — no client-side filter needed
+          // Server filters by kioskId — no client-side filter needed
           setSales(Array.isArray(d) ? d : d?.items || []);
         }
         if (analyticsRes.status === "fulfilled") {
@@ -408,7 +408,7 @@ export default function IcartSales({ cart }) {
     .filter((m) => m.count > 0);
 
   return (
-    <div className="icart_tab_content">
+    <div className="kiosk_tab_content">
       {/* Date range filter */}
       <div style={{ marginBottom: 16 }}>
         <div
@@ -786,12 +786,12 @@ export default function IcartSales({ cart }) {
       {/* Sales list */}
       <div className="drawer_section_title" style={{ marginBottom: 10 }}>
         Transactions
-        <span className="icart_section_count" style={{ marginLeft: 8 }}>
+        <span className="kiosk_section_count" style={{ marginLeft: 8 }}>
           {sales.length}
         </span>
       </div>
       {sales.length === 0 ? (
-        <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
+        <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
           <MdPointOfSale size={24} style={{ opacity: 0.3 }} />
           <span>No sales recorded yet</span>
         </div>

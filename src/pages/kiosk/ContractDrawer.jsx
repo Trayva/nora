@@ -1,5 +1,5 @@
 import { MdCircle, MdReceiptLong, MdCalendarToday } from "react-icons/md";
-import { LuShoppingCart } from "react-icons/lu";
+import { LuStore } from "react-icons/lu";
 import Drawer from "../../components/Drawer";
 
 const appStatusColors = {
@@ -52,7 +52,7 @@ function Badge({ status, colors }) {
   const s = colors[status] || Object.values(colors)[0];
   return (
     <span
-      className="icart_status_badge"
+      className="kiosk_status_badge"
       style={{
         background: s.bg,
         color: s.color,
@@ -105,9 +105,9 @@ export default function ContractDrawer({ contract, onClose }) {
               <span className="contract_meta_value">{contract.type}</span>
             </div>
             <div className="contract_meta_item">
-              <span className="contract_meta_label">iCarts Ordered</span>
+              <span className="contract_meta_label">Kiosks Ordered</span>
               <span className="contract_meta_value">
-                {contract.numberOfCarts}
+                {contract.numberOfKiosks}
               </span>
             </div>
             {contract?.type !== "PURCHASE" ? (
@@ -189,8 +189,8 @@ export default function ContractDrawer({ contract, onClose }) {
           {/* Assigned carts */}
           <div className="contract_section">
             <div className="contract_section_header">
-              <LuShoppingCart size={14} color="var(--accent)" />
-              <span className="contract_section_title">Assigned iCarts</span>
+              <LuStore size={14} color="var(--accent)" />
+              <span className="contract_section_title">Assigned Kiosks</span>
               <span className="contract_section_count">
                 {contract.carts?.length || 0}
               </span>
@@ -201,7 +201,7 @@ export default function ContractDrawer({ contract, onClose }) {
                 {contract.carts.map((cart) => (
                   <div key={cart.id} className="drawer_item_row">
                     <div className="drawer_item_img drawer_item_img_placeholder">
-                      <LuShoppingCart size={14} />
+                      <LuStore size={14} />
                     </div>
                     <div className="drawer_item_info">
                       <span
@@ -214,13 +214,13 @@ export default function ContractDrawer({ contract, onClose }) {
                     </div>
                     <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
                       <span
-                        className={`icart_indicator ${cart.isOnline ? "icart_ind_on" : "icart_ind_off"}`}
+                        className={`kiosk_indicator ${cart.isOnline ? "kiosk_ind_on" : "kiosk_ind_off"}`}
                         style={{ fontSize: "0.65rem", padding: "2px 7px" }}
                       >
                         {cart.isOnline ? "Online" : "Offline"}
                       </span>
                       <span
-                        className={`icart_indicator ${cart.isLocked ? "icart_ind_locked" : "icart_ind_unlocked"}`}
+                        className={`kiosk_indicator ${cart.isLocked ? "kiosk_ind_locked" : "kiosk_ind_unlocked"}`}
                         style={{ fontSize: "0.65rem", padding: "2px 7px" }}
                       >
                         {cart.isLocked ? "Locked" : "Unlocked"}
@@ -231,8 +231,8 @@ export default function ContractDrawer({ contract, onClose }) {
               </div>
             ) : (
               <div className="contract_empty_carts">
-                <LuShoppingCart size={22} style={{ opacity: 0.25 }} />
-                <span>No iCarts assigned yet</span>
+                <LuStore size={22} style={{ opacity: 0.25 }} />
+                <span>No Kiosks assigned yet</span>
               </div>
             )}
           </div>

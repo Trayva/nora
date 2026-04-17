@@ -378,7 +378,7 @@ export default function AdminSalesAnalytics() {
   const [sales, setSales] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [icarts, setIcarts] = useState([]);
+  const [kiosks, setKiosks] = useState([]);
 
   // Filters
   const [preset, setPreset] = useState("30d");
@@ -389,17 +389,17 @@ export default function AdminSalesAnalytics() {
   });
   const [to, setTo] = useState(() => toISODate(new Date()));
   const [showCustom, setShowCustom] = useState(false);
-  const [selectedCart, setSelectedCart] = useState(""); // icart id filter
+  const [selectedKiosk, setSelectedCart] = useState(""); // kiosk id filter
   const [paymentFilter, setPaymentFilter] = useState("ALL"); // payment method filter
 
-  // Fetch all icarts for the filter dropdown
+  // Fetch all kiosks for the filter dropdown
   useEffect(() => {
     api
-      .get("/icart")
+      .get("/kiosk")
       .then((r) => {
         const d = r.data.data;
-        const list = Array.isArray(d) ? d : d?.items || d?.icarts || [];
-        setIcarts(list);
+        const list = Array.isArray(d) ? d : d?.items || d?.kiosks || [];
+        setKiosks(list);
       })
       .catch(() => {});
   }, []);
@@ -425,7 +425,7 @@ export default function AdminSalesAnalytics() {
     if (from)
       params.push(`startDate=${encodeURIComponent(from + "T00:00:00.000Z")}`);
     if (to) params.push(`endDate=${encodeURIComponent(to + "T23:59:59.999Z")}`);
-    if (selectedCart) params.push(`cartId=${selectedCart}`);
+    if (selectedKiosk) params.push(`kioskId=${selectedKiosk}`);
     return params.length ? `?${params.join("&")}` : "";
   };
 
@@ -433,8 +433,8 @@ export default function AdminSalesAnalytics() {
     setLoading(true);
     const q = buildQuery();
     Promise.allSettled([
-      api.get(`/icart/sale${q}`),
-      api.get(`/icart/sale/analytics${q}`),
+      api.get(`/kiosk/sale${q}`),
+      api.get(`/kiosk/sale/analytics${q}`),
     ])
       .then(([salesRes, analyticsRes]) => {
         if (salesRes.status === "fulfilled") {
@@ -453,7 +453,7 @@ export default function AdminSalesAnalytics() {
 
   useEffect(() => {
     fetchData();
-  }, [from, to, selectedCart]);
+  }, [from, to, selectedKiosk]);
 
   // Client-side payment method filter
   const filteredSales =
@@ -481,7 +481,7 @@ export default function AdminSalesAnalytics() {
   // Top carts by revenue
   const cartBreakdown = Object.values(
     sales.reduce((acc, s) => {
-      const cid = s.cartId || s.cart?.id;
+      const cid = s.kioskId || s.cart?.id;
       const serial =
         s.cart?.serialNumber || cid?.slice(0, 8).toUpperCase() || "Unknown";
       if (!acc[cid]) acc[cid] = { serial, count: 0, total: 0 };
@@ -563,22 +563,22 @@ export default function AdminSalesAnalytics() {
           </button>
         </div>
 
-        {/* iCart filter */}
+        {/* Kiosk filter */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <select
             className="modal-input"
             style={{ height: 34, minWidth: 160, marginBottom: 0 }}
-            value={selectedCart}
+            value={selectedKiosk}
             onChange={(e) => setSelectedCart(e.target.value)}
           >
-            <option value="">All iCarts</option>
-            {icarts.map((c) => (
+            <option value="">All Kiosks</option>
+            {kiosks.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.serialNumber || c.id.slice(0, 8).toUpperCase()}
               </option>
             ))}
           </select>
-          {selectedCart && (
+          {selectedKiosk && (
             <button
               onClick={() => setSelectedCart("")}
               style={{
@@ -966,7 +966,7 @@ export default function AdminSalesAnalytics() {
             </div>
           )}
 
-          {/* Top iCarts by revenue */}
+          {/* Top Kiosks by revenue */}
           {cartBreakdown.length > 0 && (
             <div
               style={{
@@ -986,7 +986,7 @@ export default function AdminSalesAnalytics() {
                   marginBottom: 10,
                 }}
               >
-                Top iCarts by Revenue
+                Top Kiosks by Revenue
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {cartBreakdown.map(({ serial, count, total }, idx) => (

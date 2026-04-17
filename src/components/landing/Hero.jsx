@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import img from "../../assets/icart11.png";
+import img from "../../assets/kiosk11.png";
 import Button from "../Button";
 
 function Hero() {

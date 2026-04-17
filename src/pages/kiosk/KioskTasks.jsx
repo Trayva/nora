@@ -48,7 +48,7 @@ function StatusPill({ status }) {
   const s = taskStatusColors[status] || taskStatusColors.PENDING;
   return (
     <span
-      className="icart_status_badge"
+      className="kiosk_status_badge"
       style={{
         background: s.bg,
         color: s.color,
@@ -62,7 +62,7 @@ function StatusPill({ status }) {
 
 /* ── Template Builder ──────────────────────────────────────── */
 function TemplateBuilder({
-  cartId,
+  kioskId,
   operators = [],
   onCreated,
   editTemplate = null,
@@ -107,7 +107,7 @@ function TemplateBuilder({
       recurrence,
       schema: { fields: validFields },
       isGlobal,
-      cartId: isGlobal ? undefined : cartId,
+      kioskId: isGlobal ? undefined : kioskId,
       operatorId: operatorId || undefined,
       time: time || undefined,
     };
@@ -115,10 +115,10 @@ function TemplateBuilder({
     setSaving(true);
     try {
       if (isEdit) {
-        await api.patch(`/icart/tasks/templates/${editTemplate.id}`, payload);
+        await api.patch(`/kiosk/tasks/templates/${editTemplate.id}`, payload);
         toast.success("Template updated");
       } else {
-        await api.post("/icart/tasks/templates", payload);
+        await api.post("/kiosk/tasks/templates", payload);
         toast.success("Template created");
       }
       onCreated();
@@ -133,7 +133,7 @@ function TemplateBuilder({
   };
 
   return (
-    <div className="icart_template_builder">
+    <div className="kiosk_template_builder">
       {/* Header */}
       <div
         style={{
@@ -153,7 +153,7 @@ function TemplateBuilder({
           {isEdit ? "Edit Template" : "New Template"}
         </span>
         {isEdit && onCancelEdit && (
-          <button className="icart_icon_action_btn" onClick={onCancelEdit}>
+          <button className="kiosk_icon_action_btn" onClick={onCancelEdit}>
             <MdClose size={14} />
           </button>
         )}
@@ -236,13 +236,13 @@ function TemplateBuilder({
       </div>
 
       {/* Global toggle for ADMIN ONLY */}
-      {/* <div className="icart_toggle_row" style={{ marginBottom: 14 }}>
-        <span className="icart_toggle_label">Apply Globally (all carts)</span>
+      {/* <div className="kiosk_toggle_row" style={{ marginBottom: 14 }}>
+        <span className="kiosk_toggle_label">Apply Globally (all carts)</span>
         <button
-          className={`icart_toggle_switch ${isGlobal ? "icart_toggle_on" : ""}`}
+          className={`kiosk_toggle_switch ${isGlobal ? "kiosk_toggle_on" : ""}`}
           onClick={() => setIsGlobal((v) => !v)}
         >
-          <span className="icart_toggle_knob" />
+          <span className="kiosk_toggle_knob" />
         </button>
       </div> */}
 
@@ -253,7 +253,7 @@ function TemplateBuilder({
       >
         <span>Form Fields</span>
         <button
-          className="icart_icon_action_btn"
+          className="kiosk_icon_action_btn"
           style={{ marginLeft: "auto" }}
           onClick={addField}
         >
@@ -261,9 +261,9 @@ function TemplateBuilder({
         </button>
       </div>
 
-      <div className="icart_fields_list">
+      <div className="kiosk_fields_list">
         {fields.map((field, i) => (
-          <div key={i} className="icart_field_row">
+          <div key={i} className="kiosk_field_row">
             <select
               className="modal-input"
               style={{ width: 110, flexShrink: 0 }}
@@ -282,7 +282,7 @@ function TemplateBuilder({
               onChange={(e) => updateField(i, "label", e.target.value)}
             />
             <button
-              className="icart_icon_action_btn icart_icon_danger"
+              className="kiosk_icon_action_btn kiosk_icon_danger"
               onClick={() => removeField(i)}
               disabled={fields.length === 1}
             >
@@ -324,7 +324,7 @@ function TaskSubmitForm({ task, onSubmitted }) {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      await api.patch(`/icart/tasks/${task.id}/submit`, { data: formData });
+      await api.patch(`/kiosk/tasks/${task.id}/submit`, { data: formData });
       toast.success("Task submitted");
       onSubmitted();
     } catch (err) {
@@ -335,13 +335,13 @@ function TaskSubmitForm({ task, onSubmitted }) {
   };
 
   return (
-    <div className="icart_task_submit_form">
+    <div className="kiosk_task_submit_form">
       {schema.map((field, i) => (
         <div key={i} className="form-field">
           <label className="modal-label">{field.label}</label>
           {field.type === "checkbox" ? (
             <button
-              className={`icart_checkbox_btn ${formData[field.label] ? "icart_checkbox_checked" : ""}`}
+              className={`kiosk_checkbox_btn ${formData[field.label] ? "kiosk_checkbox_checked" : ""}`}
               onClick={() =>
                 setFormData((p) => ({ ...p, [field.label]: !p[field.label] }))
               }
@@ -397,7 +397,7 @@ function ReviewForm({ task, onReviewed }) {
     if (!comment.trim()) return toast.error("Enter a comment");
     setSaving(true);
     try {
-      await api.patch(`/icart/tasks/${task.id}/review`, {
+      await api.patch(`/kiosk/tasks/${task.id}/review`, {
         managerComments: comment.trim(),
       });
       toast.success("Review saved");
@@ -447,20 +447,20 @@ function TaskCard({ task, onRefresh }) {
     task.status === "SUBMITTED" || task.status === "COMPLETED";
 
   return (
-    <div className="icart_task_card">
+    <div className="kiosk_task_card">
       <div
-        className="icart_task_card_top"
+        className="kiosk_task_card_top"
         onClick={() => setExpanded((v) => !v)}
       >
-        <div className="icart_task_card_left">
-          <div className="icart_task_icon">
+        <div className="kiosk_task_card_left">
+          <div className="kiosk_task_icon">
             <MdTask size={14} />
           </div>
           <div>
-            <div className="icart_task_name">
+            <div className="kiosk_task_name">
               {task.template?.name || task.name || "Task"}
             </div>
-            <div className="icart_task_meta">
+            <div className="kiosk_task_meta">
               {task.template?.recurrence && (
                 <span>{task.template.recurrence}</span>
               )}
@@ -490,14 +490,14 @@ function TaskCard({ task, onRefresh }) {
       </div>
 
       {expanded && (
-        <div className="icart_task_expanded">
+        <div className="kiosk_task_expanded">
           {/* Show submitted data */}
           {task.data && Object.keys(task.data).length > 0 && (
-            <div className="icart_task_data">
+            <div className="kiosk_task_data">
               {Object.entries(task.data).map(([k, v]) => (
-                <div key={k} className="icart_task_data_row">
-                  <span className="icart_meta_key">{k}</span>
-                  <span className="icart_meta_val">
+                <div key={k} className="kiosk_task_data_row">
+                  <span className="kiosk_meta_key">{k}</span>
+                  <span className="kiosk_meta_val">
                     {typeof v === "boolean" ? (
                       v ? (
                         <MdCheck size={14} style={{ color: "#22c55e" }} />
@@ -514,8 +514,8 @@ function TaskCard({ task, onRefresh }) {
           )}
 
           {task.managerComments && (
-            <div className="icart_manager_comment">
-              <span className="icart_meta_key">Manager Note</span>
+            <div className="kiosk_manager_comment">
+              <span className="kiosk_meta_key">Manager Note</span>
               <p>{task.managerComments}</p>
             </div>
           )}
@@ -565,8 +565,8 @@ function TaskCard({ task, onRefresh }) {
   );
 }
 
-/* ── Main IcartTasks ───────────────────────────────────────── */
-export default function IcartTasks({ cart }) {
+/* ── Main KioskTasks ───────────────────────────────────────── */
+export default function KioskTasks({ cart }) {
   const [view, setView] = useState("pending"); // pending | ledger | templates | newTemplate
   const [tasks, setTasks] = useState([]);
   const [ledger, setLedger] = useState([]);
@@ -577,7 +577,7 @@ export default function IcartTasks({ cart }) {
   const fetchPending = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/icart/tasks?cartId=${cart.id}`);
+      const res = await api.get(`/kiosk/tasks?kioskId=${cart.id}`);
       setTasks(res.data.data?.items || res.data.data || []);
     } catch {
       toast.error("Failed to load tasks");
@@ -589,7 +589,7 @@ export default function IcartTasks({ cart }) {
   const fetchLedger = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/icart/tasks/ledger?cartId=${cart.id}`);
+      const res = await api.get(`/kiosk/tasks/ledger?kioskId=${cart.id}`);
       setLedger(res.data.data?.items || res.data.data || []);
     } catch {
       toast.error("Failed to load ledger");
@@ -601,7 +601,7 @@ export default function IcartTasks({ cart }) {
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/icart/tasks/templates?cartId=${cart.id}`);
+      const res = await api.get(`/kiosk/tasks/templates?kioskId=${cart.id}`);
       setTemplates(res.data.data?.items || res.data.data || []);
     } catch {
       toast.error("Failed to load templates");
@@ -623,20 +623,20 @@ export default function IcartTasks({ cart }) {
   ];
 
   return (
-    <div className="icart_tab_content">
+    <div className="kiosk_tab_content">
       {/* Sub-nav */}
-      <div className="icart_sub_nav">
+      <div className="kiosk_sub_nav">
         {subViews.map((sv) => (
           <button
             key={sv.key}
-            className={`icart_sub_nav_btn ${view === sv.key ? "icart_sub_nav_active" : ""}`}
+            className={`kiosk_sub_nav_btn ${view === sv.key ? "kiosk_sub_nav_active" : ""}`}
             onClick={() => setView(sv.key)}
           >
             {sv.icon} {sv.label}
           </button>
         ))}
         <button
-          className={`icart_sub_nav_btn ${view === "newTemplate" ? "icart_sub_nav_active" : ""}`}
+          className={`kiosk_sub_nav_btn ${view === "newTemplate" ? "kiosk_sub_nav_active" : ""}`}
           onClick={() => setView("newTemplate")}
           style={{ marginLeft: "auto" }}
         >
@@ -650,7 +650,7 @@ export default function IcartTasks({ cart }) {
         </div>
       ) : view === "newTemplate" ? (
         <TemplateBuilder
-          cartId={cart.id}
+          kioskId={cart.id}
           operators={cart.operators || []}
           onCreated={() => {
             setView("templates");
@@ -659,12 +659,12 @@ export default function IcartTasks({ cart }) {
         />
       ) : view === "pending" ? (
         tasks.length === 0 ? (
-          <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
+          <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
             <MdTask size={24} style={{ opacity: 0.3 }} />
             <span>No pending tasks</span>
           </div>
         ) : (
-          <div className="icart_tasks_list">
+          <div className="kiosk_tasks_list">
             {tasks.map((task) => (
               <TaskCard key={task.id} task={task} onRefresh={fetchPending} />
             ))}
@@ -672,12 +672,12 @@ export default function IcartTasks({ cart }) {
         )
       ) : view === "ledger" ? (
         ledger.length === 0 ? (
-          <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
+          <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
             <MdHistory size={24} style={{ opacity: 0.3 }} />
             <span>No task history yet</span>
           </div>
         ) : (
-          <div className="icart_tasks_list">
+          <div className="kiosk_tasks_list">
             {ledger.map((task) => (
               <TaskCard key={task.id} task={task} onRefresh={fetchLedger} />
             ))}
@@ -689,7 +689,7 @@ export default function IcartTasks({ cart }) {
           {editingTemplate && (
             <div style={{ marginBottom: 16 }}>
               <TemplateBuilder
-                cartId={cart.id}
+                kioskId={cart.id}
                 operators={cart.operators || []}
                 editTemplate={editingTemplate}
                 onCreated={() => {
@@ -702,24 +702,24 @@ export default function IcartTasks({ cart }) {
           )}
 
           {templates.length === 0 ? (
-            <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
+            <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
               <MdListAlt size={24} style={{ opacity: 0.3 }} />
               <span>No templates yet</span>
             </div>
           ) : (
-            <div className="icart_tasks_list">
+            <div className="kiosk_tasks_list">
               {templates.map((tpl) => (
                 <div
                   key={tpl.id}
-                  className="icart_template_row"
+                  className="kiosk_template_row"
                   style={{ opacity: editingTemplate?.id === tpl.id ? 0.4 : 1 }}
                 >
-                  <div className="icart_task_icon">
+                  <div className="kiosk_task_icon">
                     <MdListAlt size={14} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="icart_task_name">{tpl.name}</div>
-                    <div className="icart_task_meta">
+                    <div className="kiosk_task_name">{tpl.name}</div>
+                    <div className="kiosk_task_meta">
                       <span>{tpl.type}</span>
                       <span className="contract_row_dot">·</span>
                       <span>{tpl.recurrence}</span>
@@ -753,11 +753,11 @@ export default function IcartTasks({ cart }) {
                       flexShrink: 0,
                     }}
                   >
-                    <span className="icart_section_count">
+                    <span className="kiosk_section_count">
                       {tpl.schema?.fields?.length || 0} fields
                     </span>
                     <button
-                      className="icart_icon_action_btn"
+                      className="kiosk_icon_action_btn"
                       onClick={() => {
                         setEditingTemplate(
                           editingTemplate?.id === tpl.id ? null : tpl,

@@ -66,7 +66,7 @@ function ReportRow({ report, canUpdateStatus, onStatusChanged }) {
   const handleStatusChange = async (newStatus) => {
     setUpdating(true);
     try {
-      await api.patch(`/icart/maintenance/${report.id}/status`, {
+      await api.patch(`/kiosk/maintenance/${report.id}/status`, {
         status: newStatus,
       });
       setLocalStatus(newStatus);
@@ -558,7 +558,7 @@ function ReportRow({ report, canUpdateStatus, onStatusChanged }) {
 }
 
 /* ── Create Report Form ───────────────────────────────────── */
-function CreateReportForm({ cartId, onCreated, onCancel }) {
+function CreateReportForm({ kioskId, onCreated, onCancel }) {
   const [reportText, setReportText] = useState("");
   const [responses, setResponses] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -581,11 +581,11 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
         (r) => r.q.trim() && r.a.trim(),
       );
       const payload = {
-        cartId,
+        kioskId,
         reportText: reportText.trim(),
         ...(validResponses.length > 0 ? { responses: validResponses } : {}),
       };
-      const res = await api.post("/icart/maintenance", payload);
+      const res = await api.post("/kiosk/maintenance", payload);
       toast.success("Report submitted");
       onCreated(res.data.data);
     } catch (err) {
@@ -752,9 +752,9 @@ function CreateReportForm({ cartId, onCreated, onCancel }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   MAIN EXPORT  —  drop-in tab component for IcartDrawer
+   MAIN EXPORT  —  drop-in tab component for KioskDrawer
    ═══════════════════════════════════════════════════════════ */
-export default function IcartReports({ cart, canUpdateStatus = true }) {
+export default function KioskReports({ cart, canUpdateStatus = true }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -764,7 +764,7 @@ export default function IcartReports({ cart, canUpdateStatus = true }) {
     if (!cart?.id) return;
     setLoading(true);
     try {
-      const res = await api.get(`/icart/maintenance/icart/${cart.id}`);
+      const res = await api.get(`/kiosk/maintenance/kiosk/${cart.id}`);
       const d = res.data.data;
       // API returns { items: [], total, page, limit, pages }
       setReports(Array.isArray(d) ? d : d?.items || []);
@@ -787,7 +787,7 @@ export default function IcartReports({ cart, canUpdateStatus = true }) {
   };
 
   return (
-    <div className="icart_tab_content">
+    <div className="kiosk_tab_content">
       {/* ── Header bar ── */}
       <div
         style={{
@@ -851,7 +851,7 @@ export default function IcartReports({ cart, canUpdateStatus = true }) {
       {/* ── Create form ── */}
       {showForm && (
         <CreateReportForm
-          cartId={cart.id}
+          kioskId={cart.id}
           onCreated={(newReport) => {
             setReports((p) => [newReport, ...p]);
             setTotal((t) => t + 1);
@@ -867,7 +867,7 @@ export default function IcartReports({ cart, canUpdateStatus = true }) {
           <div className="page_loader_spinner" />
         </div>
       ) : reports.length === 0 && !showForm ? (
-        <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+        <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
           <MdBuild size={28} style={{ opacity: 0.3 }} />
           <span>No reports yet</span>
         </div>

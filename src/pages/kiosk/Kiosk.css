@@ -1,6 +1,6 @@
-/* ── iCart Home ──────────────────────────────────────────────── */
+/* ── Kiosk Home ──────────────────────────────────────────────── */
 
-.icart_page_header {
+.kiosk_page_header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -9,7 +9,7 @@
 }
 
 /* Summary chips row */
-.icart_summary_row {
+.kiosk_summary_row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -17,7 +17,7 @@
   flex-wrap: wrap;
 }
 
-.icart_summary_chip {
+.kiosk_summary_chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -30,15 +30,15 @@
   border-radius: 999px;
 }
 
-/* iCart cards grid */
-.icart_grid {
+/* Kiosk cards grid */
+.kiosk_grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 14px;
 }
 
-/* Individual iCart card */
-.icart_item_card {
+/* Individual Kiosk card */
+.kiosk_item_card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -51,20 +51,20 @@
     box-shadow 0.15s;
 }
 
-.icart_item_card:hover {
+.kiosk_item_card:hover {
   border-color: rgba(203, 108, 220, 0.4);
   box-shadow: 0 2px 12px rgba(203, 108, 220, 0.08);
 }
 
 /* Card top — icon + status */
-.icart_item_top {
+.kiosk_item_top {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 14px;
 }
 
-.icart_item_icon {
+.kiosk_item_icon {
   width: 38px;
   height: 38px;
   border-radius: 10px;
@@ -77,7 +77,7 @@
   flex-shrink: 0;
 }
 
-.icart_status_badge {
+.kiosk_status_badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -90,7 +90,7 @@
 }
 
 /* Serial number */
-.icart_item_serial {
+.kiosk_item_serial {
   font-size: 0.9rem;
   font-weight: 800;
   color: var(--text-heading);
@@ -100,14 +100,14 @@
 }
 
 /* Online / lock indicators */
-.icart_item_indicators {
+.kiosk_item_indicators {
   display: flex;
   gap: 6px;
   margin-bottom: 14px;
   flex-wrap: wrap;
 }
 
-.icart_indicator {
+.kiosk_indicator {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -117,32 +117,32 @@
   border-radius: 999px;
 }
 
-.icart_ind_on {
+.kiosk_ind_on {
   background: rgba(34, 197, 94, 0.1);
   color: #22c55e;
   border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
-.icart_ind_off {
+.kiosk_ind_off {
   background: var(--bg-hover);
   color: var(--text-muted);
   border: 1px solid var(--border);
 }
 
-.icart_ind_locked {
+.kiosk_ind_locked {
   background: rgba(239, 68, 68, 0.08);
   color: #ef4444;
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-.icart_ind_unlocked {
+.kiosk_ind_unlocked {
   background: rgba(34, 197, 94, 0.08);
   color: #22c55e;
   border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
 /* Meta info block */
-.icart_item_meta {
+.kiosk_item_meta {
   background: var(--bg-hover);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -150,7 +150,7 @@
   margin-bottom: 12px;
 }
 
-.icart_meta_row {
+.kiosk_meta_row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -158,30 +158,30 @@
   border-bottom: 1px solid var(--border);
 }
 
-.icart_meta_row:last-child {
+.kiosk_meta_row:last-child {
   border-bottom: none;
 }
 
-.icart_meta_key {
+.kiosk_meta_key {
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-muted);
 }
 
-.icart_meta_val {
+.kiosk_meta_val {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--text-body);
 }
 
-.icart_meta_muted {
+.kiosk_meta_muted {
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-muted);
 }
 
 /* Invoices footer pill */
-.icart_item_invoices {
+.kiosk_item_invoices {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -196,7 +196,7 @@
 }
 
 /* Empty state */
-.icart_empty_state {
+.kiosk_empty_state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -207,35 +207,35 @@
   text-align: center;
 }
 
-.icart_empty_title {
+.kiosk_empty_title {
   font-size: 1rem;
   font-weight: 700;
   color: var(--text-heading);
   margin: 0;
 }
 
-.icart_empty_sub {
+.kiosk_empty_sub {
   font-size: 0.85rem;
   color: var(--text-muted);
   margin: 0 0 8px;
 }
 
-/* ── iCart purchase layout ───────────────────────────────────── */
+/* ── Kiosk purchase layout ───────────────────────────────────── */
 
-.icart_purchase_layout {
+.kiosk_purchase_layout {
   display: flex;
   flex-direction: column;
   gap: 28px;
   margin-top: 8px;
 }
 
-.icart_step_block {
+.kiosk_step_block {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.icart_step_label {
+.kiosk_step_label {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -244,7 +244,7 @@
   color: var(--text-heading);
 }
 
-.icart_step_num {
+.kiosk_step_num {
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -259,13 +259,13 @@
 }
 
 /* Plan cards grid */
-.icart_settings_grid {
+.kiosk_settings_grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 14px;
 }
 
-.icart_settings_card {
+.kiosk_settings_card {
   background: var(--bg-card);
   border: 2px solid var(--border);
   border-radius: 16px;
@@ -276,24 +276,24 @@
     box-shadow 0.15s;
 }
 
-.icart_settings_card:hover {
+.kiosk_settings_card:hover {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(203, 108, 220, 0.1);
 }
 
-.icart_settings_card_active {
+.kiosk_settings_card_active {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(203, 108, 220, 0.12);
 }
 
-.icart_card_header {
+.kiosk_card_header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 14px;
 }
 
-.icart_card_title {
+.kiosk_card_title {
   font-size: 1rem;
   font-weight: 800;
   color: var(--text-heading);
@@ -301,13 +301,13 @@
   text-transform: capitalize;
 }
 
-.icart_card_location {
+.kiosk_card_location {
   font-size: 0.75rem;
   color: var(--text-muted);
   font-weight: 500;
 }
 
-.icart_card_currency {
+.kiosk_card_currency {
   font-size: 0.7rem;
   font-weight: 700;
   padding: 3px 10px;
@@ -317,7 +317,7 @@
   border: 1px solid rgba(203, 108, 220, 0.2);
 }
 
-.icart_selected_badge {
+.kiosk_selected_badge {
   font-size: 0.65rem;
   font-weight: 700;
   padding: 2px 8px;
@@ -327,7 +327,7 @@
   border: 1px solid rgba(34, 197, 94, 0.25);
 }
 
-.icart_card_meta {
+.kiosk_card_meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -337,25 +337,25 @@
   margin-bottom: 12px;
 }
 
-.icart_meta_label {
+.kiosk_meta_label {
   font-size: 0.75rem;
   color: var(--text-muted);
   font-weight: 600;
 }
 
-.icart_meta_value {
+.kiosk_meta_value {
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-body);
 }
 
-.icart_payments_list {
+.kiosk_payments_list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.icart_payment_row {
+.kiosk_payment_row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -366,24 +366,24 @@
   border-radius: 10px;
 }
 
-.icart_payment_info {
+.kiosk_payment_info {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.icart_payment_title {
+.kiosk_payment_title {
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-body);
 }
 
-.icart_payment_desc {
+.kiosk_payment_desc {
   font-size: 0.72rem;
   color: var(--text-muted);
 }
 
-.icart_payment_right {
+.kiosk_payment_right {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -391,24 +391,24 @@
   flex-shrink: 0;
 }
 
-.icart_payment_amount {
+.kiosk_payment_amount {
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--text-heading);
 }
 
-.icart_per_unit {
+.kiosk_per_unit {
   font-size: 0.68rem;
   font-weight: 500;
   color: var(--text-muted);
 }
 
-.icart_payment_badges {
+.kiosk_payment_badges {
   display: flex;
   gap: 4px;
 }
 
-.icart_badge {
+.kiosk_badge {
   font-size: 0.62rem;
   font-weight: 700;
   padding: 2px 7px;
@@ -417,19 +417,19 @@
   letter-spacing: 0.04em;
 }
 
-.icart_badge_recurring {
+.kiosk_badge_recurring {
   background: rgba(59, 130, 246, 0.1);
   color: #3b82f6;
   border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
-.icart_badge_refundable {
+.kiosk_badge_refundable {
   background: rgba(34, 197, 94, 0.1);
   color: #22c55e;
   border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
-.icart_card_select_hint {
+.kiosk_card_select_hint {
   margin-top: 14px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -439,7 +439,7 @@
 
 /* ── Confirm card (step 2) ───────────────────────────────────── */
 
-.icart_confirm_card {
+.kiosk_confirm_card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -449,14 +449,14 @@
   flex-direction: column;
 }
 
-.icart_confirm_header {
+.kiosk_confirm_header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 4px;
 }
 
-.icart_confirm_plan {
+.kiosk_confirm_plan {
   display: block;
   font-size: 1rem;
   font-weight: 800;
@@ -465,12 +465,12 @@
   margin-bottom: 4px;
 }
 
-.icart_confirm_location {
+.kiosk_confirm_location {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
 
-.icart_change_plan {
+.kiosk_change_plan {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--accent);
@@ -480,30 +480,30 @@
   padding: 0;
 }
 
-.icart_change_plan:hover {
+.kiosk_change_plan:hover {
   opacity: 0.75;
 }
 
-.icart_divider {
+.kiosk_divider {
   height: 1px;
   background: var(--border);
   margin: 16px 0;
 }
 
 /* Quantity control */
-.icart_qty_row {
+.kiosk_qty_row {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.icart_qty_label {
+.kiosk_qty_label {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-body);
 }
 
-.icart_qty_control {
+.kiosk_qty_control {
   display: flex;
   align-items: center;
   background: var(--bg-hover);
@@ -512,7 +512,7 @@
   overflow: hidden;
 }
 
-.icart_qty_btn {
+.kiosk_qty_btn {
   width: 36px;
   height: 36px;
   display: flex;
@@ -526,17 +526,17 @@
   font-family: inherit;
 }
 
-.icart_qty_btn:hover:not(:disabled) {
+.kiosk_qty_btn:hover:not(:disabled) {
   background: var(--bg-active);
   color: var(--accent);
 }
 
-.icart_qty_btn:disabled {
+.kiosk_qty_btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
 }
 
-.icart_qty_value {
+.kiosk_qty_value {
   min-width: 40px;
   text-align: center;
   font-size: 0.95rem;
@@ -548,21 +548,21 @@
 }
 
 /* Breakdown */
-.icart_breakdown {
+.kiosk_breakdown {
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin-bottom: 4px;
 }
 
-.icart_breakdown_row {
+.kiosk_breakdown_row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
 }
 
-.icart_breakdown_label {
+.kiosk_breakdown_label {
   font-size: 0.82rem;
   color: var(--text-muted);
   font-weight: 500;
@@ -572,7 +572,7 @@
   gap: 4px;
 }
 
-.icart_breakdown_value {
+.kiosk_breakdown_value {
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--text-body);
@@ -580,7 +580,7 @@
 }
 
 /* Total */
-.icart_confirm_total {
+.kiosk_confirm_total {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -591,13 +591,13 @@
   margin-bottom: 16px;
 }
 
-.icart_total_label {
+.kiosk_total_label {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-muted);
 }
 
-.icart_total_amount {
+.kiosk_total_amount {
   font-size: 1.05rem;
   font-weight: 800;
   color: var(--accent);
@@ -605,7 +605,7 @@
 
 /* ── Back button ─────────────────────────────────────────────── */
 
-.icart_back_btn {
+.kiosk_back_btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -621,51 +621,51 @@
   font-family: inherit;
 }
 
-.icart_back_btn:hover {
+.kiosk_back_btn:hover {
   color: var(--text-body);
 }
 
 /* ── Empty (purchase page) ───────────────────────────────────── */
 
-.icart_empty {
+.kiosk_empty {
   text-align: center;
   padding: 40px 0;
   color: var(--text-muted);
 }
 
-/* ── Append these to your existing Icart.css ────────────────── */
+/* ── Append these to your existing Kiosk.css ────────────────── */
 
 /* Section label rows */
-.icart_section_label_row {
+.kiosk_section_label_row {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 14px;
 }
 
-.icart_section_label_row_clickable {
+.kiosk_section_label_row_clickable {
   cursor: pointer;
   user-select: none;
 }
 
-.icart_section_label_row_clickable:hover .icart_section_label {
+.kiosk_section_label_row_clickable:hover .kiosk_section_label {
   color: var(--accent);
 }
 
-.icart_section_chevron {
+.kiosk_section_chevron {
   margin-left: auto;
   color: var(--text-muted);
   display: flex;
   align-items: center;
 }
 
-.icart_section_label {
+.kiosk_section_label {
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--text-heading);
 }
 
-.icart_section_count {
+.kiosk_section_count {
   font-size: 0.7rem;
   font-weight: 700;
   color: var(--text-muted);
@@ -967,19 +967,19 @@
 }
 
 /* Location value with icon */
-.icart_location_val {
+.kiosk_location_val {
   display: inline-flex;
   align-items: center;
   gap: 3px;
 }
 
-/* ── Append to Icart.css ─────────────────────────────────────
-   iCart drawer tab components
+/* ── Append to Kiosk.css ─────────────────────────────────────
+   Kiosk drawer tab components
    (drawer shell, backdrop, panel, header, body are all handled
     by the global Drawer component — no overrides needed here)
    ──────────────────────────────────────────────────────────── */
 
-/* Tabs bar — sits inside .drawer_body, icart-specific */
+/* Tabs bar — sits inside .drawer_body, kiosk-specific */
 .drawer_tabs_bar {
   display: flex;
   border-bottom: 1px solid var(--border);
@@ -1041,20 +1041,20 @@
   margin-bottom: 10px;
 }
 
-.icart_tab_content {
+.kiosk_tab_content {
   display: flex;
   flex-direction: column;
   gap: 0;
 }
 
-.icart_toggles_block {
+.kiosk_toggles_block {
   background: var(--bg-hover);
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
 }
 
-.icart_toggle_row {
+.kiosk_toggle_row {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1062,25 +1062,25 @@
   border-bottom: 1px solid var(--border);
 }
 
-.icart_toggle_row:last-child {
+.kiosk_toggle_row:last-child {
   border-bottom: none;
 }
 
-.icart_toggle_left {
+.kiosk_toggle_left {
   display: flex;
   align-items: center;
   gap: 10px;
   flex: 1;
 }
 
-.icart_toggle_label {
+.kiosk_toggle_label {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-body);
   flex: 1;
 }
 
-.icart_toggle_switch {
+.kiosk_toggle_switch {
   width: 40px;
   height: 22px;
   border-radius: 999px;
@@ -1093,15 +1093,15 @@
   padding: 0;
 }
 
-.icart_toggle_switch:disabled {
+.kiosk_toggle_switch:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.icart_toggle_on {
+.kiosk_toggle_on {
   background: var(--accent);
 }
 
-.icart_toggle_knob {
+.kiosk_toggle_knob {
   position: absolute;
   top: 3px;
   left: 3px;
@@ -1113,39 +1113,39 @@
   display: block;
 }
 
-.icart_toggle_on .icart_toggle_knob {
+.kiosk_toggle_on .kiosk_toggle_knob {
   transform: translateX(18px);
 }
 
-.icart_radius_block {
+.kiosk_radius_block {
   background: var(--bg-hover);
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
 }
 
-.icart_radius_row {
+.kiosk_radius_row {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
 }
 
-.icart_radius_display {
+.kiosk_radius_display {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-left: auto;
 }
 
-.icart_radius_edit {
+.kiosk_radius_edit {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-left: auto;
 }
 
-.icart_icon_action_btn {
+.kiosk_icon_action_btn {
   width: 28px;
   height: 28px;
   border-radius: 7px;
@@ -1162,18 +1162,18 @@
   flex-shrink: 0;
 }
 
-.icart_icon_action_btn:hover {
+.kiosk_icon_action_btn:hover {
   background: var(--bg-active);
   color: var(--accent);
 }
 
-.icart_icon_danger:hover {
+.kiosk_icon_danger:hover {
   background: rgba(239, 68, 68, 0.08);
   color: #ef4444;
   border-color: rgba(239, 68, 68, 0.2);
 }
 
-.icart_location_card {
+.kiosk_location_card {
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -1183,7 +1183,7 @@
   border-radius: 12px;
 }
 
-.icart_location_icon_wrap {
+.kiosk_location_icon_wrap {
   width: 36px;
   height: 36px;
   border-radius: 9px;
@@ -1196,23 +1196,23 @@
   flex-shrink: 0;
 }
 
-.icart_location_info {
+.kiosk_location_info {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.icart_location_name {
+.kiosk_location_name {
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--text-heading);
 }
-.icart_location_address {
+.kiosk_location_address {
   font-size: 0.75rem;
   color: var(--text-muted);
   font-weight: 500;
 }
 
-.icart_empty_inline {
+.kiosk_empty_inline {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1223,7 +1223,7 @@
   text-align: center;
 }
 
-.icart_concept_form {
+.kiosk_concept_form {
   background: var(--bg-hover);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1234,13 +1234,13 @@
   gap: 10px;
 }
 
-.icart_concepts_list {
+.kiosk_concepts_list {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.icart_concept_row {
+.kiosk_concept_row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1250,7 +1250,7 @@
   border-radius: 10px;
 }
 
-.icart_concept_icon {
+.kiosk_concept_icon {
   width: 30px;
   height: 30px;
   border-radius: 8px;
@@ -1263,23 +1263,23 @@
   flex-shrink: 0;
 }
 
-.icart_concept_info {
+.kiosk_concept_info {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.icart_concept_name {
+.kiosk_concept_name {
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-body);
 }
-.icart_concept_markup {
+.kiosk_concept_markup {
   font-size: 0.7rem;
   color: var(--text-muted);
   font-weight: 500;
 }
 
-.icart_sub_nav {
+.kiosk_sub_nav {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1287,7 +1287,7 @@
   flex-wrap: wrap;
 }
 
-.icart_sub_nav_btn {
+.kiosk_sub_nav_btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1304,31 +1304,31 @@
   white-space: nowrap;
 }
 
-.icart_sub_nav_btn:hover {
+.kiosk_sub_nav_btn:hover {
   color: var(--text-body);
   border-color: rgba(203, 108, 220, 0.3);
 }
 
-.icart_sub_nav_active {
+.kiosk_sub_nav_active {
   background: var(--bg-active);
   color: var(--accent) !important;
   border-color: rgba(203, 108, 220, 0.35) !important;
 }
 
-.icart_tasks_list {
+.kiosk_tasks_list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.icart_task_card {
+.kiosk_task_card {
   background: var(--bg-hover);
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
 }
 
-.icart_task_card_top {
+.kiosk_task_card_top {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1337,7 +1337,7 @@
   gap: 10px;
 }
 
-.icart_task_card_left {
+.kiosk_task_card_left {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1345,7 +1345,7 @@
   flex: 1;
 }
 
-.icart_task_icon {
+.kiosk_task_icon {
   width: 30px;
   height: 30px;
   border-radius: 8px;
@@ -1358,7 +1358,7 @@
   flex-shrink: 0;
 }
 
-.icart_task_name {
+.kiosk_task_name {
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-body);
@@ -1367,7 +1367,7 @@
   text-overflow: ellipsis;
 }
 
-.icart_task_meta {
+.kiosk_task_meta {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -1378,7 +1378,7 @@
   flex-wrap: wrap;
 }
 
-.icart_task_expanded {
+.kiosk_task_expanded {
   padding: 12px 14px 14px;
   border-top: 1px solid var(--border);
   display: flex;
@@ -1386,14 +1386,14 @@
   gap: 8px;
 }
 
-.icart_task_data {
+.kiosk_task_data {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
 }
 
-.icart_task_data_row {
+.kiosk_task_data_row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1402,11 +1402,11 @@
   gap: 10px;
 }
 
-.icart_task_data_row:last-child {
+.kiosk_task_data_row:last-child {
   border-bottom: none;
 }
 
-.icart_manager_comment {
+.kiosk_manager_comment {
   background: var(--bg-active);
   border: 1px solid rgba(203, 108, 220, 0.15);
   border-radius: 10px;
@@ -1416,14 +1416,14 @@
   gap: 4px;
 }
 
-.icart_manager_comment p {
+.kiosk_manager_comment p {
   margin: 0;
   font-size: 0.8rem;
   color: var(--text-body);
   line-height: 1.5;
 }
 
-.icart_template_builder {
+.kiosk_template_builder {
   background: var(--bg-hover);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1433,18 +1433,18 @@
   gap: 12px;
 }
 
-.icart_fields_list {
+.kiosk_fields_list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.icart_field_row {
+.kiosk_field_row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.icart_template_row {
+.kiosk_template_row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1454,7 +1454,7 @@
   border-radius: 10px;
 }
 
-.icart_checkbox_btn {
+.kiosk_checkbox_btn {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1470,13 +1470,13 @@
   transition: all 0.15s;
 }
 
-.icart_checkbox_checked {
+.kiosk_checkbox_checked {
   background: rgba(34, 197, 94, 0.08);
   border-color: rgba(34, 197, 94, 0.3);
   color: #22c55e;
 }
 
-.icart_task_submit_form {
+.kiosk_task_submit_form {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -1487,7 +1487,7 @@
   margin-top: 8px;
 }
 
-.icart_current_operator {
+.kiosk_current_operator {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -1497,7 +1497,7 @@
   border-radius: 12px;
 }
 
-.icart_operator_avatar {
+.kiosk_operator_avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -1512,29 +1512,29 @@
   flex-shrink: 0;
 }
 
-.icart_operator_avatar_lg {
+.kiosk_operator_avatar_lg {
   width: 44px;
   height: 44px;
   font-size: 1.1rem;
 }
-.icart_operator_name {
+.kiosk_operator_name {
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-body);
 }
-.icart_operator_meta {
+.kiosk_operator_meta {
   font-size: 0.7rem;
   color: var(--text-muted);
   font-weight: 500;
   margin-top: 2px;
 }
-.icart_operator_info {
+.kiosk_operator_info {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.icart_operator_list {
+.kiosk_operator_list {
   max-height: 220px;
   overflow-y: auto;
   border: 1px solid var(--border);
@@ -1543,7 +1543,7 @@
   scrollbar-width: thin;
 }
 
-.icart_operator_row {
+.kiosk_operator_row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1553,17 +1553,17 @@
   transition: background 0.12s;
 }
 
-.icart_operator_row:last-child {
+.kiosk_operator_row:last-child {
   border-bottom: none;
 }
-.icart_operator_row:hover {
+.kiosk_operator_row:hover {
   background: var(--bg-hover);
 }
-.icart_operator_selected {
+.kiosk_operator_selected {
   background: var(--bg-active) !important;
 }
 
-.icart_search_wrap {
+.kiosk_search_wrap {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1574,26 +1574,26 @@
   height: 40px;
 }
 
-.icart_hire_form {
+.kiosk_hire_form {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.icart_offer_card {
+.kiosk_offer_card {
   background: var(--bg-hover);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px;
 }
 
-.icart_offer_top {
+.kiosk_offer_top {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.icart_inventory_row {
+.kiosk_inventory_row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1604,17 +1604,17 @@
   border-radius: 10px;
 }
 
-.icart_inventory_low {
+.kiosk_inventory_low {
   border-color: rgba(239, 68, 68, 0.3);
   background: rgba(239, 68, 68, 0.03);
 }
 
-.icart_inventory_info {
+.kiosk_inventory_info {
   flex: 1;
   min-width: 0;
 }
 
-.icart_history_row {
+.kiosk_history_row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1626,7 +1626,7 @@
 
 /* ── Location form ───────────────────────────────────────────── */
  
-.icart_location_form {
+.kiosk_location_form {
   background: var(--bg-hover);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1636,7 +1636,7 @@
   gap: 12px;
 }
  
-.icart_location_form_grid {
+.kiosk_location_form_grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;

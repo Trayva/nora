@@ -561,12 +561,12 @@ span {
   }
 }
 
-/* ── iCart Styles ───────────────────────── */
-.icart_card_wrapper {
+/* ── Kiosk Styles ───────────────────────── */
+.kiosk_card_wrapper {
   /* display: flex; */
 }
 
-.icart_card {
+.kiosk_card {
   margin: 10px;
   padding: 40px;
   border-radius: 10px;
@@ -574,16 +574,16 @@ span {
   background-color: var(--bg-card);
 }
 
-/* ── Purchase iCart Page ──────────────────────────────────────── */
+/* ── Purchase Kiosk Page ──────────────────────────────────────── */
 
-.icart_settings_grid {
+.kiosk_settings_grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 20px;
   margin-top: 28px;
 }
 
-.icart_settings_card {
+.kiosk_settings_card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -596,20 +596,20 @@ span {
     box-shadow 0.2s;
 }
 
-.icart_settings_card:hover {
+.kiosk_settings_card:hover {
   /* border-color: var(--accent); */
   box-shadow: 0 4px 24px rgba(203, 108, 220, 0.1);
 }
 
 /* Card header */
-.icart_card_header {
+.kiosk_card_header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
-.icart_card_title {
+.kiosk_card_title {
   font-size: 1rem;
   font-weight: 700;
   color: var(--text-heading);
@@ -617,12 +617,12 @@ span {
   text-transform: capitalize;
 }
 
-.icart_card_location {
+.kiosk_card_location {
   font-size: 0.8rem;
   color: var(--text-muted);
 }
 
-.icart_card_currency {
+.kiosk_card_currency {
   font-size: 0.75rem;
   font-weight: 600;
   padding: 3px 10px;
@@ -634,7 +634,7 @@ span {
 }
 
 /* Meta row */
-.icart_card_meta {
+.kiosk_card_meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -643,25 +643,25 @@ span {
   border-radius: 10px;
 }
 
-.icart_meta_label {
+.kiosk_meta_label {
   font-size: 0.8rem;
   color: var(--text-muted);
 }
 
-.icart_meta_value {
+.kiosk_meta_value {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-body);
 }
 
 /* Payments list */
-.icart_payments_list {
+.kiosk_payments_list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.icart_payment_row {
+.kiosk_payment_row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -670,29 +670,29 @@ span {
   border-bottom: 1px solid var(--divider);
 }
 
-.icart_payment_row:last-child {
+.kiosk_payment_row:last-child {
   border-bottom: none;
   padding-bottom: 0;
 }
 
-.icart_payment_info {
+.kiosk_payment_info {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.icart_payment_title {
+.kiosk_payment_title {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-body);
 }
 
-.icart_payment_desc {
+.kiosk_payment_desc {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
 
-.icart_payment_right {
+.kiosk_payment_right {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -700,38 +700,38 @@ span {
   flex-shrink: 0;
 }
 
-.icart_payment_amount {
+.kiosk_payment_amount {
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--text-heading);
 }
 
-.icart_payment_badges {
+.kiosk_payment_badges {
   display: flex;
   gap: 4px;
 }
 
-.icart_badge {
+.kiosk_badge {
   font-size: 0.65rem;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
 }
 
-.icart_badge_recurring {
+.kiosk_badge_recurring {
   background: rgba(234, 179, 8, 0.1);
   color: #ca8a04;
   border: 1px solid rgba(234, 179, 8, 0.25);
 }
 
-.icart_badge_refundable {
+.kiosk_badge_refundable {
   background: rgba(34, 197, 94, 0.1);
   color: #16a34a;
   border: 1px solid rgba(34, 197, 94, 0.25);
 }
 
 /* Total row */
-.icart_card_total {
+.kiosk_card_total {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -741,20 +741,20 @@ span {
   border: 1px solid rgba(203, 108, 220, 0.2);
 }
 
-.icart_total_label {
+.kiosk_total_label {
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--text-muted);
 }
 
-.icart_total_amount {
+.kiosk_total_amount {
   font-size: 1rem;
   font-weight: 700;
   color: var(--accent);
 }
 
 /* Empty state */
-.icart_empty {
+.kiosk_empty {
   margin-top: 40px;
   text-align: center;
   color: var(--text-muted);

@@ -401,7 +401,7 @@ export default function PublicConceptsSection() {
           <div>
             <h2 className="pub_concepts_title">Rent a Concept</h2>
             <p className="pub_concepts_sub">
-              Browse vendor concepts available for iCart rental — complete with
+              Browse vendor concepts available for Kiosk rental — complete with
               menus, costs, and markup projections.
             </p>
           </div>

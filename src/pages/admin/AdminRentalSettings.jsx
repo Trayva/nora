@@ -32,7 +32,7 @@ export default function AdminRentalSettings() {
 
   const fetch = async () => {
     try {
-      const r = await api.get("/icart/concept-rental-settings");
+      const r = await api.get("/kiosk/concept-rental-settings");
       setItems(r.data.data || []);
     } catch {
       toast.error("Failed");
@@ -94,8 +94,8 @@ export default function AdminRentalSettings() {
         })),
       };
       if (editing)
-        await api.patch(`/icart/concept-rental-settings/${editing.id}`, body);
-      else await api.post("/icart/concept-rental-settings", body);
+        await api.patch(`/kiosk/concept-rental-settings/${editing.id}`, body);
+      else await api.post("/kiosk/concept-rental-settings", body);
       toast.success(editing ? "Updated" : "Created");
       setOpen(false);
       fetch();
@@ -110,7 +110,7 @@ export default function AdminRentalSettings() {
     if (!window.confirm("Delete?")) return;
     setDeleting(id);
     try {
-      await api.delete(`/icart/concept-rental-settings/${id}`);
+      await api.delete(`/kiosk/concept-rental-settings/${id}`);
       toast.success("Deleted");
       fetch();
     } catch (err) {

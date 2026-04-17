@@ -101,7 +101,7 @@ export default function ShopLanding() {
                   letterSpacing: "0.04em",
                 }}
               >
-                iCarts open near you
+                Kiosks open near you
               </span>
             </div>
 
@@ -137,7 +137,7 @@ export default function ShopLanding() {
                 animation: "noraFadeUp 0.55s ease 0.1s both",
               }}
             >
-              Browse menus from iCart vendors near you, pick your favourites,
+              Browse menus from Kiosk vendors near you, pick your favourites,
               and get them delivered — no fuss.
             </p>
 
@@ -310,7 +310,7 @@ export default function ShopLanding() {
                     color: "#fff",
                   }}
                 >
-                  Fresh from nearby iCarts
+                  Fresh from nearby Kiosks
                 </span>
               </div>
             </div>

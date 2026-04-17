@@ -353,7 +353,7 @@ export default function ShopOrderPage() {
     else setRefreshing(true);
     setError(null);
     try {
-      const r = await api.get("/icart/shop/order", { params: { id } });
+      const r = await api.get("/kiosk/shop/order", { params: { id } });
       setOrder(r.data.data);
     } catch (err) {
       setError(err.response?.data?.message || "Order not found");
@@ -468,7 +468,7 @@ export default function ShopOrderPage() {
           {/* Theme toggle */}
           <button
             onClick={toggle}
-            className="icart_icon_action_btn"
+            className="kiosk_icon_action_btn"
             style={{ width: 34, height: 34 }}
             title={theme === "dark" ? "Light mode" : "Dark mode"}
           >
@@ -835,7 +835,7 @@ export default function ShopOrderPage() {
               <Stepper status={order.status} />
             </div>
 
-            {/* ── iCart location ── */}
+            {/* ── Kiosk location ── */}
             {order.cart?.location && (
               <div
                 style={{
@@ -855,7 +855,7 @@ export default function ShopOrderPage() {
                     marginBottom: 12,
                   }}
                 >
-                  iCart Location
+                  Kiosk Location
                 </div>
                 <div
                   style={{ display: "flex", alignItems: "flex-start", gap: 10 }}

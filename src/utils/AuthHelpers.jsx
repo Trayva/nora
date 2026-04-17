@@ -21,7 +21,7 @@ export function getDefaultRoute(user) {
   const role = getPrimaryRole(user);
   switch (role) {
     case "ADMIN":
-      return "/app/icart-home"; // admin can navigate anywhere from sidebar
+      return "/app/kiosk-home"; // admin can navigate anywhere from sidebar
     case "VENDOR":
       return "/app/business";
     case "SUPPLIER":
@@ -29,7 +29,7 @@ export function getDefaultRoute(user) {
     case "OPERATOR":
       return "/app/operator";
     default:
-      return "/app/icart-home"; // CUSTOMER
+      return "/app/kiosk-home"; // CUSTOMER
   }
 }
 

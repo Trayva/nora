@@ -1,5 +1,5 @@
 import React from "react";
-import img from "../../assets/icart11.png"; // Placeholder or use a specific one if available
+import img from "../../assets/kiosk11.png"; // Placeholder or use a specific one if available
 
 function BrandBenefits() {
   const benefits = [

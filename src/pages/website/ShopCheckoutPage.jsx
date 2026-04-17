@@ -190,7 +190,7 @@ export default function ShopCheckoutPage() {
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  const group = state?.group; // { cartId, conceptName, items: [{item, qty, concept, cartId}] }
+  const group = state?.group; // { kioskId, conceptName, items: [{item, qty, concept, kioskId}] }
   const [form, setForm] = useState({
     customerName: "",
     customerPhone: "",
@@ -222,7 +222,7 @@ export default function ShopCheckoutPage() {
     setPlacing(true);
     try {
       const payload = {
-        cartId: group.cartId,
+        kioskId: group.kioskId,
         deliveryAddress: form.deliveryAddress.trim(),
         items: group.items.map((e) => ({
           menuItemId: e.item.id,
@@ -236,7 +236,7 @@ export default function ShopCheckoutPage() {
       if (form.customerEmail.trim())
         payload.customerEmail = form.customerEmail.trim();
 
-      const r = await api.post("/icart/shop/order", payload);
+      const r = await api.post("/kiosk/shop/order", payload);
       setOrderResult(r.data.data || r.data);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to place order");
@@ -271,7 +271,7 @@ export default function ShopCheckoutPage() {
               letterSpacing: "0.08em",
             }}
           >
-            iCart Shop
+            Kiosk Shop
           </div>
         </div>
         <OrderSuccess order={orderResult} onClose={() => navigate("/shop")} />

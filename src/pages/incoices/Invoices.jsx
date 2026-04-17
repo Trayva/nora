@@ -76,10 +76,10 @@ function invoiceContext(invoice) {
       type: "Supply Request",
       ref: "#" + invoice.supplyRequestId.slice(0, 8).toUpperCase(),
     };
-  if (invoice.iCartVendorApplicationId)
+  if (invoice.KioskVendorApplicationId)
     return {
       type: "Vendor Application",
-      ref: "#" + invoice.iCartVendorApplicationId.slice(0, 8).toUpperCase(),
+      ref: "#" + invoice.KioskVendorApplicationId.slice(0, 8).toUpperCase(),
     };
   if (invoice.contractApplicationId)
     return {
@@ -91,10 +91,10 @@ function invoiceContext(invoice) {
       type: "Concept Rental",
       ref: "#" + invoice.conceptRentalApplicationId.slice(0, 8).toUpperCase(),
     };
-  if (invoice.icartId)
+  if (invoice.kioskId)
     return {
-      type: "iCart",
-      ref: "#" + invoice.icartId.slice(0, 8).toUpperCase(),
+      type: "Kiosk",
+      ref: "#" + invoice.kioskId.slice(0, 8).toUpperCase(),
     };
   return { type: "General", ref: "—" };
 }
@@ -285,7 +285,7 @@ function generateReceiptHTML(invoice) {
   }
   .party-card.pc-customer::before{background:var(--blue)}
   .party-card.pc-company::before{background:var(--accent)}
-  .party-card.pc-icart::before{background:var(--amber)}
+  .party-card.pc-kiosk::before{background:var(--amber)}
 
   .party-eyebrow{
     font-size:8.5px;font-weight:700;
@@ -437,8 +437,8 @@ function generateReceiptHTML(invoice) {
       <div class="party-field"><div class="party-key">Email</div><div class="party-val">hello@nora.io</div></div>
       <div class="party-field"><div class="party-key">Socials</div><div class="party-val small">@noraai · in/nora-ai · x.com/noraai</div></div>
     </div>
-    <div class="party-card pc-icart">
-      <div class="party-eyebrow">iCart Reference</div>
+    <div class="party-card pc-kiosk">
+      <div class="party-eyebrow">Kiosk Reference</div>
       <div class="party-field"><div class="party-key">Context</div><div class="party-val bold">${ctx.type}</div></div>
       <div class="party-field"><div class="party-key">Reference</div><div class="party-val">${ctx.ref}</div></div>
       <div class="party-field"><div class="party-key">Invoice No.</div><div class="party-val">#${invoice.id.slice(0, 8).toUpperCase()}</div></div>
@@ -714,16 +714,16 @@ function InvoiceModal({ invoice, onClose, onPay }) {
               : []),
           ].map((m) => (
             <div key={m.label} className="invoice_meta_item">
-              <span className="icart_meta_label">{m.label}</span>
-              <span className="icart_meta_value">{m.value}</span>
+              <span className="kiosk_meta_label">{m.label}</span>
+              <span className="kiosk_meta_value">{m.value}</span>
             </div>
           ))}
         </div>
 
         {/* Total */}
-        <div className="icart_card_total">
-          <span className="icart_total_label">Total</span>
-          <span className="icart_total_amount">
+        <div className="kiosk_card_total">
+          <span className="kiosk_total_label">Total</span>
+          <span className="kiosk_total_amount">
             {formatAmount(invoice.total, invoice.currency)}
           </span>
         </div>

@@ -60,7 +60,7 @@ function OrderCard({ order, onUpdated }) {
   const updateStatus = async (status) => {
     setUpdating(status);
     try {
-      await api.patch(`/icart/shop/order/${order.id}/status/operator`, { status });
+      await api.patch(`/kiosk/shop/order/${order.id}/status/operator`, { status });
       toast.success(`Order ${status.toLowerCase()}`);
       onUpdated?.({ ...order, status });
     } catch (err) { toast.error(err.response?.data?.message || "Failed to update"); }
@@ -192,8 +192,8 @@ function OrderCard({ order, onUpdated }) {
   );
 }
 
-/* ── Main IcartOrders tab ── */
-export default function IcartOrders({ cartId }) {
+/* ── Main KioskOrders tab ── */
+export default function KioskOrders({ kioskId }) {
   const [orders, setOrders]       = useState([]);
   const [loading, setLoading]     = useState(true);
   const [filter, setFilter]       = useState("ALL");
@@ -202,7 +202,7 @@ export default function IcartOrders({ cartId }) {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const r = await api.get("/icart/shop/orders", { params: { cartId } });
+      const r = await api.get("/kiosk/shop/orders", { params: { kioskId } });
       const d = r.data.data;
       setOrders(d?.orders || []);
       setStats(d?.stats || {});
@@ -211,7 +211,7 @@ export default function IcartOrders({ cartId }) {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchOrders(); }, [cartId]);
+  useEffect(() => { fetchOrders(); }, [kioskId]);
 
   const handleUpdated = (updated) => {
     setOrders((prev) => prev.map((o) => o.id === updated.id ? updated : o));
@@ -221,7 +221,7 @@ export default function IcartOrders({ cartId }) {
   const pending  = stats.PENDING || 0;
 
   return (
-    <div className="icart_tab_content">
+    <div className="kiosk_tab_content">
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -238,7 +238,7 @@ export default function IcartOrders({ cartId }) {
       </div>
 
       {/* Status filter tabs */}
-      <div className="icart_sub_nav" style={{ marginBottom: 14 }}>
+      <div className="kiosk_sub_nav" style={{ marginBottom: 14 }}>
         {["ALL", ...ORDER_STATUSES].map((s) => {
           const count = s === "ALL" ? orders.length : orders.filter((o) => o.status === s).length;
           if (s !== "ALL" && count === 0) return null;
@@ -246,7 +246,7 @@ export default function IcartOrders({ cartId }) {
           const isActive = filter === s;
           return (
             <button key={s}
-              className={`icart_sub_nav_btn ${isActive ? "icart_sub_nav_active" : ""}`}
+              className={`kiosk_sub_nav_btn ${isActive ? "kiosk_sub_nav_active" : ""}`}
               style={isActive && ss ? { color: ss.color, borderColor: ss.border, background: ss.bg } : {}}
               onClick={() => setFilter(s)}
             >
@@ -261,10 +261,10 @@ export default function IcartOrders({ cartId }) {
       {loading ? (
         <div className="drawer_loading"><div className="page_loader_spinner" /></div>
       ) : filtered.length === 0 ? (
-        <div className="icart_empty_state" style={{ padding: "40px 0" }}>
+        <div className="kiosk_empty_state" style={{ padding: "40px 0" }}>
           <MdOutlineShoppingBag size={28} style={{ opacity: 0.25 }} />
-          <p className="icart_empty_title">{orders.length === 0 ? "No orders yet" : `No ${filter.toLowerCase()} orders`}</p>
-          <p className="icart_empty_sub">{orders.length === 0 ? "Orders from customers will appear here." : "Try a different filter."}</p>
+          <p className="kiosk_empty_title">{orders.length === 0 ? "No orders yet" : `No ${filter.toLowerCase()} orders`}</p>
+          <p className="kiosk_empty_sub">{orders.length === 0 ? "Orders from customers will appear here." : "Try a different filter."}</p>
         </div>
       ) : (
         <div>

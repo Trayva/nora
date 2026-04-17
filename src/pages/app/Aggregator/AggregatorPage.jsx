@@ -64,7 +64,7 @@ function StatusBadge({ status }) {
   );
 }
 
-/* ── iCart Details panel ── */
+/* ── Kiosk Details panel ── */
 function CartDetailsPanel({ cart }) {
   const fmt = (n) =>
     Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
@@ -395,14 +395,14 @@ function TaskCard({ task }) {
   );
 }
 
-function TasksPanel({ cartId }) {
+function TasksPanel({ kioskId }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadTasks = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/icart/tasks?cartId=${cartId}`);
+      const res = await api.get(`/kiosk/tasks?kioskId=${kioskId}`);
       setTasks(res.data.data?.items || res.data.data || []);
     } catch {
       toast.error("Failed to load tasks");
@@ -411,13 +411,13 @@ function TasksPanel({ cartId }) {
     }
   };
 
-  useEffect(() => { loadTasks(); }, [cartId]);
+  useEffect(() => { loadTasks(); }, [kioskId]);
 
   if (loading) return <div className="drawer_loading"><div className="page_loader_spinner" /></div>;
 
   if (tasks.length === 0) {
     return (
-      <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+      <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
         <MdTask size={28} style={{ opacity: 0.3 }} />
         <span>No pending tasks</span>
       </div>
@@ -470,7 +470,7 @@ export default function AggregatorPage() {
     setNotFound(false);
     setActiveTab("details");
     try {
-      const res = await api.get(`/icart/${encodeURIComponent(q)}`);
+      const res = await api.get(`/kiosk/${encodeURIComponent(q)}`);
       const found = res.data.data;
       if (!found?.id) {
         setNotFound(true);
@@ -507,7 +507,7 @@ export default function AggregatorPage() {
               Aggregator
             </h1>
             <p style={{ margin: 0, fontSize: "0.76rem", color: "var(--text-muted)" }}>
-              Look up any iCart by serial number
+              Look up any Kiosk by serial number
             </p>
           </div>
         </div>
@@ -527,7 +527,7 @@ export default function AggregatorPage() {
             color: "var(--text-muted)", marginBottom: 10,
           }}
         >
-          iCart Serial Number
+          Kiosk Serial Number
         </label>
         <div style={{ display: "flex", gap: 10 }}>
           <div style={{ position: "relative", flex: 1 }}>
@@ -542,7 +542,7 @@ export default function AggregatorPage() {
             <input
               className="modal-input"
               style={{ paddingLeft: 36, height: 44, fontSize: "0.92rem", marginBottom: 0, fontFamily: "monospace", letterSpacing: "0.04em", textTransform: "uppercase" }}
-              placeholder="e.g. ICART-00142"
+              placeholder="e.g. KIOSK-00142"
               value={serial}
               onChange={(e) => setSerial(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -576,10 +576,10 @@ export default function AggregatorPage() {
         >
           <LuShoppingCart size={28} style={{ color: "#ef4444", opacity: 0.5, marginBottom: 8 }} />
           <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "#ef4444", marginBottom: 4 }}>
-            iCart not found
+            Kiosk not found
           </div>
           <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-            No iCart matched serial number <strong style={{ fontFamily: "monospace" }}>"{serial}"</strong>
+            No Kiosk matched serial number <strong style={{ fontFamily: "monospace" }}>"{serial}"</strong>
           </div>
         </div>
       )}
@@ -619,9 +619,9 @@ export default function AggregatorPage() {
           </div>
 
           {activeTab === "details" && <CartDetailsPanel cart={cart} />}
-          {activeTab === "tasks" && <TasksPanel cartId={cart.id} />}
+          {activeTab === "tasks" && <TasksPanel kioskId={cart.id} />}
           {activeTab === "maintenance" && (
-            <MaintenanceTab cartId={cart.id} canUpdateStatus={true} />
+            <MaintenanceTab kioskId={cart.id} canUpdateStatus={true} />
           )}
         </div>
       )}
@@ -648,7 +648,7 @@ export default function AggregatorPage() {
             Enter a serial number to begin
           </div>
           <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", maxWidth: 280, margin: "0 auto" }}>
-            Search for any iCart by its serial number to view details, tasks, and maintenance reports.
+            Search for any Kiosk by its serial number to view details, tasks, and maintenance reports.
           </div>
         </div>
       )}

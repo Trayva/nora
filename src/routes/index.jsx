@@ -21,8 +21,8 @@
 // // Other Pages
 // import Landing from "../pages/website/Landing";
 // import NotFound from "../pages/NotFound";
-// import IcartHome from "../pages/icart/IcartHome";
-// import PurchaseIcart from "../pages/icart/PurchaseIcart";
+// import KioskHome from "../pages/kiosk/KioskHome";
+// import PurchaseKiosk from "../pages/kiosk/PurchaseKiosk";
 // import Invoices from "../pages/incoices/Invoices";
 // import Business from "../pages/app/Business";
 // import ConceptPage from "../pages/app/Business/ConceptPage";
@@ -116,14 +116,14 @@
 //         { path: "profile", element: <Profile /> },
 //         { path: "settings", element: <Settings /> },
 //         { path: "finance", element: <Wallet /> },
-//         { path: "icart-home", element: <IcartHome /> },
-//         { path: "purchase-icart", element: <PurchaseIcart /> },
+//         { path: "kiosk-home", element: <KioskHome /> },
+//         { path: "purchase-kiosk", element: <PurchaseKiosk /> },
 //         { path: "invoices", element: <Invoices /> },
 //         { path: "business", element: <Business /> },
 //         { path: "supplier", element: <SupplierHome /> },
 //         { path: "business/concept/:id", element: <ConceptPage /> },
 //         { path: "operator", element: <OperatorHome /> },
-//         { path: "operator/cart/:cartId", element: <OperatorCartPage /> },
+//         { path: "operator/kiosk/:kioskId", element: <OperatorCartPage /> },
 //       ],
 //     },
 
@@ -167,13 +167,13 @@ import Wallet from "../pages/app/Finance/Wallet";
 // Other Pages
 import Landing from "../pages/website/Landing";
 import NotFound from "../pages/NotFound";
-import IcartHome from "../pages/icart/IcartHome";
-import PurchaseIcart from "../pages/icart/PurchaseIcart";
+import KioskHome from "../pages/kiosk/KioskHome";
+import PurchaseKiosk from "../pages/kiosk/PurchaseKiosk";
 import Invoices from "../pages/incoices/Invoices";
 import Business from "../pages/app/Business";
 import ConceptPage from "../pages/app/Business/ConceptPage";
 import OperatorHome from "../pages/app/Operator/OperatorHome";
-import OperatorCartPage from "../pages/app/Operator/OperatorCart";
+import OperatorKioskPage from "../pages/app/Operator/OperatorKiosk";
 import SupplierHome from "../pages/app/Supplier/SupplierHome";
 import ShopPage from "../pages/website/ShopPage";
 import ShopCheckoutPage from "../pages/website/ShopCheckoutPage";
@@ -268,14 +268,14 @@ export default function Routes() {
         { path: "profile", element: <Profile /> },
         { path: "settings", element: <Settings /> },
         { path: "finance", element: <Wallet /> },
-        { path: "icart-home", element: <IcartHome /> },
-        { path: "purchase-icart", element: <PurchaseIcart /> },
+        { path: "kiosk-home", element: <KioskHome /> },
+        { path: "purchase-kiosk", element: <PurchaseKiosk /> },
         { path: "invoices", element: <Invoices /> },
         { path: "business", element: <Business /> },
         { path: "supplier", element: <SupplierHome /> },
         { path: "business/concept/:id", element: <ConceptPage /> },
         { path: "operator", element: <OperatorHome /> },
-        { path: "operator/cart/:cartId", element: <OperatorCartPage /> },
+        { path: "operator/kiosk/:kioskId", element: <OperatorKioskPage /> },
         { path: "aggregator", element: <AggregatorPage /> },
       ],
     },

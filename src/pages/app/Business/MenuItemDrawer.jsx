@@ -377,7 +377,7 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
     if (!item) return;
     setTemplatesLoading(true);
     try {
-      const r = await api.get(`/icart/tasks/templates?menuId=${item.id}`);
+      const r = await api.get(`/kiosk/tasks/templates?menuId=${item.id}`);
       setTemplates(r.data.data?.items || r.data.data || []);
     } catch { /* silent */ }
     finally { setTemplatesLoading(false); }
@@ -450,8 +450,8 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
     setSavingTemplate(true);
     const payload = { name: templateName.trim(), description: templateDesc.trim() || undefined, type: templateType, recurrence: templateRecurrence, schema: { fields: validFields }, menuItemId: item.id, time: templateTime || undefined };
     try {
-      if (editingTemplate) { await api.patch(`/icart/tasks/templates/${editingTemplate.id}`, payload); toast.success("Template updated"); }
-      else { await api.post("/icart/tasks/templates", payload); toast.success("Template created"); }
+      if (editingTemplate) { await api.patch(`/kiosk/tasks/templates/${editingTemplate.id}`, payload); toast.success("Template updated"); }
+      else { await api.post("/kiosk/tasks/templates", payload); toast.success("Template created"); }
       resetTemplateForm(); fetchTemplates();
     } catch (err) { toast.error(err.response?.data?.message || "Failed to save template"); }
     finally { setSavingTemplate(false); }
@@ -460,7 +460,7 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
   const handleDeleteTemplate = async (tplId) => {
     setDeletingTemplate(tplId);
     try {
-      await api.delete(`/icart/tasks/templates/${tplId}`);
+      await api.delete(`/kiosk/tasks/templates/${tplId}`);
       toast.success("Template deleted");
       setTemplates((p) => p.filter((t) => t.id !== tplId));
     } catch (err) { toast.error(err.response?.data?.message || "Failed"); }

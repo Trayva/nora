@@ -30,10 +30,10 @@
 //   Nav item visibility rules:
 //   ─────────────────────────────────────────────────
 //   ADMIN     → all items + Admin item
-//   VENDOR    → iCarts + My Business
-//   SUPPLIER  → iCarts + Supplier
-//   OPERATOR  → iCarts + Operator
-//   CUSTOMER  → iCarts only
+//   VENDOR    → Kiosks + My Business
+//   SUPPLIER  → Kiosks + Supplier
+//   OPERATOR  → Kiosks + Operator
+//   CUSTOMER  → Kiosks only
 
 //   Finance, Settings, Profile always visible to all.
 //   Dashboard removed entirely.
@@ -56,10 +56,10 @@
 //     forRoles: ["ALL"],
 //   },
 //   {
-//     id: "icart",
-//     label: "iCarts",
+//     id: "kiosk",
+//     label: "Kiosks",
 //     icon: MdOutlineKitchen,
-//     path: "/app/icart-home",
+//     path: "/app/kiosk-home",
 //     forRoles: ["ALL"],
 //   },
 //   {
@@ -307,11 +307,11 @@ import { getPrimaryRole } from "../utils/AuthHelpers";
   Nav item visibility rules:
   ─────────────────────────────────────────────────
   ADMIN       → all items
-  VENDOR      → iCarts + My Business
-  SUPPLIER    → iCarts + Supplier
-  OPERATOR    → iCarts + Operator
+  VENDOR      → Kiosks + My Business
+  SUPPLIER    → Kiosks + Supplier
+  OPERATOR    → Kiosks + Operator
   AGGREGATOR  → Aggregator + Finance only
-  CUSTOMER    → iCarts only
+  CUSTOMER    → Kiosks only
 
   Finance, Settings, Profile always visible to all.
   ─────────────────────────────────────────────────
@@ -320,7 +320,7 @@ import { getPrimaryRole } from "../utils/AuthHelpers";
 const ALL_NAV_ITEMS = [
   { id: "admin", label: "Admin", icon: MdAdminPanelSettings, path: "/app/admin", forRoles: ["ADMIN"] },
   { id: "finance", label: "Finance", icon: RxBarChart, path: "/app/finance", forRoles: ["ALL"] },
-  { id: "icart", label: "iCarts", icon: MdOutlineKitchen, path: "/app/icart-home", forRoles: ["ADMIN", "VENDOR", "SUPPLIER", "OPERATOR", "CUSTOMER"] },
+  { id: "kiosk", label: "Kiosks", icon: MdOutlineKitchen, path: "/app/kiosk-home", forRoles: ["ADMIN", "VENDOR", "SUPPLIER", "OPERATOR", "CUSTOMER"] },
   { id: "mybusiness", label: "My Business", icon: BsShop, path: "/app/business", forRoles: ["ADMIN", "VENDOR"] },
   { id: "supplier", label: "Supplier", icon: PiTruck, path: "/app/supplier", forRoles: ["ADMIN", "SUPPLIER"] },
   { id: "operator", label: "Operator", icon: MdOutlineBadge, path: "/app/operator", forRoles: ["ADMIN", "OPERATOR"] },

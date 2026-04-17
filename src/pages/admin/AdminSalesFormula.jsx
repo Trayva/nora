@@ -18,7 +18,7 @@ export default function AdminSalesFormula() {
 
   const fetch = async () => {
     try {
-      const r = await api.get("/icart/sales-formula");
+      const r = await api.get("/kiosk/sales-formula");
       setFormulas(r.data.data || []);
     } catch {
       toast.error("Failed to load formulas");
@@ -66,8 +66,8 @@ export default function AdminSalesFormula() {
         vendorPercent: Number(form.vendorPercent),
         noraPercent: Number(form.noraPercent),
       };
-      if (editing) await api.patch(`/icart/sales-formula/${editing.id}`, body);
-      else await api.post("/icart/sales-formula", body);
+      if (editing) await api.patch(`/kiosk/sales-formula/${editing.id}`, body);
+      else await api.post("/kiosk/sales-formula", body);
       toast.success(editing ? "Updated" : "Created");
       setShowForm(false);
       fetch();
@@ -82,7 +82,7 @@ export default function AdminSalesFormula() {
     if (!window.confirm("Delete this formula?")) return;
     setDeleting(id);
     try {
-      await api.delete(`/icart/sales-formula/${id}`);
+      await api.delete(`/kiosk/sales-formula/${id}`);
       toast.success("Deleted");
       fetch();
     } catch (err) {

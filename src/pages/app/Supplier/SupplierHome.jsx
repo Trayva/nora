@@ -478,7 +478,7 @@ function ProfileCard({ profile, onEdit }) {
               {profile.isApproved ? "ACTIVE" : "PENDING APPROVAL"}
             </span>
           </div>
-          <button onClick={onEdit} className="icart_icon_action_btn">
+          <button onClick={onEdit} className="kiosk_icon_action_btn">
             <MdEdit size={14} />
           </button>
         </div>
@@ -1009,7 +1009,7 @@ function ReviewPanel({ req, onDone, onCancel }) {
           suppliedQuantity: cannotSupply ? 0 : Number(machQtys[it.id] || 0),
         }));
       }
-      await api.patch(`/icart/supply/${req.id}/review`, payload);
+      await api.patch(`/kiosk/supply/${req.id}/review`, payload);
       toast.success(
         cannotSupply ? "Submitted — 0 supplied" : "Review submitted!",
       );
@@ -1278,7 +1278,7 @@ function ReviewPanel({ req, onDone, onCancel }) {
 }
 
 function RequestCard({ req, onClick }) {
-  const loc = req.cart?.location;
+  const loc = req.kiosk?.location;
   const ingredientCount = req.items?.length || 0;
   const machineryCount = req.supplyRequestMachineryItems?.length || 0;
   const thumbImg =
@@ -1287,12 +1287,12 @@ function RequestCard({ req, onClick }) {
 
   return (
     <div
-      className="icart_item_card"
+      className="kiosk_item_card"
       style={{ cursor: "pointer" }}
       onClick={onClick}
     >
-      <div className="icart_item_top">
-        <div className="icart_item_icon">
+      <div className="kiosk_item_top">
+        <div className="kiosk_item_icon">
           {thumbImg ? (
             <img
               src={thumbImg}
@@ -1310,34 +1310,34 @@ function RequestCard({ req, onClick }) {
         </div>
         <Chip status={req.status} small />
       </div>
-      <div className="icart_item_serial" style={{ fontFamily: "monospace" }}>
+      <div className="kiosk_item_serial" style={{ fontFamily: "monospace" }}>
         #{req.id.slice(0, 8).toUpperCase()}
       </div>
-      <div className="icart_item_meta">
-        <div className="icart_meta_row">
-          <span className="icart_meta_key">Cart</span>
+      <div className="kiosk_item_meta">
+        <div className="kiosk_meta_row">
+          <span className="kiosk_meta_key">Cart</span>
           <span
-            className="icart_meta_val"
+            className="kiosk_meta_val"
             style={{ fontFamily: "monospace", fontSize: "0.72rem" }}
           >
-            {req.cart?.serialNumber ||
-              req.cartId?.slice(0, 8).toUpperCase() ||
+            {req.kiosk?.serialNumber ||
+              req.kioskId?.slice(0, 8).toUpperCase() ||
               "—"}
           </span>
         </div>
         {ingredientCount > 0 && (
-          <div className="icart_meta_row">
-            <span className="icart_meta_key">Ingredients</span>
-            <span className="icart_meta_val">
+          <div className="kiosk_meta_row">
+            <span className="kiosk_meta_key">Ingredients</span>
+            <span className="kiosk_meta_val">
               {ingredientCount} item{ingredientCount !== 1 ? "s" : ""}
             </span>
           </div>
         )}
         {machineryCount > 0 && (
-          <div className="icart_meta_row">
-            <span className="icart_meta_key">Machinery</span>
+          <div className="kiosk_meta_row">
+            <span className="kiosk_meta_key">Machinery</span>
             <span
-              className="icart_meta_val"
+              className="kiosk_meta_val"
               style={{ display: "inline-flex", alignItems: "center", gap: 3 }}
             >
               <MdBuild size={11} style={{ color: "var(--accent)" }} />
@@ -1346,15 +1346,15 @@ function RequestCard({ req, onClick }) {
           </div>
         )}
         {ingredientCount === 0 && machineryCount === 0 && (
-          <div className="icart_meta_row">
-            <span className="icart_meta_key">Items</span>
-            <span className="icart_meta_muted">None</span>
+          <div className="kiosk_meta_row">
+            <span className="kiosk_meta_key">Items</span>
+            <span className="kiosk_meta_muted">None</span>
           </div>
         )}
-        <div className="icart_meta_row">
-          <span className="icart_meta_key">Supplier</span>
+        <div className="kiosk_meta_row">
+          <span className="kiosk_meta_key">Supplier</span>
           <span
-            className="icart_meta_val"
+            className="kiosk_meta_val"
             style={{
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -1364,28 +1364,28 @@ function RequestCard({ req, onClick }) {
             {req.supplier?.businessName || "—"}
           </span>
         </div>
-        <div className="icart_meta_row">
-          <span className="icart_meta_key">Location</span>
-          <span className="icart_meta_val">
+        <div className="kiosk_meta_row">
+          <span className="kiosk_meta_key">Location</span>
+          <span className="kiosk_meta_val">
             {loc?.name ? (
-              <span className="icart_location_val">
+              <span className="kiosk_location_val">
                 <MdOutlineLocationOn size={11} />
                 {loc.name}
               </span>
             ) : (
-              <span className="icart_meta_muted">Not set</span>
+              <span className="kiosk_meta_muted">Not set</span>
             )}
           </span>
         </div>
-        <div className="icart_meta_row">
-          <span className="icart_meta_key">Date</span>
-          <span className="icart_meta_val">{fmtDate(req.createdAt)}</span>
+        <div className="kiosk_meta_row">
+          <span className="kiosk_meta_key">Date</span>
+          <span className="kiosk_meta_val">{fmtDate(req.createdAt)}</span>
         </div>
         {req.totalAmount > 0 && (
-          <div className="icart_meta_row">
-            <span className="icart_meta_key">Total</span>
+          <div className="kiosk_meta_row">
+            <span className="kiosk_meta_key">Total</span>
             <span
-              className="icart_meta_val"
+              className="kiosk_meta_val"
               style={{ fontWeight: 800, color: "var(--accent)" }}
             >
               ₦
@@ -1396,7 +1396,7 @@ function RequestCard({ req, onClick }) {
           </div>
         )}
         {(req.status === "SUPPLIER_REVIEWED" || req.status === "ACCEPTED") && (
-          <div className="icart_meta_row" style={{ marginTop: 2 }}>
+          <div className="kiosk_meta_row" style={{ marginTop: 2 }}>
             <span
               style={{
                 fontSize: "0.65rem",
@@ -1435,7 +1435,7 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
 
   if (!req) return null;
 
-  const loc = req.cart?.location;
+  const loc = req.kiosk?.location;
   const mapsUrl =
     loc?.latitude && loc?.longitude
       ? `https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`
@@ -1454,7 +1454,7 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
   const ship = async () => {
     setShipping(true);
     try {
-      await api.post(`/icart/supply/${req.id}/ship`);
+      await api.post(`/kiosk/supply/${req.id}/ship`);
       toast.success("Marked as shipped");
       onRefresh();
       onClose();
@@ -1470,7 +1470,7 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
       isOpen={!!req}
       onClose={onClose}
       title={`#${req.id.slice(0, 8).toUpperCase()}`}
-      description={req.cart?.serialNumber || ""}
+      description={req.kiosk?.serialNumber || ""}
       width={480}
     >
       <div
@@ -1998,7 +1998,7 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
     if (search.trim()) {
       const q = search.toLowerCase();
       if (
-        !r.cart?.serialNumber?.toLowerCase().includes(q) &&
+        !r.kiosk?.serialNumber?.toLowerCase().includes(q) &&
         !r.items?.some((it) =>
           it.ingredient?.name?.toLowerCase().includes(q),
         ) &&
@@ -2039,7 +2039,7 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
           return (
             <button
               key={k}
-              className={`icart_sub_nav_btn ${filter === k ? "icart_sub_nav_active" : ""}`}
+              className={`kiosk_sub_nav_btn ${filter === k ? "kiosk_sub_nav_active" : ""}`}
               style={
                 filter === k && ps
                   ? {
@@ -2140,7 +2140,7 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
             <input
               className="modal-input"
               style={{ paddingLeft: 30, marginBottom: 0, height: 36 }}
-              placeholder="Search cart, ingredient, machinery, requester…"
+              placeholder="Search kiosk, ingredient, machinery, requester…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -2233,21 +2233,21 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
           <div className="page_loader_spinner" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="icart_empty_state" style={{ padding: "40px 0" }}>
+        <div className="kiosk_empty_state" style={{ padding: "40px 0" }}>
           <PiTruck size={28} style={{ opacity: 0.25 }} />
-          <p className="icart_empty_title">
+          <p className="kiosk_empty_title">
             {requests.length === 0
               ? "No supply requests yet"
               : "No requests match filters"}
           </p>
-          <p className="icart_empty_sub">
+          <p className="kiosk_empty_sub">
             {requests.length === 0
-              ? "Once approved, requests from iCart operators will appear here."
+              ? "Once approved, requests from Kiosk operators will appear here."
               : "Try adjusting your filters."}
           </p>
         </div>
       ) : (
-        <div className="icart_grid">
+        <div className="kiosk_grid">
           {filtered.map((req) => (
             <RequestCard
               key={req.id}
@@ -2299,7 +2299,7 @@ function PriceCard({ p, stateId, onSaved }) {
   };
 
   return (
-    <div className="icart_item_card" style={{ padding: "14px 14px 12px" }}>
+    <div className="kiosk_item_card" style={{ padding: "14px 14px 12px" }}>
       <div
         style={{
           display: "flex",
@@ -2495,7 +2495,7 @@ function MachineryPriceCard({ p, stateId, onSaved }) {
   };
 
   return (
-    <div className="icart_item_card" style={{ padding: "14px 14px 12px" }}>
+    <div className="kiosk_item_card" style={{ padding: "14px 14px 12px" }}>
       <div
         style={{
           display: "flex",
@@ -3105,7 +3105,7 @@ function IngredientPricesTab({ profile }) {
                           "bag",
                           "bottle",
                           "can",
-                          "carton",
+                          "kioskon",
                           "sachet",
                         ].map((u) => (
                           <option key={u} value={u}>
@@ -3334,10 +3334,10 @@ function IngredientPricesTab({ profile }) {
           <div className="page_loader_spinner" />
         </div>
       ) : prices.length === 0 ? (
-        <div className="icart_empty_state" style={{ padding: "40px 0" }}>
+        <div className="kiosk_empty_state" style={{ padding: "40px 0" }}>
           <MdOutlinePriceChange size={28} style={{ opacity: 0.25 }} />
-          <p className="icart_empty_title">No prices set yet</p>
-          <p className="icart_empty_sub">
+          <p className="kiosk_empty_title">No prices set yet</p>
+          <p className="kiosk_empty_sub">
             Use the form above to add ingredient prices.
           </p>
         </div>
@@ -4125,10 +4125,10 @@ function MachineryPricesTab({ profile }) {
           <div className="page_loader_spinner" />
         </div>
       ) : prices.length === 0 ? (
-        <div className="icart_empty_state" style={{ padding: "40px 0" }}>
+        <div className="kiosk_empty_state" style={{ padding: "40px 0" }}>
           <MdBuild size={28} style={{ opacity: 0.25 }} />
-          <p className="icart_empty_title">No machinery prices set yet</p>
-          <p className="icart_empty_sub">Use the form above to add prices.</p>
+          <p className="kiosk_empty_title">No machinery prices set yet</p>
+          <p className="kiosk_empty_sub">Use the form above to add prices.</p>
         </div>
       ) : (
         <>
@@ -4265,7 +4265,7 @@ export default function SupplierHome() {
   const fetchReqs = async () => {
     setReqLoading(true);
     try {
-      const r = await api.get("/icart/supply");
+      const r = await api.get("/kiosk/supply");
       const d = r.data.data;
       setRequests(Array.isArray(d) ? d : d?.requests || []);
     } catch {
@@ -4293,7 +4293,7 @@ export default function SupplierHome() {
 
   return (
     <div className="page_wrapper">
-      <div className="icart_page_header">
+      <div className="kiosk_page_header">
         <div>
           <div
             style={{
@@ -4353,9 +4353,9 @@ export default function SupplierHome() {
 
       {profile && (
         <>
-          <div className="icart_sub_nav" style={{ marginBottom: 20 }}>
+          <div className="kiosk_sub_nav" style={{ marginBottom: 20 }}>
             <button
-              className={`icart_sub_nav_btn ${tab === "requests" ? "icart_sub_nav_active" : ""}`}
+              className={`kiosk_sub_nav_btn ${tab === "requests" ? "kiosk_sub_nav_active" : ""}`}
               onClick={() => setTab("requests")}
             >
               Supply Requests
@@ -4373,7 +4373,7 @@ export default function SupplierHome() {
               )}
             </button>
             <button
-              className={`icart_sub_nav_btn ${tab === "prices" ? "icart_sub_nav_active" : ""}`}
+              className={`kiosk_sub_nav_btn ${tab === "prices" ? "kiosk_sub_nav_active" : ""}`}
               onClick={() => setTab("prices")}
             >
               My Prices

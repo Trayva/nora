@@ -264,7 +264,7 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
               <div className="concept_public_info">
                 <span className="concept_public_label">Public Concept</span>
                 <span className="concept_public_sub">
-                  Allow this concept to appear in the iCart rental marketplace
+                  Allow this concept to appear in the Kiosk rental marketplace
                 </span>
               </div>
               <button

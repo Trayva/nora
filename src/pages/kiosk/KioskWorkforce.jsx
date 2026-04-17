@@ -55,7 +55,7 @@ function StatusPill({ status }) {
   const s = offerStatusColors[status] || offerStatusColors.PENDING;
   return (
     <span
-      className="icart_status_badge"
+      className="kiosk_status_badge"
       style={{
         background: s.bg,
         color: s.color,
@@ -68,7 +68,7 @@ function StatusPill({ status }) {
 }
 
 /* ── Hire Form ─────────────────────────────────────────────── */
-function HireForm({ cartId, onHired }) {
+function HireForm({ kioskId, onHired }) {
   const [hireable, setHireable] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
   const [search, setSearch] = useState("");
@@ -83,7 +83,7 @@ function HireForm({ cartId, onHired }) {
     const fetch = async () => {
       setLoadingList(true);
       try {
-        const res = await api.get("/icart/operator/hirable");
+        const res = await api.get("/kiosk/operator/hirable");
         setHireable(res.data.data?.operators || res.data.data?.items || []);
       } catch {
         toast.error("Failed to load operators");
@@ -105,9 +105,9 @@ function HireForm({ cartId, onHired }) {
 
     setSubmitting(true);
     try {
-      await api.post("/icart/operator/job-offers", {
+      await api.post("/kiosk/operator/job-offers", {
         operatorId: selectedOperator.id,
-        cartId,
+        kioskId,
         durationDays:
           DURATION_OPTIONS.find((d) => d.key === duration)?.days || 30,
         salary: salary ? Number(salary) : undefined,
@@ -124,10 +124,10 @@ function HireForm({ cartId, onHired }) {
   };
 
   return (
-    <div className="icart_hire_form">
+    <div className="kiosk_hire_form">
       <div className="form-field">
         <label className="modal-label">Search Operators</label>
-        <div className="icart_search_wrap">
+        <div className="kiosk_search_wrap">
           <MdSearch
             size={16}
             style={{ color: "var(--text-muted)", flexShrink: 0 }}
@@ -156,30 +156,30 @@ function HireForm({ cartId, onHired }) {
           />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="icart_empty_inline">
+        <div className="kiosk_empty_inline">
           <MdPerson size={18} style={{ opacity: 0.3 }} />
           <span>No operators found</span>
         </div>
       ) : (
-        <div className="icart_operator_list">
+        <div className="kiosk_operator_list">
           {filtered.map((op) => (
             <div
               key={op.id}
-              className={`icart_operator_row ${selectedOperator?.id === op.id ? "icart_operator_selected" : ""}`}
+              className={`kiosk_operator_row ${selectedOperator?.id === op.id ? "kiosk_operator_selected" : ""}`}
               onClick={() => setSelectedOperator(op)}
             >
-              <div className="icart_operator_avatar">
+              <div className="kiosk_operator_avatar">
                 {(op.user?.fullName ||
                   op.user?.name ||
                   op.user?.email ||
                   "?")[0].toUpperCase()}
               </div>
-              <div className="icart_operator_info">
-                <div className="icart_operator_name">
+              <div className="kiosk_operator_info">
+                <div className="kiosk_operator_name">
                   {op.user?.fullName || op.user?.name || op.user?.email}
                 </div>
                 {op.state?.name && (
-                  <div className="icart_operator_meta">{op.state.name}</div>
+                  <div className="kiosk_operator_meta">{op.state.name}</div>
                 )}
               </div>
               {selectedOperator?.id === op.id && (
@@ -294,7 +294,7 @@ function JobOfferCard({ offer, onRefresh }) {
     if (!window.confirm("Terminate this contract?")) return;
     setLoading(true);
     try {
-      await api.patch(`/icart/operator/job-offers/${offer.id}/terminate`);
+      await api.patch(`/kiosk/operator/job-offers/${offer.id}/terminate`);
       toast.success("Contract terminated");
       onRefresh();
     } catch {
@@ -310,7 +310,7 @@ function JobOfferCard({ offer, onRefresh }) {
       DURATION_OPTIONS.find((d) => d.key === renewDuration)?.days || 30;
     setLoading(true);
     try {
-      await api.patch(`/icart/operator/job-offers/${offer.id}/renew`, {
+      await api.patch(`/kiosk/operator/job-offers/${offer.id}/renew`, {
         durationDays: days,
       });
       toast.success("Contract renewed");
@@ -373,17 +373,17 @@ function JobOfferCard({ offer, onRefresh }) {
           }}
         >
           <div
-            className="icart_operator_avatar"
+            className="kiosk_operator_avatar"
             style={{ width: 38, height: 38, fontSize: "0.9rem", flexShrink: 0 }}
           >
             {operatorName[0].toUpperCase()}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="icart_operator_name" style={{ marginBottom: 2 }}>
+            <div className="kiosk_operator_name" style={{ marginBottom: 2 }}>
               {operatorName}
             </div>
             {(operatorEmail || operatorState) && (
-              <div className="icart_operator_meta">
+              <div className="kiosk_operator_meta">
                 {operatorEmail || operatorState}
               </div>
             )}
@@ -604,8 +604,8 @@ function JobOfferCard({ offer, onRefresh }) {
   );
 }
 
-/* ── Main IcartWorkforce ───────────────────────────────────── */
-export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
+/* ── Main KioskWorkforce ───────────────────────────────────── */
+export default function KioskWorkforce({ cart, onRefresh: parentRefresh }) {
   const [view, setView] = useState("offers"); // offers | hire
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -614,10 +614,10 @@ export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
     setLoading(true);
     try {
       // job-offers returns offeredJobs = offers this owner sent out (with nested operator.user)
-      const res = await api.get("/icart/operator/job-offers");
+      const res = await api.get("/kiosk/operator/job-offers");
       const all = res.data.data?.offeredJobs || [];
       setOffers(
-        all.filter((o) => o.cartId === cart.id || o.cart?.id === cart.id),
+        all.filter((o) => o.kioskId === cart.id || o.cart?.id === cart.id),
       );
     } catch {
       toast.error("Failed to load job offers");
@@ -634,13 +634,13 @@ export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
   const activeOperator = cart.operator || cart.currentOperator;
 
   return (
-    <div className="icart_tab_content">
+    <div className="kiosk_tab_content">
       {/* Current operator */}
       {activeOperator && (
         <>
           <div className="drawer_section_title">Current Operator</div>
-          <div className="icart_current_operator">
-            <div className="icart_operator_avatar icart_operator_avatar_lg">
+          <div className="kiosk_current_operator">
+            <div className="kiosk_operator_avatar kiosk_operator_avatar_lg">
               {(activeOperator.user?.fullName ||
                 activeOperator.user?.name ||
                 activeOperator.user?.email ||
@@ -648,7 +648,7 @@ export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
             </div>
             <div>
               <div
-                className="icart_operator_name"
+                className="kiosk_operator_name"
                 style={{ fontSize: "0.95rem" }}
               >
                 {activeOperator.user?.fullName ||
@@ -658,12 +658,12 @@ export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
               {activeOperator.user?.email &&
                 (activeOperator.user?.fullName ||
                   activeOperator.user?.name) && (
-                  <div className="icart_operator_meta">
+                  <div className="kiosk_operator_meta">
                     {activeOperator.user.email}
                   </div>
                 )}
               {activeOperator.state?.name && (
-                <div className="icart_operator_meta">
+                <div className="kiosk_operator_meta">
                   {activeOperator.state.name}
                 </div>
               )}
@@ -674,17 +674,17 @@ export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
 
       {/* Sub-nav */}
       <div
-        className="icart_sub_nav"
+        className="kiosk_sub_nav"
         style={{ marginTop: activeOperator ? 20 : 0 }}
       >
         <button
-          className={`icart_sub_nav_btn ${view === "offers" ? "icart_sub_nav_active" : ""}`}
+          className={`kiosk_sub_nav_btn ${view === "offers" ? "kiosk_sub_nav_active" : ""}`}
           onClick={() => setView("offers")}
         >
           <MdWorkOutline size={13} /> Job Offers
         </button>
         <button
-          className={`icart_sub_nav_btn ${view === "hire" ? "icart_sub_nav_active" : ""}`}
+          className={`kiosk_sub_nav_btn ${view === "hire" ? "kiosk_sub_nav_active" : ""}`}
           onClick={() => setView("hire")}
           style={{ marginLeft: "auto" }}
         >
@@ -694,7 +694,7 @@ export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
 
       {view === "hire" ? (
         <HireForm
-          cartId={cart.id}
+          kioskId={cart.id}
           onHired={() => {
             setView("offers");
             fetchOffers();
@@ -706,12 +706,12 @@ export default function IcartWorkforce({ cart, onRefresh: parentRefresh }) {
           <div className="page_loader_spinner" />
         </div>
       ) : offers.length === 0 ? (
-        <div className="icart_empty_inline" style={{ padding: "32px 0" }}>
+        <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
           <MdWorkOutline size={24} style={{ opacity: 0.3 }} />
           <span>No job offers yet</span>
         </div>
       ) : (
-        <div className="icart_tasks_list">
+        <div className="kiosk_tasks_list">
           {offers.map((offer) => (
             <JobOfferCard
               key={offer.id}

@@ -4,7 +4,6 @@ import {
   MdOutlinePeople,
   MdOutlineStore,
   MdOutlineBadge,
-  MdOutlineShoppingCart,
   MdOutlineLocalShipping,
   MdOutlineFactCheck,
   MdOutlineLocationOn,
@@ -29,15 +28,15 @@ import AdminUsers from "./AdminUsers";
 import AdminApplications from "./AdminApplications";
 import AdminOperators from "./AdminOperators";
 import AdminVendorDetail from "./AdminVendorDetail";
-import AdminIcarts from "./AdminIcarts";
+import AdminKiosks from "./AdminKiosks";
 
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "—";
 
 /* ══════════════════════════════════════════════════════════════
@@ -93,7 +92,7 @@ export default function AdminDashboard() {
     users: 0,
     vendors: 0,
     operators: 0,
-    icarts: 0,
+    kiosks: 0,
     suppliers: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
@@ -109,11 +108,11 @@ export default function AdminDashboard() {
   const [operatorsOpen, setOperatorsOpen] = useState(false);
   // Section drawers
   const [usersOpen, setUsersOpen] = useState(false);
-  const [icartsOpen, setIcartsOpen] = useState(false);
+  const [kiosksOpen, setKiosksOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
 
   // Entity drawers
-  const [drawer, setDrawer] = useState(null); // "users"|"vendors"|"operators"|"suppliers"|"icarts"|"locations"
+  const [drawer, setDrawer] = useState(null); // "users"|"vendors"|"operators"|"suppliers"|"kiosks"|"locations"
   const [drawerItems, setDrawerItems] = useState([]);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [entityApproving, setEntityApproving] = useState(null);
@@ -147,12 +146,12 @@ export default function AdminDashboard() {
   const fetchStats = async () => {
     setStatsLoading(true);
     try {
-      const [usersR, vendorsR, operatorsR, icartsR, suppliersR] =
+      const [usersR, vendorsR, operatorsR, kiosksR, suppliersR] =
         await Promise.allSettled([
           api.get("/account"),
           api.get("/vendor/profile"),
-          api.get("/icart/operator/hirable"),
-          api.get("/icart"),
+          api.get("/kiosk/operator/hirable"),
+          api.get("/kiosk"),
           api.get("/supplier"),
         ]);
       const count = (r) => {
@@ -166,7 +165,7 @@ export default function AdminDashboard() {
           "operators",
           "suppliers",
           "users",
-          "icarts",
+          "kiosks",
           "states",
         ].find((k) => Array.isArray(d[k]));
         if (k) return d[k].length;
@@ -177,7 +176,7 @@ export default function AdminDashboard() {
         users: count(usersR),
         vendors: count(vendorsR),
         operators: count(operatorsR),
-        icarts: count(icartsR),
+        kiosks: count(kiosksR),
         suppliers: count(suppliersR),
       });
     } catch {
@@ -231,19 +230,19 @@ export default function AdminDashboard() {
       description: "Food & brand vendors on the platform",
     },
     operators: {
-      url: "/icart/operator",
+      url: "/kiosk/operator",
       title: "Operators",
-      description: "All iCart operators",
+      description: "All Kiosk operators",
     },
     suppliers: {
       url: "/supplier",
       title: "Suppliers",
       description: "All inventory suppliers",
     },
-    icarts: {
-      url: "/icart",
-      title: "iCart Fleet",
-      description: "Every iCart in the fleet",
+    kiosks: {
+      url: "/kiosk",
+      title: "Kiosk Fleet",
+      description: "Every Kiosk in the fleet",
     },
     locations: {
       url: "/config/state",
@@ -253,13 +252,13 @@ export default function AdminDashboard() {
   };
 
   const openDrawer = async (key) => {
-    // Users and icarts have dedicated full drawers
+    // Users and kiosks have dedicated full drawers
     if (key === "users") {
       setUsersOpen(true);
       return;
     }
-    if (key === "icarts") {
-      setIcartsOpen(true);
+    if (key === "kiosks") {
+      setKiosksOpen(true);
       return;
     }
     if (key === "operators") {
@@ -278,13 +277,13 @@ export default function AdminDashboard() {
       // Handle all response shapes: flat array, .items, .vendors, .operators, .suppliers, .data
       const extract = (d) => {
         if (Array.isArray(d)) return d;
-        // named keys first (vendors, operators, suppliers, users, icarts, states)
+        // named keys first (vendors, operators, suppliers, users, kiosks, states)
         const namedKey = [
           "vendors",
           "operators",
           "suppliers",
           "users",
-          "icarts",
+          "kiosks",
           "states",
           "data",
         ].find((k) => Array.isArray(d?.[k]));
@@ -302,7 +301,7 @@ export default function AdminDashboard() {
   const handleEntityApprove = async (id) => {
     const endpoints = {
       vendors: `/vendor/profile/${id}/status`,
-      operators: `/icart/operator/${id}/approve`,
+      operators: `/kiosk/operator/${id}/approve`,
       suppliers: `/supplier/${id}/approve`,
     };
     const url = endpoints[drawer];
@@ -347,12 +346,12 @@ export default function AdminDashboard() {
         }),
         ...(locationForm.maxSlots !== "" &&
           locationForm.maxSlots !== undefined && {
-            maxSlots: Number(locationForm.maxSlots),
-          }),
+          maxSlots: Number(locationForm.maxSlots),
+        }),
         ...(locationForm.slotRadius !== "" &&
           locationForm.slotRadius !== undefined && {
-            slotRadius: Number(locationForm.slotRadius),
-          }),
+          slotRadius: Number(locationForm.slotRadius),
+        }),
       });
       toast.success("State created");
       setShowLocationForm(false);
@@ -444,9 +443,9 @@ export default function AdminDashboard() {
       color: "#f59e0b",
     },
     {
-      key: "icarts",
-      label: "iCarts",
-      icon: MdOutlineShoppingCart,
+      key: "kiosks",
+      label: "Kiosks",
+      icon: MdOutlineStore,
       color: "#16a34a",
     },
     {
@@ -478,7 +477,7 @@ export default function AdminDashboard() {
       if (item.user?.email) {
         const extra = item.state?.name
           ? ` · ${item.state.name}`
-          : item.cartId
+          : item.kioskId
             ? " · Assigned"
             : " · Unassigned";
         return item.user.email + extra;
@@ -514,15 +513,15 @@ export default function AdminDashboard() {
 
     const statusStyle = approved
       ? {
-          background: "rgba(34,197,94,0.1)",
-          color: "#16a34a",
-          border: "1px solid rgba(34,197,94,0.25)",
-        }
+        background: "rgba(34,197,94,0.1)",
+        color: "#16a34a",
+        border: "1px solid rgba(34,197,94,0.25)",
+      }
       : {
-          background: "rgba(234,179,8,0.1)",
-          color: "#ca8a04",
-          border: "1px solid rgba(234,179,8,0.25)",
-        };
+        background: "rgba(234,179,8,0.1)",
+        color: "#ca8a04",
+        border: "1px solid rgba(234,179,8,0.25)",
+      };
 
     return (
       <div
@@ -624,7 +623,7 @@ export default function AdminDashboard() {
             className="admin_stat_card"
             onClick={() => {
               if (key === "users") setUsersOpen(true);
-              else if (key === "icarts") setIcartsOpen(true);
+              else if (key === "kiosks") setKiosksOpen(true);
               else if (key === "operators") setOperatorsOpen(true);
               else openDrawer(key);
             }}
@@ -824,10 +823,10 @@ export default function AdminDashboard() {
                         {app.type && (
                           <span className="admin_meta_chip">{app.type}</span>
                         )}
-                        {app.numberOfCarts && (
+                        {app.numberOfKiosks && (
                           <span className="admin_meta_chip">
-                            {app.numberOfCarts} iCart
-                            {app.numberOfCarts !== 1 ? "s" : ""}
+                            {app.numberOfKiosks} Kiosk
+                            {app.numberOfKiosks !== 1 ? "s" : ""}
                           </span>
                         )}
                         <span className="admin_meta_chip">
@@ -925,7 +924,7 @@ export default function AdminDashboard() {
               Platform Sales
             </div>
             <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-              Revenue trends, payment breakdown, top iCarts and full transaction
+              Revenue trends, payment breakdown, top Kiosks and full transaction
               history
             </div>
           </div>
@@ -983,15 +982,15 @@ export default function AdminDashboard() {
         onClose={() => setOperatorsOpen(false)}
       />
 
-      {/* iCarts drawer */}
+      {/* Kiosks drawer */}
       <Drawer
-        isOpen={icartsOpen}
-        onClose={() => setIcartsOpen(false)}
-        title="iCart Fleet"
-        description="All iCarts — filter by state or serial number"
+        isOpen={kiosksOpen}
+        onClose={() => setKiosksOpen(false)}
+        title="Kiosk Fleet"
+        description="All Kiosks — filter by state or serial number"
         width={600}
       >
-        <AdminIcarts />
+        <AdminKiosks />
       </Drawer>
 
       {/* Vendor detail drawer */}

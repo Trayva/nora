@@ -16,7 +16,7 @@ import {
   MdReceiptLong,
   MdCalendarToday,
 } from "react-icons/md";
-import { LuShoppingCart } from "react-icons/lu";
+import { LuStore } from "react-icons/lu";
 import Drawer from "../../components/Drawer";
 import api from "../../api/axios";
 import { StatusBadge, getS } from "./adminUtils_";
@@ -197,7 +197,7 @@ function ColorBadge({ status, colors }) {
   const s = colors[status] || Object.values(colors)[0];
   return (
     <span
-      className="icart_status_badge"
+      className="kiosk_status_badge"
       style={{
         background: s.bg,
         color: s.color,
@@ -283,9 +283,9 @@ function AppDetail({ app: initial, onClose, onApproved }) {
           <span className="contract_meta_value">{app.type || "—"}</span>
         </div>
         <div className="contract_meta_item">
-          <span className="contract_meta_label">iCarts Ordered</span>
+          <span className="contract_meta_label">Kiosks Ordered</span>
           <span className="contract_meta_value">
-            {app.numberOfCarts ?? "—"}
+            {app.numberOfKiosks ?? "—"}
           </span>
         </div>
         {app.state?.name && (
@@ -548,7 +548,7 @@ function AppDetail({ app: initial, onClose, onApproved }) {
                     </div>
                     {p.status && (
                       <span
-                        className="icart_status_badge"
+                        className="kiosk_status_badge"
                         style={{
                           background: ps.bg,
                           color: ps.color,
@@ -567,11 +567,11 @@ function AppDetail({ app: initial, onClose, onApproved }) {
         </div>
       )}
 
-      {/* ── Assigned iCarts ── */}
+      {/* ── Assigned Kiosks ── */}
       <div className="contract_section">
         <div className="contract_section_header">
-          <LuShoppingCart size={14} color="var(--accent)" />
-          <span className="contract_section_title">Assigned iCarts</span>
+          <LuStore size={14} color="var(--accent)" />
+          <span className="contract_section_title">Assigned Kiosks</span>
           <span className="contract_section_count">{carts.length}</span>
         </div>
         {carts.length > 0 ? (
@@ -579,7 +579,7 @@ function AppDetail({ app: initial, onClose, onApproved }) {
             {carts.map((cart) => (
               <div key={cart.id} className="drawer_item_row">
                 <div className="drawer_item_img drawer_item_img_placeholder">
-                  <LuShoppingCart size={14} />
+                  <LuStore size={14} />
                 </div>
                 <div className="drawer_item_info">
                   <span
@@ -592,13 +592,13 @@ function AppDetail({ app: initial, onClose, onApproved }) {
                 </div>
                 <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
                   <span
-                    className={`icart_indicator ${cart.isOnline ? "icart_ind_on" : "icart_ind_off"}`}
+                    className={`kiosk_indicator ${cart.isOnline ? "kiosk_ind_on" : "kiosk_ind_off"}`}
                     style={{ fontSize: "0.65rem", padding: "2px 7px" }}
                   >
                     {cart.isOnline ? "Online" : "Offline"}
                   </span>
                   <span
-                    className={`icart_indicator ${cart.isLocked ? "icart_ind_locked" : "icart_ind_unlocked"}`}
+                    className={`kiosk_indicator ${cart.isLocked ? "kiosk_ind_locked" : "kiosk_ind_unlocked"}`}
                     style={{ fontSize: "0.65rem", padding: "2px 7px" }}
                   >
                     {cart.isLocked ? "Locked" : "Unlocked"}
@@ -609,8 +609,8 @@ function AppDetail({ app: initial, onClose, onApproved }) {
           </div>
         ) : (
           <div className="contract_empty_carts">
-            <LuShoppingCart size={22} style={{ opacity: 0.25 }} />
-            <span>No iCarts assigned yet</span>
+            <LuStore size={22} style={{ opacity: 0.25 }} />
+            <span>No Kiosks assigned yet</span>
           </div>
         )}
       </div>
@@ -674,9 +674,9 @@ function AppCard({ app, onSelect, onApprove, approving }) {
           )}
           {user?.email && <span className="admin_meta_chip">{user.email}</span>}
           {app.type && <span className="admin_meta_chip">{app.type}</span>}
-          {app.numberOfCarts && (
+          {app.numberOfKiosks && (
             <span className="admin_meta_chip">
-              {app.numberOfCarts} iCart{app.numberOfCarts !== 1 ? "s" : ""}
+              {app.numberOfKiosks} Kiosk{app.numberOfKiosks !== 1 ? "s" : ""}
             </span>
           )}
           {app.state?.name && (

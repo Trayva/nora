@@ -46,7 +46,7 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
     const fetchPrice = async () => {
       setFetchingPrice(true);
       try {
-        const params = { cartId: concept.cartId };
+        const params = { kioskId: concept.kioskId };
         if (selectedVariant) params.variantId = selectedVariant;
         if (selectedExtras.length) params["extras"] = selectedExtras;
         const r = await api.get(`/library/price/menu/${item.id}`, { params });
@@ -78,7 +78,7 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
       item.extras?.filter((e) => selectedExtras.includes(e.id)) || [];
     onConfirm({
       item,
-      cartId: concept.cartId,
+      kioskId: concept.kioskId,
       conceptName: concept.name,
       qty,
       variantId: selectedVariant,
@@ -687,7 +687,7 @@ function MenuItemCard({ item, concept, cartItems, onOpenModal }) {
           </span>
           <button
             onClick={() => onOpenModal(item)}
-            className="icart_icon_action_btn"
+            className="kiosk_icon_action_btn"
             style={{
               width: 30,
               height: 30,
@@ -843,7 +843,7 @@ function ConceptSection({ concept, cartItems, onOpenModal }) {
 }
 
 /* ── Checkout form (inside cart drawer) ── */
-function CheckoutForm({ cartId, conceptName, items, onSuccess, onBack }) {
+function CheckoutForm({ kioskId, conceptName, items, onSuccess, onBack }) {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     customerName: "",
@@ -865,8 +865,8 @@ function CheckoutForm({ cartId, conceptName, items, onSuccess, onBack }) {
       return toast.error("Enter your delivery address");
     setPlacing(true);
     try {
-      const res = await api.post("/icart/shop/order", {
-        cartId,
+      const res = await api.post("/kiosk/shop/order", {
+        kioskId,
         customerName: form.customerName.trim(),
         customerEmail: form.customerEmail.trim() || undefined,
         customerPhone: form.customerPhone.trim() || undefined,
@@ -1072,21 +1072,21 @@ function CheckoutForm({ cartId, conceptName, items, onSuccess, onBack }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   CART DRAWER — strictly grouped by cartId
-   Each cartId = one iCart = one separate checkout
+   CART DRAWER — strictly grouped by kioskId
+   Each kioskId = one Kiosk = one separate checkout
    ───────────────────────────────────────────────────────────── */
 function CartDrawer({ cartItems, setCartItems, open, onClose }) {
   const [checkoutCartId, setCheckoutCartId] = useState(null);
   const [orderedCarts, setOrderedCarts] = useState(new Set());
 
-  // Build groups: { [cartId]: { cartId, conceptName, items: [] } }
-  // Items with same cartId but different concepts still merge under one iCart group
+  // Build groups: { [kioskId]: { kioskId, conceptName, items: [] } }
+  // Items with same kioskId but different concepts still merge under one Kiosk group
   const groupMap = Object.entries(cartItems).reduce((acc, [key, entry]) => {
-    const { cartId, conceptName } = entry;
-    if (!acc[cartId])
-      acc[cartId] = { cartId, conceptName, items: [], keys: [] };
-    acc[cartId].items.push(entry);
-    acc[cartId].keys.push(key);
+    const { kioskId, conceptName } = entry;
+    if (!acc[kioskId])
+      acc[kioskId] = { kioskId, conceptName, items: [], keys: [] };
+    acc[kioskId].items.push(entry);
+    acc[kioskId].keys.push(key);
     return acc;
   }, {});
   const groups = Object.values(groupMap);
@@ -1099,16 +1099,16 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
       delete n[key];
       return n;
     });
-  const clearCart = (cartId) =>
+  const clearCart = (kioskId) =>
     setCartItems((prev) => {
       const n = { ...prev };
       Object.keys(n).forEach((k) => {
-        if (n[k].cartId === cartId) delete n[k];
+        if (n[k].kioskId === kioskId) delete n[k];
       });
       return n;
     });
 
-  const checkoutGroup = groups.find((g) => g.cartId === checkoutCartId) || null;
+  const checkoutGroup = groups.find((g) => g.kioskId === checkoutCartId) || null;
 
   if (!open) return null;
 
@@ -1183,7 +1183,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
               if (checkoutGroup) setCheckoutCartId(null);
               else onClose();
             }}
-            className="icart_icon_action_btn"
+            className="kiosk_icon_action_btn"
             style={{ width: 28, height: 28 }}
           >
             {checkoutGroup ? <MdArrowBack size={14} /> : <MdClose size={14} />}
@@ -1193,33 +1193,33 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
           {/* Empty state */}
           {totalItems === 0 && (
-            <div className="icart_empty_state" style={{ padding: "60px 0" }}>
+            <div className="kiosk_empty_state" style={{ padding: "60px 0" }}>
               <LuShoppingCart size={28} style={{ opacity: 0.25 }} />
-              <p className="icart_empty_title">Your cart is empty</p>
-              <p className="icart_empty_sub">
+              <p className="kiosk_empty_title">Your cart is empty</p>
+              <p className="kiosk_empty_sub">
                 Add items from the menu to get started.
               </p>
             </div>
           )}
 
-          {/* Checkout form for selected iCart */}
+          {/* Checkout form for selected Kiosk */}
           {checkoutGroup && (
             <CheckoutForm
-              cartId={checkoutGroup.cartId}
+              kioskId={checkoutGroup.kioskId}
               conceptName={checkoutGroup.conceptName}
               items={checkoutGroup.items}
               onSuccess={(orderData) => {
                 setOrderedCarts(
-                  (prev) => new Set([...prev, checkoutGroup.cartId]),
+                  (prev) => new Set([...prev, checkoutGroup.kioskId]),
                 );
-                clearCart(checkoutGroup.cartId);
+                clearCart(checkoutGroup.kioskId);
                 setCheckoutCartId(null);
               }}
               onBack={() => setCheckoutCartId(null)}
             />
           )}
 
-          {/* All iCart groups — shown when not in checkout */}
+          {/* All Kiosk groups — shown when not in checkout */}
           {!checkoutGroup && totalItems > 0 && (
             <>
               {groups.length > 1 && (
@@ -1235,7 +1235,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
                     fontWeight: 600,
                   }}
                 >
-                  You have items from {groups.length} different iCarts — each
+                  You have items from {groups.length} different Kiosks — each
                   has its own checkout.
                 </div>
               )}
@@ -1246,11 +1246,11 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
                     s + (e.unitPrice || e.item.sellingPrice || 0) * e.qty,
                   0,
                 );
-                const isOrdered = orderedCarts.has(group.cartId);
+                const isOrdered = orderedCarts.has(group.kioskId);
 
                 return (
-                  <div key={group.cartId} style={{ marginBottom: 24 }}>
-                    {/* iCart header */}
+                  <div key={group.kioskId} style={{ marginBottom: 24 }}>
+                    {/* Kiosk header */}
                     <div
                       style={{
                         display: "flex",
@@ -1301,7 +1301,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
                             fontFamily: "monospace",
                           }}
                         >
-                          iCart #{group.cartId.slice(0, 8).toUpperCase()}
+                          Kiosk #{group.kioskId.slice(0, 8).toUpperCase()}
                         </div>
                       </div>
                       {isOrdered && (
@@ -1321,7 +1321,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
                       )}
                     </div>
 
-                    {/* Items in this iCart */}
+                    {/* Items in this Kiosk */}
                     <div
                       style={{
                         display: "flex",
@@ -1407,7 +1407,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
                             </div>
                             <button
                               onClick={() => removeItem(entryKey)}
-                              className="icart_icon_action_btn"
+                              className="kiosk_icon_action_btn"
                               style={{ width: 24, height: 24, flexShrink: 0 }}
                             >
                               <MdClose size={12} />
@@ -1417,7 +1417,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
                       })}
                     </div>
 
-                    {/* Subtotal + checkout button for THIS iCart */}
+                    {/* Subtotal + checkout button for THIS Kiosk */}
                     <div
                       style={{
                         display: "flex",
@@ -1456,7 +1456,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
                       </div>
                       {!isOrdered && (
                         <button
-                          onClick={() => setCheckoutCartId(group.cartId)}
+                          onClick={() => setCheckoutCartId(group.kioskId)}
                           className="app_btn app_btn_confirm"
                           style={{
                             height: 38,
@@ -1511,7 +1511,7 @@ export default function ShopPage() {
   useEffect(() => {
     setLoading(true);
     api
-      .get("/icart/shop/nearby", { params: { lat, lng } })
+      .get("/kiosk/shop/nearby", { params: { lat, lng } })
       .then((r) => {
         const d = r.data.data;
         console.log(r)
@@ -1627,7 +1627,7 @@ export default function ShopPage() {
           {/* Theme toggle */}
           <button
             onClick={toggle}
-            className="icart_icon_action_btn"
+            className="kiosk_icon_action_btn"
             style={{ width: 34, height: 34 }}
             title={theme === "dark" ? "Light mode" : "Dark mode"}
           >
@@ -1640,7 +1640,7 @@ export default function ShopPage() {
           {/* Track order icon */}
           <button
             onClick={() => navigate("/shop/order")}
-            className="icart_icon_action_btn"
+            className="kiosk_icon_action_btn"
             style={{ width: 34, height: 34 }}
             title="Track an order"
           >
@@ -1788,12 +1788,12 @@ export default function ShopPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="icart_empty_state" style={{ padding: "60px 0" }}>
+          <div className="kiosk_empty_state" style={{ padding: "60px 0" }}>
             <MdOutlineShoppingBag size={28} style={{ opacity: 0.25 }} />
-            <p className="icart_empty_title">
+            <p className="kiosk_empty_title">
               {search ? "No results found" : "No carts nearby"}
             </p>
-            <p className="icart_empty_sub">
+            <p className="kiosk_empty_sub">
               {search
                 ? "Try a different term."
                 : "Try adjusting your location or check back later."}

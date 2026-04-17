@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../../../api/axios";
-import IcartOrders from "../../icart/IcartOrders";
+import KioskOrders from "../../kiosk/KioskOrders";
 import {
   MdArrowBack,
   MdOutlineShoppingBag,
@@ -28,7 +28,7 @@ import {
   MdRemoveCircleOutline,
   MdArrowForward,
 } from "react-icons/md";
-import { LuShoppingCart } from "react-icons/lu";
+import { LuStore } from "react-icons/lu";
 import {
   AreaChart,
   Area,
@@ -104,7 +104,7 @@ function StatusChip({ status }) {
   const s = colors[status] || colors.PENDING;
   return (
     <span
-      className="icart_status_badge"
+      className="kiosk_status_badge"
       style={{
         background: s.bg,
         color: s.color,
@@ -137,7 +137,7 @@ function TaskSubmitForm({ task, onSubmitted }) {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      await api.patch(`/icart/tasks/${task.id}/submit`, { data: formData });
+      await api.patch(`/kiosk/tasks/${task.id}/submit`, { data: formData });
       toast.success("Task submitted");
       onSubmitted();
     } catch (err) {
@@ -160,7 +160,7 @@ function TaskSubmitForm({ task, onSubmitted }) {
           <label className="modal-label">{field.label}</label>
           {field.type === "checkbox" ? (
             <button
-              className={`icart_checkbox_btn ${formData[field.label] ? "icart_checkbox_checked" : ""}`}
+              className={`kiosk_checkbox_btn ${formData[field.label] ? "kiosk_checkbox_checked" : ""}`}
               onClick={() =>
                 setFormData((p) => ({ ...p, [field.label]: !p[field.label] }))
               }
@@ -223,14 +223,14 @@ function TaskCard({ task, onRefresh }) {
         }}
         onClick={() => setExpanded((v) => !v)}
       >
-        <div className="icart_task_icon">
+        <div className="kiosk_task_icon">
           <MdTask size={14} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="icart_task_name">
+          <div className="kiosk_task_name">
             {task.template?.name || task.name || "Task"}
           </div>
-          <div className="icart_task_meta">
+          <div className="kiosk_task_meta">
             {task.template?.recurrence && (
               <span>{task.template.recurrence}</span>
             )}
@@ -257,11 +257,11 @@ function TaskCard({ task, onRefresh }) {
           }}
         >
           {task.data && Object.keys(task.data).length > 0 && (
-            <div className="icart_task_data" style={{ marginTop: 12 }}>
+            <div className="kiosk_task_data" style={{ marginTop: 12 }}>
               {Object.entries(task.data).map(([k, v]) => (
-                <div key={k} className="icart_task_data_row">
-                  <span className="icart_meta_key">{k}</span>
-                  <span className="icart_meta_val">
+                <div key={k} className="kiosk_task_data_row">
+                  <span className="kiosk_meta_key">{k}</span>
+                  <span className="kiosk_meta_val">
                     {typeof v === "boolean" ? (
                       v ? (
                         <MdCheck size={14} style={{ color: "#22c55e" }} />
@@ -277,8 +277,8 @@ function TaskCard({ task, onRefresh }) {
             </div>
           )}
           {task.managerComments && (
-            <div className="icart_manager_comment" style={{ marginTop: 10 }}>
-              <span className="icart_meta_key">Manager Note</span>
+            <div className="kiosk_manager_comment" style={{ marginTop: 10 }}>
+              <span className="kiosk_meta_key">Manager Note</span>
               <p>{task.managerComments}</p>
             </div>
           )}
@@ -314,13 +314,13 @@ function TaskCard({ task, onRefresh }) {
   );
 }
 
-export function TasksTab({ cartId }) {
+export function TasksTab({ kioskId }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/icart/tasks?cartId=${cartId}`);
+      const res = await api.get(`/kiosk/tasks?kioskId=${kioskId}`);
       setTasks(res.data.data?.items || res.data.data || []);
     } catch {
       toast.error("Failed to load tasks");
@@ -330,7 +330,7 @@ export function TasksTab({ cartId }) {
   };
   useEffect(() => {
     fetchTasks();
-  }, [cartId]);
+  }, [kioskId]);
   if (loading)
     return (
       <div className="drawer_loading">
@@ -338,7 +338,7 @@ export function TasksTab({ cartId }) {
       </div>
     );
   return tasks.length === 0 ? (
-    <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+    <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
       <MdTask size={28} style={{ opacity: 0.3 }} />
       <span>No pending tasks</span>
     </div>
@@ -369,7 +369,7 @@ function getUnitOptions(baseUnit) {
   return ["unit"];
 }
 
-export function InventoryTab({ cartId }) {
+export function InventoryTab({ kioskId }) {
   const [view, setView] = useState("stock");
   const [inventory, setInventory] = useState([]);
   const [supply, setSupply] = useState([]);
@@ -394,7 +394,7 @@ export function InventoryTab({ cartId }) {
   const fetchStock = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/icart/inventory/icart/${cartId}`);
+      const res = await api.get(`/kiosk/inventory/kiosk/${kioskId}`);
       setInventory(res.data.data?.items || res.data.data || []);
     } catch {
       toast.error("Failed to load inventory");
@@ -405,7 +405,7 @@ export function InventoryTab({ cartId }) {
   const fetchSupply = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/icart/supply?cartId=${cartId}`);
+      const res = await api.get(`/kiosk/supply?kioskId=${kioskId}`);
       setSupply(
         res.data.data?.requests || res.data.data?.items || res.data.data || [],
       );
@@ -418,7 +418,7 @@ export function InventoryTab({ cartId }) {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/icart/inventory/history?cartId=${cartId}`);
+      const res = await api.get(`/kiosk/inventory/history?kioskId=${kioskId}`);
       setHistory(res.data.data?.items || res.data.data || []);
     } catch {
       toast.error("Failed to load history");
@@ -449,7 +449,7 @@ export function InventoryTab({ cartId }) {
       : usageReason;
     setSaving(true);
     try {
-      await api.post("/icart/inventory/record-usage", {
+      await api.post("/kiosk/inventory/record-usage", {
         itemId: usageItem.id,
         quantity: toBase(usageQty, usageUnit),
         notes: notesStr,
@@ -498,8 +498,8 @@ export function InventoryTab({ cartId }) {
     if (!valid.length) return toast.error("Add at least one ingredient");
     setSubmittingSupply(true);
     try {
-      await api.post("/icart/supply", {
-        cartId,
+      await api.post("/kiosk/supply", {
+        kioskId,
         supplierId,
         items: valid.map((row) => ({
           ingredientId: row.ingredient.id,
@@ -523,7 +523,7 @@ export function InventoryTab({ cartId }) {
 
   return (
     <div>
-      <div className="icart_sub_nav" style={{ marginBottom: 16 }}>
+      <div className="kiosk_sub_nav" style={{ marginBottom: 16 }}>
         {[
           { key: "stock", label: "Stock", icon: <MdInventory2 size={13} /> },
           {
@@ -535,7 +535,7 @@ export function InventoryTab({ cartId }) {
         ].map((sv) => (
           <button
             key={sv.key}
-            className={`icart_sub_nav_btn ${view === sv.key ? "icart_sub_nav_active" : ""}`}
+            className={`kiosk_sub_nav_btn ${view === sv.key ? "kiosk_sub_nav_active" : ""}`}
             onClick={() => {
               setView(sv.key);
               setShowSupplyForm(false);
@@ -546,7 +546,7 @@ export function InventoryTab({ cartId }) {
         ))}
         {view === "supply" && (
           <button
-            className={`icart_sub_nav_btn ${showSupplyForm ? "icart_sub_nav_active" : ""}`}
+            className={`kiosk_sub_nav_btn ${showSupplyForm ? "kiosk_sub_nav_active" : ""}`}
             style={{ marginLeft: "auto" }}
             onClick={() => setShowSupplyForm((v) => !v)}
           >
@@ -560,7 +560,7 @@ export function InventoryTab({ cartId }) {
         </div>
       ) : view === "stock" ? (
         inventory.length === 0 ? (
-          <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+          <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
             <MdInventory2 size={28} style={{ opacity: 0.3 }} />
             <span>No inventory items</span>
           </div>
@@ -622,8 +622,8 @@ export function InventoryTab({ cartId }) {
                     </div>
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="icart_task_name">{name}</div>
-                    <div className="icart_task_meta">
+                    <div className="kiosk_task_name">{name}</div>
+                    <div className="kiosk_task_meta">
                       <span>{item.type?.replace("_", " ")}</span>
                       {isLow && (
                         <span style={{ color: "#ef4444", fontWeight: 700 }}>
@@ -658,7 +658,7 @@ export function InventoryTab({ cartId }) {
                     </div>
                   </div>
                   <button
-                    className="icart_icon_action_btn"
+                    className="kiosk_icon_action_btn"
                     title="Record usage"
                     style={{ color: isActive ? "var(--accent)" : undefined }}
                     onClick={() => {
@@ -846,7 +846,7 @@ export function InventoryTab({ cartId }) {
                     </span>
                     {supplyItems.length > 1 && (
                       <button
-                        className="icart_icon_action_btn icart_icon_danger"
+                        className="kiosk_icon_action_btn kiosk_icon_danger"
                         style={{ width: 22, height: 22 }}
                         onClick={() =>
                           setSupplyItems((p) => p.filter((_, idx) => idx !== i))
@@ -857,7 +857,7 @@ export function InventoryTab({ cartId }) {
                     )}
                   </div>
                   <div style={{ position: "relative" }}>
-                    <div className="icart_search_wrap" style={{ height: 40 }}>
+                    <div className="kiosk_search_wrap" style={{ height: 40 }}>
                       <MdSearch
                         size={15}
                         style={{ color: "var(--text-muted)" }}
@@ -1033,7 +1033,7 @@ export function InventoryTab({ cartId }) {
             </div>
           )}
           {supply.length === 0 && !showSupplyForm ? (
-            <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+            <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
               <MdLocalShipping size={28} style={{ opacity: 0.3 }} />
               <span>No supply requests</span>
             </div>
@@ -1057,14 +1057,14 @@ export function InventoryTab({ cartId }) {
                     padding: "13px 14px",
                   }}
                 >
-                  <div className="icart_task_icon">
+                  <div className="kiosk_task_icon">
                     <MdLocalShipping size={14} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="icart_task_name">
+                    <div className="kiosk_task_name">
                       {req.supplier?.businessName || "Supply Request"}
                     </div>
-                    <div className="icart_task_meta">
+                    <div className="kiosk_task_meta">
                       <span>{req.items?.length || 0} items</span>
                       <span className="contract_row_dot">·</span>
                       <span>{fmtDate(req.createdAt)}</span>
@@ -1090,7 +1090,7 @@ export function InventoryTab({ cartId }) {
           )}
         </>
       ) : history.length === 0 ? (
-        <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+        <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
           <MdHistory size={28} style={{ opacity: 0.3 }} />
           <span>No history yet</span>
         </div>
@@ -1098,10 +1098,10 @@ export function InventoryTab({ cartId }) {
         history.map((entry, i) => (
           <div
             key={entry.id || i}
-            className="icart_history_row"
+            className="kiosk_history_row"
             style={{ marginBottom: 6 }}
           >
-            <div className="icart_task_icon">
+            <div className="kiosk_task_icon">
               {entry.delta > 0 ? (
                 <MdAdd size={13} style={{ color: "#22c55e" }} />
               ) : (
@@ -1109,10 +1109,10 @@ export function InventoryTab({ cartId }) {
               )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="icart_task_name">
+              <div className="kiosk_task_name">
                 {entry.ingredient?.name || entry.item?.name || "Item"}
               </div>
-              <div className="icart_task_meta">
+              <div className="kiosk_task_meta">
                 {entry.notes || (entry.delta > 0 ? "Added" : "Removed")}
               </div>
             </div>
@@ -1127,7 +1127,7 @@ export function InventoryTab({ cartId }) {
                 {entry.delta > 0 ? "+" : ""}
                 {entry.delta ?? entry.quantity}
               </div>
-              <div className="icart_operator_meta">
+              <div className="kiosk_operator_meta">
                 {fmtDate(entry.createdAt)}
               </div>
             </div>
@@ -1141,7 +1141,7 @@ export function InventoryTab({ cartId }) {
 export function MenuTab({ menuItems }) {
   if (!menuItems?.length)
     return (
-      <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+      <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
         <MdMenuBook size={28} style={{ opacity: 0.3 }} />
         <span>No menu items assigned</span>
       </div>
@@ -1786,7 +1786,7 @@ function ScoresView({ onBack }) {
           <div className="page_loader_spinner" />
         </div>
       ) : scores.length === 0 ? (
-        <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+        <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
           <MdHistory size={28} style={{ opacity: 0.3 }} />
           <span>No test attempts yet</span>
         </div>
@@ -1848,7 +1848,7 @@ function ScoresView({ onBack }) {
                       entry.menuItem?.name ||
                       `Test · ${(entry.id || "").slice(0, 6).toUpperCase()}`}
                   </div>
-                  <div className="icart_task_meta">
+                  <div className="kiosk_task_meta">
                     {entry.menuIds?.length > 0 && (
                       <span>
                         {entry.menuIds.length} menu item
@@ -2247,7 +2247,7 @@ function ActiveTestView({ test, onSubmit, onCancel }) {
 
   if (!q)
     return (
-      <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+      <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
         <MdSchool size={28} style={{ opacity: 0.3 }} />
         <span>No questions in this test</span>
       </div>
@@ -2814,7 +2814,7 @@ export function ELearningTab({ menuItems }) {
 
   if (!menuItems?.length)
     return (
-      <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+      <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
         <MdSchool size={28} style={{ opacity: 0.3 }} />
         <span>No menu items available</span>
       </div>
@@ -3080,7 +3080,7 @@ function PaymentBadge({ method }) {
   );
 }
 
-function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
+function ItemCustomiser({ item, kioskId, onConfirm, onClose }) {
   const hasVariants = item.variants?.length > 0;
   const [selectedVariant, setSelectedVariant] = useState(
     hasVariants ? item.variants[0].id : null,
@@ -3096,7 +3096,7 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
     api
       .get(`/library/price/menu/${item.id}`, {
         params: {
-          cartId,
+          kioskId,
           ...(selectedVariant ? { variantId: selectedVariant } : {}),
           ...(selectedExtras.length ? { "extras[]": selectedExtras } : {}),
         },
@@ -3458,10 +3458,10 @@ function ItemCustomiser({ item, cartId, onConfirm, onClose }) {
   );
 }
 
-function RecordSaleForm({ cartId, menuItems, onSaved }) {
+function RecordSaleForm({ kioskId, menuItems, onSaved }) {
   const fmt = (n) =>
     Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
-  const [cart, setCart] = useState({});
+  const [kiosk, setCart] = useState({});
   const [customising, setCustomising] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [saving, setSaving] = useState(false);
@@ -3511,20 +3511,20 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
       }
       return { ...prev, [key]: { ...e, qty: newQty } };
     });
-  const cartEntries = Object.entries(cart);
-  const cartTotal = cartEntries.reduce(
+  const kioskEntries = Object.entries(kiosk);
+  const kioskTotal = kioskEntries.reduce(
     (s, [, e]) => s + (e.unitPrice || 0) * e.qty,
     0,
   );
-  const cartCount = cartEntries.reduce((s, [, e]) => s + e.qty, 0);
+  const kioskCount = kioskEntries.reduce((s, [, e]) => s + e.qty, 0);
   const handleSubmit = async () => {
-    if (!cartEntries.length) return toast.error("Add at least one item");
+    if (!kioskEntries.length) return toast.error("Add at least one item");
     setSaving(true);
     try {
-      await api.post("/icart/sale", {
-        cartId,
+      await api.post("/kiosk/sale", {
+        kioskId,
         paymentMethod,
-        items: cartEntries.map(([, e]) => ({
+        items: kioskEntries.map(([, e]) => ({
           menuItemId: e.item.id,
           quantity: e.qty,
           ...(e.variantId ? { variantId: e.variantId } : {}),
@@ -3607,7 +3607,7 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
       </div>
       <div style={{ padding: "12px 16px", maxHeight: 320, overflowY: "auto" }}>
         {!menuItems?.length ? (
-          <div className="icart_empty_inline" style={{ padding: "24px 0" }}>
+          <div className="kiosk_empty_inline" style={{ padding: "24px 0" }}>
             <MdRestaurantMenu size={22} style={{ opacity: 0.3 }} />
             <span>No menu items</span>
           </div>
@@ -3624,7 +3624,7 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
               const img = item.image || item.menuItem?.image;
               const price =
                 item.sellingPrice || item.menuItem?.sellingPrice || 0;
-              const inCart = Object.values(cart)
+              const inCart = Object.values(kiosk)
                 .filter((e) => e.item.id === item.id)
                 .reduce((s, e) => s + e.qty, 0);
               return (
@@ -3728,7 +3728,7 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
           </div>
         )}
       </div>
-      {cartEntries.length > 0 && (
+      {kioskEntries.length > 0 && (
         <div
           style={{ borderTop: "1px solid var(--border)", padding: "12px 16px" }}
         >
@@ -3740,7 +3740,7 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
               marginBottom: 12,
             }}
           >
-            {cartEntries.map(([key, entry]) => (
+            {kioskEntries.map(([key, entry]) => (
               <div
                 key={key}
                 style={{
@@ -3904,7 +3904,7 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
                   color: "var(--accent)",
                 }}
               >
-                \u20A6{fmt(cartTotal)}
+                \u20A6{fmt(kioskTotal)}
               </div>
             </div>
             <button
@@ -3938,7 +3938,7 @@ function RecordSaleForm({ cartId, menuItems, onSaved }) {
       {customising && (
         <ItemCustomiser
           item={customising}
-          cartId={cartId}
+          kioskId={kioskId}
           onConfirm={addToCart}
           onClose={() => setCustomising(null)}
         />
@@ -3969,7 +3969,7 @@ function SaleRow({ sale }) {
         }}
         onClick={() => setExpanded((v) => !v)}
       >
-        <div className="icart_task_icon">
+        <div className="kiosk_task_icon">
           <MdPointOfSale size={14} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -3993,7 +3993,7 @@ function SaleRow({ sale }) {
             </span>
             <PaymentBadge method={sale.paymentMethod} />
           </div>
-          <div className="icart_task_meta">
+          <div className="kiosk_task_meta">
             <span>
               {sale.items?.length || 0} item
               {sale.items?.length !== 1 ? "s" : ""}
@@ -4083,7 +4083,7 @@ function SaleRow({ sale }) {
   );
 }
 
-export function SalesTab({ cartId, menuItems, isOperator = true }) {
+export function SalesTab({ kioskId, menuItems, isOperator = true }) {
   const [sales, setSales] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -4091,8 +4091,8 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
   const fetchSales = () => {
     setLoading(true);
     Promise.allSettled([
-      api.get(`/icart/sale?cartId=${cartId}`),
-      api.get(`/icart/sale/analytics?cartId=${cartId}`),
+      api.get(`/kiosk/sale?kioskId=${kioskId}`),
+      api.get(`/kiosk/sale/analytics?kioskId=${kioskId}`),
     ])
       .then(([salesRes, analyticsRes]) => {
         if (salesRes.status === "fulfilled") {
@@ -4106,7 +4106,7 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
   };
   useEffect(() => {
     fetchSales();
-  }, [cartId]);
+  }, [kioskId]);
   const chartData = (analytics?.chartData || []).map((d) => ({
     ...d,
     sales: Math.round(d.sales),
@@ -4286,7 +4286,7 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
       )}
       {showForm && (
         <RecordSaleForm
-          cartId={cartId}
+          kioskId={kioskId}
           menuItems={menuItems}
           onSaved={() => {
             setShowForm(false);
@@ -4299,7 +4299,7 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
           <div className="page_loader_spinner" />
         </div>
       ) : sales.length === 0 ? (
-        <div className="icart_empty_inline" style={{ padding: "40px 0" }}>
+        <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
           <MdPointOfSale size={28} style={{ opacity: 0.3 }} />
           <span>No sales recorded yet</span>
         </div>
@@ -4311,19 +4311,19 @@ export function SalesTab({ cartId, menuItems, isOperator = true }) {
 }
 
 /* MAIN PAGE */
-export default function OperatorCartPage() {
-  const { cartId } = useParams();
+export default function OperatorKioskPage() {
+  const { kioskId } = useParams();
   const navigate = useNavigate();
-  const [cart, setCart] = useState(null);
+  const [kiosk, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("tasks");
   useEffect(() => {
     api
-      .get(`/icart/${cartId}`)
+      .get(`/kiosk/${kioskId}`)
       .then((r) => setCart(r.data.data))
-      .catch(() => toast.error("Failed to load cart"))
+      .catch(() => toast.error("Failed to load kiosk"))
       .finally(() => setLoading(false));
-  }, [cartId]);
+  }, [kioskId]);
   if (loading)
     return (
       <div className="page_wrapper">
@@ -4332,12 +4332,12 @@ export default function OperatorCartPage() {
         </div>
       </div>
     );
-  if (!cart)
+  if (!kiosk)
     return (
       <div className="page_wrapper">
-        <div className="icart_empty_state" style={{ padding: "64px 0" }}>
-          <LuShoppingCart size={32} style={{ opacity: 0.3 }} />
-          <p className="icart_empty_title">Cart not found</p>
+        <div className="kiosk_empty_state" style={{ padding: "64px 0" }}>
+          <LuStore size={32} style={{ opacity: 0.3 }} />
+          <p className="kiosk_empty_title">Cart not found</p>
           <button
             className="app_btn app_btn_cancel"
             style={{ height: 38, padding: "0 20px" }}
@@ -4348,7 +4348,7 @@ export default function OperatorCartPage() {
         </div>
       </div>
     );
-  const menuItems = cart.menuItems || [];
+  const menuItems = kiosk.menuItems || [];
   return (
     <div className="page_wrapper">
       <button
@@ -4398,7 +4398,7 @@ export default function OperatorCartPage() {
               justifyContent: "center",
             }}
           >
-            <LuShoppingCart size={20} />
+            <LuStore size={20} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
@@ -4418,9 +4418,9 @@ export default function OperatorCartPage() {
                   fontFamily: "monospace",
                 }}
               >
-                {cart.serialNumber}
+                {kiosk.serialNumber}
               </span>
-              <StatusChip status={cart.status} />
+              <StatusChip status={kiosk.status} />
               <span
                 style={{
                   display: "inline-flex",
@@ -4430,11 +4430,11 @@ export default function OperatorCartPage() {
                   fontWeight: 700,
                   padding: "2px 8px",
                   borderRadius: 999,
-                  background: cart.isOnline
+                  background: kiosk.isOnline
                     ? "rgba(34,197,94,0.1)"
                     : "rgba(107,114,128,0.1)",
-                  color: cart.isOnline ? "#22c55e" : "#6b7280",
-                  border: `1px solid ${cart.isOnline ? "rgba(34,197,94,0.25)" : "rgba(107,114,128,0.25)"}`,
+                  color: kiosk.isOnline ? "#22c55e" : "#6b7280",
+                  border: `1px solid ${kiosk.isOnline ? "rgba(34,197,94,0.25)" : "rgba(107,114,128,0.25)"}`,
                 }}
               >
                 <span
@@ -4442,13 +4442,13 @@ export default function OperatorCartPage() {
                     width: 6,
                     height: 6,
                     borderRadius: "50%",
-                    background: cart.isOnline ? "#22c55e" : "#9ca3af",
+                    background: kiosk.isOnline ? "#22c55e" : "#9ca3af",
                   }}
                 />
-                {cart.isOnline ? "Online" : "Offline"}
+                {kiosk.isOnline ? "Online" : "Offline"}
               </span>
             </div>
-            {cart.location && (
+            {kiosk.location && (
               <div
                 style={{
                   fontSize: "0.78rem",
@@ -4459,8 +4459,8 @@ export default function OperatorCartPage() {
                 }}
               >
                 <MdRestaurantMenu size={13} />
-                {cart.location.name}
-                {cart.location.city ? ` \u00B7 ${cart.location.city}` : ""}
+                {kiosk.location.name}
+                {kiosk.location.city ? ` \u00B7 ${kiosk.location.city}` : ""}
               </div>
             )}
           </div>
@@ -4476,14 +4476,14 @@ export default function OperatorCartPage() {
               borderTop: "1px solid var(--border)",
             }}
           >
-            <div className="icart_summary_chip">
+            <div className="kiosk_summary_chip">
               <MdRestaurantMenu size={12} />
               {menuItems.length} Menu Item{menuItems.length !== 1 ? "s" : ""}
             </div>
-            {cart.operators?.length > 0 && (
-              <div className="icart_summary_chip">
-                👤 {cart.operators.length} Operator
-                {cart.operators.length !== 1 ? "s" : ""}
+            {kiosk.operators?.length > 0 && (
+              <div className="kiosk_summary_chip">
+                👤 {kiosk.operators.length} Operator
+                {kiosk.operators.length !== 1 ? "s" : ""}
               </div>
             )}
           </div>
@@ -4528,13 +4528,13 @@ export default function OperatorCartPage() {
           );
         })}
       </div>
-      {activeTab === "tasks" && <TasksTab cartId={cartId} />}
-      {activeTab === "inventory" && <InventoryTab cartId={cartId} />}
+      {activeTab === "tasks" && <TasksTab kioskId={kioskId} />}
+      {activeTab === "inventory" && <InventoryTab kioskId={kioskId} />}
       {activeTab === "menu" && <MenuTab menuItems={menuItems} />}
       {activeTab === "elearning" && <ELearningTab menuItems={menuItems} />}
-      {activeTab === "orders" && <IcartOrders cartId={cartId} />}
+      {activeTab === "orders" && <KioskOrders kioskId={kioskId} />}
       {activeTab === "sales" && (
-        <SalesTab cartId={cartId} menuItems={menuItems} isOperator={true} />
+        <SalesTab kioskId={kioskId} menuItems={menuItems} isOperator={true} />
       )}
     </div>
   );

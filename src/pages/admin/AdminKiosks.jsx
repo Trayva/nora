@@ -7,7 +7,7 @@ import {
   MdCircle,
   MdExpandMore,
   MdExpandLess,
-  MdOutlineShoppingCart,
+  MdOutlineStore,
 } from "react-icons/md";
 import {
   AreaChart,
@@ -20,7 +20,7 @@ import {
 } from "recharts";
 import Drawer from "../../components/Drawer";
 import api from "../../api/axios";
-import IcartDrawer from "../icart/IcartDrawer";
+import KioskDrawer from "../kiosk/KioskDrawer";
 
 
 const fmt = (n) =>
@@ -97,7 +97,7 @@ const PRESETS = [
 ];
 
 /* ── Main list ────────────────────────────────────────────── */
-export default function AdminIcarts() {
+export default function AdminKiosks() {
   const [carts, setCarts] = useState([]);
   const [states, setStates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -125,13 +125,13 @@ export default function AdminIcarts() {
       const params = { page: p, limit };
       if (s.trim()) params.serialNumber = s.trim();
       if (sid) params.stateId = sid;
-      const r = await api.get("/icart", { params });
+      const r = await api.get("/kiosk", { params });
       const d = r.data.data;
-      const list = Array.isArray(d) ? d : d?.icarts || d?.items || [];
+      const list = Array.isArray(d) ? d : d?.kiosks || d?.items || [];
       setCarts(list);
       setTotal(d?.total || list.length);
     } catch {
-      toast.error("Failed to load iCarts");
+      toast.error("Failed to load Kiosks");
     } finally {
       setLoading(false);
     }
@@ -163,7 +163,7 @@ export default function AdminIcarts() {
     <>
       <div className="admin_section">
         <div className="admin_section_header">
-          <span className="admin_section_title">iCart Fleet</span>
+          <span className="admin_section_title">Kiosk Fleet</span>
           <span className="admin_section_count">{total}</span>
         </div>
 
@@ -220,7 +220,7 @@ export default function AdminIcarts() {
         {/* List */}
         {!loading && carts.length === 0 ? (
           <div className="admin_empty">
-            <p style={{ margin: 0, fontSize: "0.82rem" }}>No iCarts found.</p>
+            <p style={{ margin: 0, fontSize: "0.82rem" }}>No Kiosks found.</p>
           </div>
         ) : (
           <div className="admin_drawer_list">
@@ -244,7 +244,7 @@ export default function AdminIcarts() {
                       fontWeight: 900,
                     }}
                   >
-                    <MdOutlineShoppingCart size={16} />
+                    <MdOutlineStore size={16} />
                   </div>
                   <div className="admin_drawer_info">
                     <div
@@ -329,8 +329,8 @@ export default function AdminIcarts() {
         )}
       </div>
       {selected && (
-        <IcartDrawer
-          cartId={selected.id}
+        <KioskDrawer
+          kioskId={selected.id}
           onClose={() => setSelected(null)}
           onUpdate={(updated) => {
             setSelected(updated);

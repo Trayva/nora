@@ -101,7 +101,7 @@ function ScreenShot(props) {
           <div className="shot-header">
             <h1 className="shot-title">Watch Tutorials</h1>
             <p className="shot-subtitle">
-              View iCart menus and watch tutorials on meal preparations
+              View Kiosk menus and watch tutorials on meal preparations
             </p>
           </div>
 

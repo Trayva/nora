@@ -10,22 +10,22 @@ import {
   MdPointOfSale,
   MdOutlineShoppingBag,
 } from "react-icons/md";
-import { LuShoppingCart } from "react-icons/lu";
+import { LuStore } from "react-icons/lu";
 
-// Import all tab components from OperatorCartPage
-// These are defined in OperatorCartPage.jsx — we re-export them via a shared barrel
+// Import all tab components from OperatorKioskPage
+// These are defined in OperatorKioskPage.jsx — we re-export them via a shared barrel
 // OR we inline the tab rendering here using the same components.
 // Since React doesn't support cross-file named function imports easily without
-// refactoring, we import from OperatorCartPage via a re-export pattern.
-// The cleanest approach: OperatorCartPage exports its tabs, drawer imports them.
+// refactoring, we import from OperatorKioskPage via a re-export pattern.
+// The cleanest approach: OperatorKioskPage exports its tabs, drawer imports them.
 import {
   TasksTab,
   InventoryTab,
   MenuTab,
   ELearningTab,
   SalesTab,
-} from "./OperatorCart";
-import IcartOrders from "../../icart/IcartOrders";
+} from "./OperatorKiosk";
+import KioskOrders from "../../kiosk/KioskOrders";
 
 const TABS = [
   { key: "tasks", label: "Tasks", icon: <MdTask size={13} /> },
@@ -36,34 +36,34 @@ const TABS = [
   { key: "orders", label: "Orders", icon: <MdOutlineShoppingBag size={13} /> },
 ];
 
-export default function OperatorCartDrawer({ cartId, onClose }) {
-  const [cart, setCart] = useState(null);
+export default function OperatorKioskDrawer({ kioskId, onClose }) {
+  const [kiosk, setKiosk] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("tasks");
 
   useEffect(() => {
-    if (!cartId) {
-      setCart(null);
+    if (!kioskId) {
+      setKiosk(null);
       return;
     }
     setActiveTab("tasks");
     setLoading(true);
     api
-      .get(`/icart/${cartId}`)
-      .then((r) => setCart(r.data.data))
-      .catch(() => toast.error("Failed to load cart"))
+      .get(`/kiosk/${kioskId}`)
+      .then((r) => setKiosk(r.data.data))
+      .catch(() => toast.error("Failed to load kiosk"))
       .finally(() => setLoading(false));
-  }, [cartId]);
+  }, [kioskId]);
 
-  const cartSerial = cart?.serialNumber || "My iCart";
-  const cartLocation = cart?.location?.name || "";
+  const kioskSerial = kiosk?.serialNumber || "My Kiosk";
+  const kioskLocation = kiosk?.location?.name || "";
 
   return (
     <Drawer
-      isOpen={!!cartId}
+      isOpen={!!kioskId}
       onClose={onClose}
-      title={cartSerial}
-      description={cartLocation}
+      title={kioskSerial}
+      description={kioskLocation}
       width={560}
     >
       {/* Tab bar */}
@@ -84,22 +84,22 @@ export default function OperatorCartDrawer({ cartId, onClose }) {
         <div className="drawer_loading">
           <div className="page_loader_spinner" />
         </div>
-      ) : !cart ? null : (
+      ) : !kiosk ? null : (
         <>
-          {activeTab === "tasks" && <TasksTab cartId={cartId} />}
-          {activeTab === "inventory" && <InventoryTab cartId={cartId} />}
-          {activeTab === "menu" && <MenuTab menuItems={cart.menuItems || []} />}
+          {activeTab === "tasks" && <TasksTab kioskId={kioskId} />}
+          {activeTab === "inventory" && <InventoryTab kioskId={kioskId} />}
+          {activeTab === "menu" && <MenuTab menuItems={kiosk.menuItems || []} />}
           {activeTab === "elearning" && (
-            <ELearningTab menuItems={cart.menuItems || []} />
+            <ELearningTab menuItems={kiosk.menuItems || []} />
           )}
           {activeTab === "sales" && (
             <SalesTab
-              cartId={cartId}
-              menuItems={cart.menuItems || []}
+              kioskId={kioskId}
+              menuItems={kiosk.menuItems || []}
               isOperator={true}
             />
           )}
-          {activeTab === "orders" && <IcartOrders cartId={cartId} />}
+          {activeTab === "orders" && <KioskOrders kioskId={kioskId} />}
         </>
       )}
     </Drawer>

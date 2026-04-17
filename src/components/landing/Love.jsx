@@ -5,7 +5,7 @@ import "swiper/css";
 import "swiper/css/autoplay";
 import { useNavigate } from "react-router-dom";
 
-import img1 from "../../assets/icart11.png";
+import img1 from "../../assets/kiosk11.png";
 import img2 from "../../assets/cc.jpg";
 import img3 from "../../assets/bb.jpg";
 import img4 from "../../assets/aa.jpg";

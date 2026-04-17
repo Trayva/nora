@@ -22,7 +22,7 @@ export default function VerifyOtp() {
   const verificationType = state?.verificationType || "email";
   // nextRoute: set by Register after role-based registration
   const nextRoute =
-    state?.nextRoute || (user ? getDefaultRoute(user) : "/app/icart-home");
+    state?.nextRoute || (user ? getDefaultRoute(user) : "/app/kiosk-home");
 
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const [verifying, setVerifying] = useState(false);
