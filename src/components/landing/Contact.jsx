@@ -3,6 +3,8 @@ import { IoLocationOutline, IoMailOutline } from "react-icons/io5";
 import { MdOutlinePhone } from "react-icons/md";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 const INITIAL = { name: "", email: "", phone: "", message: "" };
 
@@ -15,16 +17,21 @@ function Contact() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
+    if (!form.name.trim() || !form.email.trim() || !form.message.trim() || !form.phone.trim()) {
       toast.error("Please fill in all required fields.");
+      return;
+    }
+    if (form.phone.length < 10) {
+      toast.error("Please enter a valid phone number with country code.");
       return;
     }
     setLoading(true);
     try {
+      const formattedPhone = form.phone ? (form.phone.startsWith("+") ? form.phone : `+${form.phone}`) : undefined;
       await api.post("/support", {
         name: form.name.trim(),
         email: form.email.trim(),
-        phone: form.phone.trim() || undefined,
+        phone: formattedPhone,
         message: form.message.trim(),
       });
       toast.success("Message sent! We'll get back to you shortly.");
@@ -115,15 +122,18 @@ function Contact() {
                 />
               </div>
               <div className="form-field">
-                <label className="modal-label">Phone Number</label>
-                <input
-                  className="modal-input"
-                  type="tel"
-                  placeholder="+234 80 123 4567"
-                  value={form.phone}
-                  onChange={set("phone")}
-                  disabled={loading}
-                />
+                <label className="modal-label">Phone Number *</label>
+                <div className="register_phone_wrapper">
+                  <PhoneInput
+                    country="ae"
+                    value={form.phone}
+                    onChange={(value) => setForm((prev) => ({ ...prev, phone: value }))}
+                    enableSearch
+                    searchPlaceholder="Search country..."
+                    disableSearchIcon
+                    disabled={loading}
+                  />
+                </div>
               </div>
               <div className="form-field">
                 <label className="modal-label">Message *</label>

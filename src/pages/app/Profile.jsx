@@ -6,6 +6,8 @@ import { MdOutlineCalendarToday, MdOutlinePhone } from "react-icons/md";
 import { LuPenLine } from "react-icons/lu";
 import Modal from "../../components/Modal";
 import ButtonLoader from "../../components/ButtonLoader";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
@@ -55,10 +57,18 @@ const Profile = () => {
     setSubmitError(null);
 
     try {
+      if (!formData.phone || formData.phone.length < 10) {
+        throw new Error("Please enter a valid phone number with country code.");
+      }
+
       // Use FormData because the endpoint accepts file uploads
       const payload = new FormData();
       if (formData.fullName) payload.append("fullName", formData.fullName);
-      if (formData.phone) payload.append("phone", formData.phone);
+      if (formData.phone) {
+        // Ensure phone has + prefix if it doesn't already, matching Register.jsx behavior
+        const formattedPhone = formData.phone.startsWith("+") ? formData.phone : `+${formData.phone}`;
+        payload.append("phone", formattedPhone);
+      }
       if (formData.image) payload.append("image", formData.image);
 
       await updateProfile(payload);
@@ -175,15 +185,18 @@ const Profile = () => {
           </div>
 
           <div className="form-field">
-            <label className="modal-label">Phone</label>
-            <input
-              className="modal-input"
-              type="text"
-              name="phone"
-              placeholder="+1234567890"
-              value={formData.phone}
-              onChange={handleChange}
-            />
+            <label className="modal-label">Phone *</label>
+            <div className="register_phone_wrapper">
+              <PhoneInput
+                country="ae"
+                value={formData.phone}
+                onChange={(value) => setFormData((prev) => ({ ...prev, phone: value }))}
+                onBlur={() => {}}
+                enableSearch
+                searchPlaceholder="Search country..."
+                disableSearchIcon
+              />
+            </div>
           </div>
 
           <div className="form-field">
