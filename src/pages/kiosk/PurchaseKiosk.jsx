@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
 
 function PurchaseKiosk() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const selectedId = searchParams.get("selection");
+  const scrollRef = useRef({});
+
   const [numberOfKiosks, setNumberOfKiosks] = useState(1);
   const [settings, setSettings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,10 +28,25 @@ function PurchaseKiosk() {
     fetchSettings();
   }, []);
 
+  // Scroll to selected plan
+  useEffect(() => {
+    if (!loading && selectedId && scrollRef.current[selectedId]) {
+      setTimeout(() => {
+        scrollRef.current[selectedId].scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 500);
+    }
+  }, [loading, selectedId]);
+
   const handlePurchase = async (settingsId) => {
     setPurchasing(settingsId);
     try {
-      await api.post("/contract/application/purchase-kiosk", { settingsId, numberOfKiosks });
+      await api.post("/contract/application/purchase-kiosk", {
+        settingsId,
+        numberOfKiosks,
+      });
       toast.success("Kiosk purchased successfully!");
       navigate("/app/invoices", { state: { openLatest: true } });
     } catch (err) {
@@ -48,17 +67,29 @@ function PurchaseKiosk() {
       </p>
 
       {loading ? (
-        <div className="page_loader"><div className="page_loader_spinner" /></div>
+        <div className="page_loader">
+          <div className="page_loader_spinner" />
+        </div>
       ) : settings.length === 0 ? (
-        <div className="kiosk_empty"><p>No contract settings available at the moment.</p></div>
+        <div className="kiosk_empty">
+          <p>No contract settings available at the moment.</p>
+        </div>
       ) : (
         <div className="kiosk_settings_grid">
           {settings.map((setting) => {
             const isLoading = purchasing === setting.id;
-            const totalAmount = setting.payments.reduce((sum, p) => sum + p.amount * numberOfKiosks, 0);
+            const isSelected = selectedId === setting.id;
+            const totalAmount = setting.payments.reduce(
+              (sum, p) => sum + p.amount * numberOfKiosks,
+              0,
+            );
 
             return (
-              <div key={setting.id} className="kiosk_settings_card">
+              <div
+                key={setting.id}
+                ref={(el) => (scrollRef.current[setting.id] = el)}
+                className={`kiosk_settings_card ${isSelected ? "selection_highlight" : ""}`}
+              >
                 {/* Header */}
                 <div className="kiosk_card_header">
                   <div>

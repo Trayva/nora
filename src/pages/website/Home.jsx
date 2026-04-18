@@ -11,6 +11,8 @@ import Why from "../../components/landing/Why";
 import Vision from "../../components/landing/Vision";
 import FinalCTA from "../../components/landing/FinalCTA";
 
+import PlansSection from "../../components/landing/PlansSection";
+
 function Home(props) {
   return (
     <>
@@ -29,6 +31,7 @@ function Home(props) {
         <How />
         <Why />
         <Vision />
+        <PlansSection />
         {/* <PublicConceptsSection /> */}
         {/* <Love /> */}
         {/* <FinalCTA /> */}
