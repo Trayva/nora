@@ -30,10 +30,10 @@ import AdminOperators from "./AdminOperators";
 import AdminVendorDetail from "./AdminVendorDetail";
 import AdminKiosks from "./AdminKiosks";
 
-import { 
-  DashboardSkeleton, 
-  TableSkeleton, 
-  CardSkeleton 
+import {
+  DashboardSkeleton,
+  TableSkeleton,
+  CardSkeleton
 } from "../../components/SkeletonTemplates";
 
 const fmtDate = (d) =>

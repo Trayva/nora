@@ -57,10 +57,10 @@ const getStatusStyle = (s) => STATUS_COLORS[s] || STATUS_COLORS.PENDING;
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "—";
 
 /* ─── ApplicationDrawer ─────────────────────────────────────── */
@@ -212,55 +212,55 @@ function ApplicationDrawer({ app, onClose, onStatusUpdated, onDeleted }) {
             app[k] != null &&
             typeof app[k] !== "object",
         ).length > 0 && (
-          <div
-            style={{
-              background: "var(--bg-hover)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-              padding: "14px 16px",
-              marginBottom: 16,
-            }}
-          >
             <div
               style={{
-                fontSize: "0.62rem",
-                fontWeight: 900,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "var(--text-muted)",
-                marginBottom: 10,
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                borderRadius: 12,
+                padding: "14px 16px",
+                marginBottom: 16,
               }}
             >
-              Details
+              <div
+                style={{
+                  fontSize: "0.62rem",
+                  fontWeight: 900,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--text-muted)",
+                  marginBottom: 10,
+                }}
+              >
+                Details
+              </div>
+              {Object.entries(app)
+                .filter(
+                  ([k]) =>
+                    ![
+                      "id",
+                      "status",
+                      "createdAt",
+                      "updatedAt",
+                      "user",
+                      "vendor",
+                      "payments",
+                    ].includes(k) &&
+                    app[k] != null &&
+                    typeof app[k] !== "object",
+                )
+                .map(([k, v]) => (
+                  <div key={k} className="kiosk_meta_row">
+                    <span
+                      className="kiosk_meta_key"
+                      style={{ textTransform: "capitalize" }}
+                    >
+                      {k.replace(/([A-Z])/g, " $1").trim()}
+                    </span>
+                    <span className="kiosk_meta_val">{String(v)}</span>
+                  </div>
+                ))}
             </div>
-            {Object.entries(app)
-              .filter(
-                ([k]) =>
-                  ![
-                    "id",
-                    "status",
-                    "createdAt",
-                    "updatedAt",
-                    "user",
-                    "vendor",
-                    "payments",
-                  ].includes(k) &&
-                  app[k] != null &&
-                  typeof app[k] !== "object",
-              )
-              .map(([k, v]) => (
-                <div key={k} className="kiosk_meta_row">
-                  <span
-                    className="kiosk_meta_key"
-                    style={{ textTransform: "capitalize" }}
-                  >
-                    {k.replace(/([A-Z])/g, " $1").trim()}
-                  </span>
-                  <span className="kiosk_meta_val">{String(v)}</span>
-                </div>
-              ))}
-          </div>
-        )}
+          )}
 
         {/* Status actions */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -404,7 +404,7 @@ export default function AdminVendorApplicationSettings() {
     }
   };
 
-  const fetchApplications = async () => {   
+  const fetchApplications = async () => {
     setAppsLoading(true);
     try {
       const r = await api.get("/kioskVendorApplication");
@@ -513,7 +513,7 @@ export default function AdminVendorApplicationSettings() {
   return (
     <>
       {/* ════ APPLICATIONS PANEL ════ */}
-      <div className="admin_settings_panel">
+      {/* <div className="admin_settings_panel">
         <div className="admin_settings_panel_header">
           <span className="admin_settings_panel_title">
             Vendor Applications
@@ -656,7 +656,7 @@ export default function AdminVendorApplicationSettings() {
             </>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* ════ SETTINGS PANEL ════ */}
       <div className="admin_settings_panel">
