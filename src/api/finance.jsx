@@ -78,10 +78,11 @@ export const verifyBankAccount = async (accountNumber, bankCode) => {
  * @param {string} accountNumber
  * @param {string} bankCode
  */
-export const updateSettlementAccount = async (accountNumber, bankCode) => {
+export const updateSettlementAccount = async (accountNumber, bankCode, bankName) => {
   const response = await api.patch("/finance/wallet/update-account", {
     accountNumber,
     bankCode,
+    bankName
   });
   return response.data;
 };

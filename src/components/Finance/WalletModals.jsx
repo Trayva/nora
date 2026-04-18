@@ -190,7 +190,7 @@ export function PinModal({ isOpen, onClose, hasPin, onSuccess }) {
     : hasPin ? "Change Transaction Pin" : "Set Transaction Pin";
   const desc = mode === "reset" ? "Enter a new 4-digit pin to reset your access."
     : hasPin ? "Enter your current pin and a new 4-digit pin."
-    : "Create a 4-digit pin to secure your transactions.";
+      : "Create a 4-digit pin to secure your transactions.";
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} description={desc}>
@@ -305,7 +305,7 @@ export function SettlementModal({ isOpen, onClose, onSuccess }) {
     if (!accountName) return toast.error("Please verify account first");
     setUpdating(true);
     try {
-      await updateSettlementAccount(accountNumber, bankCode);
+      await updateSettlementAccount(accountNumber, bankCode, banks.find(_ => _.code === bankCode)?.name);
       toast.success("Settlement account updated");
       onSuccess?.(); onClose();
     } catch (err) {
