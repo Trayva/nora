@@ -10,6 +10,7 @@ import {
   MdWorkOutline,
   MdAccessTime,
   MdSearch,
+  MdLocationOn,
 } from "react-icons/md";
 import api from "../../api/axios";
 
@@ -67,6 +68,47 @@ function StatusPill({ status }) {
   );
 }
 
+function OperatorCard({ op, isSelected, onSelect }) {
+  const [imgError, setImgError] = useState(false);
+  const userImg =
+    op.user?.image || op.details?.user?.image || op.user?.details?.user?.image;
+
+  return (
+    <div
+      className={`kiosk_operator_card ${isSelected ? "kiosk_operator_card_selected" : ""}`}
+      onClick={() => onSelect(op)}
+    >
+      <div className="kiosk_operator_avatar_v2">
+        {userImg && !imgError ? (
+          <img
+            src={userImg}
+            alt={op.user?.fullName}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <MdPerson size={32} style={{ opacity: 0.5 }} />
+        )}
+      </div>
+      <div className="kiosk_operator_info_v2">
+        <div className="kiosk_operator_name_v2">
+          {op.user?.fullName || op.user?.name || op.user?.email}
+        </div>
+        <div className="kiosk_operator_meta_v2">
+          <span className="kiosk_operator_meta_icon">
+            <MdLocationOn size={14} />
+          </span>
+          <span>{op.state?.name || "Global / Online"}</span>
+        </div>
+      </div>
+      {isSelected && (
+        <div className="kiosk_operator_check_v2">
+          <MdCheck size={14} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Hire Form ─────────────────────────────────────────────── */
 function HireForm({ kioskId, onHired }) {
   const [hireable, setHireable] = useState([]);
@@ -79,11 +121,23 @@ function HireForm({ kioskId, onHired }) {
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   useEffect(() => {
     const fetch = async () => {
       setLoadingList(true);
       try {
-        const res = await api.get("/kiosk/operator/hirable");
+        const res = await api.get(
+          `/kiosk/operator/hirable${debouncedSearch ? `?search=${encodeURIComponent(debouncedSearch)}` : ""}`,
+        );
         setHireable(res.data.data?.operators || res.data.data?.items || []);
       } catch {
         toast.error("Failed to load operators");
@@ -92,12 +146,7 @@ function HireForm({ kioskId, onHired }) {
       }
     };
     fetch();
-  }, []);
-
-  const filtered = hireable.filter((op) => {
-    const name = op.user?.fullName || op.user?.name || op.user?.email || "";
-    return name.toLowerCase().includes(search.toLowerCase());
-  });
+  }, [debouncedSearch]);
 
   const handleSubmit = async () => {
     if (!selectedOperator) return toast.error("Select an operator");
@@ -127,9 +176,9 @@ function HireForm({ kioskId, onHired }) {
     <div className="kiosk_hire_form">
       <div className="form-field">
         <label className="modal-label">Search Operators</label>
-        <div className="kiosk_search_wrap">
+        <div className="kiosk_search_wrap_v2">
           <MdSearch
-            size={16}
+            size={18}
             style={{ color: "var(--text-muted)", flexShrink: 0 }}
           />
           <input
@@ -140,54 +189,42 @@ function HireForm({ kioskId, onHired }) {
               padding: 0,
               flex: 1,
               outline: "none",
+              fontSize: "0.85rem",
             }}
-            placeholder="Search by name or email"
+            placeholder="Search by name, email or phone"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {loadingList && search && (
+            <span className="btn_loader" style={{ width: 14, height: 14 }} />
+          )}
         </div>
       </div>
 
-      {loadingList ? (
-        <div style={{ padding: "10px 0" }}>
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 44, borderRadius: 10, marginBottom: 8 }} />
+      {loadingList && !hireable.length ? (
+        <div className="kiosk_operator_list_v2">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div
+              key={i}
+              className="skeleton_shimmer skeleton_rect"
+              style={{ height: 180, borderRadius: 24 }}
+            />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="kiosk_empty_inline">
-          <MdPerson size={18} style={{ opacity: 0.3 }} />
+      ) : hireable.length === 0 ? (
+        <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
+          <MdPerson size={24} style={{ opacity: 0.3 }} />
           <span>No operators found</span>
         </div>
       ) : (
-        <div className="kiosk_operator_list">
-          {filtered.map((op) => (
-            <div
+        <div className="kiosk_operator_list_v2">
+          {hireable.map((op) => (
+            <OperatorCard
               key={op.id}
-              className={`kiosk_operator_row ${selectedOperator?.id === op.id ? "kiosk_operator_selected" : ""}`}
-              onClick={() => setSelectedOperator(op)}
-            >
-              <div className="kiosk_operator_avatar">
-                {(op.user?.fullName ||
-                  op.user?.name ||
-                  op.user?.email ||
-                  "?")[0].toUpperCase()}
-              </div>
-              <div className="kiosk_operator_info">
-                <div className="kiosk_operator_name">
-                  {op.user?.fullName || op.user?.name || op.user?.email}
-                </div>
-                {op.state?.name && (
-                  <div className="kiosk_operator_meta">{op.state.name}</div>
-                )}
-              </div>
-              {selectedOperator?.id === op.id && (
-                <MdCheck
-                  size={16}
-                  style={{ color: "var(--accent)", flexShrink: 0 }}
-                />
-              )}
-            </div>
+              op={op}
+              isSelected={selectedOperator?.id === op.id}
+              onSelect={setSelectedOperator}
+            />
           ))}
         </div>
       )}
