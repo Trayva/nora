@@ -69,7 +69,7 @@ function PurchaseKiosk() {
                 </div>
 
                 {/* Duration — only for non-purchase types */}
-                {setting.type !== "PURCHASE" && (
+                {setting.type === "LEASE" && (
                   <div className="kiosk_card_meta">
                     <span className="kiosk_meta_label">Contract Duration</span>
                     <span className="kiosk_meta_value">{setting.durationDays} days</span>
@@ -90,7 +90,7 @@ function PurchaseKiosk() {
                 )}
 
                 {/* Max menus & operators */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, margin: "6px 0" }}>
+                {/* <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, margin: "6px 0" }}>
                   {setting.maxMenus != null && (
                     <div style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 12px" }}>
                       <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>
@@ -111,7 +111,7 @@ function PurchaseKiosk() {
                       </div>
                     </div>
                   )}
-                </div>
+                </div> */}
 
                 {/* Payments */}
                 <div className="kiosk_payments_list">

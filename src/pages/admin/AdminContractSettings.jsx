@@ -7,6 +7,7 @@ import api from "../../api/axios";
 import { CountrySelect } from "./adminUtils_";
 
 const DURATION_PRESETS = [
+  { label: "None", days: null },
   { label: "1 Month", days: 30 },
   { label: "3 Months", days: 90 },
   { label: "6 Months", days: 180 },
@@ -82,10 +83,11 @@ export default function AdminContractSettings() {
   const selectPreset = (preset) => {
     setDurationPreset(preset.label);
     if (preset.days) setForm((p) => ({ ...p, durationDays: preset.days.toString() }));
+    else setForm((p) => ({ ...p, durationDays: 0 }));
   };
 
   const handleSave = async () => {
-    if (!form.country || !form.currency || !form.durationDays || !form.length || !form.breadth)
+    if (!form.country || !form.currency || !form.length || !form.breadth)
       return toast.error("Fill all required fields");
     if (form.maxMenus === "" || form.maxOperatorsAtATime === "")
       return toast.error("Max Menus and Max Operators are required");
@@ -95,7 +97,7 @@ export default function AdminContractSettings() {
     try {
       const body = {
         ...(editing?.id && { id: editing.id }),
-        durationDays: Number(form.durationDays),
+        durationDays: form.durationDays ? Number(form.durationDays) : null,
         country: form.country.trim(),
         currency: form.currency.trim(),
         type: form.type,
@@ -213,6 +215,7 @@ export default function AdminContractSettings() {
               <select className="modal-input" value={form.type} onChange={set("type")}>
                 <option value="LEASE">LEASE</option>
                 <option value="PURCHASE">PURCHASE</option>
+                <option value="FRANCHISE">FRANCHISE</option>
               </select>
             </div>
             <div className="form-field">
