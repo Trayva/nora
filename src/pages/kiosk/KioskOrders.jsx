@@ -259,7 +259,34 @@ export default function KioskOrders({ kioskId }) {
 
       {/* List */}
       {loading ? (
-        <div className="drawer_loading"><div className="page_loader_spinner" /></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {Array(5)
+            .fill(0)
+            .map((_, i) => (
+              <div
+                key={i}
+                className="kiosk_task_card"
+                style={{ padding: "14px", background: "var(--bg-card)" }}
+              >
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <div
+                    className="skeleton_shimmer skeleton_rect"
+                    style={{ width: 36, height: 36, borderRadius: 10 }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div
+                      className="skeleton_shimmer skeleton_text"
+                      style={{ width: "30%", height: 14, marginBottom: 7 }}
+                    />
+                    <div
+                      className="skeleton_shimmer skeleton_text"
+                      style={{ width: "50%", height: 10 }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="kiosk_empty_state" style={{ padding: "40px 0" }}>
           <MdOutlineShoppingBag size={28} style={{ opacity: 0.25 }} />

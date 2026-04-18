@@ -2254,8 +2254,33 @@ export default function KioskInventory({ cart }) {
       </div>
 
       {loading ? (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+          {Array(5)
+            .fill(0)
+            .map((_, i) => (
+              <div
+                key={i}
+                className="kiosk_task_card"
+                style={{ padding: "12px", background: "var(--bg-card)" }}
+              >
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <div
+                    className="skeleton_shimmer skeleton_rect"
+                    style={{ width: 34, height: 34, borderRadius: 8 }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div
+                      className="skeleton_shimmer skeleton_text"
+                      style={{ width: "40%", height: 14, marginBottom: 6 }}
+                    />
+                    <div
+                      className="skeleton_shimmer skeleton_text"
+                      style={{ width: "60%", height: 10 }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
         </div>
       ) : view === "addItem" ? (
         <AddInventoryForm

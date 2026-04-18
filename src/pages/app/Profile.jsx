@@ -73,9 +73,21 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="page_wrapper">
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
+      <div className="page_wrapper profile_div">
+        <div className="profile_pic_div">
+          <div className="skeleton_shimmer skeleton_circle profile_pic shadow-sm" style={{ width: 100, height: 100 }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "200px", height: "18px", marginBottom: "8px" }} />
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "150px", height: "12px", marginBottom: "16px" }} />
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <div className="skeleton_shimmer skeleton_rect" style={{ width: 100, height: 24, borderRadius: 6 }} />
+            <div className="skeleton_shimmer skeleton_rect" style={{ width: 100, height: 24, borderRadius: 6 }} />
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div className="skeleton_shimmer skeleton_rect" style={{ width: 80, height: 20, borderRadius: 4 }} />
+            <div className="skeleton_shimmer skeleton_rect" style={{ width: 80, height: 20, borderRadius: 4 }} />
+          </div>
         </div>
       </div>
     );

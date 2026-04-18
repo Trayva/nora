@@ -109,7 +109,11 @@ export default function MenuTab({ vendorId }) {
 
       {/* Content */}
       {loading ? (
-        <div className="page_loader"><div className="page_loader_spinner" /></div>
+        <div className="drawer_items_list">
+          {Array(5).fill(0).map((_, i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 72, borderRadius: 14, marginBottom: 8 }} />
+          ))}
+        </div>
       ) : items.length === 0 ? (
         <div className="biz_empty">
           <MdOutlineFastfood size={28} />

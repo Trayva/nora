@@ -645,8 +645,10 @@ export default function KioskTasks({ cart }) {
       </div>
 
       {loading ? (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 60, borderRadius: 12 }} />
+          ))}
         </div>
       ) : view === "newTemplate" ? (
         <TemplateBuilder

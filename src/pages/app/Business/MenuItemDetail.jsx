@@ -71,7 +71,17 @@ export default function MenuItemDetail({ item, onClose }) {
     >
       {loading ? (
         <div className="modal-body">
-          <div className="page_loader"><div className="page_loader_spinner" /></div>
+          <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
+            <div className="skeleton_shimmer skeleton_rect" style={{ width: 80, height: 80, borderRadius: 12 }} />
+            <div style={{ flex: 1, paddingTop: 4 }}>
+              <div className="skeleton_shimmer skeleton_text" style={{ width: "60%", height: 16, marginBottom: 10 }} />
+              <div className="skeleton_shimmer skeleton_text" style={{ width: "80%", height: 12 }} />
+            </div>
+          </div>
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "30%", height: 14, marginBottom: 16 }} />
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 48, borderRadius: 10, marginBottom: 8 }} />
+          ))}
         </div>
       ) : (
         <div className="modal-body">

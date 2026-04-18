@@ -149,11 +149,10 @@ function HireForm({ kioskId, onHired }) {
       </div>
 
       {loadingList ? (
-        <div className="drawer_loading" style={{ padding: "20px 0" }}>
-          <div
-            className="page_loader_spinner"
-            style={{ width: 20, height: 20 }}
-          />
+        <div style={{ padding: "10px 0" }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 44, borderRadius: 10, marginBottom: 8 }} />
+          ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="kiosk_empty_inline">
@@ -702,8 +701,10 @@ export default function KioskWorkforce({ cart, onRefresh: parentRefresh }) {
           }}
         />
       ) : loading ? (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 100, borderRadius: 14 }} />
+          ))}
         </div>
       ) : offers.length === 0 ? (
         <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>

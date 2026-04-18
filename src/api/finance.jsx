@@ -110,6 +110,14 @@ export const withdrawFunds = async (pin, amount, description) => {
   return response.data;
 };
 /**
+ * Get dedicated account details for topup.
+ */
+export const getDedicatedAccount = async () => {
+  const response = await api.get("/finance/wallet/dedicated-account");
+  return response.data;
+};
+
+/**
  * Get invoices for the current user.
  */
 export const getInvoices = async (from, to, search, pending) => {

@@ -9,6 +9,8 @@ import ExtrasTab from "./ExtrasTab";
 import RegisterBusinessModal from "./RegisterBusinessModal";
 import "./Business.css";
 
+import { PageSkeleton } from "../../../components/SkeletonTemplates";
+
 export default function Business() {
   const [vendor, setVendor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,14 +30,12 @@ export default function Business() {
     }
   };
 
-  useEffect(() => { fetchVendor(); }, []);
+  useEffect(() => {
+    fetchVendor();
+  }, []);
 
   if (loading) {
-    return (
-      <div className="page_wrapper">
-        <div className="page_loader"><div className="page_loader_spinner" /></div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (!vendor) {

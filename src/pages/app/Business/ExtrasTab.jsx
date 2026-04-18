@@ -75,8 +75,10 @@ export default function ExtrasTab() {
       </div>
 
       {loading ? (
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
+        <div className="biz_concepts_grid">
+          {Array(3).fill(0).map((_, i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 260, borderRadius: 16 }} />
+          ))}
         </div>
       ) : extras.length === 0 ? (
         <div className="biz_empty">

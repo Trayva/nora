@@ -413,7 +413,13 @@ function TasksPanel({ kioskId }) {
 
   useEffect(() => { loadTasks(); }, [kioskId]);
 
-  if (loading) return <div className="drawer_loading"><div className="page_loader_spinner" /></div>;
+  if (loading) return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {Array(3).fill(0).map((_, i) => (
+        <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 60, borderRadius: 12 }} />
+      ))}
+    </div>
+  );
 
   if (tasks.length === 0) {
     return (

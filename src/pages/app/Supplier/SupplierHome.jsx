@@ -651,7 +651,7 @@ function InlinePrice({ ingredientId, stateId }) {
 
   if (loading)
     return (
-      <div className="page_loader_spinner" style={{ width: 12, height: 12 }} />
+      <div className="skeleton_shimmer skeleton_circle" style={{ width: 12, height: 12 }} />
     );
   if (editing)
     return (
@@ -845,7 +845,7 @@ function InlineMachineryPrice({ machineryId, stateId, supplierId }) {
 
   if (loading)
     return (
-      <div className="page_loader_spinner" style={{ width: 12, height: 12 }} />
+      <div className="skeleton_shimmer skeleton_circle" style={{ width: 12, height: 12 }} />
     );
   if (editing)
     return (
@@ -2229,8 +2229,14 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
       )}
 
       {reqLoading ? (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="skeleton_shimmer skeleton_rect"
+              style={{ height: "110px", borderRadius: "14px" }}
+            />
+          ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="kiosk_empty_state" style={{ padding: "40px 0" }}>
@@ -3330,9 +3336,15 @@ function IngredientPricesTab({ profile }) {
       </div>
 
       {loading ? (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
-        </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div
+                key={i}
+                className="skeleton_shimmer skeleton_rect"
+                style={{ height: "85px", borderRadius: "12px" }}
+              />
+            ))}
+          </div>
       ) : prices.length === 0 ? (
         <div className="kiosk_empty_state" style={{ padding: "40px 0" }}>
           <MdOutlinePriceChange size={28} style={{ opacity: 0.25 }} />
@@ -4121,9 +4133,15 @@ function MachineryPricesTab({ profile }) {
       </div>
 
       {loading ? (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
-        </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="skeleton_shimmer skeleton_rect"
+                style={{ height: "85px", borderRadius: "12px" }}
+              />
+            ))}
+          </div>
       ) : prices.length === 0 ? (
         <div className="kiosk_empty_state" style={{ padding: "40px 0" }}>
           <MdBuild size={28} style={{ opacity: 0.25 }} />
@@ -4285,8 +4303,24 @@ export default function SupplierHome() {
   if (loading)
     return (
       <div className="page_wrapper">
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
+          <div>
+            <div className="skeleton_shimmer skeleton_text" style={{ width: "160px", height: "18px", marginBottom: "8px" }} />
+            <div className="skeleton_shimmer skeleton_text" style={{ width: "240px", height: "12px" }} />
+          </div>
+          <div className="skeleton_shimmer skeleton_circle" style={{ width: 44, height: 44 }} />
+        </div>
+        
+        <div className="business_tabs" style={{ marginBottom: 24 }}>
+          {Array(4).fill(0).map((_, i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ width: 85, height: 34, borderRadius: 20 }} />
+          ))}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {Array(5).fill(0).map((_, i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 110, borderRadius: 14 }} />
+          ))}
         </div>
       </div>
     );

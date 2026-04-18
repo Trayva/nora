@@ -101,6 +101,8 @@ function StatusBadge({ status, colors }) {
   );
 }
 
+import { CardSkeleton, TableSkeleton } from "../../components/SkeletonTemplates";
+
 export default function KioskHome() {
   const navigate = useNavigate();
   const [kiosks, setKiosks] = useState([]);
@@ -157,8 +159,17 @@ export default function KioskHome() {
       </div>
 
       {loading ? (
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
+        <div style={{ marginTop: "24px" }}>
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "120px", height: "18px", marginBottom: "20px" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px", marginBottom: "40px" }}>
+            {Array(3).fill(0).map((_, i) => (
+              <div key={i} className="kiosk_item_card" style={{ height: "200px" }}>
+                <div className="skeleton_shimmer skeleton_rect" style={{ height: "100%", borderRadius: "12px" }} />
+              </div>
+            ))}
+          </div>
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "150px", height: "18px", marginBottom: "20px" }} />
+          <TableSkeleton rows={4} cols={3} />
         </div>
       ) : (
         <>

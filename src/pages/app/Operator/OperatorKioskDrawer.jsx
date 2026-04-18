@@ -81,8 +81,20 @@ export default function OperatorKioskDrawer({ kioskId, onClose }) {
 
       {/* Content */}
       {loading ? (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
+        <div style={{ padding: "12px" }}>
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "120px", height: "16px", marginBottom: "20px" }} />
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="skeleton_shimmer skeleton_rect"
+              style={{ height: "64px", borderRadius: "12px", marginBottom: "12px" }}
+            />
+          ))}
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "140px", height: "16px", marginTop: "24px", marginBottom: "20px" }} />
+          <div
+            className="skeleton_shimmer skeleton_rect"
+            style={{ height: "100px", borderRadius: "12px" }}
+          />
         </div>
       ) : !kiosk ? null : (
         <>

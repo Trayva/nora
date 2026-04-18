@@ -333,8 +333,15 @@ export function TasksTab({ kioskId }) {
   }, [kioskId]);
   if (loading)
     return (
-      <div className="drawer_loading">
-        <div className="page_loader_spinner" />
+      <div style={{ padding: "16px" }}>
+        <div className="skeleton_shimmer skeleton_text" style={{ width: "120px", height: "14px", marginBottom: "20px" }} />
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="skeleton_shimmer skeleton_rect"
+            style={{ height: "70px", borderRadius: "12px", marginBottom: "12px" }}
+          />
+        ))}
       </div>
     );
   return tasks.length === 0 ? (
@@ -555,8 +562,14 @@ export function InventoryTab({ kioskId }) {
         )}
       </div>
       {loading ? (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
+        <div style={{ padding: "0 4px" }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="skeleton_shimmer skeleton_rect"
+              style={{ height: "68px", borderRadius: "12px", marginBottom: "8px" }}
+            />
+          ))}
         </div>
       ) : view === "stock" ? (
         inventory.length === 0 ? (
@@ -1782,8 +1795,19 @@ function ScoresView({ onBack }) {
         Your past e-learning test results
       </div>
       {loading ? (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="skeleton_shimmer"
+              style={{
+                height: 76,
+                borderRadius: 13,
+                background: "var(--bg-card)",
+                border: "1px solid var(--border)",
+              }}
+            />
+          ))}
         </div>
       ) : scores.length === 0 ? (
         <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
@@ -3020,8 +3044,10 @@ export function ELearningTab({ menuItems }) {
         </div>
       )}
       {loadingSummary && (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
+        <div style={{ marginTop: 24 }}>
+          <div className="skeleton_shimmer skeleton_rect" style={{ height: 160, borderRadius: 14, marginBottom: 16 }} />
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "100%", height: 12, marginBottom: 8 }} />
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "80%", height: 12 }} />
         </div>
       )}
       {summary && !loadingSummary && (
@@ -4295,8 +4321,14 @@ export function SalesTab({ kioskId, menuItems, isOperator = true }) {
         />
       )}
       {loading ? (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="skeleton_shimmer skeleton_rect"
+              style={{ height: "130px", borderRadius: "14px" }}
+            />
+          ))}
         </div>
       ) : sales.length === 0 ? (
         <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
@@ -4327,8 +4359,17 @@ export default function OperatorKioskPage() {
   if (loading)
     return (
       <div className="page_wrapper">
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
+        <div className="skeleton_shimmer skeleton_text" style={{ width: "160px", height: "18px", marginBottom: "30px" }} />
+        <div className="business_tabs" style={{ marginBottom: 24 }}>
+          {Array(4).fill(0).map((_, i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ width: 80, height: 32, borderRadius: 20 }} />
+          ))}
+        </div>
+        <div className="skeleton_shimmer skeleton_rect" style={{ height: 200, borderRadius: 16, marginBottom: 24 }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {Array(3).fill(0).map((_, i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 72, borderRadius: 12 }} />
+          ))}
         </div>
       </div>
     );

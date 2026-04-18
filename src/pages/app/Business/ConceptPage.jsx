@@ -52,8 +52,19 @@ export default function ConceptPage() {
   if (loading) {
     return (
       <div className="page_wrapper">
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
+        <div className="skeleton_shimmer skeleton_rect" style={{ height: "180px", borderRadius: "16px", marginBottom: "24px" }} />
+        <div style={{ display: "flex", gap: "10px", marginBottom: "24px" }}>
+          {Array(3).fill(0).map((_, i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ flex: 1, height: "80px", borderRadius: "12px" }} />
+          ))}
+        </div>
+        <div className="skeleton_shimmer skeleton_text" style={{ width: "140px", height: "20px", marginBottom: "20px" }} />
+        <div className="menu_items_grid">
+          {Array(6).fill(0).map((_, i) => (
+            <div key={i} className="menu_item_card" style={{ height: "160px" }}>
+              <div className="skeleton_shimmer skeleton_rect" style={{ height: "100%", borderRadius: "14px" }} />
+            </div>
+          ))}
         </div>
       </div>
     );

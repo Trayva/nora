@@ -886,8 +886,29 @@ export default function Invoices() {
   if (loading) {
     return (
       <div className="page_wrapper">
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
+        <h2 className="page_title_big m-0">Invoices</h2>
+        <p className="welcome_message">View and pay your outstanding invoices</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 40 }}>
+          {Array(6)
+            .fill(0)
+            .map((_, i) => (
+              <div
+                key={i}
+                className="invoice_card"
+                style={{ height: 74, padding: "16px", background: "var(--bg-card)" }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ flex: 1 }}>
+                    <div
+                      className="skeleton_shimmer skeleton_text"
+                      style={{ width: "30%", height: 14, marginBottom: 8 }}
+                    />
+                    <div className="skeleton_shimmer skeleton_text" style={{ width: "20%", height: 10 }} />
+                  </div>
+                  <div className="skeleton_shimmer skeleton_text" style={{ width: "80px", height: 16 }} />
+                </div>
+              </div>
+            ))}
         </div>
       </div>
     );

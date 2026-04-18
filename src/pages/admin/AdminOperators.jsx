@@ -824,12 +824,6 @@ export default function AdminOperators({ open, onClose }) {
             <option value="true">Approved</option>
             <option value="false">Pending</option>
           </select>
-          {loading && (
-            <div
-              className="page_loader_spinner"
-              style={{ width: 16, height: 16, alignSelf: "center" }}
-            />
-          )}
         </div>
 
         {/* Count */}

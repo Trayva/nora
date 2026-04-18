@@ -539,7 +539,22 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
   return (
     <Drawer isOpen={!!item} onClose={onClose} title={item?.name || ""} description={item?.description || "Menu item details"} width={520}>
       {loading ? (
-        <div className="page_loader"><div className="page_loader_spinner" /></div>
+        <div style={{ padding: 20 }}>
+          <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
+            <div className="skeleton_shimmer skeleton_rect" style={{ width: 100, height: 100, borderRadius: 16 }} />
+            <div style={{ flex: 1, paddingTop: 8 }}>
+              <div className="skeleton_shimmer skeleton_text" style={{ width: "60%", height: 16, marginBottom: 10 }} />
+              <div className="skeleton_shimmer skeleton_text" style={{ width: "40%", height: 12, marginBottom: 12 }} />
+              <div className="skeleton_shimmer skeleton_text" style={{ width: "100%", height: 10 }} />
+            </div>
+          </div>
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{ marginBottom: 20 }}>
+              <div className="skeleton_shimmer skeleton_text" style={{ width: "30%", height: 14, marginBottom: 10 }} />
+              <div className="skeleton_shimmer skeleton_rect" style={{ width: "100%", height: 50, borderRadius: 12 }} />
+            </div>
+          ))}
+        </div>
       ) : detail ? (
         <>
           {/* Hero */}
@@ -599,8 +614,13 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
                 </div>
               </form>
             )}
-            {machLoading ? <div className="drawer_loading"><div className="page_loader_spinner" /></div>
-              : machineries.length === 0 ? <div className="biz_empty" style={{ padding: "20px 0" }}><MdBuild size={22} style={{ opacity: 0.3 }} /><p>No machineries added yet.</p></div>
+            {machLoading ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {[1, 2].map((i) => (
+                  <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 48, borderRadius: 10 }} />
+                ))}
+              </div>
+            ) : machineries.length === 0 ? <div className="biz_empty" style={{ padding: "20px 0" }}><MdBuild size={22} style={{ opacity: 0.3 }} /><p>No machineries added yet.</p></div>
               : (
                 <div className="drawer_items_list">
                   {machineries.map((m) => {
@@ -687,8 +707,13 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
                 </div>
               </form>
             )}
-            {markupsLoading ? <div className="drawer_loading"><div className="page_loader_spinner" /></div>
-              : markups.length === 0 ? <div className="biz_empty" style={{ padding: "20px 0" }}><MdPublic size={22} style={{ opacity: 0.3 }} /><p>No markups set. Add country-specific markups to adjust pricing.</p></div>
+            {markupsLoading ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {[1, 2].map((i) => (
+                  <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 48, borderRadius: 10 }} />
+                ))}
+              </div>
+            ) : markups.length === 0 ? <div className="biz_empty" style={{ padding: "20px 0" }}><MdPublic size={22} style={{ opacity: 0.3 }} /><p>No markups set. Add country-specific markups to adjust pricing.</p></div>
               : <div className="drawer_items_list">{markups.map((mu) => (<div key={mu.id} className="recipe_step_row"><div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--bg-active)", border: "1px solid rgba(203,108,220,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MdPublic size={14} style={{ color: "var(--accent)" }} /></div><div className="recipe_step_info"><span className="recipe_step_id">{mu.country}</span>{mu.state?.name && <span className="recipe_step_instruction">{mu.state.name}</span>}</div><span style={{ fontSize: "0.88rem", fontWeight: 900, color: "var(--accent)", flexShrink: 0 }}>{mu.markup}%</span><button className="biz_icon_btn biz_icon_btn_danger" onClick={() => handleDeleteMarkup(mu.id)} disabled={deletingMarkup === mu.id} style={{ position: "relative" }}>{deletingMarkup === mu.id ? <span className="btn_loader" style={{ width: 12, height: 12, borderColor: "#ef4444", borderTopColor: "transparent" }} /> : <LuTrash2 size={13} />}</button></div>))}</div>}
           </Section>
 
@@ -728,8 +753,13 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
                 </div>
               </div>
             )}
-            {templatesLoading ? <div className="drawer_loading"><div className="page_loader_spinner" /></div>
-              : templates.length === 0 && !showTemplateForm ? <div className="biz_empty" style={{ padding: "16px 0" }}><p>No task templates for this menu item yet.</p></div>
+            {templatesLoading ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {[1, 2].map((i) => (
+                  <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 52, borderRadius: 10 }} />
+                ))}
+              </div>
+            ) : templates.length === 0 && !showTemplateForm ? <div className="biz_empty" style={{ padding: "16px 0" }}><p>No task templates for this menu item yet.</p></div>
               : <div className="drawer_items_list" style={{ marginTop: 8 }}>{templates.map((tpl) => (<div key={tpl.id} className="recipe_step_row" style={{ opacity: editingTemplate?.id === tpl.id ? 0.4 : 1 }}><div className="recipe_step_info"><span className="recipe_step_id">{tpl.name}</span><span className="recipe_step_instruction">{tpl.type} · {tpl.recurrence}{tpl.time ? ` · ${tpl.time}` : ""}</span></div><span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text-muted)", flexShrink: 0 }}>{tpl.schema?.fields?.length || 0} fields</span><button className="biz_icon_btn" onClick={() => { setEditingTemplate(tpl); setTemplateName(tpl.name); setTemplateDesc(tpl.description || ""); setTemplateType(tpl.type || "CHECKLIST"); setTemplateRecurrence(tpl.recurrence || "DAILY"); setTemplateTime(tpl.time || ""); setTemplateFields(tpl.schema?.fields || [{ type: "checkbox", label: "" }]); setShowTemplateForm(false); }} title="Edit"><LuPencil size={13} /></button><button className="biz_icon_btn biz_icon_btn_danger" onClick={() => handleDeleteTemplate(tpl.id)} disabled={deletingTemplate === tpl.id} style={{ position: "relative" }}>{deletingTemplate === tpl.id ? <span className="btn_loader" style={{ width: 12, height: 12, borderColor: "#ef4444", borderTopColor: "transparent" }} /> : <LuTrash2 size={13} />}</button></div>))}</div>}
           </Section>
 

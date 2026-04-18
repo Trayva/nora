@@ -500,6 +500,7 @@ function MapPicker({ lat, lng, onPick }) {
       />
       {!mapReady && (
         <div
+          className="skeleton_shimmer"
           style={{
             position: "absolute",
             inset: 0,
@@ -507,15 +508,11 @@ function MapPicker({ lat, lng, onPick }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 8,
             fontSize: "0.78rem",
             color: "var(--text-muted)",
+            fontWeight: 700,
           }}
         >
-          <div
-            className="page_loader_spinner"
-            style={{ width: 18, height: 18 }}
-          />{" "}
           Loading map…
         </div>
       )}
@@ -1299,8 +1296,8 @@ function InvoicePayModal({ invoice, application, onPaid, onClose }) {
               </div>
               {walletLoading ? (
                 <div
-                  className="page_loader_spinner"
-                  style={{ width: 16, height: 16 }}
+                  className="skeleton_shimmer skeleton_rect"
+                  style={{ width: "60px", height: "18px", borderRadius: 4 }}
                 />
               ) : (
                 <div
@@ -2564,17 +2561,8 @@ function MenuDetailDrawer({
           {/* Scrollable content */}
           <div style={{ flex: 1, padding: "20px 24px", overflowY: "auto" }}>
             {loading ? (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  padding: "48px 0",
-                }}
-              >
-                <div
-                  className="page_loader_spinner"
-                  style={{ width: 28, height: 28 }}
-                />
+              <div style={{ padding: 24 }}>
+                <div className="skeleton_shimmer skeleton_rect" style={{ height: 180, borderRadius: 12 }} />
               </div>
             ) : !summary ? (
               <div className="kiosk_empty_inline" style={{ padding: "48px 0" }}>
@@ -6189,8 +6177,10 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
           )}
 
           {menuLoading ? (
-            <div className="drawer_loading">
-              <div className="page_loader_spinner" />
+            <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 44, borderRadius: 10 }} />
+              ))}
             </div>
           ) : vendorMenuItems.length === 0 ? (
             <div className="kiosk_empty_inline">

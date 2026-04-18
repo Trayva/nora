@@ -30,6 +30,12 @@ import AdminOperators from "./AdminOperators";
 import AdminVendorDetail from "./AdminVendorDetail";
 import AdminKiosks from "./AdminKiosks";
 
+import { 
+  DashboardSkeleton, 
+  TableSkeleton, 
+  CardSkeleton 
+} from "../../components/SkeletonTemplates";
+
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
@@ -39,9 +45,23 @@ const fmtDate = (d) =>
     })
     : "—";
 
+const ItemListSkeleton = ({ count = 4 }) => (
+  <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+    {Array(count).fill(0).map((_, i) => (
+      <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div className="skeleton_shimmer skeleton_circle" style={{ width: "36px", height: "36px" }} />
+        <div style={{ flex: 1 }}>
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "70%", height: "12px", marginBottom: "6px" }} />
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "40%", height: "8px" }} />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 /* ══════════════════════════════════════════════════════════════
    ENTITY DRAWER (generic list + approve)
-═══════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════ */
 function EntityDrawer({
   open,
   onClose,
@@ -63,9 +83,7 @@ function EntityDrawer({
       width={520}
     >
       {loading ? (
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
-        </div>
+        <ItemListSkeleton />
       ) : items.length === 0 ? (
         <div className="admin_empty">
           <p style={{ margin: 0, fontSize: "0.82rem" }}>
@@ -756,9 +774,7 @@ export default function AdminDashboard() {
           </button>
         </div>
         {appsLoading ? (
-          <div className="page_loader">
-            <div className="page_loader_spinner" />
-          </div>
+          <ItemListSkeleton />
         ) : applications.length === 0 ? (
           <div className="admin_empty">
             <p style={{ margin: 0, fontSize: "0.82rem" }}>

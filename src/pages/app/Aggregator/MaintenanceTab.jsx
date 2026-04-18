@@ -1155,8 +1155,10 @@ export default function MaintenanceTab({ kioskId, canUpdateStatus = false }) {
       )}
 
       {loading ? (
-        <div className="drawer_loading">
-          <div className="page_loader_spinner" />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {Array(3).fill(0).map((_, i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 64, borderRadius: 14 }} />
+          ))}
         </div>
       ) : reports.length === 0 && !showForm ? (
         <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>

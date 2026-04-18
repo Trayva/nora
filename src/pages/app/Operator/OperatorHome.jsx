@@ -964,15 +964,41 @@ export default function OperatorHome() {
       o.status !== "ACCEPTED",
   );
 
-  if (loading) {
+  if (loading)
     return (
       <div className="page_wrapper">
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
+        <div
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: 16,
+            padding: 24,
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+            <div className="skeleton_shimmer skeleton_circle" style={{ width: 44, height: 44 }} />
+            <div style={{ flex: 1 }}>
+              <div className="skeleton_shimmer skeleton_text" style={{ width: "40%", height: 16, marginBottom: 8 }} />
+              <div className="skeleton_shimmer skeleton_text" style={{ width: "20%", height: 12 }} />
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="skeleton_shimmer skeleton_text" style={{ width: "100%", height: 12 }} />
+            <div className="skeleton_shimmer skeleton_text" style={{ width: "100%", height: 12 }} />
+            <div className="skeleton_shimmer skeleton_text" style={{ width: "80%", height: 12 }} />
+          </div>
+        </div>
+
+        <div className="skeleton_shimmer skeleton_text" style={{ width: "120px", height: "16px", marginBottom: "20px" }} />
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 160, borderRadius: 14 }} />
+          ))}
         </div>
       </div>
     );
-  }
 
   // Deduplicate active kiosks from active offers
   const activeCarts = activeOffers.reduce((acc, offer) => {
@@ -1405,9 +1431,9 @@ export default function OperatorHome() {
       )}
 
       <OperatorKioskDrawer
-        kioskId={selectedKioskId}
-        onClose={() => setSelectedKioskId(null)}
-        onUpdate={fetchData}
+        kioskId={openCartId}
+        onClose={() => setOpenCartId(null)}
+        onUpdate={fetchAll}
       />
     </div>
   );

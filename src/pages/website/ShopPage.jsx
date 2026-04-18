@@ -1754,14 +1754,8 @@ export default function ShopPage() {
             {[0, 1, 2].map((i) => (
               <div key={i} style={{ marginBottom: 24 }}>
                 <div
-                  style={{
-                    height: 18,
-                    width: 180,
-                    borderRadius: 6,
-                    background: "var(--bg-hover)",
-                    border: "1px solid var(--border)",
-                    marginBottom: 12,
-                  }}
+                  className="skeleton_shimmer skeleton_text"
+                  style={{ height: 18, width: 180, marginBottom: 12 }}
                 />
                 <div
                   className="shop-grid"

@@ -182,14 +182,14 @@ import { getDefaultRoute } from "../utils/AuthHelpers";
 import AggregatorPage from "../pages/app/Aggregator/AggregatorPage";
 import NotificationBell from "../components/Notifications/NotificationBell";
 
+import { PageSkeleton } from "../components/SkeletonTemplates";
+
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading)
     return (
       <div className="page_wrapper">
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
-        </div>
+        <PageSkeleton />
       </div>
     );
   if (!user) return <Navigate to="/auth/login" replace />;
@@ -201,9 +201,7 @@ function GuestRoute({ children }) {
   if (loading)
     return (
       <div className="page_wrapper">
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
-        </div>
+        <PageSkeleton />
       </div>
     );
   if (user) return <Navigate to={getDefaultRoute(user)} replace />;

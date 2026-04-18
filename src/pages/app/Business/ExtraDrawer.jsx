@@ -79,8 +79,18 @@ export default function ExtraDrawer({ extra, onClose, onUpdate }) {
       width={480}
     >
       {loading ? (
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
+        <div style={{ padding: 20 }}>
+          <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
+            <div className="skeleton_shimmer skeleton_rect" style={{ width: 52, height: 52, borderRadius: 12 }} />
+            <div style={{ flex: 1, paddingTop: 4 }}>
+              <div className="skeleton_shimmer skeleton_text" style={{ width: "40%", height: 14, marginBottom: 8 }} />
+              <div className="skeleton_shimmer skeleton_text" style={{ width: "60%", height: 10 }} />
+            </div>
+          </div>
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "30%", height: 14, marginBottom: 12 }} />
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 60, borderRadius: 12, marginBottom: 10 }} />
+          ))}
         </div>
       ) : detail ? (
         <>

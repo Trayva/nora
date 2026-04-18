@@ -60,8 +60,10 @@ export default function ConceptsTab({ activeTab }) {
       </div>
 
       {loading ? (
-        <div className="page_loader">
-          <div className="page_loader_spinner" />
+        <div className="biz_concepts_grid">
+          {Array(3).fill(0).map((_, i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 180, borderRadius: 16 }} />
+          ))}
         </div>
       ) : concepts.length === 0 ? (
         <div className="biz_empty">

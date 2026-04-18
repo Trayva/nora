@@ -28,17 +28,17 @@ const fmt = (n) =>
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "—";
 const fmtChart = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-      })
+      day: "2-digit",
+      month: "short",
+    })
     : "";
 const toISO = (d) => d.toISOString().split("T")[0];
 
@@ -96,6 +96,22 @@ const PRESETS = [
   { label: "All", days: null },
 ];
 
+
+const ItemListSkeleton = ({ count = 5 }) => (
+  <div style={{ padding: "0 10px", display: "flex", flexDirection: "column", gap: "px" }}>
+    {Array(count).fill(0).map((_, i) => (
+      <div key={i} className="admin_drawer_row">
+        <div className="skeleton_shimmer skeleton_circle" style={{ width: "36px", height: "36px" }} />
+        <div style={{ flex: 1 }}>
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "40%", height: "14px", marginBottom: "8px" }} />
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "20%", height: "10px" }} />
+        </div>
+        <div className="skeleton_shimmer skeleton_rect" style={{ width: "80px", height: "24px", borderRadius: "20px" }} />
+      </div>
+    ))}
+  </div>
+);
+
 /* ── Main list ────────────────────────────────────────────── */
 export default function AdminKiosks() {
   const [carts, setCarts] = useState([]);
@@ -116,7 +132,7 @@ export default function AdminKiosks() {
         const d = r.data.data;
         setStates(Array.isArray(d) ? d : d?.states || d?.items || []);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const fetchCarts = async (s = serial, sid = stateId, p = page) => {
@@ -209,16 +225,12 @@ export default function AdminKiosks() {
               </option>
             ))}
           </select>
-          {loading && (
-            <div
-              className="page_loader_spinner"
-              style={{ width: 16, height: 16, alignSelf: "center" }}
-            />
-          )}
         </div>
 
         {/* List */}
-        {!loading && carts.length === 0 ? (
+        {loading ? (
+          <ItemListSkeleton />
+        ) : carts.length === 0 ? (
           <div className="admin_empty">
             <p style={{ margin: 0, fontSize: "0.82rem" }}>No Kiosks found.</p>
           </div>

@@ -182,8 +182,16 @@ export default function ConceptDrawer({ concept, onClose, onUpdate }) {
         width={540}
       >
         {loading ? (
-          <div className="page_loader">
-            <div className="page_loader_spinner" />
+          <div style={{ padding: 20 }}>
+            <div className="drawer_meta_grid" style={{ marginBottom: 24 }}>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 40, borderRadius: 8 }} />
+              ))}
+            </div>
+            <div className="skeleton_shimmer skeleton_text" style={{ width: "30%", height: 14, marginBottom: 16 }} />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 70, borderRadius: 12, marginBottom: 10 }} />
+            ))}
           </div>
         ) : detail ? (
           <>

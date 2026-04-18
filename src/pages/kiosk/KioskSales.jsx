@@ -473,12 +473,7 @@ export default function KioskSales({ cart }) {
           >
             <MdCalendarToday size={12} /> Custom
           </button>
-          {loading && (
-            <div
-              className="page_loader_spinner"
-              style={{ width: 16, height: 16, marginLeft: 4 }}
-            />
-          )}
+          {/* Removed legacy spinner */}
         </div>
         {showCustom && (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -511,7 +506,13 @@ export default function KioskSales({ cart }) {
       </div>
 
       {/* Summary cards */}
-      {totals && (
+      {loading ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 60, borderRadius: 12 }} />
+          ))}
+        </div>
+      ) : totals && (
         <div
           style={{
             display: "grid",
@@ -576,7 +577,12 @@ export default function KioskSales({ cart }) {
       )}
 
       {/* Chart */}
-      {chartData.length > 0 && (
+      {loading ? (
+        <div style={{ marginBottom: 20 }}>
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "100px", height: "16px", marginBottom: "12px" }} />
+          <div className="skeleton_shimmer skeleton_rect" style={{ height: "180px", borderRadius: "12px" }} />
+        </div>
+      ) : chartData.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div
             style={{
