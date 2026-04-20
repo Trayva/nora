@@ -17,6 +17,11 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
+
+    // Update meta theme-color to match --bg-main
+    const themeColor = theme === "dark" ? "#111111" : "#ffffff";
+    const metaTags = document.querySelectorAll('meta[name="theme-color"]');
+    metaTags.forEach((tag) => tag.setAttribute("content", themeColor));
   }, [theme]);
 
   const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
