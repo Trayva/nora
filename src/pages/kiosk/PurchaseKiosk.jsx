@@ -13,6 +13,8 @@ function PurchaseKiosk() {
   const [settings, setSettings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(null);
+  const [termsAccepted, setTermsAccepted] = useState({});
+  const [termsModal, setTermsModal] = useState(null); // holds the setting object
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -79,6 +81,7 @@ function PurchaseKiosk() {
           {settings.map((setting) => {
             const isLoading = purchasing === setting.id;
             const isSelected = selectedId === setting.id;
+            const accepted = !!termsAccepted[setting.id];
             const totalAmount = setting.payments.reduce(
               (sum, p) => sum + p.amount * numberOfKiosks,
               0,
@@ -99,7 +102,7 @@ function PurchaseKiosk() {
                   <span className="kiosk_card_currency">{setting.currency}</span>
                 </div>
 
-                {/* Duration — only for non-purchase types */}
+                {/* Duration — only for LEASE types */}
                 {setting.type === "LEASE" && (
                   <div className="kiosk_card_meta">
                     <span className="kiosk_meta_label">Contract Duration</span>
@@ -119,30 +122,6 @@ function PurchaseKiosk() {
                     </span>
                   </div>
                 )}
-
-                {/* Max menus & operators */}
-                {/* <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, margin: "6px 0" }}>
-                  {setting.maxMenus != null && (
-                    <div style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 12px" }}>
-                      <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>
-                        Max Menus
-                      </div>
-                      <div style={{ fontSize: "1rem", fontWeight: 900, color: "var(--accent)" }}>
-                        {setting.maxMenus}
-                      </div>
-                    </div>
-                  )}
-                  {setting.maxOperatorsAtATime != null && (
-                    <div style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 12px" }}>
-                      <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>
-                        Max Operators
-                      </div>
-                      <div style={{ fontSize: "1rem", fontWeight: 900, color: "var(--accent)" }}>
-                        {setting.maxOperatorsAtATime}
-                      </div>
-                    </div>
-                  )}
-                </div> */}
 
                 {/* Payments */}
                 <div className="kiosk_payments_list">
@@ -181,12 +160,93 @@ function PurchaseKiosk() {
                   <span className="kiosk_total_amount">{setting.currency} {totalAmount.toLocaleString()}</span>
                 </div>
 
+                {/* Terms acceptance */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 0 6px",
+                    borderTop: "1px solid var(--border)",
+                    marginTop: 8,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setTermsAccepted((p) => ({
+                        ...p,
+                        [setting.id]: !p[setting.id],
+                      }))
+                    }
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 5,
+                      border: `2px solid ${accepted ? "var(--accent)" : "var(--border)"}`,
+                      background: accepted ? "var(--accent)" : "transparent",
+                      flexShrink: 0,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {accepted && (
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </button>
+                  <span style={{ fontSize: "0.78rem", color: "var(--text-body)", lineHeight: 1.4 }}>
+                    I have read and accept the{" "}
+                    {setting.terms ? (
+                      <button
+                        type="button"
+                        onClick={() => setTermsModal(setting)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          color: "var(--accent)",
+                          fontWeight: 700,
+                          fontSize: "inherit",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          textDecoration: "underline",
+                        }}
+                      >
+                        Terms &amp; Conditions
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setTermsModal(setting)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          color: "var(--accent)",
+                          fontWeight: 700,
+                          fontSize: "inherit",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          textDecoration: "underline",
+                        }}
+                      >
+                        Terms &amp; Conditions
+                      </button>
+                    )}
+                  </span>
+                </div>
+
                 {/* CTA */}
                 <button
                   className={`app_btn app_btn_confirm ${isLoading ? "btn_loading" : ""}`}
                   style={{ width: "100%", height: 42, position: "relative", marginTop: 4 }}
                   onClick={() => handlePurchase(setting.id)}
-                  disabled={!!purchasing}
+                  disabled={!!purchasing || !accepted}
                 >
                   <span className="btn_text">Select this Plan</span>
                   {isLoading && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
@@ -194,6 +254,131 @@ function PurchaseKiosk() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Terms Modal */}
+      {termsModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1400,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            onClick={() => setTermsModal(null)}
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(0,0,0,0.6)",
+              backdropFilter: "blur(3px)",
+            }}
+          />
+          <div
+            style={{
+              position: "relative",
+              zIndex: 1,
+              width: "min(520px, 94vw)",
+              maxHeight: "80vh",
+              background: "var(--bg-card)",
+              borderRadius: 18,
+              overflow: "hidden",
+              boxShadow: "0 16px 48px rgba(0,0,0,0.35)",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "18px 22px 14px",
+                borderBottom: "1px solid var(--border)",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--text-heading)" }}>
+                  Terms &amp; Conditions
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
+                  {termsModal.title || termsModal.type} — {termsModal.country}
+                </div>
+              </div>
+              <button
+                onClick={() => setTermsModal(null)}
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 7,
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-muted)",
+                  fontSize: "1rem",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            <div
+              style={{
+                overflowY: "auto",
+                padding: "20px 22px",
+                fontSize: "0.85rem",
+                lineHeight: 1.7,
+                color: "var(--text-body)",
+                whiteSpace: "pre-wrap",
+                flex: 1,
+              }}
+            >
+              {termsModal.terms || (
+                <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>
+                  No specific terms provided for this plan. Standard platform terms apply.
+                </span>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                padding: "14px 22px 20px",
+                borderTop: "1px solid var(--border)",
+                flexShrink: 0,
+                display: "flex",
+                gap: 8,
+              }}
+            >
+              <button
+                className="app_btn app_btn_cancel"
+                style={{ flex: 1, height: 42 }}
+                onClick={() => setTermsModal(null)}
+              >
+                Close
+              </button>
+              <button
+                className="app_btn app_btn_confirm"
+                style={{ flex: 1, height: 42 }}
+                onClick={() => {
+                  setTermsAccepted((p) => ({ ...p, [termsModal.id]: true }));
+                  setTermsModal(null);
+                }}
+              >
+                Accept &amp; Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
