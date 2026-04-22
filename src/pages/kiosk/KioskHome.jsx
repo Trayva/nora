@@ -112,6 +112,7 @@ export default function KioskHome() {
   const [selectedKioskId, setSelectedKioskId] = useState(null);
   const [kiosksOpen, setKiosksOpen] = useState(true);
   const [contractsOpen, setContractsOpen] = useState(true);
+  const [deactivatedOpen, setDeactivatedOpen] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -131,12 +132,14 @@ export default function KioskHome() {
     fetchAll();
   }, []);
 
-  // When a kiosk is updated from inside the drawer, sync it back to the list
   const handleKioskUpdate = (updatedKiosk) => {
     setKiosks((prev) =>
       prev.map((k) => (k.id === updatedKiosk.id ? { ...k, ...updatedKiosk } : k)),
     );
   };
+
+  const activeKiosks = kiosks.filter((k) => k.status !== "INACTIVE");
+  const deactivatedKiosks = kiosks.filter((k) => k.status === "INACTIVE");
 
   return (
     <div className="page_wrapper">
@@ -179,7 +182,7 @@ export default function KioskHome() {
             onClick={() => setKiosksOpen((v) => !v)}
           >
             <span className="kiosk_section_label">My Kiosks</span>
-            <span className="kiosk_section_count">{kiosks.length}</span>
+            <span className="kiosk_section_count">{activeKiosks.length}</span>
             <span className="kiosk_section_chevron">
               {kiosksOpen ? (
                 <MdExpandLess size={18} />
@@ -206,20 +209,20 @@ export default function KioskHome() {
                 <div className="kiosk_summary_row">
                   <div className="kiosk_summary_chip">
                     <LuStore size={13} />
-                    {kiosks.length} Kiosk{kiosks.length !== 1 ? "s" : ""}
+                    {activeKiosks.length} Kiosk{activeKiosks.length !== 1 ? "s" : ""}
                   </div>
                   <div className="kiosk_summary_chip">
                     <MdCircle size={7} style={{ color: "#22c55e" }} />
-                    {kiosks.filter((k) => k.isOnline).length} Online
+                    {activeKiosks.filter((k) => k.isOnline).length} Online
                   </div>
                   <div className="kiosk_summary_chip">
                     <MdLockOpen size={13} />
-                    {kiosks.filter((k) => !k.isLocked).length} Unlocked
+                    {activeKiosks.filter((k) => !k.isLocked).length} Unlocked
                   </div>
                 </div>
 
                 <div className="kiosk_grid" style={{ marginBottom: 36 }}>
-                  {kiosks.map((kiosk) => (
+                  {activeKiosks.map((kiosk) => (
                     <div
                       key={kiosk.id}
                       className="kiosk_item_card"
@@ -264,7 +267,7 @@ export default function KioskHome() {
                       </div>
 
                       <div className="kiosk_item_meta">
-                        {kiosk?.status !== "PURCHASED" ? (
+                        {/* {kiosk?.status !== "PURCHASED" ? (
                           <div className="kiosk_meta_row">
                             <span className="kiosk_meta_key">Contract</span>
                             <span className="kiosk_meta_val">
@@ -275,7 +278,7 @@ export default function KioskHome() {
                               )}
                             </span>
                           </div>
-                        ) : null}
+                        ) : null} */}
                         <div className="kiosk_meta_row">
                           <span className="kiosk_meta_key">Brand</span>
                           <span className="kiosk_meta_val">
@@ -317,6 +320,76 @@ export default function KioskHome() {
                 </div>
               </>
             ))}
+
+          {/* ── Deactivated Kiosks ── */}
+          {deactivatedKiosks.length > 0 && (
+            <>
+              <div
+                className="kiosk_section_label_row kiosk_section_label_row_clickable"
+                style={{ marginTop: 12 }}
+                onClick={() => setDeactivatedOpen((v) => !v)}
+              >
+                <span className="kiosk_section_label" style={{ color: "var(--text-muted)" }}>Deactivated Kiosks</span>
+                <span className="kiosk_section_count">{deactivatedKiosks.length}</span>
+                <span className="kiosk_section_chevron">
+                  {deactivatedOpen ? (
+                    <MdExpandLess size={18} />
+                  ) : (
+                    <MdExpandMore size={18} />
+                  )}
+                </span>
+              </div>
+
+              {deactivatedOpen && (
+                <div className="kiosk_grid" style={{ marginBottom: 36, opacity: 0.6 }}>
+                  {deactivatedKiosks.map((kiosk) => (
+                    <div
+                      key={kiosk.id}
+                      className="kiosk_item_card"
+                      style={{ cursor: "pointer", grayscale: 1 }}
+                      onClick={() => setSelectedKioskId(kiosk.id)}
+                    >
+                      <div className="kiosk_item_top">
+                        <div className="kiosk_item_icon">
+                          <LuStore size={17} />
+                        </div>
+                        <StatusBadge
+                          status={kiosk.status}
+                          colors={kioskStatusColors}
+                        />
+                      </div>
+
+                      <div className="kiosk_item_serial">
+                        {kiosk.serialNumber}
+                      </div>
+
+                      <div className="kiosk_item_indicators">
+                        <span className="kiosk_indicator kiosk_ind_off">
+                          <MdWifiOff size={12} /> Offline
+                        </span>
+                        <span className="kiosk_indicator kiosk_ind_locked">
+                          <MdLock size={11} /> Locked
+                        </span>
+                      </div>
+
+                      <div className="kiosk_item_meta">
+                        <div className="kiosk_meta_row">
+                          <span className="kiosk_meta_key">Status</span>
+                          <span className="kiosk_meta_val" style={{ color: "#ef4444" }}>Deactivated</span>
+                        </div>
+                        <div className="kiosk_meta_row">
+                          <span className="kiosk_meta_key">Location</span>
+                          <span className="kiosk_meta_val">
+                            {kiosk.location?.name || "Not assigned"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
           {/* ── Contract Applications ── */}
           <div

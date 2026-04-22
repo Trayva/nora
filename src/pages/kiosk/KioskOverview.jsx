@@ -6678,6 +6678,10 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
   const [opHours, setOpHours] = useState(cart.operatingHours || "");
   const [opDays, setOpDays] = useState(cart.operatingDays || "");
   const [savingHours, setSavingHours] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
+  const [showReactivateModal, setShowReactivateModal] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
 
   const handleToggleOnline = async () => {
     setTogglingOnline(true);
@@ -6746,6 +6750,40 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
       toast.error("Failed to update operating hours");
     } finally {
       setSavingHours(false);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    setDeactivating(true);
+    try {
+      await api.post(`/kiosk/${cart.id}/deactivate`);
+      onUpdate({ ...cart, status: "INACTIVE" });
+      toast.success("Kiosk deactivated successfully");
+      setShowDeactivateModal(false);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to deactivate kiosk",
+      );
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    setReactivating(true);
+    try {
+      await api.post(`/kiosk/${cart.id}/activate`);
+      onUpdate({ ...cart, status: "ACTIVE" });
+      toast.success("Kiosk reactivated successfully");
+      setShowReactivateModal(false);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to reactivate kiosk",
+      );
+    } finally {
+      setReactivating(false);
     }
   };
 
@@ -7176,9 +7214,159 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
         </div>
       )}
 
+      {/* ── Danger Zone / Recovery Zone ── */}
+      {cart.status === "INACTIVE" ? (
+        <div
+          style={{
+            marginTop: 40,
+            padding: 20,
+            background: "rgba(34,197,94,0.04)",
+            borderRadius: 16,
+            border: "1px dashed rgba(34,197,94,0.25)",
+          }}
+        >
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "#16a34a" }}>Recovery Zone</div>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
+              This kiosk is currently deactivated. Reactivating it will resume all operations.
+            </div>
+          </div>
+          <button
+            className="app_btn"
+            style={{
+              background: "transparent",
+              border: "1px solid #16a34a",
+              color: "#16a34a",
+              width: "100%",
+              height: 40,
+              fontSize: "0.8rem",
+            }}
+            onClick={() => setShowReactivateModal(true)}
+          >
+            Reactivate Kiosk
+          </button>
+        </div>
+      ) : (
+        <div
+          style={{
+            marginTop: 40,
+            padding: 20,
+            background: "rgba(239,68,68,0.04)",
+            borderRadius: 16,
+            border: "1px dashed rgba(239,68,68,0.2)",
+          }}
+        >
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "#ef4444" }}>Danger Zone</div>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
+              Deactivating this kiosk will stop its operations. This action requires confirmation.
+            </div>
+          </div>
+          <button
+            className="app_btn"
+            style={{
+              background: "transparent",
+              border: "1px solid #ef4444",
+              color: "#ef4444",
+              width: "100%",
+              height: 40,
+              fontSize: "0.8rem",
+            }}
+            onClick={() => setShowDeactivateModal(true)}
+          >
+            Deactivate Kiosk
+          </button>
+        </div>
+      )}
+
       {/* ── Modals ── */}
       {showLiveStream && (
         <LiveStreamModal onClose={() => setShowLiveStream(false)} />
+      )}
+
+      {showDeactivateModal && (
+        <Modal
+          isOpen={true}
+          onClose={() => !deactivating && setShowDeactivateModal(false)}
+          title="Deactivate Kiosk?"
+        >
+          <div style={{ padding: "0 20px 20px" }}>
+            <div style={{ fontSize: "0.88rem", color: "var(--text-body)", marginBottom: 20, lineHeight: 1.5 }}>
+              Are you sure you want to deactivate <strong style={{ color: "var(--text-heading)" }}>{cart.serialNumber}</strong>?
+              This will suspend all active operations for this unit.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                className="app_btn app_btn_cancel"
+                style={{ flex: 1, height: 42 }}
+                onClick={() => setShowDeactivateModal(false)}
+                disabled={deactivating}
+              >
+                Cancel
+              </button>
+              <button
+                className={`app_btn${deactivating ? " btn_loading" : ""}`}
+                style={{
+                  flex: 1,
+                  height: 42,
+                  background: "#ef4444",
+                  color: "white",
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+                onClick={handleDeactivate}
+                disabled={deactivating}
+              >
+                <span className="btn_text">Continue</span>
+                {deactivating && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {showReactivateModal && (
+        <Modal
+          isOpen={true}
+          onClose={() => !reactivating && setShowReactivateModal(false)}
+          title="Reactivate Kiosk?"
+        >
+          <div style={{ padding: "0 20px 20px" }}>
+            <div style={{ fontSize: "0.88rem", color: "var(--text-body)", marginBottom: 20, lineHeight: 1.5 }}>
+              Reactivate <strong style={{ color: "var(--text-heading)" }}>{cart.serialNumber}</strong>? This will restore all operations for this unit.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                className="app_btn app_btn_cancel"
+                style={{ flex: 1, height: 42 }}
+                onClick={() => setShowReactivateModal(false)}
+                disabled={reactivating}
+              >
+                Cancel
+              </button>
+              <button
+                className={`app_btn${reactivating ? " btn_loading" : ""}`}
+                style={{
+                  flex: 1,
+                  height: 42,
+                  background: "#16a34a",
+                  color: "white",
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                onClick={handleReactivate}
+                disabled={reactivating}
+              >
+                <span className="btn_text">Continue</span>
+                {reactivating && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
