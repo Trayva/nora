@@ -93,7 +93,7 @@ function PurchaseKiosk() {
                 {/* Header */}
                 <div className="kiosk_card_header">
                   <div>
-                    <h3 className="kiosk_card_title">{setting.type}</h3>
+                    <h3 className="kiosk_card_title">{setting.title?.toUpperCase()}</h3>
                     <span className="kiosk_card_location">{setting.country}</span>
                   </div>
                   <span className="kiosk_card_currency">{setting.currency}</span>

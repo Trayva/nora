@@ -23,10 +23,11 @@ const EMPTY_PAYMENT = {
   intervalInDays: "",
 };
 const EMPTY_FORM = {
+  title: "",
   durationDays: "",
   country: "",
   currency: "",
-  type: "LEASE",
+  type: "FRANCHISE",
   terms: "",
   length: "",
   breadth: "",
@@ -97,7 +98,8 @@ export default function AdminContractSettings() {
     try {
       const body = {
         ...(editing?.id && { id: editing.id }),
-        durationDays: form.durationDays ? Number(form.durationDays) : null,
+        ...(form.title.trim() && { title: form.title.trim() }),
+        durationDays: form.type === "LEASE" && form.durationDays ? Number(form.durationDays) : null,
         country: form.country.trim(),
         currency: form.currency.trim(),
         type: form.type,
@@ -163,7 +165,7 @@ export default function AdminContractSettings() {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-heading)" }}>
-                      {item.type} — {item.country}
+                      {item.title ? `${item.title} · ` : ""}{item.type} — {item.country}
                     </span>
                   </div>
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
@@ -202,6 +204,10 @@ export default function AdminContractSettings() {
       <Drawer isOpen={open} onClose={() => setOpen(false)} title={editing ? "Edit Contract Setting" : "New Contract Setting"} description="Define lease or purchase plans for Kiosk contracts" width={540}>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div className="admin_form_grid">
+            <div className="form-field" style={{ gridColumn: "1 / -1" }}>
+              <label className="modal-label">Title</label>
+              <input className="modal-input" placeholder="e.g. Standard Franchise Plan" value={form.title} onChange={set("title")} />
+            </div>
             <div className="form-field">
               <label className="modal-label">Country *</label>
               <CountrySelect value={form.country} onChange={set("country")} required />
@@ -213,28 +219,32 @@ export default function AdminContractSettings() {
             <div className="form-field">
               <label className="modal-label">Type *</label>
               <select className="modal-input" value={form.type} onChange={set("type")}>
+                <option value="FRANCHISE">FRANCHISE</option>
                 <option value="LEASE">LEASE</option>
                 <option value="PURCHASE">PURCHASE</option>
-                <option value="FRANCHISE">FRANCHISE</option>
               </select>
             </div>
-            <div className="form-field">
-              <label className="modal-label">Duration (days) *</label>
-              <input className="modal-input" type="number" min="0" placeholder="e.g. 365" value={form.durationDays} onChange={set("durationDays")} />
-            </div>
+            {form.type === "LEASE" && (
+              <div className="form-field">
+                <label className="modal-label">Duration (days)</label>
+                <input className="modal-input" type="number" min="0" placeholder="e.g. 365" value={form.durationDays} onChange={set("durationDays")} />
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className="modal-label">Quick Duration</label>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {DURATION_PRESETS.map((p) => (
-                <button key={p.label} type="button" onClick={() => selectPreset(p)}
-                  style={{ padding: "4px 12px", borderRadius: 8, border: `1px solid ${durationPreset === p.label ? "rgba(203,108,220,0.4)" : "var(--border)"}`, background: durationPreset === p.label ? "var(--bg-active)" : "var(--bg-hover)", color: durationPreset === p.label ? "var(--accent)" : "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                  {p.label}
-                </button>
-              ))}
+          {form.type === "LEASE" && (
+            <div>
+              <label className="modal-label">Quick Duration</label>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {DURATION_PRESETS.map((p) => (
+                  <button key={p.label} type="button" onClick={() => selectPreset(p)}
+                    style={{ padding: "4px 12px", borderRadius: 8, border: `1px solid ${durationPreset === p.label ? "rgba(203,108,220,0.4)" : "var(--border)"}`, background: durationPreset === p.label ? "var(--bg-active)" : "var(--bg-hover)", color: durationPreset === p.label ? "var(--accent)" : "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 80px", gap: 12 }}>
             <div className="form-field" style={{ marginBottom: 0 }}>

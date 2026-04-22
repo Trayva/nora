@@ -59,9 +59,9 @@ function PlansSection() {
                 className={`plan-card ${isPopular ? "plan-card-popular" : ""}`}
               >
                 {isPopular && <div className="popular-badge">Most Flexible</div>}
-                
+
                 <div className="plan-header">
-                  <span className="plan-type">{setting.type}</span>
+                  <span className="plan-type">{setting.title?.toUpperCase()}</span>
                   <div className="plan-price-wrap">
                     <span className="plan-currency">{setting.currency}</span>
                     <span className="plan-price">{baseAmount.toLocaleString()}</span>
