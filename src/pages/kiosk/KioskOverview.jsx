@@ -146,11 +146,11 @@ function LiveStreamModal({ onClose }) {
           boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
           ...(isFullscreen
             ? {
-                width: "100vw",
-                height: "100vh",
-                display: "flex",
-                flexDirection: "column",
-              }
+              width: "100vw",
+              height: "100vh",
+              display: "flex",
+              flexDirection: "column",
+            }
             : {}),
         }}
       >
@@ -979,10 +979,10 @@ function InvoicePayModal({ invoice, application, onPaid, onClose }) {
   const fmtDate = (d) =>
     d
       ? new Date(d).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
       : "—";
 
   const statusColors = {
@@ -1013,7 +1013,7 @@ function InvoicePayModal({ invoice, application, onPaid, onClose }) {
     api
       .get("/finance/wallet")
       .then((r) => setWallet(r.data.data))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setWalletLoading(false));
   }, []);
 
@@ -2364,7 +2364,7 @@ function MenuDetailDrawer({
           parsed != null && !isNaN(parsed) && parsed > 0 ? parsed : null,
         );
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [menuId]);
 
   const fmt = (n) =>
@@ -4111,13 +4111,12 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                       : availableSlots != null && availableSlots <= 2
                         ? "rgba(234,179,8,0.08)"
                         : "rgba(34,197,94,0.08)",
-                  border: `1px solid ${
-                    availableSlots === 0
-                      ? "rgba(239,68,68,0.2)"
-                      : availableSlots != null && availableSlots <= 2
-                        ? "rgba(234,179,8,0.2)"
-                        : "rgba(34,197,94,0.2)"
-                  }`,
+                  border: `1px solid ${availableSlots === 0
+                    ? "rgba(239,68,68,0.2)"
+                    : availableSlots != null && availableSlots <= 2
+                      ? "rgba(234,179,8,0.2)"
+                      : "rgba(34,197,94,0.2)"
+                    }`,
                   flexShrink: 0,
                 }}
               >
@@ -4453,18 +4452,18 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                             </div>
                             {(brand.branding?.tagline ||
                               brand.brandTagline) && (
-                              <div
-                                style={{
-                                  fontSize: "0.72rem",
-                                  color: "var(--text-muted)",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {brand.branding?.tagline || brand.brandTagline}
-                              </div>
-                            )}
+                                <div
+                                  style={{
+                                    fontSize: "0.72rem",
+                                    color: "var(--text-muted)",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {brand.branding?.tagline || brand.brandTagline}
+                                </div>
+                              )}
                             {brandMenuCount !== null && (
                               <div
                                 style={{
@@ -4492,13 +4491,12 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                                       : brandSlots[brand.id] <= 2
                                         ? "rgba(234,179,8,0.08)"
                                         : "rgba(34,197,94,0.08)",
-                                  border: `1px solid ${
-                                    brandSlots[brand.id] === 0
-                                      ? "rgba(239,68,68,0.2)"
-                                      : brandSlots[brand.id] <= 2
-                                        ? "rgba(234,179,8,0.2)"
-                                        : "rgba(34,197,94,0.2)"
-                                  }`,
+                                  border: `1px solid ${brandSlots[brand.id] === 0
+                                    ? "rgba(239,68,68,0.2)"
+                                    : brandSlots[brand.id] <= 2
+                                      ? "rgba(234,179,8,0.2)"
+                                      : "rgba(34,197,94,0.2)"
+                                    }`,
                                 }}
                               >
                                 <MdSignalCellularAlt
@@ -5589,8 +5587,8 @@ function BrandIdleCard({
                     position: "relative",
                   }}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.borderColor =
-                      "rgba(203,108,220,0.4)")
+                  (e.currentTarget.style.borderColor =
+                    "rgba(203,108,220,0.4)")
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.borderColor = "var(--border)")
@@ -5814,7 +5812,6 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
       await api.post(`/kiosk/${cart.id}/menu-items`, {
         items: pendingAdd.map((p) => ({
           id: p.id,
-          markup: Number(markupValues[p.id] || 0),
         })),
       });
       toast.success(
@@ -6003,8 +6000,8 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                         cursor: "pointer",
                       }}
                       onMouseEnter={(e) =>
-                        (e.currentTarget.style.borderColor =
-                          "rgba(203,108,220,0.3)")
+                      (e.currentTarget.style.borderColor =
+                        "rgba(203,108,220,0.3)")
                       }
                       onMouseLeave={(e) =>
                         (e.currentTarget.style.borderColor = "var(--border)")
@@ -6361,47 +6358,6 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                           </button>
                         )}
                       </div>
-                      {pending && (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 7,
-                            padding: "0 12px 9px",
-                          }}
-                        >
-                          <label
-                            style={{
-                              fontSize: "0.66rem",
-                              color: "var(--text-muted)",
-                              fontWeight: 700,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            Markup %
-                          </label>
-                          <input
-                            className="modal-input"
-                            type="number"
-                            min="0"
-                            placeholder="0"
-                            value={markupValues[item.id] ?? "0"}
-                            onChange={(e) =>
-                              setMarkupValues((p) => ({
-                                ...p,
-                                [item.id]: e.target.value,
-                              }))
-                            }
-                            style={{
-                              height: 30,
-                              fontSize: "0.78rem",
-                              marginBottom: 0,
-                              flex: 1,
-                              maxWidth: 90,
-                            }}
-                          />
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -6522,7 +6478,7 @@ function ManageMenuDrawer({ cart, onClose, onRefresh }) {
           menuName={manageDetailName}
           cart={cart}
           isSelected={false}
-          onToggleSelect={() => {}}
+          onToggleSelect={() => { }}
           selectedCount={0}
           onClose={() => {
             setManageDetailId(null);
@@ -6614,7 +6570,7 @@ function VendorMenuSection({ cart, onUpdate, onRefresh }) {
           menuName={idleDetailName}
           cart={cart}
           isSelected={false}
-          onToggleSelect={() => {}}
+          onToggleSelect={() => { }}
           selectedCount={0}
           onClose={() => {
             setIdleDetailId(null);
@@ -7196,15 +7152,15 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
                     flexShrink: 0,
                     ...(op.isApproved
                       ? {
-                          background: "rgba(34,197,94,0.1)",
-                          color: "#16a34a",
-                          border: "1px solid rgba(34,197,94,0.25)",
-                        }
+                        background: "rgba(34,197,94,0.1)",
+                        color: "#16a34a",
+                        border: "1px solid rgba(34,197,94,0.25)",
+                      }
                       : {
-                          background: "rgba(234,179,8,0.1)",
-                          color: "#ca8a04",
-                          border: "1px solid rgba(234,179,8,0.25)",
-                        }),
+                        background: "rgba(234,179,8,0.1)",
+                        color: "#ca8a04",
+                        border: "1px solid rgba(234,179,8,0.25)",
+                      }),
                   }}
                 >
                   {op.isApproved ? "Active" : "Pending"}
