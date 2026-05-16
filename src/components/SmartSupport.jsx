@@ -235,12 +235,12 @@ const SmartSupport = () => {
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Toggle AI Support"
       >
-        {isOpen ? <BsXCircleFill className="fab-icon" /> : <img style={{ width: 35, height: 35, marginBottom: 2 }} src={nora_logo} alt="NORA" className="fab-icon" />}
+        {isOpen ? <BsXCircleFill className="fab-icon" /> : <img style={{ width: 35, height: 35, marginBottom: 2 }} src={nora_white} alt="NORA" className="fab-icon" />}
         {!isOpen && <div className="fab-glow" />}
       </button>
 
       {/* Chat Window */}
-      <div 
+      <div
         ref={windowRef}
         className={`smart-support-window ${isOpen ? 'visible' : ''} ${isFullScreen ? 'full-screen' : ''}`}
       >
@@ -272,9 +272,9 @@ const SmartSupport = () => {
             >
               {isFullScreen ? <BsArrowsAngleContract size={16} /> : <BsArrowsAngleExpand size={16} />}
             </button>
-            <LuSparkles 
-              className="sparkle-icon" 
-              onClick={() => setActiveView('landing')} 
+            <LuSparkles
+              className="sparkle-icon"
+              onClick={() => setActiveView('landing')}
               style={{ cursor: 'pointer' }}
               title="Landing"
             />
@@ -298,8 +298,8 @@ const SmartSupport = () => {
             </div>
 
             <div className="landing-actions">
-              <button 
-                className="action-card primary" 
+              <button
+                className="action-card primary"
                 onClick={handleStartSession}
                 disabled={isLoading}
               >
@@ -312,8 +312,8 @@ const SmartSupport = () => {
                 </div>
               </button>
 
-              <button 
-                className="action-card secondary" 
+              <button
+                className="action-card secondary"
                 onClick={() => setActiveView('history')}
               >
                 <div className="action-icon-circle">
@@ -325,7 +325,7 @@ const SmartSupport = () => {
                 </div>
               </button>
             </div>
-            
+
             <div className="landing-footer">
               <span className="footer-tag">AI Powered • Real-time Data • Secure</span>
             </div>
