@@ -149,9 +149,20 @@ export default function IngredientSearchInput({
                   className="ing_option"
                   onClick={() => handlePick(item, "prep")}
                 >
-                  <div className="ing_option_img ing_option_img_placeholder ing_option_img_prep">
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="ing_option_img"
+                    />
+                  ) : (
+                    <div className="ing_option_img ing_option_img_placeholder">
+                      <MdOutlineBlender size={12} />
+                    </div>
+                  )}
+                  {/* <div className="ing_option_img ing_option_img_placeholder ing_option_img_prep">
                     <MdOutlineBlender size={12} />
-                  </div>
+                  </div> */}
                   <span className="ing_option_name">{item.name}</span>
                   <span className="ing_option_unit">{item.unit}</span>
                 </button>

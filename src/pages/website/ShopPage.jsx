@@ -1513,7 +1513,7 @@ export default function ShopPage() {
     api
       .get("/kiosk/shop/nearby", { params: { lat, lng } })
       .then((r) => {
-        const d = r.data.data;
+        const d = r.data.data.kiosks;
         console.log(r)
         setConcepts(Array.isArray(d) ? d : d?.carts || []);
       })

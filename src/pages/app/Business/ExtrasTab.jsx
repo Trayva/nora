@@ -101,9 +101,9 @@ export default function ExtrasTab() {
                 <div className="concept_header_row">
                   <div>
                     <h3 className="concept_name">{extra.name}</h3>
-                    {extra.description && (
+                    {/* {extra.description && (
                       <p className="concept_location">{extra.description}</p>
-                    )}
+                    )} */}
                   </div>
                   <span className="concept_currency_badge">{extra.unit}</span>
                 </div>

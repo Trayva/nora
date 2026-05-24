@@ -18,11 +18,11 @@ export default function RecipeStepsList({
     setEditingId(step.id);
     setEditForm({
       type: step.type || (step.ingredient ? "ingredient" : "prep"),
-      itemId: step.ingredientId || step.prepItemId || step.itemId || "",
+      itemId: step.ingredientId || step.prepRefId || step.itemId || "",
       quantity: step.quantity || "",
       instruction: step.instruction || "",
       _itemName:
-        step.ingredient?.name || step.prepItem?.name || step.item?.name || "",
+        step.ingredient?.name || step.prepItem?.name || step.prepRef?.name || step.item?.name || "",
     });
   };
 
@@ -68,10 +68,10 @@ export default function RecipeStepsList({
         const isDeleting = deletingId === step.id;
         const itemName =
           step.ingredient?.name ||
-          step.prepItem?.name ||
+          step.prepItem?.name || step.prepRef?.name ||
           step.item?.name ||
           step.ingredientId ||
-          step.prepItemId ||
+          step.prepRefId ||
           "Item";
 
         return isEditing ? (
