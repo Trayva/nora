@@ -567,8 +567,8 @@ function JobOfferCard({ offer, onAction }) {
               gap: 6,
               marginBottom:
                 offer.status === "PENDING" ||
-                offer.status === "ACTIVE" ||
-                offer.status === "ACCEPTED"
+                  offer.status === "ACTIVE" ||
+                  offer.status === "ACCEPTED"
                   ? 14
                   : 0,
             }}
@@ -755,7 +755,7 @@ function JobOfferCard({ offer, onAction }) {
                     color: "var(--text-body)",
                   }}
                 >
-                  {offer.kiosk?.location?.name || `Location assigned`}
+                  {`${offer.kiosk?.location?.address}, ${offer.kiosk?.location?.city}, ${offer.kiosk?.location?.state?.name}, ${offer.kiosk?.location?.country}` || `Location assigned`}
                 </span>
               </div>
             )}
@@ -773,7 +773,7 @@ function JobOfferCard({ offer, onAction }) {
                 border: "1px solid var(--border)",
                 borderRadius: 9,
                 marginBottom: 14,
-                marginTop:14
+                marginTop: 14
               }}
             >
               <MdNotes
@@ -950,7 +950,7 @@ export default function OperatorHome() {
         const d = res.data.data;
         setStates(Array.isArray(d) ? d : d?.items || []);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const pendingOffers = offers.filter((o) => o.status === "PENDING");

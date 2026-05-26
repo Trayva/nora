@@ -5,10 +5,11 @@ import { LuPlus } from "react-icons/lu";
 import api from "../../api/axios";
 import { CountrySelect } from "./adminUtils_";
 
-const EMPTY = { country: "", vendorPercent: "", noraPercent: "" };
+const EMPTY = { country: "", vendorPercent: "", noraPercent: "", operatorPercent: "", vendorId: "" };
 
 export default function AdminSalesFormula() {
   const [formulas, setFormulas] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -26,8 +27,19 @@ export default function AdminSalesFormula() {
       setLoading(false);
     }
   };
+
+  const fetchBrands = async () => {
+    try {
+      const r = await api.get("/vendor/profile", { params: { limit: 100 } });
+      setBrands(r.data.data.vendors || []);
+    } catch {
+      console.error("Failed to load brands");
+    }
+  };
+
   useEffect(() => {
     fetch();
+    fetchBrands();
   }, []);
 
   const openCreate = () => {
@@ -36,17 +48,22 @@ export default function AdminSalesFormula() {
     setShowForm(true);
   };
   const openEdit = (f) => {
-    setForm(f);
+    setForm({
+      ...f,
+      operatorPercent: f.operatorPercent || 0,
+      vendorId: f.vendorId || "",
+    });
     setEditing(f);
     setShowForm(true);
   };
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
   const ownerPct = () => {
-    const v = Number(form.vendorPercent),
-      n = Number(form.noraPercent);
-    return !isNaN(v) && !isNaN(n) && v + n <= 100
-      ? (100 - v - n).toFixed(1)
+    const v = Number(form.vendorPercent || 0),
+      n = Number(form.noraPercent || 0),
+      o = Number(form.operatorPercent || 0);
+    return !isNaN(v) && !isNaN(n) && !isNaN(o) && v + n + o <= 100
+      ? (100 - v - n - o).toFixed(1)
       : "—";
   };
 
@@ -57,14 +74,19 @@ export default function AdminSalesFormula() {
       form.noraPercent === ""
     )
       return toast.error("All fields required");
-    if (Number(form.vendorPercent) + Number(form.noraPercent) > 100)
-      return toast.error("Cannot exceed 100%");
+    const v = Number(form.vendorPercent || 0);
+    const n = Number(form.noraPercent || 0);
+    const o = Number(form.operatorPercent || 0);
+    if (v + n + o > 100)
+      return toast.error("Total percentages cannot exceed 100%");
     setSaving(true);
     try {
       const body = {
         country: form.country.trim(),
-        vendorPercent: Number(form.vendorPercent),
-        noraPercent: Number(form.noraPercent),
+        vendorPercent: v,
+        noraPercent: n,
+        operatorPercent: o,
+        vendorId: form.vendorId || null,
       };
       if (editing) await api.patch(`/kiosk/sales-formula/${editing.id}`, body);
       else await api.post("/kiosk/sales-formula", body);
@@ -130,7 +152,7 @@ export default function AdminSalesFormula() {
                 <MdClose size={13} />
               </button>
             </div>
-            <div className="admin_form_grid_3" style={{ marginBottom: 10 }}>
+            <div className="admin_form_grid_3" style={{ marginBottom: 10, gridTemplateColumns: "1fr 1fr" }}>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <label className="modal-label">Country *</label>
                 <CountrySelect
@@ -139,6 +161,24 @@ export default function AdminSalesFormula() {
                   required
                 />
               </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <label className="modal-label">Brand / Vendor (Optional)</label>
+                <select
+                  className="modal-input"
+                  value={form.vendorId || ""}
+                  onChange={set("vendorId")}
+                  style={{ background: "var(--bg-input)", color: "var(--text-body)" }}
+                >
+                  <option value="">Default (No Brand Specific override)</option>
+                  {brands.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.businessName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="admin_form_grid_3" style={{ marginBottom: 10 }}>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <label className="modal-label">Vendor %</label>
                 <input
@@ -163,12 +203,25 @@ export default function AdminSalesFormula() {
                   onChange={set("noraPercent")}
                 />
               </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <label className="modal-label">Operator %</label>
+                <input
+                  className="modal-input"
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="10"
+                  value={form.operatorPercent}
+                  onChange={set("operatorPercent")}
+                />
+              </div>
             </div>
             {form.vendorPercent && form.noraPercent && (
               <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                 {[
                   { l: "Vendor", v: `${form.vendorPercent}%`, c: "#3b82f6" },
                   { l: "Nora", v: `${form.noraPercent}%`, c: "var(--accent)" },
+                  { l: "Operator", v: `${form.operatorPercent || 0}%`, c: "#ca8a04" },
                   { l: "Owner", v: `${ownerPct()}%`, c: "#16a34a" },
                 ].map((x) => (
                   <div
@@ -267,17 +320,35 @@ export default function AdminSalesFormula() {
                     fontWeight: 700,
                     color: "var(--text-heading)",
                     marginBottom: 4,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
                   }}
                 >
                   {f.country}
+                  {f.vendor && (
+                    <span 
+                      style={{ 
+                        fontSize: "0.65rem", 
+                        background: "rgba(59, 130, 246, 0.1)", 
+                        color: "#3b82f6", 
+                        padding: "2px 6px", 
+                        borderRadius: 4, 
+                        fontWeight: 600 
+                      }}
+                    >
+                      Brand: {f.vendor.businessName}
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                   {[
                     { l: "Vendor", v: f.vendorPercent, c: "#3b82f6" },
                     { l: "Nora", v: f.noraPercent, c: "var(--accent)" },
+                    { l: "Operator", v: f.operatorPercent || 0, c: "#ca8a04" },
                     {
                       l: "Owner",
-                      v: (100 - f.vendorPercent - f.noraPercent).toFixed(1),
+                      v: (100 - f.vendorPercent - f.noraPercent - (f.operatorPercent || 0)).toFixed(1),
                       c: "#16a34a",
                     },
                   ].map((x) => (
