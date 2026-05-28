@@ -332,6 +332,18 @@ const BOTTOM_ITEMS = [
   { id: "profile", label: "Profile", icon: MdOutlinePerson, path: "/app/profile" },
 ];
 
+function getUserNavItems(userRoles = []) {
+  return ALL_NAV_ITEMS.filter((item) => {
+    // visible to everyone
+    if (item.forRoles.includes("ALL")) {
+      return true;
+    }
+
+    // check if user has at least one matching role
+    return userRoles.some((role) => item.forRoles.includes(role));
+  });
+}
+
 function getVisibleItems(user) {
   if (!user) return [];
   const role = getPrimaryRole(user);
@@ -342,10 +354,10 @@ function getVisibleItems(user) {
       item.id === "aggregator" || item.id === "finance"
     );
   }
-
-  return ALL_NAV_ITEMS.filter((item) =>
-    item.forRoles.includes("ALL") || item.forRoles.includes(role)
-  );
+  return getUserNavItems(user.roles)
+  // return ALL_NAV_ITEMS.filter((item) =>
+  //   item.forRoles.includes("ALL") || item.forRoles.includes(role)
+  // );
 }
 
 export default function Sidebar({ mobileOpen = false, onMobileClose }) {

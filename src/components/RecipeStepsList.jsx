@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import { LuTrash2, LuPencil, LuCheck, LuX } from "react-icons/lu";
 import IngredientSearchInput from "./IngredientSearchInput";
+import Modal from "./Modal";
 
 export default function RecipeStepsList({
   steps,
@@ -10,6 +11,7 @@ export default function RecipeStepsList({
   onUpdate,
   cost,
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -52,6 +54,8 @@ export default function RecipeStepsList({
       setSaving(false);
     }
   };
+
+  const isDeleting = deletingId === confirmDelete?.id;
 
   if (!steps || steps.length === 0) {
     return (
@@ -265,7 +269,7 @@ export default function RecipeStepsList({
             </button>
             <button
               className={`biz_icon_btn biz_icon_btn_danger ${isDeleting ? "btn_loading" : ""}`}
-              onClick={() => onDelete(step.id)}
+              onClick={() => setConfirmDelete({ ...step, itemName })}
               disabled={isDeleting}
               style={{ position: "relative" }}
             >
@@ -286,6 +290,31 @@ export default function RecipeStepsList({
           </div>
         );
       })}
+      {/* Confirm delete */}
+      <Modal
+        isOpen={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        title="Delete Recipe Step"
+        description={`Delete this recipe step: \n 
+          '${confirmDelete?.itemName}' \n '${confirmDelete?.instruction}' ? \nThis cannot be undone.`}
+      >
+        <div className="modal-body">
+          <div className="modal-footer">
+            <button className="app_btn app_btn_cancel" onClick={() => setConfirmDelete(null)}>
+              Cancel
+            </button>
+            <button
+              className={`app_btn app_btn_confirm ${isDeleting ? "btn_loading" : ""}`}
+              style={{ background: "#ef4444", position: "relative", minWidth: 110 }}
+              onClick={() => onDelete(confirmDelete.id)}
+              disabled={!!isDeleting}
+            >
+              <span className="btn_text">Delete</span>
+              {isDeleting && <span className="btn_loader" style={{ width: 14, height: 14 }} />}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
