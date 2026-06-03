@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import {
@@ -37,6 +38,7 @@ import {
 } from "../../components/SupplierPicker";
 import { useAppState } from "../../contexts/StateContext";
 import Modal from "../../components/Modal";
+import ESignDrawer from "../../components/ESignDrawer";
 
 const LOCATION_TYPES = ["ACTIVE", "POTENTIAL", "INACTIVE", "RESTRICTED"];
 const BLANK_LOCATION = {
@@ -2287,7 +2289,7 @@ function MachinerySupplyModal({
   );
 }
 
-function MenuDetailDrawer({
+export function MenuDetailDrawer({
   menuId,
   menuName,
   isSelected,
@@ -2480,7 +2482,7 @@ function MenuDetailDrawer({
                 Menu item details
               </div>
             </div>
-            <button
+            {onToggleSelect ? <button
               onClick={onToggleSelect}
               disabled={atLimit}
               style={{
@@ -2521,7 +2523,7 @@ function MenuDetailDrawer({
                   <MdAdd size={15} /> Select
                 </>
               )}
-            </button>
+            </button> : null}
           </div>
 
           {/* Tab bar */}
@@ -3815,7 +3817,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
 
   const [termsData, setTermsData] = useState(null);
   const [termsLoading, setTermsLoading] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showSignDrawer, setShowSignDrawer] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [invoiceData, setInvoiceData] = useState(null);
 
@@ -3948,19 +3950,23 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
   }, [view]);
 
   const handleConfirm = async () => {
-    if (!termsAccepted) {
-      toast.error("Accept the terms to continue");
-      return;
-    }
     if (!selectedBrandId) {
       toast.error("Select a brand first");
       return;
     }
+    setShowSignDrawer(true);
+  };
+
+  const handleSignSubmit = async ({ signatureName, terms, isSigned }) => {
     setConfirming(true);
+    setShowSignDrawer(false);
     try {
       const res = await api.post(`/kiosk/${cart.id}/change-vendor`, {
         vendorId: selectedBrandId,
         menuIds: selectedMenuIds,
+        signatureName,
+        terms,
+        isSigned,
       });
       const data = res.data.data;
       if (data?.invoice) {
@@ -5177,66 +5183,23 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                     </div>
                   )}
 
-                  <button
-                    onClick={() => setTermsAccepted((v) => !v)}
+                  <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 14,
-                      background: termsAccepted
-                        ? "var(--bg-active)"
-                        : "var(--bg-hover)",
-                      border: `2px solid ${termsAccepted ? "var(--accent)" : "var(--border)"}`,
-                      borderRadius: 14,
-                      padding: "14px 16px",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      transition: "all 0.15s",
+                      gap: 8,
+                      background: "rgba(203,108,220,0.06)",
+                      border: "1px dashed rgba(203,108,220,0.3)",
+                      borderRadius: 12,
+                      padding: "10px 14px",
+                      color: "var(--accent)",
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      marginTop: 10,
                     }}
                   >
-                    <div
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: 8,
-                        border: `2px solid ${termsAccepted ? "var(--accent)" : "var(--border)"}`,
-                        background: termsAccepted
-                          ? "var(--accent)"
-                          : "transparent",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        transition: "all 0.15s",
-                      }}
-                    >
-                      {termsAccepted && (
-                        <MdCheck size={15} style={{ color: "#fff" }} />
-                      )}
-                    </div>
-                    <div style={{ flex: 1, textAlign: "left" }}>
-                      <div
-                        style={{
-                          fontSize: "0.85rem",
-                          fontWeight: 700,
-                          color: termsAccepted
-                            ? "var(--accent)"
-                            : "var(--text-body)",
-                        }}
-                      >
-                        I agree to the terms and conditions
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "var(--text-muted)",
-                          marginTop: 2,
-                        }}
-                      >
-                        For {termsData.country} · {termsData.currency}
-                      </div>
-                    </div>
-                  </button>
+                    <span>ℹ️ E-Signing of terms is required upon confirmation.</span>
+                  </div>
                 </div>
               )}
 
@@ -5291,11 +5254,46 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
             setDetailMenuId(null);
             setDetailMenuName("");
           }}
+        />)}
+      {showSignDrawer && (
+        <ESignDrawer
+          isOpen={showSignDrawer}
+          onClose={() => setShowSignDrawer(false)}
+          title="Kiosk Vendor Agreement"
+          description="Sign the vendor operating agreement to link this brand to the kiosk."
+          templateText={termsData?.terms || DEFAULT_VENDOR_AGREEMENT}
+          variables={{
+            buyer_name: selectedBrand?.businessName || "Vendor Operator",
+            buyer_address: cart.location?.address || "Kiosk Location Address",
+            kiosk_serial: cart.serialNumber || "Kiosk Unit",
+            currency: termsData?.currency || "NGN",
+            purchase_price: (termsData?.payments || []).reduce((sum, p) => sum + p.amount, 0).toLocaleString(),
+          }}
+          submitting={confirming}
+          onSubmit={handleSignSubmit}
         />
       )}
     </>
   );
 }
+
+const DEFAULT_VENDOR_AGREEMENT = `
+<h2 style="text-align: center; margin-bottom: 20px;">NORA AI PLATFORM<br/>KIOSK VENDOR LICENSE AGREEMENT</h2>
+ 
+<p>This License Agreement is entered into on the <strong>{{ date }}</strong> between NORA AI LTD., hereinafter referred to as "the Licensor" on the one part and <strong>{{ buyer_name }}</strong>, hereinafter referred to as "the Licensee" (collectively, the "Parties") for the operation of brand concept menus on Kiosk Unit <strong>{{ kiosk_serial }}</strong> located at <strong>{{ buyer_address }}</strong>.</p>
+
+<h3>1. LICENSE AND KIOSK DEPLOYMENT</h3>
+<p>The Licensor grants to the Licensee a limited, non-exclusive, non-transferable license to deploy and operate the selected food brand concepts on the designated Kiosk unit.</p>
+
+<h3>2. FEES AND PAYMENTS</h3>
+<p>The Licensee shall pay the fees described in the vendor application settings: total initialization of {{ currency }} {{ purchase_price }}. All payments are non-refundable unless specified otherwise.</p>
+
+<h3>3. COMPLIANCE</h3>
+<p>The Licensee shall ensure that operation complies with all local food safety regulations and platform operating standards.</p>
+
+<h3>4. TERMINATION</h3>
+<p>Either party may terminate this license with 30 days written notice. Upon termination, the Licensee's rights to operate the food concepts on the Kiosk shall cease.</p>
+`;
 
 /* ── BrandIdleCard ───────────────────────────────────────────── */
 function BrandIdleCard({
@@ -7058,7 +7056,7 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
       <div className="kiosk_item_meta" style={{ marginBottom: 0 }}>
         <InfoRow label="Serial Number" value={cart.serialNumber} />
         <InfoRow label="Status" value={cart.status} />
-        <InfoRow label="Owner" value={cart.owner?.name || cart.owner?.email} />
+        <InfoRow label="Owner" value={cart.owner?.fullName || "N/A"} />
       </div>
 
       {/* ── Location ── */}

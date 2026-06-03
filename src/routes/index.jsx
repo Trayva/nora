@@ -178,6 +178,8 @@ import SupplierHome from "../pages/app/Supplier/SupplierHome";
 import ShopPage from "../pages/website/ShopPage";
 import ShopCheckoutPage from "../pages/website/ShopCheckoutPage";
 import ShopOrderPage from "../pages/website/ShopOrderPage";
+import PrivacyPolicy from "../pages/website/PrivacyPolicy";
+import TermsOfService from "../pages/website/TermsOfService";
 import { getDefaultRoute } from "../utils/AuthHelpers";
 import AggregatorPage from "../pages/app/Aggregator/AggregatorPage";
 import NotificationBell from "../components/Notifications/NotificationBell";
@@ -218,7 +220,11 @@ export default function Routes() {
     // ── Landing (with Header) ────────────────────────────────
     {
       element: <LandingLayout />,
-      children: [{ path: "/", element: <Landing /> }],
+      children: [
+        { path: "/", element: <Landing /> },
+        { path: "/legal/privacy-policy", element: <PrivacyPolicy /> },
+        { path: "/legal/terms", element: <TermsOfService /> },
+      ],
     },
 
     // ── Shop (standalone — own header, no landing Header) ────

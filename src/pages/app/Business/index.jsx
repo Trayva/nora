@@ -6,6 +6,7 @@ import { getVendorProfile } from "../../../api/vendor";
 import BusinessProfile from "./BusinessProfile";
 import MenuTab from "./MenuTab";
 import ExtrasTab from "./ExtrasTab";
+import SettingsTab from "./SettingsTab";
 import RegisterBusinessModal from "./RegisterBusinessModal";
 import "./Business.css";
 
@@ -82,14 +83,18 @@ export default function Business() {
         >
           Extras
         </button>
+        <button
+          className={`business_tab ${activeTab === "settings" ? "business_tab_active" : ""}`}
+          onClick={() => setActiveTab("settings")}
+        >
+          Settings
+        </button>
       </div>
 
       <div className="business_tab_content">
-        {activeTab === "menu" ? (
-          <MenuTab vendorId={vendor.id} />
-        ) : (
-          <ExtrasTab />
-        )}
+        {activeTab === "menu" && <MenuTab vendorId={vendor.id} />}
+        {activeTab === "extras" && <ExtrasTab />}
+        {activeTab === "settings" && <SettingsTab vendor={vendor} onUpdate={fetchVendor} />}
       </div>
     </div>
   );

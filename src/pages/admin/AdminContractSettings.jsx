@@ -5,6 +5,7 @@ import { LuPlus, LuTrash2 } from "react-icons/lu";
 import Drawer from "../../components/Drawer";
 import api from "../../api/axios";
 import { CountrySelect } from "./adminUtils_";
+import RichTextEditor from "../../components/RichTextEditor";
 
 const DURATION_PRESETS = [
   { label: "None", days: null },
@@ -291,8 +292,8 @@ export default function AdminContractSettings() {
           </div>
 
           <div className="form-field">
-            <label className="modal-label">Terms</label>
-            <textarea className="modal-input" rows={2} style={{ resize: "none" }} placeholder="Optional terms…" value={form.terms} onChange={set("terms")} />
+            <label className="modal-label">Terms Template</label>
+            <RichTextEditor value={form.terms} onChange={(html) => setForm((p) => ({ ...p, terms: html }))} />
           </div>
 
           <div>

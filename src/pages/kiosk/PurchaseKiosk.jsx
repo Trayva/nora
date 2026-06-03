@@ -2,19 +2,21 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
+import { useAuth } from "../../contexts/AuthContext";
+import ESignDrawer from "../../components/ESignDrawer";
 
 function PurchaseKiosk() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const selectedId = searchParams.get("selection");
   const scrollRef = useRef({});
+  const { user } = useAuth();
 
   const [numberOfKiosks, setNumberOfKiosks] = useState(1);
   const [settings, setSettings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(null);
-  const [termsAccepted, setTermsAccepted] = useState({});
-  const [termsModal, setTermsModal] = useState(null); // holds the setting object
+  const [activeSignSetting, setActiveSignSetting] = useState(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -42,14 +44,19 @@ function PurchaseKiosk() {
     }
   }, [loading, selectedId]);
 
-  const handlePurchase = async (settingsId) => {
-    setPurchasing(settingsId);
+  const handleSignSubmit = async ({ signatureName, terms, isSigned }) => {
+    if (!activeSignSetting) return;
+    setPurchasing(activeSignSetting.id);
     try {
       await api.post("/contract/application/purchase-kiosk", {
-        settingsId,
-        numberOfKiosks,
+        settingsId: activeSignSetting.id,
+        numberOfCarts: numberOfKiosks,
+        signatureName,
+        terms,
+        isSigned,
       });
-      toast.success("Kiosk purchased successfully!");
+      toast.success("Kiosk purchase initiated successfully!");
+      setActiveSignSetting(null);
       navigate("/app/invoices", { state: { openLatest: true } });
     } catch (err) {
       toast.error(err.response?.data?.message || "Purchase failed");
@@ -81,7 +88,6 @@ function PurchaseKiosk() {
           {settings.map((setting) => {
             const isLoading = purchasing === setting.id;
             const isSelected = selectedId === setting.id;
-            const accepted = !!termsAccepted[setting.id];
             const totalAmount = setting.payments.reduce(
               (sum, p) => sum + p.amount * numberOfKiosks,
               0,
@@ -160,93 +166,12 @@ function PurchaseKiosk() {
                   <span className="kiosk_total_amount">{setting.currency} {totalAmount.toLocaleString()}</span>
                 </div>
 
-                {/* Terms acceptance */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 0 6px",
-                    borderTop: "1px solid var(--border)",
-                    marginTop: 8,
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setTermsAccepted((p) => ({
-                        ...p,
-                        [setting.id]: !p[setting.id],
-                      }))
-                    }
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 5,
-                      border: `2px solid ${accepted ? "var(--accent)" : "var(--border)"}`,
-                      background: accepted ? "var(--accent)" : "transparent",
-                      flexShrink: 0,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    {accepted && (
-                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                        <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </button>
-                  <span style={{ fontSize: "0.78rem", color: "var(--text-body)", lineHeight: 1.4 }}>
-                    I have read and accept the{" "}
-                    {setting.terms ? (
-                      <button
-                        type="button"
-                        onClick={() => setTermsModal(setting)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          color: "var(--accent)",
-                          fontWeight: 700,
-                          fontSize: "inherit",
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                          textDecoration: "underline",
-                        }}
-                      >
-                        Terms &amp; Conditions
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setTermsModal(setting)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          color: "var(--accent)",
-                          fontWeight: 700,
-                          fontSize: "inherit",
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                          textDecoration: "underline",
-                        }}
-                      >
-                        Terms &amp; Conditions
-                      </button>
-                    )}
-                  </span>
-                </div>
-
                 {/* CTA */}
                 <button
                   className={`app_btn app_btn_confirm ${isLoading ? "btn_loading" : ""}`}
-                  style={{ width: "100%", height: 42, position: "relative", marginTop: 4 }}
-                  onClick={() => handlePurchase(setting.id)}
-                  disabled={!!purchasing || !accepted}
+                  style={{ width: "100%", height: 42, position: "relative", marginTop: 12 }}
+                  onClick={() => setActiveSignSetting(setting)}
+                  disabled={!!purchasing}
                 >
                   <span className="btn_text">Select this Plan</span>
                   {isLoading && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
@@ -257,132 +182,67 @@ function PurchaseKiosk() {
         </div>
       )}
 
-      {/* Terms Modal */}
-      {termsModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1400,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+      {/* E-Signature Drawer */}
+      {activeSignSetting && (
+        <ESignDrawer
+          isOpen={!!activeSignSetting}
+          onClose={() => setActiveSignSetting(null)}
+          title="Kiosk Purchase Agreement"
+          description="Please review the specifications and sign the agreement to initiate purchase."
+          templateText={activeSignSetting.terms || DEFAULT_SALES_AGREEMENT}
+          variables={{
+            buyer_name: user?.fullName || user?.email || "Franchisee Buyer",
+            buyer_address: user?.address || "Nigeria",
+            purchase_price: (activeSignSetting.payments.reduce(
+              (sum, p) => sum + p.amount * numberOfKiosks,
+              0,
+            )).toLocaleString(),
+            currency: activeSignSetting.currency || "NGN",
+            number_of_kiosks: numberOfKiosks.toString(),
+            kiosk_type: activeSignSetting.kioskSize
+              ? `${activeSignSetting.kioskSize.length} × ${activeSignSetting.kioskSize.breadth} ${activeSignSetting.kioskSize.unit}`
+              : "Modular QSR Unit",
           }}
-        >
-          <div
-            onClick={() => setTermsModal(null)}
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "rgba(0,0,0,0.6)",
-              backdropFilter: "blur(3px)",
-            }}
-          />
-          <div
-            style={{
-              position: "relative",
-              zIndex: 1,
-              width: "min(520px, 94vw)",
-              maxHeight: "80vh",
-              background: "var(--bg-card)",
-              borderRadius: 18,
-              overflow: "hidden",
-              boxShadow: "0 16px 48px rgba(0,0,0,0.35)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            {/* Header */}
-            <div
-              style={{
-                padding: "18px 22px 14px",
-                borderBottom: "1px solid var(--border)",
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--text-heading)" }}>
-                  Terms &amp; Conditions
-                </div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
-                  {termsModal.title || termsModal.type} — {termsModal.country}
-                </div>
-              </div>
-              <button
-                onClick={() => setTermsModal(null)}
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 7,
-                  background: "var(--bg-hover)",
-                  border: "1px solid var(--border)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--text-muted)",
-                  fontSize: "1rem",
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Body */}
-            <div
-              style={{
-                overflowY: "auto",
-                padding: "20px 22px",
-                fontSize: "0.85rem",
-                lineHeight: 1.7,
-                color: "var(--text-body)",
-                whiteSpace: "pre-wrap",
-                flex: 1,
-              }}
-            >
-              {termsModal.terms || (
-                <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>
-                  No specific terms provided for this plan. Standard platform terms apply.
-                </span>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div
-              style={{
-                padding: "14px 22px 20px",
-                borderTop: "1px solid var(--border)",
-                flexShrink: 0,
-                display: "flex",
-                gap: 8,
-              }}
-            >
-              <button
-                className="app_btn app_btn_cancel"
-                style={{ flex: 1, height: 42 }}
-                onClick={() => setTermsModal(null)}
-              >
-                Close
-              </button>
-              <button
-                className="app_btn app_btn_confirm"
-                style={{ flex: 1, height: 42 }}
-                onClick={() => {
-                  setTermsAccepted((p) => ({ ...p, [termsModal.id]: true }));
-                  setTermsModal(null);
-                }}
-              >
-                Accept &amp; Close
-              </button>
-            </div>
-          </div>
-        </div>
+          submitting={purchasing === activeSignSetting.id}
+          onSubmit={handleSignSubmit}
+        />
       )}
     </div>
   );
 }
+
+const DEFAULT_SALES_AGREEMENT = `
+<h2 style="text-align: center; margin-bottom: 20px;">NORA AI LTD.<br/>KIOSK SALE AGREEMENT</h2>
+ 
+<p>This Agreement is entered into on the <strong>{{ date }}</strong>, between NORA AI LTD., hereinafter referred to as “the Seller” on the one part and <strong>{{ buyer_name }}</strong> of {{ buyer_address }}, hereinafter referred to as “the Buyer” (collectively, the "Parties") for the outright sale of {{ number_of_kiosks }} Modular QSR Kiosk Unit(s) (the "Kiosk") on the following terms:</p>
+
+<h3>1. THE KIOSK</h3>
+<p>The Seller agrees to sell and the Buyer agrees to purchase the Kiosk unit(s), free from all charges and encumbrances. Kiosk specifications: {{ kiosk_type }}.</p>
+{{ specification_table }}
+ 
+<h3>2. PURCHASE PRICE AND PAYMENT</h3>
+<p>2.1 The total purchase price for the Kiosk is <strong>{{ currency }} {{ purchase_price }}</strong>, payable at once.</p>
+<p>2.2 All payments shall be made by bank transfer only, and it shall be made to the Seller’s designated account.</p>
+<p>2.3 Title in the Kiosk shall pass to the Buyer only upon receipt of the full Purchase Price in cleared funds. Risk shall pass to the Buyer upon delivery.</p>
+
+<h3>3. DELIVERY</h3>
+<p>3.1 The Buyer shall take the responsibility of delivery of the Kiosk at the specified location. Upon delivery, the Buyer shall inspect and sign a Delivery Note confirming receipt in good condition.</p>
+<p>3.2 The Buyer is responsible for obtaining all necessary government permits and approvals for the placement and operation of the Kiosk at their chosen location.</p>
+
+<h3>4. SELLER’S WARRANTIES</h3>
+<p>The Seller warrants that the Kiosk shall conform in all material respects to the specifications set out in Clause 1, and that all electrical and gas installations in the Kiosk shall have been tested and in safe working order at delivery.</p>
+
+<h3>5. BUYER’S ACKNOWLEDGEMENTS</h3>
+<p>The Buyer acknowledges and agrees that: (a) This is a standalone sale of a physical asset; (b) The Buyer is free to use the Kiosk for any lawful business purpose; (c) The Buyer has inspected the Kiosk specifications and is satisfied with the same.</p>
+
+<h3>6. NORA AI FRANCHISE OPTION</h3>
+<p>The Buyer is hereby notified that, having purchased a Nora AI Kiosk, they are eligible to apply for access to the Nora AI franchise platform to list their Kiosk for operation under an established food brand as a Franchise Owner.</p>
+
+<h3>7. ADVERT SIGNAGE RIGHTS</h3>
+<p>The Buyer grants the Seller (NORA AI LTD.) and its authorised agents an exclusive, irrevocable, and transferable right to install and display advertisement signage on the designated signage area located on the top section of the Kiosk.</p>
+
+<h3>8. GENERAL</h3>
+<p>This Agreement shall be governed by and construed in accordance with the laws of the Federal Republic of Nigeria.</p>
+`;
 
 export default PurchaseKiosk;

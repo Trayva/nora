@@ -29,6 +29,7 @@ import {
 import { PiTruck } from "react-icons/pi";
 import api from "../../../api/axios";
 import Drawer from "../../../components/Drawer";
+import Input from "../../../components/Input";
 
 const fmt = (n) =>
   Number(n || 0).toLocaleString("en-NG", {
@@ -38,10 +39,10 @@ const fmt = (n) =>
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "—";
 
 const STATUS = {
@@ -464,15 +465,15 @@ function ProfileCard({ profile, onEdit }) {
                 borderRadius: 999,
                 ...(profile.isApproved
                   ? {
-                      background: "rgba(34,197,94,0.1)",
-                      color: "#16a34a",
-                      border: "1px solid rgba(34,197,94,0.2)",
-                    }
+                    background: "rgba(34,197,94,0.1)",
+                    color: "#16a34a",
+                    border: "1px solid rgba(34,197,94,0.2)",
+                  }
                   : {
-                      background: "rgba(234,179,8,0.1)",
-                      color: "#ca8a04",
-                      border: "1px solid rgba(234,179,8,0.2)",
-                    }),
+                    background: "rgba(234,179,8,0.1)",
+                    color: "#ca8a04",
+                    border: "1px solid rgba(234,179,8,0.2)",
+                  }),
               }}
             >
               {profile.isApproved ? "ACTIVE" : "PENDING APPROVAL"}
@@ -968,6 +969,7 @@ function InlineMachineryPrice({ machineryId, stateId, supplierId }) {
 /* ── Review Panel ── */
 function ReviewPanel({ req, onDone, onCancel }) {
   const ingredientItems = req.items || [];
+  const [logisticsCost, setLogisticsCost] = useState("");
   const machineryItems = req.supplyRequestMachineryItems || [];
 
   const [ingQtys, setIngQtys] = useState(() =>
@@ -996,7 +998,7 @@ function ReviewPanel({ req, onDone, onCancel }) {
     }
     setSubmitting(true);
     try {
-      const payload = {};
+      const payload = { logisticsCost: parseInt(logisticsCost || 0) };
       if (ingredientItems.length > 0) {
         payload.items = ingredientItems.map((it) => ({
           itemId: it.id,
@@ -1250,7 +1252,15 @@ function ReviewPanel({ req, onDone, onCancel }) {
           ))}
         </>
       )}
-
+      <div className="form-field">
+        <label className="modal-label">Delivery/Logistics Cost *</label>
+        <input
+          className="modal-input"
+          placeholder="e.g. 2000"
+          value={logisticsCost}
+          onChange={(e) => setLogisticsCost(e.target.value)}
+        />
+      </div>
       <div style={{ display: "flex", gap: 8 }}>
         <button
           className="app_btn app_btn_cancel"
@@ -1898,6 +1908,7 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
           gap: 10,
         }}
       >
+
         {req.status === "PENDING" && !reviewing && (
           <button
             className="app_btn app_btn_confirm"
@@ -2043,10 +2054,10 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
               style={
                 filter === k && ps
                   ? {
-                      color: ps.color,
-                      borderColor: ps.border,
-                      background: ps.bg,
-                    }
+                    color: ps.color,
+                    borderColor: ps.border,
+                    background: ps.bg,
+                  }
                   : {}
               }
               onClick={() => setFilter(k)}
@@ -3336,15 +3347,15 @@ function IngredientPricesTab({ profile }) {
       </div>
 
       {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div
-                key={i}
-                className="skeleton_shimmer skeleton_rect"
-                style={{ height: "85px", borderRadius: "12px" }}
-              />
-            ))}
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div
+              key={i}
+              className="skeleton_shimmer skeleton_rect"
+              style={{ height: "85px", borderRadius: "12px" }}
+            />
+          ))}
+        </div>
       ) : prices.length === 0 ? (
         <div className="kiosk_empty_state" style={{ padding: "40px 0" }}>
           <MdOutlinePriceChange size={28} style={{ opacity: 0.25 }} />
@@ -4133,15 +4144,15 @@ function MachineryPricesTab({ profile }) {
       </div>
 
       {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="skeleton_shimmer skeleton_rect"
-                style={{ height: "85px", borderRadius: "12px" }}
-              />
-            ))}
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="skeleton_shimmer skeleton_rect"
+              style={{ height: "85px", borderRadius: "12px" }}
+            />
+          ))}
+        </div>
       ) : prices.length === 0 ? (
         <div className="kiosk_empty_state" style={{ padding: "40px 0" }}>
           <MdBuild size={28} style={{ opacity: 0.25 }} />
@@ -4310,7 +4321,7 @@ export default function SupplierHome() {
           </div>
           <div className="skeleton_shimmer skeleton_circle" style={{ width: 44, height: 44 }} />
         </div>
-        
+
         <div className="business_tabs" style={{ marginBottom: 24 }}>
           {Array(4).fill(0).map((_, i) => (
             <div key={i} className="skeleton_shimmer skeleton_rect" style={{ width: 85, height: 34, borderRadius: 20 }} />

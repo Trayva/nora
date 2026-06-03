@@ -35,6 +35,8 @@ import {
   TableSkeleton,
   CardSkeleton
 } from "../../components/SkeletonTemplates";
+import Modal from "../../components/Modal";
+import UnitSelect from "../../components/UnitSelect";
 
 const fmtDate = (d) =>
   d
@@ -134,6 +136,154 @@ export default function AdminDashboard() {
   const [drawerItems, setDrawerItems] = useState([]);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [entityApproving, setEntityApproving] = useState(null);
+
+  const [drawerPage, setDrawerPage] = useState(1);
+  const [drawerTotalPages, setDrawerTotalPages] = useState(1);
+  const [drawerSearch, setDrawerSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const [editingEntity, setEditingEntity] = useState(null);
+  const [entityForm, setEntityForm] = useState({});
+  const [entityImageFile, setEntityImageFile] = useState(null);
+  const [savingEntity, setSavingEntity] = useState(false);
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(drawerSearch);
+      setDrawerPage(1);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [drawerSearch]);
+
+  const fetchDrawerItems = async () => {
+    if (!drawer) return;
+    setDrawerLoading(true);
+    try {
+      const cfg = DRAWER_CONFIG[drawer];
+      if (!cfg) return;
+
+      const params = {
+        page: drawerPage,
+        limit: 15,
+      };
+      if (debouncedSearch) {
+        params.search = debouncedSearch;
+      }
+
+      const r = await api.get(cfg.url, { params });
+      const d = r.data.data;
+
+      const extract = (dataObj) => {
+        if (Array.isArray(dataObj)) return dataObj;
+        const namedKey = [
+          "vendors",
+          "operators",
+          "suppliers",
+          "users",
+          "kiosks",
+          "states",
+          "data",
+          "ingredients",
+          "machineries",
+        ].find((k) => Array.isArray(dataObj?.[k]));
+        if (namedKey) return dataObj[namedKey];
+        return dataObj?.items || dataObj?.data || [];
+      };
+
+      const itemsList = extract(d);
+      setDrawerItems(itemsList);
+
+      if (d && typeof d.totalPages === "number") {
+        setDrawerTotalPages(d.totalPages);
+      } else if (d && typeof d.pages === "number") {
+        setDrawerTotalPages(d.pages);
+      } else {
+        setDrawerTotalPages(1);
+      }
+    } catch {
+      toast.error("Failed to load");
+    } finally {
+      setDrawerLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDrawerItems();
+  }, [drawer, drawerPage, debouncedSearch]);
+
+  const handleEditEntity = (item) => {
+    setEditingEntity(item);
+    setEntityImageFile(null);
+    if (drawer === "ingredients") {
+      setEntityForm({
+        name: item.name || "",
+        unit: item.unit || "",
+        image: item.image || "",
+
+      });
+    } else {
+      setEntityForm({
+        name: item.name || "",
+        description: item.description || "",
+        powerConsumption: item.powerConsumption || "",
+        manufacturer: item.manufacturer || "",
+        modelNumber: item.modelNumber || "",
+        image: item.image || "",
+      });
+    }
+  };
+
+  const handleSaveEntityUpdate = async (e) => {
+    e.preventDefault();
+    if (!editingEntity) return;
+    setSavingEntity(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", entityForm.name);
+
+      if (drawer === "ingredients") {
+        fd.append("unit", entityForm.unit);
+      } else {
+        if (entityForm.description) fd.append("description", entityForm.description);
+        if (entityForm.powerConsumption !== undefined && entityForm.powerConsumption !== null) {
+          fd.append("powerConsumption", String(entityForm.powerConsumption));
+        }
+        if (entityForm.manufacturer) fd.append("manufacturer", entityForm.manufacturer);
+        if (entityForm.modelNumber) fd.append("modelNumber", entityForm.modelNumber);
+      }
+
+      if (entityImageFile) {
+        fd.append("image", entityImageFile);
+      }
+
+      const url = drawer === "ingredients"
+        ? `/library/ingredient/${editingEntity.id}`
+        : `/library/machinery/${editingEntity.id}`;
+
+      await api.patch(url, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      toast.success("Updated successfully!");
+      setEditingEntity(null);
+      fetchDrawerItems();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update item");
+    } finally {
+      setSavingEntity(false);
+    }
+  };
+
+  const displayedItems = (() => {
+    if (drawer === "locations" && debouncedSearch) {
+      return drawerItems.filter((item) =>
+        item.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        item.code?.toLowerCase().includes(debouncedSearch.toLowerCase())
+      );
+    }
+    return drawerItems;
+  })();
 
   // Location form
   const [showLocationForm, setShowLocationForm] = useState(false);
@@ -267,6 +417,16 @@ export default function AdminDashboard() {
       title: "Locations",
       description: "States and regions",
     },
+    ingredients: {
+      url: "/library/ingredient",
+      title: "Ingredients",
+      description: "Ingredients and raw materials",
+    },
+    machineries: {
+      url: "/library/machinery",
+      title: "Machineries",
+      description: "Machines and equipments",
+    },
   };
 
   const openDrawer = async (key) => {
@@ -285,35 +445,11 @@ export default function AdminDashboard() {
     }
     // vendors falls through to entity drawer — clicking a row opens AdminVendorDetail
 
+    setDrawerPage(1);
+    setDrawerSearch("");
+    setDebouncedSearch("");
     setDrawer(key);
     setDrawerItems([]);
-    setDrawerLoading(true);
-    try {
-      const cfg = DRAWER_CONFIG[key];
-      const r = await api.get(cfg.url);
-      const d = r.data.data;
-      // Handle all response shapes: flat array, .items, .vendors, .operators, .suppliers, .data
-      const extract = (d) => {
-        if (Array.isArray(d)) return d;
-        // named keys first (vendors, operators, suppliers, users, kiosks, states)
-        const namedKey = [
-          "vendors",
-          "operators",
-          "suppliers",
-          "users",
-          "kiosks",
-          "states",
-          "data",
-        ].find((k) => Array.isArray(d?.[k]));
-        if (namedKey) return d[namedKey];
-        return d?.items || [];
-      };
-      setDrawerItems(extract(d));
-    } catch {
-      toast.error("Failed to load");
-    } finally {
-      setDrawerLoading(false);
-    }
   };
 
   const handleEntityApprove = async (id) => {
@@ -472,6 +608,7 @@ export default function AdminDashboard() {
       icon: MdOutlineLocalShipping,
       color: "#8b5cf6",
     },
+
   ];
 
   const renderEntityRow = (item) => {
@@ -484,6 +621,7 @@ export default function AdminDashboard() {
       item.name ||
       item.serialNumber ||
       `#${item.id?.slice(0, 8).toUpperCase()}`;
+    const imageUrl = item.brandLogo || item.imageUrl || item.image || item.branding?.logo
 
     // Sub: email + extra context
     const sub = (() => {
@@ -553,7 +691,11 @@ export default function AdminDashboard() {
           }
         }}
       >
-        <div className="admin_drawer_avatar">{initials}</div>
+        <div className="admin_drawer_avatar">{imageUrl ? (
+          <img style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} src={imageUrl} alt={name} />
+        ) : (
+          initials
+        )}</div>
         <div className="admin_drawer_info">
           <div className="admin_drawer_name">{name}</div>
           {sub && <div className="admin_drawer_sub">{sub}</div>}
@@ -566,6 +708,20 @@ export default function AdminDashboard() {
             flexShrink: 0,
           }}
         >
+          {["ingredients", "machineries"].includes(drawer) && (
+            <button
+              className="biz_icon_btn"
+              title="Edit"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditEntity(item);
+                console.log(item)
+              }}
+              style={{ width: 28, height: 28 }}
+            >
+              <MdEdit size={13} />
+            </button>
+          )}
           {statusLabel && (
             <span className="admin_status_badge" style={statusStyle}>
               <MdCircle size={5} />
@@ -707,6 +863,18 @@ export default function AdminDashboard() {
               label: "Locations",
               icon: MdOutlineLocationOn,
               color: "#16a34a",
+            },
+            {
+              key: "machineries",
+              label: "Machineries",
+              icon: MdOutlineLocalShipping,
+              color: "#8b5cf6",
+            },
+            {
+              key: "ingredients",
+              label: "Ingredients",
+              icon: MdOutlineLocalShipping,
+              color: "#8b5cf6",
             },
           ].map(({ key, label, icon: Icon, color }) => (
             <button
@@ -1054,6 +1222,17 @@ export default function AdminDashboard() {
         description={cfg.description || ""}
         width={500}
       >
+        {drawer && (
+          <div style={{ marginBottom: 16 }}>
+            <input
+              className="modal-input"
+              placeholder={`Search ${cfg.title || "items"}...`}
+              value={drawerSearch}
+              onChange={(e) => setDrawerSearch(e.target.value)}
+              style={{ height: 38 }}
+            />
+          </div>
+        )}
         {/* Location create form */}
         {drawer === "locations" && (
           <div style={{ marginBottom: 16 }}>
@@ -1218,7 +1397,7 @@ export default function AdminDashboard() {
         ) : drawer === "locations" ? (
           /* ── Location rows with edit/delete ── */
           <div className="admin_drawer_list">
-            {drawerItems.map((state) => (
+            {displayedItems.map((state) => (
               <div key={state.id}>
                 {editingState?.id === state.id ? (
                   /* Inline edit form */
@@ -1488,7 +1667,40 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <div className="admin_drawer_list">
-            {drawerItems.map((item) => renderEntityRow(item))}{" "}
+            {displayedItems.map((item) => renderEntityRow(item))}
+          </div>
+        )}
+
+        {drawerTotalPages > 1 && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginTop: 16,
+              paddingTop: 16,
+              borderTop: "1px solid var(--border)",
+            }}
+          >
+            <button
+              className="app_btn app_btn_cancel"
+              style={{ height: 32, padding: "0 12px", fontSize: "0.75rem" }}
+              disabled={drawerPage === 1}
+              onClick={() => setDrawerPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </button>
+            <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontWeight: 600 }}>
+              Page {drawerPage} of {drawerTotalPages}
+            </span>
+            <button
+              className="app_btn app_btn_cancel"
+              style={{ height: 32, padding: "0 12px", fontSize: "0.75rem" }}
+              disabled={drawerPage >= drawerTotalPages}
+              onClick={() => setDrawerPage((p) => Math.min(drawerTotalPages, p + 1))}
+            >
+              Next
+            </button>
           </div>
         )}
       </Drawer>
@@ -1578,6 +1790,134 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Ingredients & Machineries Modal */}
+      {editingEntity && (
+        <Modal
+          isOpen={!!editingEntity}
+          onClose={() => setEditingEntity(null)}
+          title={drawer === "ingredients" ? "Edit Ingredient" : "Edit Machinery"}
+          description="Update details for this catalog item."
+        >
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+            width: "100%",
+            height: "100px",
+            borderRadius: "8px",
+            overflow: "hidden",
+            position: "relative",
+          }}>
+            <img src={entityForm.image} alt={entityForm.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <button
+              className="app_btn app_btn_cancel"
+              style={{ position: "absolute", top: 4, right: 4, width: 24, height: 24, padding: 0, margin: 0 }}
+              onClick={() => setEditingEntity(null)}
+            >
+              <MdClose />
+            </button>
+          </div>
+          <form onSubmit={handleSaveEntityUpdate}>
+            <div className="modal-body">
+              <div className="form-field">
+                <label className="modal-label">Name *</label>
+                <input
+                  className="modal-input"
+                  value={entityForm.name}
+                  onChange={(e) => setEntityForm((prev) => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+              </div>
+
+              {drawer === "ingredients" ? (
+                <div className="form-field">
+                  <label className="modal-label">Unit of Measure *</label>
+                  <UnitSelect
+                    value={entityForm.unit}
+                    onChange={(e) =>
+                      setEntityForm((p) => ({ ...p, unit: e.target.value }))
+                    }
+                    style={{ marginBottom: 8 }}
+                  />
+                  {/* <input
+                    className="modal-input"
+                    placeholder="e.g. kg, litres, pcs"
+                    value={entityForm.unit}
+                    onChange={(e) => setEntityForm((prev) => ({ ...prev, unit: e.target.value }))}
+                    required
+                  /> */}
+                </div>
+              ) : (
+                <>
+                  <div className="form-field">
+                    <label className="modal-label">Description</label>
+                    <textarea
+                      className="modal-input"
+                      style={{ height: 60, padding: 8 }}
+                      value={entityForm.description}
+                      onChange={(e) => setEntityForm((prev) => ({ ...prev, description: e.target.value }))}
+                    />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div className="form-field">
+                      <label className="modal-label">Power Consumption (W)</label>
+                      <input
+                        className="modal-input"
+                        type="number"
+                        value={entityForm.powerConsumption}
+                        onChange={(e) => setEntityForm((prev) => ({ ...prev, powerConsumption: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label className="modal-label">Model Number</label>
+                      <input
+                        className="modal-input"
+                        value={entityForm.modelNumber}
+                        onChange={(e) => setEntityForm((prev) => ({ ...prev, modelNumber: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-field">
+                    <label className="modal-label">Manufacturer</label>
+                    <input
+                      className="modal-input"
+                      value={entityForm.manufacturer}
+                      onChange={(e) => setEntityForm((prev) => ({ ...prev, manufacturer: e.target.value }))}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="form-field">
+                <label className="modal-label">Image</label>
+                <input
+                  className="modal-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setEntityImageFile(e.target.files[0])}
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button className="app_btn app_btn_cancel" type="button" onClick={() => setEditingEntity(null)}>
+                  Cancel
+                </button>
+                <button
+                  className={`app_btn app_btn_confirm ${savingEntity ? "btn_loading" : ""}`}
+                  type="submit"
+                  disabled={savingEntity}
+                  style={{ position: "relative", minWidth: 120 }}
+                >
+                  <span className="btn_text">Save Changes</span>
+                  {savingEntity && <span className="btn_loader" style={{ width: 16, height: 16 }} />}
+                </button>
+              </div>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

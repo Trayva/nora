@@ -4,6 +4,7 @@ import { MdImage, MdExpandMore, MdExpandLess } from "react-icons/md";
 import Drawer from "../../components/Drawer";
 import ConceptOverviewDrawer from "../app/Business/ConceptOverviewDrawer";
 import api from "../../api/axios";
+import { MenuDetailDrawer } from "../kiosk/KioskOverview";
 
 /* ── Concept row — click to open the full overview drawer ── */
 function ConceptRow({ concept, onSelect }) {
@@ -120,11 +121,11 @@ function ConceptRow({ concept, onSelect }) {
 export default function AdminVendorDetail({ vendor, onClose }) {
   const [concepts, setConcepts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedConcept, setSelectedConcept] = useState(null);
+  const [selectedMenu, setSelectedMenu] = useState(null);
 
   useEffect(() => {
     api
-      .get("/vendor/concept", { params: { vendorId: vendor.id } })
+      .get("/vendor/menu", { params: { vendorId: vendor.id } })
       .then((r) => {
         const d = r.data.data;
         setConcepts(Array.isArray(d) ? d : d?.concepts || d?.items || []);
@@ -240,7 +241,7 @@ export default function AdminVendorDetail({ vendor, onClose }) {
                 color: "var(--text-heading)",
               }}
             >
-              Concepts
+              Menu
             </span>
             <span className="admin_section_count">{concepts.length}</span>
             {concepts.length > 0 && (
@@ -262,7 +263,7 @@ export default function AdminVendorDetail({ vendor, onClose }) {
               <ConceptRow
                 key={c.id}
                 concept={c}
-                onSelect={setSelectedConcept}
+                onSelect={setSelectedMenu}
               />
             ))
           )}
@@ -270,10 +271,11 @@ export default function AdminVendorDetail({ vendor, onClose }) {
       </Drawer>
 
       {/* Full concept overview — same as vendor view */}
-      {selectedConcept && (
-        <ConceptOverviewDrawer
-          concept={selectedConcept}
-          onClose={() => setSelectedConcept(null)}
+      {selectedMenu && (
+        <MenuDetailDrawer
+          menuName={selectedMenu.name}
+          menuId={selectedMenu.id}
+          onClose={() => setSelectedMenu(null)}
         />
       )}
     </>

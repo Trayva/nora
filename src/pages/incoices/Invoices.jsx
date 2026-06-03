@@ -406,10 +406,10 @@ function generateReceiptHTML(invoice) {
       <div class="logo-tagline">Sustainable Urban Mobility</div>
       <div class="logo-address">50 Ebitu Ukiwe Street, Jabi, Abuja</div>
       <div class="logo-socials">
-        <span>@noraai</span><span class="sep">·</span>
-        <span>in/nora-ai</span><span class="sep">·</span>
-        <span>x.com/noraai</span><span class="sep">·</span>
-        <span>hello@nora.io</span>
+        <span>@trynora</span><span class="sep">·</span>
+        <span>in/trynora</span><span class="sep">·</span>
+        <span>x.com/trynora</span><span class="sep">·</span>
+        <span>contact@trynora.net</span>
       </div>
     </div>
     <div class="receipt-meta">
@@ -434,8 +434,8 @@ function generateReceiptHTML(invoice) {
       <div class="party-eyebrow">Issuing Company</div>
       <div class="party-field"><div class="party-key">Company</div><div class="party-val bold">NORA AI Ltd</div></div>
       <div class="party-field"><div class="party-key">Address</div><div class="party-val small">50 Ebitu Ukiwe St, Jabi, Abuja</div></div>
-      <div class="party-field"><div class="party-key">Email</div><div class="party-val">hello@nora.io</div></div>
-      <div class="party-field"><div class="party-key">Socials</div><div class="party-val small">@noraai · in/nora-ai · x.com/noraai</div></div>
+      <div class="party-field"><div class="party-key">Email</div><div class="party-val">contact@trynora.net</div></div>
+      <div class="party-field"><div class="party-key">Socials</div><div class="party-val small">@trynora · in/trynora · x.com/trynora</div></div>
     </div>
     <div class="party-card pc-kiosk">
       <div class="party-eyebrow">Kiosk Reference</div>
@@ -483,7 +483,7 @@ function generateReceiptHTML(invoice) {
   <div class="footer">
     <div class="footer-left">
       <strong>NORA AI Ltd</strong> · 50 Ebitu Ukiwe Street, Jabi, Abuja<br/>
-      Sustainable Urban Mobility · hello@nora.io<br/>
+      Sustainable Urban Mobility · contact@trynora.net<br/>
       This is an official receipt — please retain for your records.
     </div>
     <div class="footer-right">
@@ -559,29 +559,29 @@ function InvoiceModal({ invoice, onClose, onPay }) {
         >
           <StatusBadge status={invoice.status} />
           <span className="invoice_modal_currency">{invoice.currency}</span>
-          {invoice.status === "PAID" && (
-            <button
-              onClick={() => downloadReceipt(invoice)}
-              style={{
-                marginLeft: "auto",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                height: 30,
-                padding: "0 12px",
-                borderRadius: 7,
-                border: "1px solid rgba(34,197,94,0.3)",
-                background: "rgba(34,197,94,0.08)",
-                color: "#16a34a",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                fontSize: "0.74rem",
-                fontWeight: 700,
-              }}
-            >
-              <MdDownload size={14} /> Download Receipt
-            </button>
-          )}
+          {/* {invoice.status === "PAID" && ( */}
+          <button
+            onClick={() => downloadReceipt(invoice)}
+            style={{
+              marginLeft: "auto",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              height: 30,
+              padding: "0 12px",
+              borderRadius: 7,
+              border: "1px solid rgba(34,197,94,0.3)",
+              background: "rgba(34,197,94,0.08)",
+              color: "#16a34a",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: "0.74rem",
+              fontWeight: 700,
+            }}
+          >
+            <MdDownload size={14} /> Download {invoice.status === "PAID" ? "Receipt" : "Invoice"}
+          </button>
+          {/* )} */}
         </div>
 
         {/* Items — paginated */}
@@ -720,7 +720,13 @@ function InvoiceModal({ invoice, onClose, onPay }) {
           ))}
         </div>
 
-        {/* Total */}
+        {/* Discount */}
+        {invoice.discount ? <div style={{ background: "transparent", border: "none" }} className="kiosk_card_total">
+          <span style={{ color: 'green' }} className="kiosk_total_label">Discount</span>
+          <span style={{ color: 'green' }} className="kiosk_total_amount">
+            - {formatAmount(invoice.discount, invoice.currency)}
+          </span>
+        </div> : null}
         <div className="kiosk_card_total">
           <span className="kiosk_total_label">Total</span>
           <span className="kiosk_total_amount">
@@ -1018,7 +1024,7 @@ export default function Invoices() {
                       #{invoice.id.slice(0, 8).toUpperCase()}
                     </span>
                     <StatusBadge status={invoice.status} />
-                    {invoice.status === "PAID" && (
+                    {/* {invoice.status === "PAID" && (
                       <span
                         style={{
                           display: "inline-flex",
@@ -1031,7 +1037,7 @@ export default function Invoices() {
                       >
                         <MdCheck size={11} /> Receipt
                       </span>
-                    )}
+                    )} */}
                   </div>
                   <span className="invoice_date">
                     Due {formatDate(invoice.dueDate)}
