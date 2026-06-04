@@ -3283,7 +3283,7 @@ export function MenuDetailDrawer({
                                 </span>
                               )}
                               {/* Select for order button */}
-                              <button
+                              {cart ? <button
                                 onClick={() => toggleMachSelection(mach)}
                                 title={
                                   isSel ? "Remove from order" : "Add to order"
@@ -3309,7 +3309,7 @@ export function MenuDetailDrawer({
                                 ) : (
                                   <MdAdd size={15} />
                                 )}
-                              </button>
+                              </button> : null}
                             </div>
                           );
                         })}
@@ -3511,7 +3511,7 @@ export function MenuDetailDrawer({
                                 </div>
                               )}
                               {/* Select for supply button */}
-                              <button
+                              {cart ? <button
                                 onClick={() => toggleIngSelection(ing)}
                                 title={
                                   isSel ? "Remove from order" : "Add to order"
@@ -3537,7 +3537,7 @@ export function MenuDetailDrawer({
                                 ) : (
                                   <MdAdd size={15} />
                                 )}
-                              </button>
+                              </button> : null}
                             </div>
                           );
                         })}
@@ -3616,10 +3616,23 @@ export function MenuDetailDrawer({
                               flexShrink: 0,
                             }}
                           >
-                            <MdRestaurantMenu
-                              size={18}
-                              style={{ color: "var(--accent)" }}
-                            />
+                            {prep.image ? (
+                              <img
+                                src={prep.image}
+                                alt={prep.name}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                  borderRadius: "inherit",
+                                }}
+                              />
+                            ) : (
+                              <MdRestaurantMenu
+                                size={18}
+                                style={{ color: "var(--accent)" }}
+                              />
+                            )}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div
@@ -3631,7 +3644,7 @@ export function MenuDetailDrawer({
                             >
                               {prep.name}
                             </div>
-                            {prep.unit && (
+                            {/* {prep.unit && (
                               <div
                                 style={{
                                   fontSize: "0.72rem",
@@ -3640,7 +3653,7 @@ export function MenuDetailDrawer({
                               >
                                 {prep.unit}
                               </div>
-                            )}
+                            )} */}
                             {prep.usedIn?.length > 0 && (
                               <div
                                 style={{
