@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Drawer from "./Drawer";
 import { MdEdit, MdCheck } from "react-icons/md";
 import { toast } from "react-toastify";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function ESignDrawer({
   isOpen,
@@ -13,7 +14,8 @@ export default function ESignDrawer({
   onSubmit,
   submitting = false,
 }) {
-  const [signedName, setSignedName] = useState("");
+  const { user } = useAuth()
+  const [signedName, setSignedName] = useState(user?.fullName || "");
   const [consentChecked, setConsentChecked] = useState(false);
   const [parsedText, setParsedText] = useState("");
 

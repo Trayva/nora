@@ -23,6 +23,8 @@ const EMPTY_PAYMENT = {
   refundable: false,
   recurring: false,
   intervalInDays: "",
+  target: "franchisee",
+  isPercentage: false,
 };
 const EMPTY_FORM = {
   country: "",
@@ -109,7 +111,7 @@ function ApplicationDrawer({ app, onClose, onStatusUpdated, onDeleted }) {
         isOpen={!!app}
         onClose={onClose}
         title={`Application #${app.id?.slice(0, 8).toUpperCase()}`}
-        description="Vendor application details"
+        description="Brand application details"
         width={500}
       >
         {/* Status badge */}
@@ -430,7 +432,13 @@ export default function AdminVendorApplicationSettings() {
     setSettingsOpen(true);
   };
   const openEdit = (item) => {
-    setForm({ ...item, payments: item.payments || [{ ...EMPTY_PAYMENT }] });
+    setForm({
+      ...item,
+      payments: (item.payments || [{ ...EMPTY_PAYMENT }]).map((p) => ({
+        ...EMPTY_PAYMENT,
+        ...p,
+      })),
+    });
     setEditingSetting(item);
     setSettingsOpen(true);
   };
@@ -469,6 +477,8 @@ export default function AdminVendorApplicationSettings() {
           amount: Number(p.amount),
           refundable: Boolean(p.refundable),
           recurring: Boolean(p.recurring),
+          isPercentage: Boolean(p.isPercentage),
+          target: p.target || "franchisee",
           ...(p.intervalInDays && { intervalInDays: Number(p.intervalInDays) }),
         })),
       };
@@ -663,7 +673,7 @@ export default function AdminVendorApplicationSettings() {
       <div className="admin_settings_panel">
         <div className="admin_settings_panel_header">
           <span className="admin_settings_panel_title">
-            Vendor Application Settings
+            Franchise Application Settings
           </span>
           <button
             className="app_btn app_btn_confirm biz_add_btn"
@@ -727,8 +737,7 @@ export default function AdminVendorApplicationSettings() {
                         className="admin_meta_chip"
                         style={{ color: "var(--accent)" }}
                       >
-                        {p.title}: {item.currency}{" "}
-                        {Number(p.amount).toLocaleString()}
+                        {p.title}: {p.isPercentage ? `${p.amount}%` : `${item.currency} ${Number(p.amount).toLocaleString()}`} ({p.target === "franchisor" ? "Franchisor" : "Franchisee"})
                       </span>
                     ))}
                   </div>
@@ -771,8 +780,8 @@ export default function AdminVendorApplicationSettings() {
       <Drawer
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        title={editingSetting ? "Edit Vendor Setting" : "New Vendor Setting"}
-        description="Define vendor application pricing per country"
+        title={editingSetting ? "Edit Franchise Setting" : "New Franchise Setting"}
+        description="Define franchise application agreement and pricing per country"
         width={520}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -880,28 +889,53 @@ export default function AdminVendorApplicationSettings() {
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
                     <label className="modal-label">Amount *</label>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input
+                        className="modal-input"
+                        type="number"
+                        min="0"
+                        placeholder={p.isPercentage ? "e.g. 10" : "e.g. 2000"}
+                        value={p.amount}
+                        onChange={(e) =>
+                          updatePayment(i, "amount", e.target.value)
+                        }
+                        style={{ flex: 1 }}
+                      />
+                      <select
+                        className="modal-input"
+                        value={p.isPercentage ? "percentage" : "fixed"}
+                        onChange={(e) => updatePayment(i, "isPercentage", e.target.value === "percentage")}
+                        style={{ width: 80, flexShrink: 0 }}
+                      >
+                        <option value="fixed">Fixed</option>
+                        <option value="percentage">%</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div className="admin_form_grid" style={{ marginBottom: 8 }}>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label className="modal-label">Target *</label>
+                    <select
+                      className="modal-input"
+                      value={p.target || "franchisee"}
+                      onChange={(e) => updatePayment(i, "target", e.target.value)}
+                    >
+                      <option value="franchisee">Franchisee (Applicant)</option>
+                      <option value="franchisor">Franchisor (Brand)</option>
+                    </select>
+                  </div>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label className="modal-label">Description</label>
                     <input
                       className="modal-input"
-                      type="number"
-                      min="0"
-                      placeholder="e.g. 2000"
-                      value={p.amount}
+                      placeholder="Brief description…"
+                      value={p.description}
                       onChange={(e) =>
-                        updatePayment(i, "amount", e.target.value)
+                        updatePayment(i, "description", e.target.value)
                       }
                     />
                   </div>
-                </div>
-                <div className="form-field" style={{ marginBottom: 8 }}>
-                  <label className="modal-label">Description</label>
-                  <input
-                    className="modal-input"
-                    placeholder="Brief description…"
-                    value={p.description}
-                    onChange={(e) =>
-                      updatePayment(i, "description", e.target.value)
-                    }
-                  />
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {[

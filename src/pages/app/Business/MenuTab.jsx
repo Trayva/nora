@@ -7,10 +7,13 @@ import { deleteMenuItem } from "../../../api/vendor";
 import CreateMenuItemModal from "./CreateMenuItemModal";
 import MenuItemDrawer from "./MenuItemDrawer";
 import Modal from "../../../components/Modal";
+import { BsInfoCircle } from "react-icons/bs";
+import { MenuDetailDrawer } from "../../kiosk/KioskOverview";
 
 export default function MenuTab({ vendorId }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [openMenu, setOpenMenu] = useState(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -157,6 +160,13 @@ export default function MenuTab({ vendorId }) {
                   <button
                     className="biz_icon_btn"
                     title="View recipes"
+                    onClick={(e) => { e.stopPropagation(); setOpenMenu(item) }}
+                  >
+                    <BsInfoCircle size={14} />
+                  </button>
+                  <button
+                    className="biz_icon_btn"
+                    title="View recipes"
                     onClick={(e) => { e.stopPropagation(); setSelectedItem(item); }}
                   >
                     <LuChefHat size={14} />
@@ -237,6 +247,13 @@ export default function MenuTab({ vendorId }) {
           </div>
         </div>
       </Modal>
+      {openMenu && (
+        <MenuDetailDrawer
+          menuName={openMenu.name}
+          menuId={openMenu.id}
+          onClose={() => setOpenMenu(null)}
+        />
+      )}
     </div>
   );
 }

@@ -5059,7 +5059,22 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                       >
                         Payment Schedule
                       </div>
-                      {termsData.payments.map((p, i) => (
+                      {[...selectedBrand.franchisePayments, ...termsData.payments?.filter(_ => _.target === 'franchisee')?.map((p, idx) => {
+                        const isPercentage = Boolean(p.isPercentage);
+                        let amount = parseFloat(p.amount) || 0;
+                        if (isPercentage) {
+                          const totalVendorPayments = selectedBrand.franchisePayments.reduce((total, item) => total + item.amount, 0);
+                          amount = totalVendorPayments * (amount / 100);
+                        }
+
+                        const item = {
+                          title: p.title + (isPercentage ? ` (${p.amount}%)` : ""),
+                          description: p.description || "",
+                          quantity: 1,
+                          amount: amount,
+                        };
+                        return item
+                      })].map((p, i) => (
                         <div
                           key={i}
                           style={{
@@ -5147,7 +5162,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                     </div>
                   )}
 
-                  {termsData.terms && (
+                  {/* {termsData.terms && (
                     <div
                       style={{
                         background: "var(--bg-hover)",
@@ -5181,7 +5196,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
                         {termsData.terms}
                       </div>
                     </div>
-                  )}
+                  )} */}
 
                   <div
                     style={{
@@ -5234,6 +5249,24 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
             </div>
           )}
         </div>
+        {showSignDrawer && (
+          <ESignDrawer
+            isOpen={showSignDrawer}
+            onClose={() => setShowSignDrawer(false)}
+            title="Tripartite Franchise Agreement"
+            description="Sign the franchise agreement to link this brand to the kiosk."
+            templateText={termsData?.terms || DEFAULT_VENDOR_AGREEMENT}
+            variables={{
+              buyer_name: selectedBrand?.businessName || "Vendor Operator",
+              buyer_address: cart.location?.address || "Kiosk Location Address",
+              kiosk_serial: cart.serialNumber || "Kiosk Unit",
+              currency: termsData?.currency || "NGN",
+              purchase_price: (termsData?.payments || []).reduce((sum, p) => sum + p.amount, 0).toLocaleString(),
+            }}
+            submitting={confirming}
+            onSubmit={handleSignSubmit}
+          />
+        )}
       </div>
 
       {detailMenuId && (
@@ -5255,24 +5288,7 @@ function BrandSelectionDrawer({ cart, onClose, onDone }) {
             setDetailMenuName("");
           }}
         />)}
-      {showSignDrawer && (
-        <ESignDrawer
-          isOpen={showSignDrawer}
-          onClose={() => setShowSignDrawer(false)}
-          title="Kiosk Vendor Agreement"
-          description="Sign the vendor operating agreement to link this brand to the kiosk."
-          templateText={termsData?.terms || DEFAULT_VENDOR_AGREEMENT}
-          variables={{
-            buyer_name: selectedBrand?.businessName || "Vendor Operator",
-            buyer_address: cart.location?.address || "Kiosk Location Address",
-            kiosk_serial: cart.serialNumber || "Kiosk Unit",
-            currency: termsData?.currency || "NGN",
-            purchase_price: (termsData?.payments || []).reduce((sum, p) => sum + p.amount, 0).toLocaleString(),
-          }}
-          submitting={confirming}
-          onSubmit={handleSignSubmit}
-        />
-      )}
+
     </>
   );
 }

@@ -14,6 +14,7 @@ import {
   MdOutlineTrendingUp,
   MdEdit,
   MdDelete,
+  MdOutlineFastfood,
 } from "react-icons/md";
 import { LuPlus } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
@@ -873,7 +874,7 @@ export default function AdminDashboard() {
             {
               key: "ingredients",
               label: "Ingredients",
-              icon: MdOutlineLocalShipping,
+              icon: MdOutlineFastfood,
               color: "#8b5cf6",
             },
           ].map(({ key, label, icon: Icon, color }) => (
@@ -1922,3 +1923,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
