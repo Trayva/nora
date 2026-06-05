@@ -2309,6 +2309,7 @@ export function MenuDetailDrawer({
   const [analysisStateId, setAnalysisStateId] = useState(selectedState?.id || "");
   const [calculatedCosts, setCalculatedCosts] = useState({ base: null, variants: {} });
   const [calcLoading, setCalcLoading] = useState(false);
+  const [expandedCombo, setExpandedCombo] = useState("base");
 
   useEffect(() => {
     if (selectedState?.id && !analysisStateId) {
@@ -2317,6 +2318,142 @@ export function MenuDetailDrawer({
   }, [selectedState?.id]);
 
   const activeStateId = analysisStateId || selectedState?.id;
+
+  const getCombinationsList = () => {
+    const combos = [];
+    combos.push({
+      key: "base",
+      variantId: null,
+      extraId: null,
+      name: `${menuName} (Base)`,
+    });
+
+    (summary?.extras || []).forEach(extra => {
+      combos.push({
+        key: `base_extra_${extra.id}`,
+        variantId: null,
+        extraId: extra.id,
+        name: `${menuName} (Base) + ${extra.name}`,
+      });
+    });
+
+    (summary?.variants || []).forEach(variant => {
+      combos.push({
+        key: `variant_${variant.id}`,
+        variantId: variant.id,
+        extraId: null,
+        name: `${menuName} (${variant.name})`,
+      });
+
+      (summary?.extras || []).forEach(extra => {
+        combos.push({
+          key: `variant_${variant.id}_extra_${extra.id}`,
+          variantId: variant.id,
+          extraId: extra.id,
+          name: `${menuName} (${variant.name}) + ${extra.name}`,
+        });
+      });
+    });
+
+    return combos;
+  };
+
+  const getComboData = (combo) => {
+
+    const variant = summary?.variants?.find(v => v.id === combo.variantId) || null;
+    const extra = summary?.extras?.find(e => e.id === combo.extraId) || null;
+
+    let totalCost = null;
+    if (variant) {
+      if (variant.cost != null) {
+        totalCost = (variant.cost * variant.quantity);
+      }
+    }
+
+    if (extra) {
+      totalCost += (extra.cost);
+    }
+    // } else {
+    //   if (summary?.baseCost != null) {
+    //     totalCost = summary.baseCost + (extra && extra.cost != null ? extra.cost : 0);
+    //   }
+
+
+    const ingMap = new Map();
+    const addIngs = (sourcePrefix) => {
+      (summary?.ingredients || []).forEach(ing => {
+        const matchingUsedIn = ing.usedIn?.filter(u => u.source?.startsWith(sourcePrefix)) || [];
+        if (matchingUsedIn.length > 0) {
+          const qtySum = matchingUsedIn.reduce((sum, u) => sum + (u.quantity || 0), 0);
+          if (qtySum > 0) {
+            const existing = ingMap.get(ing.id);
+            if (existing) {
+              existing.qty += qtySum;
+            } else {
+              ingMap.set(ing.id, {
+                id: ing.id,
+                name: ing.name,
+                unit: ing.unit,
+                image: ing.image,
+                costPerUnit: ing.cost || 0,
+                qty: qtySum,
+                type: "ingredient",
+              });
+            }
+          }
+        }
+      });
+    };
+
+    addIngs("base");
+
+    if (variant) {
+      addIngs(`variant:${variant.name}`);
+    }
+
+    const ingredientsList = Array.from(ingMap.values()).map(ing => ({
+      ...ing,
+      totalCostVal: ing.qty * ing.costPerUnit,
+    }));
+
+    const extrasList = [];
+    if (extra) {
+      extrasList.push({
+        id: extra.id,
+        name: extra.name,
+        unit: extra.prepItem?.unit || "unit",
+        image: extra.prepItem?.image || null,
+        costPerUnit: extra.cost || 0,
+        qty: 1,
+        totalCostVal: extra.cost || 0,
+        type: "extra",
+      });
+    }
+    if (variant) console.log(variant, variant.cost * variant.quantity)
+    const allItems = [...ingredientsList, ...extrasList, ...(variant ? [{
+      id: variant.id,
+      name: variant?.prepItem?.name,//JSON.stringify(Object.keys(variant)),//variant?.prepItem?.name,
+      unit: variant?.prepItem?.unit,
+      image: variant?.prepItem?.image,
+      costPerUnit: variant.cost || 0,
+      qty: variant.quantity,
+      totalCostVal: (variant.cost * variant.quantity) || 0,
+      type: "variant",
+    }] : [])]
+      .filter(x => x.totalCostVal > 0)
+      .sort((a, b) => b.totalCostVal - a.totalCostVal);
+    console.log("COMBO DATA", combo, {
+      totalCost,
+      items: allItems,
+      extraUsed: extra,
+    }, "SUMMARY COST", summary.baseCost)
+    return {
+      totalCost: totalCost + summary.baseCost,
+      items: allItems,
+      extraUsed: extra,
+    };
+  };
+
 
   useEffect(() => {
     if (!menuId || !activeStateId) return;
@@ -2889,82 +3026,6 @@ export function MenuDetailDrawer({
                       )}
                     </div>
 
-                    {/* Ingredients Cost Contribution Bar Graph */}
-                    <div
-                      style={{
-                        background: "var(--bg-card)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 14,
-                        padding: "16px 18px",
-                        marginBottom: 20,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: "0.75rem",
-                          fontWeight: 800,
-                          color: "var(--text-heading)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          marginBottom: 16,
-                        }}
-                      >
-                        Ingredient Cost Contribution Graph
-                      </div>
-                      {(() => {
-                        const ingContributions = (summary?.ingredients || [])
-                          .map((ing) => {
-                            const qty = ing.totalQuantity || 0;
-                            const costPerUnit = ing.cost || 0;
-                            const totalCostVal = qty * costPerUnit;
-                            return { ...ing, qty, costPerUnit, totalCostVal };
-                          })
-                          .filter((x) => x.totalCostVal > 0)
-                          .sort((a, b) => b.totalCostVal - a.totalCostVal);
-
-                        if (ingContributions.length === 0) {
-                          return (
-                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center", padding: "10px 0" }}>
-                              No ingredient cost data available to graph.
-                            </div>
-                          );
-                        }
-
-                        const maxCost = Math.max(...ingContributions.map((x) => x.totalCostVal), 1);
-
-                        return (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                            {ingContributions.map((ing) => {
-                              const pct = (ing.totalCostVal / maxCost) * 100;
-                              return (
-                                <div key={ing.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
-                                    <span style={{ fontWeight: 600, color: "var(--text-body)" }}>
-                                      {ing.name} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>({ing.qty.toFixed(3)} {ing.unit})</span>
-                                    </span>
-                                    <span style={{ fontWeight: 700, color: "var(--text-heading)" }}>
-                                      {formatCost(ing.totalCostVal)}
-                                    </span>
-                                  </div>
-                                  <div style={{ height: 8, width: "100%", background: "var(--bg-hover)", borderRadius: 4, overflow: "hidden" }}>
-                                    <div
-                                      style={{
-                                        height: "100%",
-                                        background: "linear-gradient(90deg, #a855f7 0%, var(--accent) 100%)",
-                                        width: `${pct}%`,
-                                        borderRadius: 4,
-                                        transition: "width 0.3s ease",
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                    </div>
-
                     {/* Prep Items Cost Contribution Bar Graph */}
                     <div
                       style={{
@@ -3041,8 +3102,193 @@ export function MenuDetailDrawer({
                       })()}
                     </div>
 
+                    {/* Ingredient & Extra Cost Contribution Graphs by Combination */}
+                    <div style={{ marginBottom: 20 }}>
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          color: "var(--text-heading)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          marginBottom: 14,
+                        }}
+                      >
+                        Ingredient & Extra Cost Contribution Graph
+                      </div>
+                      {(() => {
+                        const combos = getCombinationsList();
+                        console.log('ComBOS', combos)
+
+                        if (combos.length === 0) {
+                          return (
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center", padding: "10px 0" }}>
+                              No ingredient cost data available to graph.
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                            {combos.map((combo) => {
+                              const comboData = getComboData(combo);
+                              const isExpanded = expandedCombo === combo.key;
+                              const sellingPrice = calcSellingPrice(comboData.totalCost);
+                              const profit = calcProfit(comboData.totalCost);
+
+                              return (
+                                <div
+                                  key={combo.key}
+                                  style={{
+                                    background: "var(--bg-card)",
+                                    border: "1px solid var(--border)",
+                                    borderRadius: 14,
+                                    padding: "16px 18px",
+                                    transition: "all 0.2s ease",
+                                  }}
+                                >
+                                  {/* Header */}
+                                  <div
+                                    onClick={() => setExpandedCombo(isExpanded ? null : combo.key)}
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div
+                                        style={{
+                                          fontSize: "0.82rem",
+                                          fontWeight: 800,
+                                          color: isExpanded ? "var(--accent)" : "var(--text-heading)",
+                                          transition: "color 0.2s ease",
+                                        }}
+                                      >
+                                        {combo.name}
+                                      </div>
+
+                                      {/* Mini summary row */}
+                                      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 6, fontSize: "0.72rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
+                                        {comboData.totalCost != null ? (
+                                          <>
+                                            <span>
+                                              Cost: <strong style={{ color: "var(--text-heading)", fontWeight: 700 }}>{formatCost(comboData.totalCost)}</strong>
+                                            </span>
+                                            <span style={{ opacity: 0.3 }}>•</span>
+                                            <span>
+                                              Price: <strong style={{ color: "var(--accent)", fontWeight: 700 }}>{formatCost(sellingPrice)}</strong>
+                                            </span>
+                                            <span style={{ opacity: 0.3 }}>•</span>
+                                            <span>
+                                              Profit: <strong style={{ color: "var(--text-success, #16a34a)", fontWeight: 700 }}>{formatCost(profit)}</strong>
+                                            </span>
+                                          </>
+                                        ) : (
+                                          <span style={{ color: "var(--text-warning, #eab308)", fontSize: "0.68rem", fontWeight: 700 }}>
+                                            ⚠ Cost unavailable
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div
+                                      style={{
+                                        color: "var(--text-muted)",
+                                        marginLeft: 12,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: "50%",
+                                        background: "var(--bg-hover)",
+                                      }}
+                                    >
+                                      {isExpanded ? <MdExpandLess size={18} /> : <MdExpandMore size={18} />}
+                                    </div>
+                                  </div>
+
+                                  {/* Expanded content */}
+                                  {isExpanded && (
+                                    <div
+                                      style={{
+                                        marginTop: 16,
+                                        paddingTop: 16,
+                                        borderTop: "1px solid var(--border)",
+                                      }}
+                                    >
+                                      {comboData.items.length === 0 ? (
+                                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center", padding: "10px 0" }}>
+                                          No ingredient or extra cost data available for this combination.
+                                        </div>
+                                      ) : (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+                                          {comboData.items.map((item) => {
+                                            const pct = comboData.totalCost ? (item.totalCostVal / comboData.totalCost) * 100 : 0;
+                                            return (
+                                              <div key={item.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
+                                                  <span style={{ fontWeight: 600, color: "var(--text-body)" }}>
+                                                    {item.name}{" "}
+                                                    <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>
+                                                      ({item.qty.toFixed(2)} {item.unit})
+                                                    </span>
+                                                    {item.type === "extra" && (
+                                                      <span
+                                                        style={{
+                                                          marginLeft: 6,
+                                                          fontSize: "0.62rem",
+                                                          fontWeight: 800,
+                                                          padding: "1px 5px",
+                                                          borderRadius: 4,
+                                                          background: "var(--bg-active)",
+                                                          color: "var(--accent)",
+                                                          border: "1px solid rgba(203,108,220,0.2)",
+                                                        }}
+                                                      >
+                                                        EXTRA
+                                                      </span>
+                                                    )}
+                                                  </span>
+                                                  <span style={{ fontWeight: 700, color: "var(--text-heading)" }}>
+                                                    {formatCost(item.totalCostVal)}
+                                                  </span>
+                                                </div>
+                                                <div style={{ height: 8, width: "100%", background: "var(--bg-hover)", borderRadius: 4, overflow: "hidden" }}>
+                                                  <div
+                                                    style={{
+                                                      height: "100%",
+                                                      background: item.type === "extra"
+                                                        ? "linear-gradient(90deg, #ec4899 0%, #f472b6 100%)"
+                                                        : "linear-gradient(90deg, #a855f7 0%, var(--accent) 100%)",
+                                                      width: `${pct}%`,
+                                                      borderRadius: 4,
+                                                      transition: "width 0.3s ease",
+                                                    }}
+                                                  />
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+
+
                     {/* Detailed Base Item Cost Details */}
-                    <div
+                    {/* <div
                       style={{
                         background: "var(--bg-hover)",
                         border: "1px solid var(--border)",
@@ -3080,10 +3326,10 @@ export function MenuDetailDrawer({
                           </span>
                         )}
                       </div>
-                    </div>
+                    </div> */}
 
                     {/* Detailed Varieties Cost Cards */}
-                    {(summary?.variants || [])?.length > 0 && (
+                    {/* {(summary?.variants || [])?.length > 0 && (
                       <div style={{ marginBottom: 24 }}>
                         <div
                           style={{
@@ -3157,7 +3403,7 @@ export function MenuDetailDrawer({
                           })}
                         </div>
                       </div>
-                    )}
+                    )} */}
 
                     {/* Detailed Ingredients Cost Breakdown */}
                     <div>
@@ -3413,7 +3659,7 @@ export function MenuDetailDrawer({
                               Healthy Margin
                             </span>
                           </div>
-                          
+
                           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
                             {/* Cost */}
                             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -3477,46 +3723,46 @@ export function MenuDetailDrawer({
                                   : null,
                             accent: true,
                           },
-                        {
-                          label: "Recipe Cost",
-                          value:
-                            baseCost != null
-                              ? `₦${fmt(baseCost)}`
-                              : item?.recipeCost > 0
-                                ? `₦${fmt(item.recipeCost)}`
+                          {
+                            label: "Recipe Cost",
+                            value:
+                              baseCost != null
+                                ? `₦${fmt(baseCost)}`
+                                : item?.recipeCost > 0
+                                  ? `₦${fmt(item.recipeCost)}`
+                                  : null,
+                          },
+                          {
+                            label: "Ticket Time",
+                            value:
+                              item?.ticketTime > 0
+                                ? `${item.ticketTime} min`
                                 : null,
-                        },
-                        {
-                          label: "Ticket Time",
-                          value:
-                            item?.ticketTime > 0
-                              ? `${item.ticketTime} min`
-                              : null,
-                        },
-                        { label: "Serves", value: displayServeTo || null },
-                        { label: "Origin", value: displayOrigin || null },
-                        {
-                          label: "Ingredients",
-                          value:
-                            ingredients.length > 0
-                              ? String(ingredients.length)
-                              : null,
-                        },
-                        {
-                          label: "Prep Items",
-                          value:
-                            prepItems.length > 0
-                              ? String(prepItems.length)
-                              : null,
-                        },
-                        {
-                          label: "Tools",
-                          value:
-                            machineries.length > 0
-                              ? String(machineries.length)
-                              : null,
-                        },
-                      ];
+                          },
+                          { label: "Serves", value: displayServeTo || null },
+                          { label: "Origin", value: displayOrigin || null },
+                          {
+                            label: "Ingredients",
+                            value:
+                              ingredients.length > 0
+                                ? String(ingredients.length)
+                                : null,
+                          },
+                          {
+                            label: "Prep Items",
+                            value:
+                              prepItems.length > 0
+                                ? String(prepItems.length)
+                                : null,
+                          },
+                          {
+                            label: "Tools",
+                            value:
+                              machineries.length > 0
+                                ? String(machineries.length)
+                                : null,
+                          },
+                        ];
                       })()
                         .filter((s) => s.value)
                         .map((s) => (
