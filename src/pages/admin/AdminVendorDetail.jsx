@@ -30,9 +30,9 @@ function ConceptRow({ concept, onSelect }) {
         (e.currentTarget.style.borderColor = "var(--border)")
       }
     >
-      {concept.banner ? (
+      {concept.image ? (
         <img
-          src={concept.banner}
+          src={concept.image}
           alt=""
           style={{
             width: 36,
