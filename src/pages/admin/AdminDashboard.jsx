@@ -15,6 +15,7 @@ import {
   MdEdit,
   MdDelete,
   MdOutlineFastfood,
+  MdOutlineReceiptLong,
 } from "react-icons/md";
 import { LuPlus } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
@@ -30,6 +31,7 @@ import AdminApplications from "./AdminApplications";
 import AdminOperators from "./AdminOperators";
 import AdminVendorDetail from "./AdminVendorDetail";
 import AdminKiosks from "./AdminKiosks";
+import AdminInvoiceGenerator from "./AdminInvoiceGenerator";
 
 import {
   DashboardSkeleton,
@@ -130,6 +132,7 @@ export default function AdminDashboard() {
   // Section drawers
   const [usersOpen, setUsersOpen] = useState(false);
   const [kiosksOpen, setKiosksOpen] = useState(false);
+  const [invoiceGeneratorOpen, setInvoiceGeneratorOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
 
   // Entity drawers
@@ -1200,6 +1203,82 @@ export default function AdminDashboard() {
         </div>
         <AdminContractSettings />
       </div>
+
+      {/* ── Tools ── */}
+      <div className="admin_section">
+        <div className="admin_section_header">
+          <span className="admin_section_title">Tools</span>
+        </div>
+        <div className="admin_two_col" style={{ marginBottom: 16 }}>
+          <div
+            className="admin_stat_card"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 16,
+              cursor: "pointer",
+              padding: "18px 20px",
+            }}
+            onClick={() => setInvoiceGeneratorOpen(true)}
+          >
+            <div
+              className="admin_stat_icon"
+              style={{
+                color: "var(--accent)",
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                flexShrink: 0,
+              }}
+            >
+              <MdOutlineReceiptLong size={22} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: "0.9rem",
+                  fontWeight: 800,
+                  color: "var(--text-heading)",
+                  marginBottom: 3,
+                }}
+              >
+                Instant Invoice Generator
+              </div>
+              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                Create, customize, and print ad-hoc invoices on-the-fly (frontend only)
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  padding: "3px 10px",
+                  borderRadius: 999,
+                  background: "var(--bg-active)",
+                  color: "var(--accent)",
+                  border: "1px solid rgba(203,108,220,0.2)",
+                }}
+              >
+                Launch Tool
+              </span>
+              <MdArrowForward size={16} style={{ color: "var(--accent)" }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <AdminInvoiceGenerator
+        isOpen={invoiceGeneratorOpen}
+        onClose={() => setInvoiceGeneratorOpen(false)}
+      />
 
       {/* Applications drawer */}
       <AdminApplications
