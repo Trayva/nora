@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
+import "../app/Business/Business.css";
 import {
   MdWifi,
   MdWifiOff,
@@ -2298,11 +2299,99 @@ export function MenuDetailDrawer({
   onClose,
   cart,
 }) {
-  const { selectedState } = useAppState();
+  const { selectedState, states } = useAppState();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
-  const [menuPrice, setMenuPrice] = useState(null);
+  const [markup, setMarkup] = useState(30);
+  const [useCache, setUseCache] = useState(true);
+
+  const [analysisStateId, setAnalysisStateId] = useState(selectedState?.id || "");
+  const [calculatedCosts, setCalculatedCosts] = useState({ base: null, variants: {} });
+  const [calcLoading, setCalcLoading] = useState(false);
+
+  useEffect(() => {
+    if (selectedState?.id && !analysisStateId) {
+      setAnalysisStateId(selectedState.id);
+    }
+  }, [selectedState?.id]);
+
+  const activeStateId = analysisStateId || selectedState?.id;
+
+  useEffect(() => {
+    if (!menuId || !activeStateId) return;
+
+    let active = true;
+    const fetchCosts = async () => {
+      setCalcLoading(true);
+      try {
+        // Fetch base cost
+        const baseRes = await api.get(`/library/calculation/menu/${menuId}/calc`, {
+          params: {
+            stateId: activeStateId,
+            useAverage: "true",
+            returnCacheData: useCache ? "true" : "false",
+          }
+        });
+        const baseCostVal = baseRes.data.data?.cost;
+
+        // Fetch variants costs
+        const varCostMap = {};
+        const variantList = summary?.variants || [];
+        for (const variant of variantList) {
+          try {
+            const varRes = await api.get(`/library/calculation/menu/${menuId}/calc`, {
+              params: {
+                stateId: activeStateId,
+                useAverage: "true",
+                variantId: variant.id,
+                returnCacheData: useCache ? "true" : "false",
+              }
+            });
+            varCostMap[variant.id] = varRes.data.data?.cost;
+          } catch {
+            varCostMap[variant.id] = null;
+          }
+        }
+
+        if (active) {
+          setCalculatedCosts({
+            base: baseCostVal,
+            variants: varCostMap
+          });
+        }
+      } catch (e) {
+        console.error("Failed to calculate costs", e);
+      } finally {
+        if (active) setCalcLoading(false);
+      }
+    };
+
+    fetchCosts();
+
+    return () => {
+      active = false;
+    };
+  }, [menuId, activeStateId, useCache, summary?.variants]);
+
+  const currency = selectedState?.currency || "NGN";
+  const formatCost = (amount) =>
+    amount != null
+      ? new Intl.NumberFormat("en-NG", { style: "currency", currency }).format(
+        amount,
+      )
+      : null;
+
+  const calcSellingPrice = (cost) =>
+    cost != null ? cost + (markup / 100) * cost : null;
+
+  const calcProfit = (cost) =>
+    cost != null ? calcSellingPrice(cost) - cost : null;
+
+  const calcCostPct = (cost) =>
+    cost != null && calcSellingPrice(cost) > 0
+      ? ((cost / calcSellingPrice(cost)) * 100).toFixed(1)
+      : null;
 
   // Machinery supply request state
   const [selectedMachIds, setSelectedMachIds] = useState([]); // { id, name, image }
@@ -2343,31 +2432,19 @@ export function MenuDetailDrawer({
     if (!menuId) return;
     setLoading(true);
     setSummary(null);
-    setMenuPrice(null);
+
+    const params = {
+      returnCacheData: useCache,
+    };
+    if (activeStateId) params.stateId = activeStateId;
+    if (cart?.id) params.kioskId = cart.id;
+
     api
-      .get(`/vendor/menu/${menuId}/summary`)
+      .get(`/vendor/menu/${menuId}/summary`, { params })
       .then((r) => setSummary(r.data.data))
       .catch(() => toast.error("Failed to load menu details"))
       .finally(() => setLoading(false));
-    const priceParams = [];
-    if (selectedState?.id) priceParams.push(`stateId=${selectedState.id}`);
-    const priceUrl = `/library/price/menu/${menuId}${priceParams.length ? `?${priceParams.join("&")}` : ""}`;
-    api
-      .get(priceUrl)
-      .then((r) => {
-        const d = r.data.data;
-        const raw =
-          d?.sellingPrice ??
-          d?.price ??
-          d?.total ??
-          (typeof d === "number" ? d : null);
-        const parsed = raw != null ? Number(raw) : null;
-        setMenuPrice(
-          parsed != null && !isNaN(parsed) && parsed > 0 ? parsed : null,
-        );
-      })
-      .catch(() => { });
-  }, [menuId]);
+  }, [menuId, useCache, activeStateId, cart?.id]);
 
   const fmt = (n) =>
     n != null
@@ -2376,6 +2453,7 @@ export function MenuDetailDrawer({
 
   const TABS = [
     { key: "overview", label: "Overview" },
+    { key: "costing", label: "Live Costing" },
     { key: "machinery", label: "Tools" },
     { key: "ingredients", label: "Ingredients" },
     { key: "preps", label: "Prep Items" },
@@ -2573,6 +2651,607 @@ export function MenuDetailDrawer({
               </div>
             ) : (
               <>
+                {activeTab === "costing" && (
+                  <div>
+                    {/* Controls Row (State Selector & Cache Toggle) */}
+                    <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+                      {/* State Selector */}
+                      <div style={{ flex: 1, minWidth: 160 }}>
+                        <label
+                          style={{
+                            display: "block",
+                            fontSize: "0.68rem",
+                            fontWeight: 800,
+                            color: "var(--text-muted)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            marginBottom: 6,
+                          }}
+                        >
+                          State (Supplier Price Reference)
+                        </label>
+                        <select
+                          value={analysisStateId}
+                          onChange={(e) => setAnalysisStateId(e.target.value)}
+                          style={{
+                            width: "100%",
+                            height: 38,
+                            borderRadius: 8,
+                            background: "var(--bg-hover)",
+                            border: "1px solid var(--border)",
+                            color: "var(--text-heading)",
+                            padding: "0 10px",
+                            fontFamily: "inherit",
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            outline: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <option value="">Select State</option>
+                          {states.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name} ({s.code})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Cache toggle */}
+                      <div style={{ flex: "0 0 auto" }}>
+                        <label
+                          style={{
+                            display: "block",
+                            fontSize: "0.68rem",
+                            fontWeight: 800,
+                            color: "var(--text-muted)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            marginBottom: 6,
+                          }}
+                        >
+                          Live Prices
+                        </label>
+                        <button
+                          type="button"
+                          className={`overview_cache_toggle ${!useCache ? "overview_cache_toggle_active" : ""}`}
+                          onClick={() => setUseCache((v) => !v)}
+                          style={{ height: 38, width: 64, display: "flex", alignItems: "center", justifyContent: "center" }}
+                          title={
+                            useCache
+                              ? "Using cached prices — click for live"
+                              : "Using live prices"
+                          }
+                        >
+                          <span className="overview_cache_knob" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Markup slider */}
+                    <div className="overview_markup_row" style={{ marginBottom: 20 }}>
+                      <div className="overview_markup_header">
+                        <span className="overview_markup_label">Markup</span>
+                        <span className="overview_markup_value">{markup}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        step={10}
+                        max={1000}
+                        value={markup}
+                        onChange={(e) => setMarkup(Number(e.target.value))}
+                        className="overview_markup_slider"
+                      />
+                      <div className="overview_markup_hints">
+                        <span>0%</span>
+                        <span>500%</span>
+                        <span>1000%</span>
+                      </div>
+                    </div>
+
+                    {/* Comparative Analytics Chart */}
+                    <div
+                      style={{
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 14,
+                        padding: "16px 18px",
+                        marginBottom: 20,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          color: "var(--text-heading)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          marginBottom: 14,
+                        }}
+                      >
+                        Cost vs. Selling Price Chart
+                      </div>
+
+                      {calcLoading ? (
+                        <div style={{ padding: "20px 0", textAlign: "center" }}>
+                          <div className="page_loader_spinner" style={{ margin: "0 auto", width: 24, height: 24 }} />
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 8 }}>
+                            Calculating recipe costs...
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                          {/* Base Menu bar */}
+                          {calculatedCosts.base != null && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem" }}>
+                                <span style={{ fontWeight: 700, color: "var(--text-body)" }}>{menuName} (Base)</span>
+                                <span style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>
+                                  Cost: <strong style={{ color: "var(--text-heading)" }}>{formatCost(calculatedCosts.base)}</strong> · Price: <strong style={{ color: "var(--accent)" }}>{formatCost(calcSellingPrice(calculatedCosts.base))}</strong>
+                                </span>
+                              </div>
+                              <div style={{ height: 16, background: "var(--bg-hover)", borderRadius: 8, overflow: "hidden", display: "flex" }}>
+                                <div
+                                  style={{
+                                    height: "100%",
+                                    background: "linear-gradient(90deg, #a855f7, #c084fc)",
+                                    width: `${Math.min(100, (calculatedCosts.base / calcSellingPrice(calculatedCosts.base)) * 100)}%`,
+                                    transition: "width 0.3s ease",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "flex-end",
+                                    paddingRight: 6,
+                                    fontSize: "0.58rem",
+                                    fontWeight: 900,
+                                    color: "#fff",
+                                  }}
+                                >
+                                  {calcCostPct(calculatedCosts.base)}% Cost
+                                </div>
+                                <div
+                                  style={{
+                                    flex: 1,
+                                    height: "100%",
+                                    background: "rgba(34, 197, 94, 0.15)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    paddingLeft: 6,
+                                    fontSize: "0.58rem",
+                                    fontWeight: 900,
+                                    color: "#16a34a",
+                                  }}
+                                >
+                                  +{markup}% Margin
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Variants bars */}
+                          {(summary?.variants || []).map((variant) => {
+                            const varCost = calculatedCosts.variants[variant.id];
+                            if (varCost == null) return null;
+                            const varSellingPrice = calcSellingPrice(varCost);
+                            const varCostPct = calcCostPct(varCost);
+                            return (
+                              <div key={variant.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem" }}>
+                                  <span style={{ fontWeight: 700, color: "var(--text-body)" }}>{menuName} ({variant.name})</span>
+                                  <span style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>
+                                    Cost: <strong style={{ color: "var(--text-heading)" }}>{formatCost(varCost)}</strong> · Price: <strong style={{ color: "var(--accent)" }}>{formatCost(varSellingPrice)}</strong>
+                                  </span>
+                                </div>
+                                <div style={{ height: 16, background: "var(--bg-hover)", borderRadius: 8, overflow: "hidden", display: "flex" }}>
+                                  <div
+                                    style={{
+                                      height: "100%",
+                                      background: "linear-gradient(90deg, #a855f7, #c084fc)",
+                                      width: `${Math.min(100, (varCost / varSellingPrice) * 100)}%`,
+                                      transition: "width 0.3s ease",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "flex-end",
+                                      paddingRight: 6,
+                                      fontSize: "0.58rem",
+                                      fontWeight: 900,
+                                      color: "#fff",
+                                    }}
+                                  >
+                                    {varCostPct}% Cost
+                                  </div>
+                                  <div
+                                    style={{
+                                      flex: 1,
+                                      height: "100%",
+                                      background: "rgba(34, 197, 94, 0.15)",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      paddingLeft: 6,
+                                      fontSize: "0.58rem",
+                                      fontWeight: 900,
+                                      color: "#16a34a",
+                                    }}
+                                  >
+                                    +{markup}% Margin
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {calculatedCosts.base == null && Object.keys(calculatedCosts.variants).length === 0 && (
+                            <div style={{ textAlign: "center", fontSize: "0.78rem", color: "var(--text-muted)", padding: "10px 0" }}>
+                              No calculated price data. Configure suppliers in {selectedState?.name || "the active state"}.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Ingredients Cost Contribution Bar Graph */}
+                    <div
+                      style={{
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 14,
+                        padding: "16px 18px",
+                        marginBottom: 20,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          color: "var(--text-heading)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          marginBottom: 16,
+                        }}
+                      >
+                        Ingredient Cost Contribution Graph
+                      </div>
+                      {(() => {
+                        const ingContributions = (summary?.ingredients || [])
+                          .map((ing) => {
+                            const qty = ing.totalQuantity || 0;
+                            const costPerUnit = ing.cost || 0;
+                            const totalCostVal = qty * costPerUnit;
+                            return { ...ing, qty, costPerUnit, totalCostVal };
+                          })
+                          .filter((x) => x.totalCostVal > 0)
+                          .sort((a, b) => b.totalCostVal - a.totalCostVal);
+
+                        if (ingContributions.length === 0) {
+                          return (
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center", padding: "10px 0" }}>
+                              No ingredient cost data available to graph.
+                            </div>
+                          );
+                        }
+
+                        const maxCost = Math.max(...ingContributions.map((x) => x.totalCostVal), 1);
+
+                        return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                            {ingContributions.map((ing) => {
+                              const pct = (ing.totalCostVal / maxCost) * 100;
+                              return (
+                                <div key={ing.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
+                                    <span style={{ fontWeight: 600, color: "var(--text-body)" }}>
+                                      {ing.name} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>({ing.qty.toFixed(3)} {ing.unit})</span>
+                                    </span>
+                                    <span style={{ fontWeight: 700, color: "var(--text-heading)" }}>
+                                      {formatCost(ing.totalCostVal)}
+                                    </span>
+                                  </div>
+                                  <div style={{ height: 8, width: "100%", background: "var(--bg-hover)", borderRadius: 4, overflow: "hidden" }}>
+                                    <div
+                                      style={{
+                                        height: "100%",
+                                        background: "linear-gradient(90deg, #a855f7 0%, var(--accent) 100%)",
+                                        width: `${pct}%`,
+                                        borderRadius: 4,
+                                        transition: "width 0.3s ease",
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Prep Items Cost Contribution Bar Graph */}
+                    <div
+                      style={{
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 14,
+                        padding: "16px 18px",
+                        marginBottom: 20,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          color: "var(--text-heading)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          marginBottom: 16,
+                        }}
+                      >
+                        Prep Item Cost Contribution Graph
+                      </div>
+                      {(() => {
+                        const prepContributions = (summary?.prepItems || [])
+                          .map((prep) => {
+                            const qty = prep.usedIn?.reduce((sum, u) => sum + (u.quantity || 0), 0) || 0;
+                            const costPerUnit = prep.cost || 0;
+                            const totalCostVal = qty * costPerUnit;
+                            return { ...prep, qty, costPerUnit, totalCostVal };
+                          })
+                          .filter((x) => x.totalCostVal > 0)
+                          .sort((a, b) => b.totalCostVal - a.totalCostVal);
+
+                        if (prepContributions.length === 0) {
+                          return (
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center", padding: "10px 0" }}>
+                              No prep item cost data available to graph.
+                            </div>
+                          );
+                        }
+
+                        const maxCost = Math.max(...prepContributions.map((x) => x.totalCostVal), 1);
+
+                        return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                            {prepContributions.map((prep) => {
+                              const pct = (prep.totalCostVal / maxCost) * 100;
+                              return (
+                                <div key={prep.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
+                                    <span style={{ fontWeight: 600, color: "var(--text-body)" }}>
+                                      {prep.name} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>({prep.qty.toFixed(3)} {prep.unit || "unit"})</span>
+                                    </span>
+                                    <span style={{ fontWeight: 700, color: "var(--text-heading)" }}>
+                                      {formatCost(prep.totalCostVal)}
+                                    </span>
+                                  </div>
+                                  <div style={{ height: 8, width: "100%", background: "var(--bg-hover)", borderRadius: 4, overflow: "hidden" }}>
+                                    <div
+                                      style={{
+                                        height: "100%",
+                                        background: "linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%)",
+                                        width: `${pct}%`,
+                                        borderRadius: 4,
+                                        transition: "width 0.3s ease",
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Detailed Base Item Cost Details */}
+                    <div
+                      style={{
+                        background: "var(--bg-hover)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 12,
+                        padding: "14px 16px",
+                        marginBottom: 20,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "0.85rem",
+                          fontWeight: 800,
+                          color: "var(--text-heading)",
+                          marginBottom: 10,
+                        }}
+                      >
+                        {menuName} (Base Item)
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {calculatedCosts.base != null ? (
+                          <>
+                            <span className="overview_cost_chip overview_cost_chip_green" title="Estimated selling price">
+                              Selling Price: {formatCost(calcSellingPrice(calculatedCosts.base))}
+                            </span>
+                            <span className="overview_cost_chip overview_cost_chip_blue" title="Estimated profit">
+                              Profit: {formatCost(calcProfit(calculatedCosts.base))}
+                            </span>
+                            <span className="overview_cost_chip overview_cost_chip_purple" title="Recipe cost · Cost percentage">
+                              Cost: {formatCost(calculatedCosts.base)} · {calcCostPct(calculatedCosts.base)}%
+                            </span>
+                          </>
+                        ) : (
+                          <span className="overview_cost_chip overview_cost_chip_warn">
+                            ⚠ Cost unavailable for the selected state
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Detailed Varieties Cost Cards */}
+                    {(summary?.variants || [])?.length > 0 && (
+                      <div style={{ marginBottom: 24 }}>
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            fontWeight: 700,
+                            color: "var(--text-muted)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            marginBottom: 10,
+                          }}
+                        >
+                          Varieties & Live Costing
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          {summary.variants.map((variant) => {
+                            const vCost = calculatedCosts.variants[variant.id];
+                            return (
+                              <div
+                                key={variant.id}
+                                style={{
+                                  background: "var(--bg-hover)",
+                                  border: "1px solid var(--border)",
+                                  borderRadius: 12,
+                                  padding: "14px",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 8,
+                                }}
+                              >
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                  <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                                    {variant.name}
+                                  </div>
+                                  {variant.prepItem?.name && (
+                                    <span
+                                      style={{
+                                        fontSize: "0.65rem",
+                                        fontWeight: 700,
+                                        padding: "2px 8px",
+                                        borderRadius: 999,
+                                        background: "var(--bg-active)",
+                                        color: "var(--accent)",
+                                        border: "1px solid rgba(203,108,220,0.2)",
+                                      }}
+                                    >
+                                      {variant.prepItem.name}
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                  {vCost != null ? (
+                                    <>
+                                      <span className="overview_cost_chip overview_cost_chip_green" title="Estimated selling price">
+                                        Selling Price: {formatCost(calcSellingPrice(vCost))}
+                                      </span>
+                                      <span className="overview_cost_chip overview_cost_chip_blue" title="Estimated profit">
+                                        Profit: {formatCost(calcProfit(vCost))}
+                                      </span>
+                                      <span className="overview_cost_chip overview_cost_chip_purple" title="Recipe cost · Cost percentage">
+                                        Cost: {formatCost(vCost)} · {calcCostPct(vCost)}%
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="overview_cost_chip overview_cost_chip_warn">
+                                      ⚠ Cost unavailable
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Detailed Ingredients Cost Breakdown */}
+                    <div>
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          color: "var(--text-muted)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          marginBottom: 12,
+                        }}
+                      >
+                        Recipe Ingredient Breakdown
+                      </div>
+                      {summary?.ingredients?.length === 0 ? (
+                        <div style={{ padding: 14, background: "var(--bg-hover)", borderRadius: 12, fontSize: "0.78rem", color: "var(--text-muted)", textAlign: "center" }}>
+                          No ingredients found in the menu recipe.
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          {summary.ingredients.map((ing) => {
+                            const hasCost = ing.cost != null;
+                            const totalIngCost = hasCost ? ing.totalQuantity * ing.cost : null;
+                            return (
+                              <div
+                                key={ing.id}
+                                style={{
+                                  background: "var(--bg-hover)",
+                                  border: "1px solid var(--border)",
+                                  borderRadius: 12,
+                                  padding: "12px 14px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 12,
+                                }}
+                              >
+                                {ing.image ? (
+                                  <img
+                                    src={ing.image}
+                                    alt=""
+                                    style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+                                  />
+                                ) : (
+                                  <div
+                                    style={{
+                                      width: 36,
+                                      height: 36,
+                                      borderRadius: 8,
+                                      background: "var(--bg-card)",
+                                      border: "1px solid var(--border)",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      color: "var(--text-muted)",
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    <MdOutlineInventory2 size={16} />
+                                  </div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-body)" }}>
+                                    {ing.name}
+                                  </div>
+                                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+                                    Qty: <strong style={{ color: "var(--text-heading)" }}>{ing.totalQuantity?.toFixed(3)} {ing.unit}</strong>
+                                    {hasCost && (
+                                      <>
+                                        {" · "}Price: <strong>{formatCost(ing.cost)} / {ing.unit}</strong>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                  {hasCost ? (
+                                    <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--accent)" }}>
+                                      {formatCost(totalIngCost)}
+                                    </div>
+                                  ) : (
+                                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontStyle: "italic" }}>
+                                      Price missing
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {activeTab === "overview" && (
                   <div>
                     {item?.image && (
@@ -2697,78 +3376,84 @@ export function MenuDetailDrawer({
                       </p>
                     )}
 
-                    {(menuPrice != null || baseCost != null) && (
-                      <div
-                        style={{ display: "flex", gap: 10, marginBottom: 14 }}
-                      >
-                        {menuPrice != null && (
-                          <div
-                            style={{
-                              flex: 1,
-                              background: "var(--bg-active)",
-                              border: "1px solid rgba(203,108,220,0.2)",
-                              borderRadius: 12,
-                              padding: "12px 14px",
-                            }}
-                          >
-                            <div
+                    {/* Professional Financial Overview Widget */}
+                    {(baseCost != null || item?.recipeCost != null) && (() => {
+                      const costVal = baseCost ?? item?.recipeCost;
+                      const priceVal = calcSellingPrice(costVal);
+                      const profitVal = calcProfit(costVal);
+                      const marginPct = calcCostPct(costVal);
+                      return (
+                        <div
+                          style={{
+                            background: "linear-gradient(135deg, var(--bg-hover) 0%, var(--bg-card) 100%)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 16,
+                            padding: "16px 20px",
+                            marginBottom: 20,
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 12,
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                              Financial Overview ({markup}% Markup)
+                            </span>
+                            <span
                               style={{
-                                fontSize: "0.6rem",
+                                fontSize: "0.68rem",
                                 fontWeight: 700,
-                                color: "var(--text-muted)",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.05em",
-                                marginBottom: 3,
+                                padding: "2px 8px",
+                                borderRadius: 999,
+                                background: "rgba(34, 197, 94, 0.15)",
+                                color: "#22c55e",
+                                border: "1px solid rgba(34, 197, 94, 0.25)",
                               }}
                             >
-                              Selling Price
+                              Healthy Margin
+                            </span>
+                          </div>
+                          
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+                            {/* Cost */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                              <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
+                                Cost Price
+                              </span>
+                              <span style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--text-heading)" }}>
+                                ₦{fmt(costVal)}
+                              </span>
                             </div>
-                            <div
-                              style={{
-                                fontSize: "1.1rem",
-                                fontWeight: 900,
-                                color: "var(--accent)",
-                              }}
-                            >
-                              ₦{fmt(menuPrice)}
+
+                            {/* Selling Price */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                              <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
+                                Selling Price
+                              </span>
+                              <span style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--accent)" }}>
+                                ₦{fmt(priceVal)}
+                              </span>
+                            </div>
+
+                            {/* Profit */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                              <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
+                                Est. Profit
+                              </span>
+                              <span style={{ fontSize: "1.1rem", fontWeight: 900, color: "#22c55e" }}>
+                                ₦{fmt(profitVal)}
+                              </span>
                             </div>
                           </div>
-                        )}
-                        {baseCost != null && (
-                          <div
-                            style={{
-                              flex: 1,
-                              background: "var(--bg-hover)",
-                              border: "1px solid var(--border)",
-                              borderRadius: 12,
-                              padding: "12px 14px",
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontSize: "0.6rem",
-                                fontWeight: 700,
-                                color: "var(--text-muted)",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.05em",
-                                marginBottom: 3,
-                              }}
-                            >
-                              Recipe Cost
-                            </div>
-                            <div
-                              style={{
-                                fontSize: "1.1rem",
-                                fontWeight: 900,
-                                color: "var(--text-heading)",
-                              }}
-                            >
-                              ₦{fmt(baseCost)}
-                            </div>
+
+                          {/* Progress visual bar */}
+                          <div style={{ height: 6, width: "100%", background: "var(--bg-hover)", borderRadius: 3, overflow: "hidden", display: "flex", marginTop: 4 }}>
+                            <div style={{ height: "100%", background: "#a855f7", width: `${marginPct}%` }} title={`Cost: ${marginPct}%`} />
+                            <div style={{ flex: 1, height: "100%", background: "#22c55e" }} title={`Profit: ${100 - marginPct}%`} />
                           </div>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      );
+                    })()}
 
                     <div
                       style={{
@@ -2779,17 +3464,19 @@ export function MenuDetailDrawer({
                         marginBottom: 20,
                       }}
                     >
-                      {[
-                        {
-                          label: "Selling Price",
-                          value:
-                            menuPrice != null
-                              ? `₦${fmt(menuPrice)}`
-                              : item?.sellingPrice > 0
-                                ? `₦${fmt(item.sellingPrice)}`
-                                : null,
-                          accent: true,
-                        },
+                      {(() => {
+                        const costVal = baseCost ?? item?.recipeCost;
+                        return [
+                          {
+                            label: "Selling Price",
+                            value:
+                              costVal != null
+                                ? `₦${fmt(calcSellingPrice(costVal))}`
+                                : item?.sellingPrice > 0
+                                  ? `₦${fmt(item.sellingPrice)}`
+                                  : null,
+                            accent: true,
+                          },
                         {
                           label: "Recipe Cost",
                           value:
@@ -2829,7 +3516,8 @@ export function MenuDetailDrawer({
                               ? String(machineries.length)
                               : null,
                         },
-                      ]
+                      ];
+                      })()
                         .filter((s) => s.value)
                         .map((s) => (
                           <div
