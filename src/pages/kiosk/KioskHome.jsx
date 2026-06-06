@@ -101,7 +101,10 @@ function StatusBadge({ status, colors }) {
   );
 }
 
-import { CardSkeleton, TableSkeleton } from "../../components/SkeletonTemplates";
+import {
+  CardSkeleton,
+  TableSkeleton,
+} from "../../components/SkeletonTemplates";
 
 export default function KioskHome() {
   const navigate = useNavigate();
@@ -134,7 +137,9 @@ export default function KioskHome() {
 
   const handleKioskUpdate = (updatedKiosk) => {
     setKiosks((prev) =>
-      prev.map((k) => (k.id === updatedKiosk.id ? { ...k, ...updatedKiosk } : k)),
+      prev.map((k) =>
+        k.id === updatedKiosk.id ? { ...k, ...updatedKiosk } : k
+      )
     );
   };
 
@@ -152,26 +157,50 @@ export default function KioskHome() {
           </p>
         </div>
         <button
-          className="app_btn app_btn_confirm"
-          style={{ height: 40, display: "flex", alignItems: "center", gap: 6 }}
+          className="kiosk_buy_btn"
           onClick={() => navigate("/app/purchase-kiosk")}
+          aria-label="Purchase Kiosk"
         >
-          <MdAdd size={17} />
-          Buy Kiosk
+          <span className="kiosk_buy_icon">
+            <MdAdd size={16} />
+          </span>
+          {/* <span className="kiosk_buy_text">Purchase Kiosk</span> */}
         </button>
       </div>
 
       {loading ? (
         <div style={{ marginTop: "24px" }}>
-          <div className="skeleton_shimmer skeleton_text" style={{ width: "120px", height: "18px", marginBottom: "20px" }} />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px", marginBottom: "40px" }}>
-            {Array(3).fill(0).map((_, i) => (
-              <div key={i} className="kiosk_item_card" style={{ height: "200px" }}>
-                <div className="skeleton_shimmer skeleton_rect" style={{ height: "100%", borderRadius: "12px" }} />
-              </div>
-            ))}
+          <div
+            className="skeleton_shimmer skeleton_text"
+            style={{ width: "120px", height: "18px", marginBottom: "20px" }}
+          />
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: "20px",
+              marginBottom: "40px",
+            }}
+          >
+            {Array(3)
+              .fill(0)
+              .map((_, i) => (
+                <div
+                  key={i}
+                  className="kiosk_item_card"
+                  style={{ height: "200px" }}
+                >
+                  <div
+                    className="skeleton_shimmer skeleton_rect"
+                    style={{ height: "100%", borderRadius: "12px" }}
+                  />
+                </div>
+              ))}
           </div>
-          <div className="skeleton_shimmer skeleton_text" style={{ width: "150px", height: "18px", marginBottom: "20px" }} />
+          <div
+            className="skeleton_shimmer skeleton_text"
+            style={{ width: "150px", height: "18px", marginBottom: "20px" }}
+          />
           <TableSkeleton rows={4} cols={3} />
         </div>
       ) : (
@@ -209,7 +238,8 @@ export default function KioskHome() {
                 <div className="kiosk_summary_row">
                   <div className="kiosk_summary_chip">
                     <LuStore size={13} />
-                    {activeKiosks.length} Kiosk{activeKiosks.length !== 1 ? "s" : ""}
+                    {activeKiosks.length} Kiosk
+                    {activeKiosks.length !== 1 ? "s" : ""}
                   </div>
                   <div className="kiosk_summary_chip">
                     <MdCircle size={7} style={{ color: "#22c55e" }} />
@@ -245,7 +275,9 @@ export default function KioskHome() {
 
                       <div className="kiosk_item_indicators">
                         <span
-                          className={`kiosk_indicator ${kiosk.isOnline ? "kiosk_ind_on" : "kiosk_ind_off"}`}
+                          className={`kiosk_indicator ${
+                            kiosk.isOnline ? "kiosk_ind_on" : "kiosk_ind_off"
+                          }`}
                         >
                           {kiosk.isOnline ? (
                             <MdWifi size={12} />
@@ -255,7 +287,11 @@ export default function KioskHome() {
                           {kiosk.isOnline ? "Online" : "Offline"}
                         </span>
                         <span
-                          className={`kiosk_indicator ${kiosk.isLocked ? "kiosk_ind_locked" : "kiosk_ind_unlocked"}`}
+                          className={`kiosk_indicator ${
+                            kiosk.isLocked
+                              ? "kiosk_ind_locked"
+                              : "kiosk_ind_unlocked"
+                          }`}
                         >
                           {kiosk.isLocked ? (
                             <MdLock size={11} />
@@ -329,8 +365,15 @@ export default function KioskHome() {
                 style={{ marginTop: 12 }}
                 onClick={() => setDeactivatedOpen((v) => !v)}
               >
-                <span className="kiosk_section_label" style={{ color: "var(--text-muted)" }}>Deactivated Kiosks</span>
-                <span className="kiosk_section_count">{deactivatedKiosks.length}</span>
+                <span
+                  className="kiosk_section_label"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Deactivated Kiosks
+                </span>
+                <span className="kiosk_section_count">
+                  {deactivatedKiosks.length}
+                </span>
                 <span className="kiosk_section_chevron">
                   {deactivatedOpen ? (
                     <MdExpandLess size={18} />
@@ -341,7 +384,10 @@ export default function KioskHome() {
               </div>
 
               {deactivatedOpen && (
-                <div className="kiosk_grid" style={{ marginBottom: 36, opacity: 0.6 }}>
+                <div
+                  className="kiosk_grid"
+                  style={{ marginBottom: 36, opacity: 0.6 }}
+                >
                   {deactivatedKiosks.map((kiosk) => (
                     <div
                       key={kiosk.id}
@@ -375,7 +421,12 @@ export default function KioskHome() {
                       <div className="kiosk_item_meta">
                         <div className="kiosk_meta_row">
                           <span className="kiosk_meta_key">Status</span>
-                          <span className="kiosk_meta_val" style={{ color: "#ef4444" }}>Deactivated</span>
+                          <span
+                            className="kiosk_meta_val"
+                            style={{ color: "#ef4444" }}
+                          >
+                            Deactivated
+                          </span>
                         </div>
                         <div className="kiosk_meta_row">
                           <span className="kiosk_meta_key">Location</span>
@@ -468,7 +519,7 @@ export default function KioskHome() {
                                   day: "2-digit",
                                   month: "short",
                                   year: "numeric",
-                                },
+                                }
                               )}
                             </span>
                           </div>
