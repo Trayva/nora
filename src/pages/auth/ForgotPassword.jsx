@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { useState } from "react";
 import { MdLockOutline, MdArrowForward } from "react-icons/md";
 import api from "../../api/axios";
+import useQuery from "../../hooks/useQuery";
 
 const forgotPasswordSchema = Yup.object().shape({
   email: Yup.string()
@@ -14,6 +15,8 @@ const forgotPasswordSchema = Yup.object().shape({
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
+  const query = useQuery();
+  const isAddingAccount = query.get("addAccount") === "true";
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (values) => {
@@ -21,7 +24,7 @@ export default function ForgotPassword() {
     try {
       await api.post("/auth/forgot-password", { email: values.email });
       toast.success("Password reset link sent! Check your email.");
-      navigate("/auth/login");
+      navigate(`/auth/login${isAddingAccount ? "?addAccount=true" : ""}`);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to send reset link");
     } finally {
@@ -83,7 +86,10 @@ export default function ForgotPassword() {
 
             <p className="muted" style={{ marginTop: 20, textAlign: "center", fontSize: "0.875rem" }}>
               Remember your password?{" "}
-              <Link to="/auth/login" className="login_signup_link">
+              <Link
+                to={`/auth/login${isAddingAccount ? "?addAccount=true" : ""}`}
+                className="login_signup_link"
+              >
                 Sign in
               </Link>
             </p>

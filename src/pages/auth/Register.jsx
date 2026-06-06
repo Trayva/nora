@@ -31,6 +31,7 @@ export default function Register() {
   const navigate = useNavigate();
   const query = useQuery();
   const roleParam = query.get("role");
+  const isAddingAccount = query.get("addAccount") === "true";
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -262,7 +263,10 @@ export default function Register() {
 
       <p className="muted" style={{ marginTop: 22, textAlign: "center", fontSize: "0.875rem" }}>
         Already have an account?{" "}
-        <Link to="/auth/login" className="login_signup_link">
+        <Link
+          to={`/auth/login${isAddingAccount ? "?addAccount=true" : ""}`}
+          className="login_signup_link"
+        >
           Sign in
         </Link>
       </p>

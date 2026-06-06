@@ -33,6 +33,7 @@ function AvatarChip({ account, active, onSelect, onRemove }) {
   const hue = nameHue(account.user?.fullName || "");
   const initials = getInitials(account.user?.fullName || "?");
   const role = getPrimaryRole(account.user);
+  const imgSrc = account.user?.image || null;
 
   return (
     <button
@@ -43,9 +44,16 @@ function AvatarChip({ account, active, onSelect, onRemove }) {
     >
       <span
         className="login-account-avatar"
-        style={{ background: `hsl(${hue}, 60%, 48%)` }}
+        style={imgSrc ? { background: "transparent", padding: 0, overflow: "hidden" } : { background: `hsl(${hue}, 60%, 48%)` }}
       >
-        {initials}
+        {imgSrc ? (
+          <img
+            src={imgSrc}
+            alt={account.user?.fullName || "Avatar"}
+            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", display: "block" }}
+            onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.parentElement.textContent = initials; }}
+          />
+        ) : initials}
       </span>
       <span className="login-account-info">
         <span className="login-account-name">{account.user?.fullName || "Account"}</span>
@@ -85,11 +93,13 @@ export default function Login() {
   const { theme } = useTheme();
   const query = useQuery();
   const cbUrl = query.get("cbUrl");
+  const isAddingAccount = query.get("addAccount") === "true";
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   /** accountId of the "continue as" selection, or null = use full form */
   const [selectedAccountId, setSelectedAccountId] = useState(null);
+  // Start with chips visible so existing accounts are clickable; form is secondary
   const [showFullForm, setShowFullForm] = useState(false);
 
   const selectedAccount = savedAccounts.find((a) => a.id === selectedAccountId) || null;
@@ -191,16 +201,23 @@ export default function Login() {
   return (
     <div className="login-page-inner">
       <div className="login-heading-group">
-        <h2 className="login-title">Welcome back</h2>
+        <h2 className="login-title">
+          {isAddingAccount ? "Add account" : "Welcome back"}
+        </h2>
         <p className="login-subtitle">
-          New here?{" "}
-          <Link to="/auth/register?role=CUSTOMER" className="login_signup_link">
-            Create a free account
-          </Link>
+          {isAddingAccount ? (
+            <>Log in to add another account to your session</>
+          ) : (
+            <>New here?{" "}
+              <Link to="/auth/register?role=CUSTOMER" className="login_signup_link">
+                Create a free account
+              </Link>
+            </>
+          )}
         </p>
       </div>
 
-      {/* ── Saved account chips ───────────────────────────────────── */}
+      {/* ── Saved account chips ──────────────────────────────────── */}
       {hasSaved && !showFullForm && (
         <div className="login-accounts-section">
           <p className="login-section-label">Continue as</p>
@@ -340,7 +357,10 @@ export default function Login() {
                 <div className="form-field">
                   <div className="login-label-row">
                     <label className="modal-label">Password</label>
-                    <Link to="/auth/forgot-password" className="login_forgot_link">
+                    <Link
+                      to={`/auth/forgot-password${isAddingAccount ? "?addAccount=true" : ""}`}
+                      className="login_forgot_link"
+                    >
                       Forgot?
                     </Link>
                   </div>
@@ -397,7 +417,10 @@ export default function Login() {
 
       <p className="muted" style={{ marginTop: 22, textAlign: "center", fontSize: "0.875rem" }}>
         Don't have an account?{" "}
-        <Link to="/auth/register?role=CUSTOMER" className="login_signup_link">
+        <Link
+          to={`/auth/register?role=CUSTOMER${isAddingAccount ? "&addAccount=true" : ""}`}
+          className="login_signup_link"
+        >
           Sign up
         </Link>
       </p>

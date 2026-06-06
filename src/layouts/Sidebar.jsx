@@ -76,6 +76,38 @@ function nameHue(str = "") {
   return h;
 }
 
+/**
+ * Renders a circular avatar: profile image if available, otherwise
+ * a deterministic colour + initials fallback.
+ */
+function UserAvatar({ user, className = "sidebar-user-avatar", style = {} }) {
+  const hue = nameHue(user?.fullName || user?.email || "");
+  const initials = getInitials(user?.fullName || user?.email || "?");
+  const imgSrc = user?.image || null;
+
+  if (imgSrc) {
+    return (
+      <span className={className} style={{ background: "transparent", padding: 0, overflow: "hidden", ...style }}>
+        <img
+          src={imgSrc}
+          alt={user?.fullName || "Avatar"}
+          style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", display: "block" }}
+          onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.parentElement.textContent = initials; }}
+        />
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={className}
+      style={{ background: `hsl(${hue}, 60%, 48%)`, ...style }}
+    >
+      {initials}
+    </span>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function Sidebar({ mobileOpen = false, onMobileClose }) {
@@ -251,12 +283,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
 
               {/* Active account */}
               <div className="sidebar-account-item sidebar-account-item--active">
-                <span
-                  className="sidebar-account-item-avatar"
-                  style={{ background: `hsl(${userHue}, 60%, 48%)` }}
-                >
-                  {userInitials}
-                </span>
+                <UserAvatar user={user} className="sidebar-account-item-avatar" />
                 <span className="sidebar-account-item-info">
                   <span className="sidebar-account-item-name">{user.fullName || "You"}</span>
                   <span className="sidebar-account-item-email">{user.email}</span>
@@ -271,16 +298,12 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
                 return (
                   <div key={account.id} className="sidebar-account-item" style={{ justifyContent: "space-between" }}>
                     <button
+
                       onClick={() => handleSwitchAccount(account)}
-                      style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
+                      style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit", textAlign: "left" }}
                       title={`Switch to ${account.user?.fullName}`}
                     >
-                      <span
-                        className="sidebar-account-item-avatar"
-                        style={{ background: `hsl(${hue}, 60%, 48%)` }}
-                      >
-                        {initials}
-                      </span>
+                      <UserAvatar user={account.user} className="sidebar-account-item-avatar" />
                       <span className="sidebar-account-item-info">
                         <span className="sidebar-account-item-name">{account.user?.fullName || "Account"}</span>
                         <span className="sidebar-account-item-email">{account.user?.email}</span>
@@ -302,7 +325,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
               {/* Add account */}
               <button
                 className="sidebar-add-account-btn"
-                onClick={() => { setAccountMenuOpen(false); navigate("/auth/login"); }}
+                onClick={() => { setAccountMenuOpen(false); navigate("/auth/login?addAccount=true"); }}
               >
                 <MdPersonAdd size={15} />
                 Add account
@@ -318,12 +341,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
             title={collapsed ? (user.fullName || user.email) : undefined}
             aria-expanded={accountMenuOpen}
           >
-            <span
-              className="sidebar-user-avatar"
-              style={{ background: `hsl(${userHue}, 60%, 48%)` }}
-            >
-              {userInitials}
-            </span>
+            <UserAvatar user={user} className="sidebar-user-avatar" />
             {!collapsed && (
               <>
                 <span className="sidebar-user-info">

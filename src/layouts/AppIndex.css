@@ -215,8 +215,8 @@
     width: 34px;
     height: 34px;
     border-radius: 10px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
+    /* background: var(--bg-card); */
+    /* border: 1px solid var(--border); */
     flex-shrink: 0;
     overflow: hidden;
   }

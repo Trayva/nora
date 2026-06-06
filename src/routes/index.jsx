@@ -143,7 +143,7 @@
 
 //   return routes;
 // }
-import { useRoutes, Navigate } from "react-router-dom";
+import { useRoutes, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 // Layouts
@@ -201,13 +201,17 @@ function ProtectedRoute({ children }) {
 
 function GuestRoute({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
+  const isAddingAccount = new URLSearchParams(location.search).get("addAccount") === "true";
+
   if (loading)
     return (
       <div className="page_wrapper">
         <PageSkeleton />
       </div>
     );
-  if (user) return <Navigate to={getDefaultRoute(user)} replace />;
+  // Allow a logged-in user through if they're explicitly adding a new account
+  if (user && !isAddingAccount) return <Navigate to={getDefaultRoute(user)} replace />;
   return children;
 }
 
