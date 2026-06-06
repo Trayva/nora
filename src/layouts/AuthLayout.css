@@ -424,7 +424,7 @@
     min-height: 200px;
     padding: 32px 28px;
     /* flex-direction: row; */
-    align-items: center;
+    /* align-items: center; */
     gap: 20px;
   }
 
