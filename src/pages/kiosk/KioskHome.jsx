@@ -152,12 +152,12 @@ export default function KioskHome() {
           </p>
         </div>
         <button
-          className="app_btn app_btn_confirm shift-right"
+          className="app_btn app_btn_confirm"
           style={{ height: 40, display: "flex", alignItems: "center", gap: 6 }}
           onClick={() => navigate("/app/purchase-kiosk")}
         >
           <MdAdd size={17} />
-          Purchase Kiosk
+          Buy Kiosk
         </button>
       </div>
 

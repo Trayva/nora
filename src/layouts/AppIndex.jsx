@@ -128,7 +128,7 @@ export default function AppIndex() {
           >
             {theme === "dark" ? <MdOutlineLightMode size={18} /> : <MdOutlineDarkMode size={18} />}
           </button>
-          <NotificationBell />
+          <NotificationBell className="desktop-header-icon-btn" />
           {user && (
             <button
               id="header-account-btn"
@@ -182,7 +182,7 @@ export default function AppIndex() {
           >
             {theme === "dark" ? <MdOutlineLightMode size={18} /> : <MdOutlineDarkMode size={18} />}
           </button>
-          <NotificationBell />
+          <NotificationBell className="mobile-nav-action" />
         </div>
       </header>
 
@@ -231,7 +231,7 @@ export default function AppIndex() {
               >
                 {theme === "dark" ? <MdOutlineLightMode size={18} /> : <MdOutlineDarkMode size={18} />}
               </button>
-              <NotificationBell />
+              <NotificationBell className="desktop-header-icon-btn" />
 
 
               {/* {user && (

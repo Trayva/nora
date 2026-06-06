@@ -183,6 +183,7 @@ import TermsOfService from "../pages/website/TermsOfService";
 import { getDefaultRoute } from "../utils/AuthHelpers";
 import AggregatorPage from "../pages/app/Aggregator/AggregatorPage";
 import NotificationBell from "../components/Notifications/NotificationBell";
+import NotificationsPage from "../pages/app/Notifications";
 
 import { PageSkeleton } from "../components/SkeletonTemplates";
 
@@ -281,6 +282,7 @@ export default function Routes() {
         { path: "operator", element: <OperatorHome /> },
         { path: "operator/kiosk/:kioskId", element: <OperatorKioskPage /> },
         { path: "aggregator", element: <AggregatorPage /> },
+        { path: "notifications", element: <NotificationsPage /> },
       ],
     },
 
