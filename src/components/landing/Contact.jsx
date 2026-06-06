@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { IoLocationOutline, IoMailOutline } from "react-icons/io5";
-import { MdOutlinePhone } from "react-icons/md";
+import { MdOutlinePhone, MdOutlineSend } from "react-icons/md";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
 import PhoneInput from "react-phone-input-2";
@@ -8,9 +8,42 @@ import "react-phone-input-2/lib/style.css";
 
 const INITIAL = { name: "", email: "", phone: "", message: "" };
 
+const INFO = [
+  {
+    icon: IoLocationOutline,
+    label: "Address",
+    text: "Office 1703 – Fahidi Heights, Alhamriya\nDubai, United Arab Emirates",
+    href: null,
+  },
+  {
+    icon: IoMailOutline,
+    label: "Email",
+    text: "support@trynora.net",
+    href: "mailto:support@trynora.net",
+  },
+  {
+    icon: MdOutlinePhone,
+    label: "Phone",
+    text: "+234 80 123 4567",
+    href: "tel:+2348012345678",
+  },
+];
+
 function Contact() {
   const [form, setForm] = useState(INITIAL);
   const [loading, setLoading] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { el.classList.add("lp-visible"); obs.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -27,7 +60,9 @@ function Contact() {
     }
     setLoading(true);
     try {
-      const formattedPhone = form.phone ? (form.phone.startsWith("+") ? form.phone : `+${form.phone}`) : undefined;
+      const formattedPhone = form.phone
+        ? form.phone.startsWith("+") ? form.phone : `+${form.phone}`
+        : undefined;
       await api.post("/support", {
         name: form.name.trim(),
         email: form.email.trim(),
@@ -44,63 +79,47 @@ function Contact() {
   };
 
   return (
-    <section className="contact-section" id="contact">
-      <div className="contact-inner">
+    <section className="lp-contact-section" id="contact">
+      <div className="lp-inner lp-two-col lp-two-col-contact" ref={ref}>
 
         {/* Left */}
-        <div className="contact-left">
-          <h1 className="contact-heading">Contact Us</h1>
-          <p className="contact-sub">
-            Have a question or need more information? Submit your enquiry, and
-            our team will get back to you promptly with the answers you need.
-            We're here to help!
+        <div className="lp-contact-left lp-reveal lp-reveal-left">
+          <div className="lp-eyebrow">Get In Touch</div>
+          <h2 className="lp-heading">Contact Us</h2>
+          <p className="lp-body">
+            Have a question or need more information? Submit your enquiry and
+            our team will get back to you promptly. We're here to help!
           </p>
 
-          <div className="contact-info-list">
-            <div className="contact-info-item">
-              <div className="contact-info-icon">
-                <IoLocationOutline size={18} />
+          <div className="lp-contact-info">
+            {INFO.map(({ icon: Icon, label, text, href }) => (
+              <div key={label} className="lp-contact-info-row">
+                <div className="lp-contact-info-icon">
+                  <Icon size={18} />
+                </div>
+                <div className="lp-contact-info-body">
+                  <span className="lp-contact-info-label">{label}</span>
+                  {href ? (
+                    <a className="lp-contact-info-val lp-contact-link" href={href}>
+                      {text}
+                    </a>
+                  ) : (
+                    <span className="lp-contact-info-val">{text}</span>
+                  )}
+                </div>
               </div>
-              <p className="contact-info-text">
-                Office 1703- Fahidi Heights-Alhamriya <br />
-                Dubai-United Arab Emirates
-              </p>
-            </div>
-
-            <div className="contact-info-item">
-              <div className="contact-info-icon">
-                <IoMailOutline size={18} />
-              </div>
-              <a
-                className="contact-info-text contact-link"
-                href="mailto:support@trynora.net"
-              >
-                support@trynora.net
-              </a>
-            </div>
-
-            <div className="contact-info-item">
-              <div className="contact-info-icon">
-                <MdOutlinePhone size={18} />
-              </div>
-              <a
-                className="contact-info-text contact-link"
-                href="tel:+2348012345678"
-              >
-                +234 80 123 4567
-              </a>
-            </div>
+            ))}
           </div>
         </div>
 
         {/* Right — Form */}
-        <div className="contact-form-card">
-          <form onSubmit={handleSubmit}>
-            <div className="contact-form-fields">
-              <div className="form-field">
-                <label className="modal-label">Name *</label>
+        <div className="lp-contact-form-card lp-reveal lp-reveal-right">
+          <form onSubmit={handleSubmit} className="lp-contact-form">
+            <div className="lp-contact-form-row">
+              <div className="lp-contact-field">
+                <label className="lp-contact-label">Name *</label>
                 <input
-                  className="modal-input"
+                  className="lp-contact-input"
                   type="text"
                   placeholder="Jane Doe"
                   value={form.name}
@@ -109,10 +128,10 @@ function Contact() {
                   required
                 />
               </div>
-              <div className="form-field">
-                <label className="modal-label">Email *</label>
+              <div className="lp-contact-field">
+                <label className="lp-contact-label">Email *</label>
                 <input
-                  className="modal-input"
+                  className="lp-contact-input"
                   type="email"
                   placeholder="your@email.com"
                   value={form.email}
@@ -121,43 +140,47 @@ function Contact() {
                   required
                 />
               </div>
-              <div className="form-field">
-                <label className="modal-label">Phone Number *</label>
-                <div className="register_phone_wrapper">
-                  <PhoneInput
-                    country="ae"
-                    value={form.phone}
-                    onChange={(value) => setForm((prev) => ({ ...prev, phone: value }))}
-                    enableSearch
-                    searchPlaceholder="Search country..."
-                    disableSearchIcon
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-              <div className="form-field">
-                <label className="modal-label">Message *</label>
-                <textarea
-                  className="modal-input contact-textarea"
-                  placeholder="Type your message here..."
-                  rows={5}
-                  value={form.message}
-                  onChange={set("message")}
+            </div>
+
+            <div className="lp-contact-field">
+              <label className="lp-contact-label">Phone Number *</label>
+              <div className="register_phone_wrapper">
+                <PhoneInput
+                  country="ae"
+                  value={form.phone}
+                  onChange={(value) => setForm((prev) => ({ ...prev, phone: value }))}
+                  enableSearch
+                  searchPlaceholder="Search country..."
+                  disableSearchIcon
                   disabled={loading}
-                  required
                 />
               </div>
-
-              <button
-                type="submit"
-                className={`app_btn app_btn_confirm ${loading ? "btn_loading" : ""}`}
-                style={{ width: "100%", height: 50, marginTop: 8, fontSize: "0.9375rem", position: "relative" }}
-                disabled={loading}
-              >
-                <span className="btn_text">Send Message</span>
-                {loading && <span className="btn_loader" style={{ width: 16, height: 16 }} />}
-              </button>
             </div>
+
+            <div className="lp-contact-field">
+              <label className="lp-contact-label">Message *</label>
+              <textarea
+                className="lp-contact-input lp-contact-textarea"
+                placeholder="Type your message here..."
+                rows={5}
+                value={form.message}
+                onChange={set("message")}
+                disabled={loading}
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className={`lp-contact-submit ${loading ? "btn_loading" : ""}`}
+              disabled={loading}
+            >
+              <span className="btn_text">
+                <MdOutlineSend size={18} />
+                Send Message
+              </span>
+              {loading && <span className="btn_loader" style={{ width: 16, height: 16 }} />}
+            </button>
           </form>
         </div>
 

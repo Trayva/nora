@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { MdCheckCircle } from "react-icons/md";
+import { MdCheckCircle, MdOutlineStarBorder } from "react-icons/md";
 import api from "../../api/axios";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -9,12 +9,15 @@ function PlansSection() {
   const { user } = useAuth();
   const [settings, setSettings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const ref = useRef(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         const res = await api.get("/contract/settings");
-        setSettings(res.data.data || []);
+        // Handle both { data: [...] } and { data: { data: [...] } } shapes
+        const raw = res.data?.data ?? res.data;
+        setSettings(Array.isArray(raw) ? raw : []);
       } catch (err) {
         console.error("Failed to load plans", err);
       } finally {
@@ -24,12 +27,23 @@ function PlansSection() {
     fetchSettings();
   }, []);
 
+  // Trigger reveal once data is loaded and ref is mounted.
+  // We can't rely on IntersectionObserver with [] deps because the
+  // component returns null while loading, so ref.current is null on mount.
+  useEffect(() => {
+    if (loading || !settings.length) return;
+    const el = ref.current;
+    if (!el) return;
+    // Small timeout lets the DOM paint first, then reveal
+    const t = setTimeout(() => el.classList.add("lp-visible"), 80);
+    return () => clearTimeout(t);
+  }, [loading, settings]);
+
   const handleSelect = (settingsId) => {
     const targetUrl = `/app/purchase-kiosk?selection=${settingsId}`;
     if (user) {
       navigate(targetUrl);
     } else {
-      // Redirect to login with callback URL
       navigate(`/auth/login?cbUrl=${encodeURIComponent(targetUrl)}`);
     }
   };
@@ -38,77 +52,81 @@ function PlansSection() {
   if (!loading && settings.length === 0) return null;
 
   return (
-    <section className="plans-section" id="plans">
-      <div className="plans-inner">
-        <div className="plans-header">
-          <h2 className="plans-heading">Choose Your Ownership Model</h2>
-          <p className="plans-sub">
+    <section className="lp-section lp-section-alt" id="plans">
+      <div className="lp-inner lp-block" ref={ref}>
+        <div className="lp-section-header lp-reveal lp-reveal-up">
+          <div className="lp-eyebrow">Ownership Models</div>
+          <h2 className="lp-heading lp-heading-center">Choose Your Plan</h2>
+          <p className="lp-sub-center">
             Flexible plans tailored to your scale and investment. Get started
             with standardized infrastructure today.
           </p>
         </div>
 
-        <div className="plans-grid">
+        <div className="lp-plans-grid">
           {settings.map((setting, index) => {
-            const isPopular = index === 1 || setting.type === "LEASE"; // Heuristic for highlighting
+            const isPopular = index === 1 || setting.type === "LEASE";
             const baseAmount = setting.payments.reduce((sum, p) => sum + p.amount, 0);
 
             return (
               <div
                 key={setting.id}
-                className={`plan-card ${isPopular ? "plan-card-popular" : ""}`}
+                className={`lp-plan-card lp-reveal lp-reveal-up ${isPopular ? "lp-plan-card-popular" : ""}`}
+                style={{ animationDelay: `${index * 0.1}s` }}
               >
-                {isPopular && <div className="popular-badge">Most Flexible</div>}
+                {isPopular && (
+                  <div className="lp-plan-popular-badge">
+                    <MdOutlineStarBorder size={14} />
+                    Most Flexible
+                  </div>
+                )}
 
-                <div className="plan-header">
-                  <span className="plan-type">{setting.title?.toUpperCase()}</span>
-                  <div className="plan-price-wrap">
-                    <span className="plan-currency">{setting.currency}</span>
-                    <span className="plan-price">{baseAmount.toLocaleString()}</span>
-                    {setting.type === "LEASE" && (
-                      <span className="plan-duration">/ total setup</span>
-                    )}
+                <div className="lp-plan-header">
+                  <span className="lp-plan-type">{setting.title?.toUpperCase()}</span>
+                  <div className="lp-plan-price-row">
+                    <span className="lp-plan-currency">{setting.currency}</span>
+                    <span className="lp-plan-price">{baseAmount.toLocaleString()}</span>
                   </div>
                   {setting.type === "LEASE" && (
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                      Contract Duration: {setting.durationDays} Days
+                    <p className="lp-plan-duration">
+                      Contract: {setting.durationDays} days
                     </p>
                   )}
                 </div>
 
-                <ul className="plan-features">
-                  <li className="plan-feature-item">
-                    <MdCheckCircle className="plan-feature-icon" size={18} />
+                <ul className="lp-plan-features">
+                  <li className="lp-plan-feature">
+                    <MdCheckCircle size={16} className="lp-plan-check" />
                     <span>Location: {setting.country}</span>
                   </li>
                   {setting.kioskSize && (
-                    <li className="plan-feature-item">
-                      <MdCheckCircle className="plan-feature-icon" size={18} />
+                    <li className="lp-plan-feature">
+                      <MdCheckCircle size={16} className="lp-plan-check" />
                       <span>
-                        Size: {setting.kioskSize.length}x{setting.kioskSize.breadth} {setting.kioskSize.unit}
+                        Size: {setting.kioskSize.length}×{setting.kioskSize.breadth}{" "}
+                        {setting.kioskSize.unit}
                       </span>
                     </li>
                   )}
                   {setting.maxMenus && (
-                    <li className="plan-feature-item">
-                      <MdCheckCircle className="plan-feature-icon" size={18} />
-                      <span>Support for up to {setting.maxMenus} Menus</span>
+                    <li className="lp-plan-feature">
+                      <MdCheckCircle size={16} className="lp-plan-check" />
+                      <span>Up to {setting.maxMenus} menus</span>
                     </li>
                   )}
-                  {setting.payments.some(p => p.recurring) && (
-                    <li className="plan-feature-item">
-                      <MdCheckCircle className="plan-feature-icon" size={18} />
+                  {setting.payments.some((p) => p.recurring) && (
+                    <li className="lp-plan-feature">
+                      <MdCheckCircle size={16} className="lp-plan-check" />
                       <span>Recurring support included</span>
                     </li>
                   )}
                 </ul>
 
                 <button
-                  className={`app_btn ${isPopular ? "app_btn_confirm" : "app_btn_cancel"}`}
-                  style={{ width: "100%", height: 50, fontSize: "0.95rem" }}
+                  className={`lp-plan-btn ${isPopular ? "lp-plan-btn-primary" : "lp-plan-btn-secondary"}`}
                   onClick={() => handleSelect(setting.id)}
                 >
-                  {user ? "Get Started" : "Login to Selection"}
+                  {user ? "Get Started" : "Login to Select"}
                 </button>
               </div>
             );

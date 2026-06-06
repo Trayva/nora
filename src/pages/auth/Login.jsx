@@ -6,34 +6,103 @@ import { toast } from "react-toastify";
 import api from "../../api/axios";
 import { useAuth } from "../../contexts/AuthContext";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
-import nora_logo_white from "../../assets/nora_white.png";
-import nora_logo_dark from "../../assets/nora_dark.png";
+import { MdClose, MdArrowForward, MdPersonAdd } from "react-icons/md";
 import { useTheme } from "../../contexts/ThemeContext";
-import { getDefaultRoute } from "../../utils/AuthHelpers";
+import { getDefaultRoute, getPrimaryRole } from "../../utils/AuthHelpers";
 import useQuery from "../../hooks/useQuery";
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+function getInitials(name = "") {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join("");
+}
+
+/** Deterministic hue from a string — always looks good */
+function nameHue(str = "") {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360;
+  return h;
+}
+
+function AvatarChip({ account, active, onSelect, onRemove }) {
+  const hue = nameHue(account.user?.fullName || "");
+  const initials = getInitials(account.user?.fullName || "?");
+  const role = getPrimaryRole(account.user);
+
+  return (
+    <button
+      type="button"
+      id={`account-chip-${account.id}`}
+      className={`login-account-chip ${active ? "login-account-chip--active" : ""}`}
+      onClick={onSelect}
+    >
+      <span
+        className="login-account-avatar"
+        style={{ background: `hsl(${hue}, 60%, 48%)` }}
+      >
+        {initials}
+      </span>
+      <span className="login-account-info">
+        <span className="login-account-name">{account.user?.fullName || "Account"}</span>
+        <span className="login-account-email">{account.user?.email || ""}</span>
+      </span>
+      {role && (
+        <span className="login-account-role">{role}</span>
+      )}
+      <span
+        className="login-account-remove"
+        role="button"
+        tabIndex={0}
+        title="Remove"
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onRemove(); } }}
+      >
+        <MdClose size={12} />
+      </span>
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const loginSchema = Yup.object().shape({
   email: Yup.string().email("Invalid email").required("Email is required"),
   password: Yup.string().required("Password is required"),
 });
 
+const passwordSchema = Yup.object().shape({
+  password: Yup.string().required("Password is required"),
+});
+
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, savedAccounts, switchAccount, removeAccount } = useAuth();
   const { theme } = useTheme();
   const query = useQuery();
-  const cbUrl = query.get("cbUrl"); // honour callback URL if present
+  const cbUrl = query.get("cbUrl");
+
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  /** accountId of the "continue as" selection, or null = use full form */
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
+  const [showFullForm, setShowFullForm] = useState(false);
 
-  const handleSubmit = async (values) => {
+  const selectedAccount = savedAccounts.find((a) => a.id === selectedAccountId) || null;
+
+  // ── full-login submit ─────────────────────────────────────────────────────
+
+  const handleFullLogin = async (values) => {
     setLoading(true);
     try {
       const response = await api.post("/auth/login", values);
       const { accessToken, refreshToken, user } = response.data.data;
       login(user, accessToken, refreshToken);
       toast.success("Welcome back!");
-      // Honour cbUrl first, then default to role-based route
       navigate(cbUrl || getDefaultRoute(user));
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed");
@@ -42,114 +111,244 @@ export default function Login() {
     }
   };
 
+  // ── saved-account switch (no re-auth, just swap token) ───────────────────
+
+  const handleSwitchAccount = (account) => {
+    switchAccount(account.id);
+    toast.success(`Switched to ${account.user?.fullName || "account"}`);
+    navigate(cbUrl || getDefaultRoute(account.user));
+  };
+
+  // ── continue-as: verify password for selected saved account ──────────────
+
+  const handleContinueAs = async (values) => {
+    if (!selectedAccount) return;
+    setLoading(true);
+    try {
+      const response = await api.post("/auth/login", {
+        email: selectedAccount.user?.email,
+        password: values.password,
+      });
+      const { accessToken, refreshToken, user } = response.data.data;
+      login(user, accessToken, refreshToken);
+      toast.success(`Welcome back, ${user?.fullName?.split(" ")[0] || ""}!`);
+      navigate(cbUrl || getDefaultRoute(user));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const hasSaved = savedAccounts.length > 0;
+
   return (
-    <div>
-      <img
-        src={theme === "dark" ? nora_logo_white : nora_logo_dark}
-        alt="nora_logo"
-        className="sidebar_logo mb-4"
-      />
-      <h3 className="profile_header">Welcome Back</h3>
-      <p className="welcome_message">Sign in to access your Nora account</p>
+    <div className="login-page-inner">
+      <div className="login-heading-group">
+        <h2 className="login-title">Welcome back</h2>
+        <p className="login-subtitle">
+          New here?{" "}
+          <Link to="/auth/register?role=CUSTOMER" className="login_signup_link">
+            Create a free account
+          </Link>
+        </p>
+      </div>
 
-      <Formik
-        initialValues={{ email: "", password: "" }}
-        validationSchema={loginSchema}
-        onSubmit={handleSubmit}
-      >
-        {({ errors, touched, values, handleChange, handleBlur }) => (
-          <Form style={{ marginTop: 24 }}>
-            <div className="form-field">
-              <label className="modal-label">Email</label>
-              <input
-                className={`modal-input ${touched.email && errors.email ? "modal-input-error" : ""}`}
-                type="email"
-                name="email"
-                placeholder="your@email.com"
-                value={values.email}
-                onChange={handleChange}
-                onBlur={handleBlur}
+      {/* ── Saved account chips ───────────────────────────────────── */}
+      {hasSaved && !showFullForm && (
+        <div className="login-accounts-section">
+          <p className="login-section-label">Continue as</p>
+          <div className="login-accounts-list">
+            {savedAccounts.map((account) => (
+              <AvatarChip
+                key={account.id}
+                account={account}
+                active={selectedAccountId === account.id}
+                onSelect={() => {
+                  if (selectedAccountId === account.id) {
+                    // second click = quick switch (no password if same token)
+                    handleSwitchAccount(account);
+                  } else {
+                    setSelectedAccountId(account.id);
+                  }
+                }}
+                onRemove={() => {
+                  removeAccount(account.id);
+                  if (selectedAccountId === account.id) setSelectedAccountId(null);
+                }}
               />
-              {touched.email && errors.email && (
-                <span className="login_field_error">{errors.email}</span>
-              )}
-            </div>
+            ))}
+          </div>
 
-            <div className="form-field">
-              <label className="modal-label">Password</label>
-              <div className="login_password_wrapper">
-                <input
-                  className={`modal-input ${touched.password && errors.password ? "modal-input-error" : ""}`}
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  placeholder="Enter your password"
-                  value={values.password}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                />
-                <button
-                  type="button"
-                  className="login_eye_btn"
-                  onClick={() => setShowPassword((p) => !p)}
-                  tabIndex={-1}
-                >
-                  {showPassword ? (
-                    <IoMdEyeOff size={16} />
-                  ) : (
-                    <IoMdEye size={16} />
+          {/* Password prompt for selected account */}
+          {selectedAccount && (
+            <Formik
+              initialValues={{ password: "" }}
+              validationSchema={passwordSchema}
+              onSubmit={handleContinueAs}
+            >
+              {({ errors, touched, values, handleChange, handleBlur }) => (
+                <Form className="login-continue-form">
+                  <p className="login-section-label" style={{ marginBottom: 8 }}>
+                    Enter password for <strong>{selectedAccount.user?.email}</strong>
+                  </p>
+                  <div className="login_password_wrapper">
+                    <input
+                      className={`modal-input ${touched.password && errors.password ? "modal-input-error" : ""}`}
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      placeholder="Enter password"
+                      value={values.password}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      className="login_eye_btn"
+                      onClick={() => setShowPassword((p) => !p)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <IoMdEyeOff size={16} /> : <IoMdEye size={16} />}
+                    </button>
+                  </div>
+                  {touched.password && errors.password && (
+                    <span className="login_field_error">{errors.password}</span>
                   )}
-                </button>
-              </div>
-              {touched.password && errors.password && (
-                <span className="login_field_error">{errors.password}</span>
+                  <div className="login-continue-actions">
+                    <button
+                      type="button"
+                      className="app_btn app_btn_cancel"
+                      style={{ flex: 1 }}
+                      onClick={() => setSelectedAccountId(null)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className={`app_btn app_btn_confirm login-continue-btn ${loading ? "btn_loading" : ""}`}
+                      style={{ flex: 2, position: "relative", height: 42 }}
+                    >
+                      <span className="btn_text">Sign In →</span>
+                      {loading && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
+                    </button>
+                  </div>
+                </Form>
               )}
-            </div>
+            </Formik>
+          )}
 
-            <div style={{ textAlign: "right", marginTop: 6 }}>
-              <Link to="/auth/forgot-password" className="login_forgot_link">
-                Forgot password?
-              </Link>
-            </div>
+          <div className="login-divider">
+            <span>or</span>
+          </div>
 
+          <button
+            type="button"
+            id="login-use-different-account"
+            className="login-different-btn"
+            onClick={() => { setShowFullForm(true); setSelectedAccountId(null); }}
+          >
+            <MdPersonAdd size={16} />
+            Sign in with a different account
+          </button>
+        </div>
+      )}
+
+      {/* ── Full email/password form ───────────────────────────────── */}
+      {(!hasSaved || showFullForm) && (
+        <>
+          {showFullForm && (
             <button
-              disabled={loading}
-              type="submit"
-              className={`app_btn app_btn_confirm ${loading ? "btn_loading" : ""}`}
-              style={{
-                width: "100%",
-                marginTop: 20,
-                position: "relative",
-                height: 42,
-              }}
+              type="button"
+              className="login-back-btn"
+              onClick={() => setShowFullForm(false)}
             >
-              <span className="btn_text">Sign In</span>
-              {loading && (
-                <span
-                  className="btn_loader"
-                  style={{ width: 18, height: 18 }}
-                />
-              )}
+              ← Back to accounts
             </button>
+          )}
+          <Formik
+            initialValues={{ email: "", password: "" }}
+            validationSchema={loginSchema}
+            onSubmit={handleFullLogin}
+          >
+            {({ errors, touched, values, handleChange, handleBlur }) => (
+              <Form style={{ marginTop: 20 }}>
+                <div className="form-field">
+                  <label className="modal-label">Email address</label>
+                  <input
+                    id="login-email"
+                    className={`modal-input ${touched.email && errors.email ? "modal-input-error" : ""}`}
+                    type="email"
+                    name="email"
+                    placeholder="you@company.com"
+                    value={values.email}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                  />
+                  {touched.email && errors.email && (
+                    <span className="login_field_error">{errors.email}</span>
+                  )}
+                </div>
 
-            <p
-              className="muted"
-              style={{
-                marginTop: 24,
-                textAlign: "center",
-                fontSize: "0.875rem",
-              }}
-            >
-              Don't have an account?{" "}
-              <Link
-                to="/auth/register?role=CUSTOMER"
-                className="login_signup_link"
-              >
-                Sign up
-              </Link>
-            </p>
-          </Form>
-        )}
-      </Formik>
+                <div className="form-field">
+                  <div className="login-label-row">
+                    <label className="modal-label">Password</label>
+                    <Link to="/auth/forgot-password" className="login_forgot_link">
+                      Forgot?
+                    </Link>
+                  </div>
+                  <div className="login_password_wrapper">
+                    <input
+                      id="login-password"
+                      className={`modal-input ${touched.password && errors.password ? "modal-input-error" : ""}`}
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      placeholder="Enter password"
+                      value={values.password}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                    <button
+                      type="button"
+                      className="login_eye_btn"
+                      onClick={() => setShowPassword((p) => !p)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <IoMdEyeOff size={16} /> : <IoMdEye size={16} />}
+                    </button>
+                  </div>
+                  {touched.password && errors.password && (
+                    <span className="login_field_error">{errors.password}</span>
+                  )}
+                </div>
+
+                <button
+                  id="login-submit"
+                  disabled={loading}
+                  type="submit"
+                  className={`app_btn app_btn_confirm ${loading ? "btn_loading" : ""}`}
+                  style={{ width: "100%", marginTop: 20, position: "relative", height: 44 }}
+                >
+                  <span className="btn_text" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    Sign in <MdArrowForward />
+                  </span>
+                  {loading && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
+                </button>
+
+                <p className="muted" style={{ marginTop: 20, textAlign: "center", fontSize: "0.875rem" }}>
+                  Don't have an account?{" "}
+                  <Link to="/auth/register?role=CUSTOMER" className="login_signup_link">
+                    Sign up
+                  </Link>
+                </p>
+              </Form>
+            )}
+          </Formik>
+        </>
+      )}
     </div>
   );
 }

@@ -1,9 +1,19 @@
 /* AppIndex.css */
 
+/* ── Root layout: column so desktop header sits on top ── */
 .app-layout {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   overflow: hidden;
+}
+
+/* ── Sidebar + main row ── */
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .app-main {
@@ -12,23 +22,161 @@
   min-width: 0;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   DESKTOP TOP HEADER
+   ═══════════════════════════════════════════════════════════════ */
+.desktop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 73px;
+  padding: 0 20px;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 100;
+  gap: 16px;
+  box-sizing: border-box;
+
+}
+
+[data-theme="dark"] .desktop-header {
+  background: rgba(22, 22, 22, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Header left: breadcrumb ── */
+.desktop-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.desktop-header-breadcrumb {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desktop-header-sep {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.desktop-header-sub {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Header right: actions ── */
+.desktop-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.desktop-header-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.desktop-header-icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-body);
+}
+
+/* Account switcher button in header */
+
+.desktop-header-account-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px 4px 5px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+  color: var(--text-heading);
+  font-size: 0.9rem;
+}
+
+.desktop-header-account-btn:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.desktop-header-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.desktop-header-account-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Mobile top navbar ─────────────────────────────────────── */
 .mobile-navbar {
-  display: none; /* hidden on desktop */
+  display: none;
 }
 
-/* ── Sidebar backdrop (mobile overlay) ───────────────────── */
+.mobile-tab-bar {
+  display: none;
+}
+
+/* ── Sidebar backdrop — hidden on desktop ── */
 .sidebar-backdrop {
   display: none;
 }
 
-/* ── Mobile breakpoint ────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   MOBILE BREAKPOINT
+   ══════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .app-layout {
-    flex-direction: column;
+
+  /* ── Hide desktop header ── */
+  .desktop-header {
+    display: none;
   }
 
-  /* Show top navbar */
+  /* ── Upgraded mobile top navbar ── */
   .mobile-navbar {
     display: flex;
     align-items: center;
@@ -38,85 +186,69 @@
     left: 0;
     right: 0;
     z-index: 200;
-    height: 54px;
+    height: 58px;
     padding: 0 16px;
     background: var(--bg-sidebar);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
+    box-sizing: border-box;
   }
 
-  /* Mobile logo inside navbar — injected via CSS variable / sidebar handles its own */
-  .mobile-navbar-logo {
-    height: 28px;
-    width: auto;
-    object-fit: contain;
+  [data-theme="dark"] .mobile-navbar {
+    background: rgba(18, 18, 18, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
   }
 
-  /* Hamburger button */
-  .mobile-hamburger {
+  /* Brand left section */
+  .mobile-navbar-brand {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mobile-navbar-logo-wrap {
+    display: flex;
+    align-items: center;
     justify-content: center;
-    gap: 5px;
-    width: 36px;
-    height: 36px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 8px;
-    transition: background 0.15s;
-  }
-
-  .mobile-hamburger:hover {
-    background: var(--bg-hover);
-  }
-
-  .mobile-hamburger span {
-    display: block;
-    height: 2px;
-    width: 100%;
-    background: var(--text-muted);
-    border-radius: 2px;
-    transition: all 0.2s;
-  }
-
-  /* Backdrop */
-  .sidebar-backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 299;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(2px);
-    animation: fadeIn 0.2s ease;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-
-  /* Push main content below the fixed navbar */
-  .app-main {
-    padding-top: 54px;
-  }
-
-  /* Logo absolutely centred */
-  .mobile-navbar {
-    position: fixed; /* already set above, reinforce */
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow: hidden;
   }
 
   .mobile-navbar-logo {
-    height: 26px;
+    height: 20px;
     width: auto;
     object-fit: contain;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
   }
 
-  /* Settings icon button */
+  /* Location / business name pill */
+  .mobile-navbar-location {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+  }
+
+  .mobile-navbar-biz-name {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text-heading);
+    letter-spacing: -0.01em;
+  }
+
+  /* Right actions */
+  .mobile-navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
   .mobile-nav-action {
     display: flex;
     align-items: center;
@@ -124,131 +256,161 @@
     width: 36px;
     height: 36px;
     border: none;
-    border-radius: 9px;
-    background: transparent;
+    border-radius: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     color: var(--text-muted);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
     flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
   }
 
   .mobile-nav-action:hover {
     background: var(--bg-hover);
     color: var(--text-body);
   }
-}
 
-
-/* ── Mobile responsive ─────────────────────────────────────── */
-
-/* Mobile top navbar — hidden on desktop */
-.mobile-navbar {
-  display: none;
-}
-
-/* Backdrop — hidden on desktop */
-.sidebar-backdrop {
-  display: none;
-}
-
-@media (max-width: 768px) {
-  .app-layout {
-    flex-direction: column;
-  }
-
-  /* Show top navbar */
-  .mobile-navbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 200;
-    height: 54px;
-    padding: 0 16px;
-    background: var(--bg-sidebar);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  /* Logo absolutely centred */
-  .mobile-navbar-logo {
-    height: 26px;
-    width: auto;
-    object-fit: contain;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-
-  /* Hamburger + settings — shared base */
-  .mobile-hamburger,
-  .mobile-nav-action {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: background 0.15s, color 0.15s;
-    padding: 0;
-  }
-
-  .mobile-hamburger:hover,
-  .mobile-nav-action:hover {
-    background: var(--bg-hover);
-    color: var(--text-body);
-  }
-
-  /* Hamburger lines */
-  .mobile-hamburger {
-    flex-direction: column;
-    gap: 5px;
-    padding: 8px;
-  }
-
-  .mobile-hamburger span {
-    display: block;
-    height: 2px;
-    width: 100%;
-    background: currentColor;
-    border-radius: 2px;
-  }
-
-  /* Backdrop */
+  /* ── Sidebar backdrop ── */
   .sidebar-backdrop {
     display: block;
     position: fixed;
     inset: 0;
     z-index: 299;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(2px);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
     animation: backdropFadeIn 0.2s ease;
   }
 
   @keyframes backdropFadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
 
-  /* Push main content below the fixed navbar */
+  /* Push main content below navbar + above tab bar */
   .app-main {
-    padding-top: 54px;
+    padding-top: 58px;
+    padding-bottom: 72px;
   }
 
-  /* Move verification banner below navbar on mobile */
+  /* Move verification banner below navbar */
   .verification_banner {
-    top: 66px;
+    top: 70px;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     MOBILE BOTTOM TAB BAR
+     ══════════════════════════════════════════════════════════ */
+  .mobile-tab-bar {
+    display: flex;
+    align-items: stretch;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    height: 62px;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg-sidebar);
+    border-top: 1px solid var(--border);
+    box-sizing: border-box;
+  }
+
+  [data-theme="dark"] .mobile-tab-bar {
+    background: rgba(18, 18, 18, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .mobile-tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 12px;
+    font-family: inherit;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-tab-item:active {
+    background: var(--bg-active);
+  }
+
+  .mobile-tab-icon-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-tab-icon {
+    font-size: 1.35rem;
+    color: var(--text-muted);
+    transition: color 0.18s, transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .mobile-tab-item--active .mobile-tab-icon {
+    color: var(--accent);
+    transform: translateY(-2px) scale(1.08);
+  }
+
+  .mobile-tab-active-dot {
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: tabDotIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes tabDotIn {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) scale(0);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+  }
+
+  .mobile-tab-label {
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: color 0.18s;
+    letter-spacing: 0.01em;
+  }
+
+  .mobile-tab-item--active .mobile-tab-label {
+    color: var(--accent);
+  }
+
+  /* Move verification banner below navbar */
+  .verification_banner {
+    top: 70px;
   }
 }
+
 /* ── Verification Banner ──────────────────────────────────────── */
+
 
 .verification_banner {
   position: fixed;
@@ -338,7 +500,7 @@
   color: var(--text-heading);
 }
 
-.verification_banner_item + .verification_banner_item {
+.verification_banner_item+.verification_banner_item {
   padding-top: 6px;
   border-top: 1px solid rgba(234, 179, 8, 0.15);
   padding-left: 0;

@@ -1,55 +1,70 @@
-import React from "react";
-import img from "../../assets/who.png"; // Placeholder or use a specific one if available
+import { useEffect, useRef } from "react";
+import img from "../../assets/who.png";
+import { MdCheckCircle } from "react-icons/md";
+
+const BENEFITS = [
+  "Access to established food brands",
+  "Ready-to-deploy modular kiosks",
+  "Integrated supply chain and logistics",
+  "Digital tools to manage daily operations",
+  "Performance insights powered by AI",
+  "No prior experience required — just the ambition to build",
+];
 
 function OwnerBenefits() {
-  const benefits = [
-    "Access to established food brands",
-    "Ready-to-deploy modular sized kiosks",
-    "Integrated supply chain and logistics",
-    "Digital tools to manage daily operations",
-    "Performance insights powered by AI",
-    "No prior experience required — just the ambition to build",
-  ];
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { el.classList.add("lp-visible"); obs.disconnect(); } },
+      { threshold: 0.12 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   return (
-    <section className="whoweare-section">
-      <div className="whoweare-inner">
-        {/* Left (Content) */}
-        <div className="whoweare-left">
-          <h2 className="whoweare-heading">For Franchise Owners</h2>
-          <h3 className="whoweare-sub" style={{ fontSize: "1.5rem", marginBottom: "1.5rem" }}>
-            Own a Food Business. Operate from Your Phone.
-          </h3>
-          <p className="whoweare-body">
+    <section className="lp-section lp-section-alt">
+      <div className="lp-inner lp-two-col" ref={ref}>
+        {/* Left content */}
+        <div className="lp-col-text lp-reveal lp-reveal-left">
+          <div className="lp-eyebrow">For Franchise Owners</div>
+          <h2 className="lp-heading">
+            Own a Food Business.{" "}
+            <span className="lp-accent">Operate from Your Phone.</span>
+          </h2>
+          <p className="lp-body">
             Nora AI makes it possible to own and run a QSR outlet without
-            starting from scratch.
+            starting from scratch. Everything you need is built in.
           </p>
-          <div style={{ margin: "2rem 0" }}>
-            <h4 style={{ color: "var(--text-heading)", marginBottom: "1rem" }}>What You Get:</h4>
-            <ul style={{ listStyle: "none", padding: 0 }}>
-              {benefits.map((benefit, index) => (
-                <li key={index} style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  marginBottom: "0.8rem",
-                  color: "var(--text-body)",
-                  fontSize: "0.95rem"
-                }}>
-                  <span style={{ color: "var(--accent)", fontWeight: "bold" }}>✓</span>
-                  {benefit}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <p className="whoweare-body" style={{ fontWeight: "600", color: "var(--accent)" }}>
-            No prior experience required — just the ambition to build.
+
+          <ul className="lp-checklist">
+            {BENEFITS.map((b, i) => (
+              <li key={i} className="lp-check-item">
+                <MdCheckCircle size={18} className="lp-check-icon" />
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
+
+          <p className="lp-accent-tagline">
+            Your ambition is enough. We'll handle the rest.
           </p>
         </div>
 
-        {/* Right (Image) */}
-        <div className="whoweare-right">
-          <img src={img} alt="Franchise Owners" className="whoweare-img" />
+        {/* Right image */}
+        <div className="lp-col-visual lp-reveal lp-reveal-right">
+          <div className="lp-img-frame">
+            <div className="lp-img-glow" />
+            <img src={img} alt="Franchise Owners" className="lp-img" />
+            {/* Floating badge */}
+            <div className="lp-img-badge lp-img-badge-br">
+              <span className="lp-img-badge-value">200+</span>
+              <span className="lp-img-badge-label">Active Owners</span>
+            </div>
+          </div>
         </div>
       </div>
     </section>

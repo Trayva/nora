@@ -260,9 +260,9 @@ export default function Routes() {
       path: "/app",
       element: (
         <ProtectedRoute>
-          <div className="desktop-notification" style={{ position: "fixed", top: 20, right: 20, zIndex: 10 }}>
+          {/* <div className="desktop-notification" style={{ position: "fixed", top: 20, right: 20, zIndex: 10, }}>
             <NotificationBell />
-          </div>
+          </div> */}
           <AppIndex />
         </ProtectedRoute>
       ),

@@ -8,6 +8,7 @@ import {
 } from "react-icons/bs";
 import { useAuth } from "../../contexts/AuthContext";
 import { getDefaultRoute, getPrimaryRole } from "../../utils/AuthHelpers";
+import { MdArrowForward, MdOutlineStore } from "react-icons/md";
 
 const scrollTo = (id) =>
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -49,14 +50,33 @@ function Footer() {
             Whether you're a food brand looking to expand or an individual ready to
             own a QSR outlet, Nora AI provides the platform to make it happen.
           </p>
-          <div className="d-flex gap-10 mobile-column">
+          <br />
+          <div className="hero-ctas hero-ctas-centered">
+            <button
+              id="hero-cta-brand"
+              className="hero-btn-primary"
+              onClick={() => navigate("/auth/register?role=VENDOR")}
+            >
+              Partner as a Brand
+              <MdArrowForward size={18} />
+            </button>
+            <button
+              id="hero-cta-owner"
+              className="hero-btn-secondary"
+              onClick={() => navigate("/auth/register?role=CUSTOMER")}
+            >
+              <MdOutlineStore size={18} />
+              Own a Franchise
+            </button>
+          </div>
+          {/* <div className="d-flex gap-10 mobile-column">
             <button className="footer-cta-btn" onClick={() => scrollTo("how")}>
               Partner as a Brand
             </button>
             <button className="footer-cta-btn" onClick={() => scrollTo("how")}>
               Own a Franchise
             </button>
-          </div>
+          </div> */}
         </div>
       </section>
 

@@ -6,12 +6,10 @@ import { toast } from "react-toastify";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
+import { MdArrowForward } from "react-icons/md";
 import api from "../../api/axios";
 import { useAuth } from "../../contexts/AuthContext";
 import useQuery from "../../hooks/useQuery";
-import nora_logo_white from "../../assets/nora_white.png";
-import nora_logo_dark from "../../assets/nora_dark.png";
-import { useTheme } from "../../contexts/ThemeContext";
 import { roleParamToRoles, getDefaultRoute } from "../../utils/AuthHelpers";
 
 const registerSchema = Yup.object().shape({
@@ -32,50 +30,42 @@ const registerSchema = Yup.object().shape({
 export default function Register() {
   const navigate = useNavigate();
   const query = useQuery();
-  const roleParam = query.get("role"); // e.g. "vendor", "supplier", "operator"
+  const roleParam = query.get("role");
   const { login } = useAuth();
-  const { theme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // 1. Register — include roles from ?role= param
       await api.post("/auth/register", {
         ...values,
         phone: `+${values.phone}`,
         roles: roleParamToRoles(roleParam),
       });
 
-      // 2. Auto-login immediately after registration
       const loginResponse = await api.post("/auth/login", {
         email: values.email,
         password: values.password,
       });
 
       const { accessToken, refreshToken, user } = loginResponse.data.data;
-
-      // 3. Persist session
       login(user, accessToken, refreshToken);
 
-      // 4. Request email verification (non-blocking)
       api
         .post(
           "/auth/request-verification",
           { type: "email" },
-          { headers: { Authorization: `Bearer ${accessToken}` } },
+          { headers: { Authorization: `Bearer ${accessToken}` } }
         )
         .catch(() => {});
 
       toast.success("Account created! Welcome to Nora 🎉");
 
-      // 5. Redirect to OTP verification, then deep-link to role's default page
       navigate("/auth/verify-otp", {
         state: {
           email: values.email,
           verificationType: "email",
-          // After OTP, redirect to the right page for this role
           nextRoute: getDefaultRoute(user),
         },
       });
@@ -83,14 +73,13 @@ export default function Register() {
       toast.error(
         error.response?.data?.message ||
           error.response?.data?.error ||
-          "Registration failed",
+          "Registration failed"
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // Role label for the heading
   const roleLabel =
     {
       vendor: "as a Vendor",
@@ -99,17 +88,13 @@ export default function Register() {
     }[roleParam?.toLowerCase()] || "";
 
   return (
-    <div>
-      <img
-        src={theme === "dark" ? nora_logo_white : nora_logo_dark}
-        alt="nora_logo"
-        className="sidebar_logo"
-        style={{ marginBottom: 16 }}
-      />
-      <h3 className="profile_header">Get Started {roleLabel}</h3>
-      <p className="welcome_message">
-        Nora - Your All-in-One Ecosystem for Quick Restaurant Expansion
-      </p>
+    <div className="login-page-inner">
+      <div className="login-heading-group">
+        <h2 className="login-title">Get Started {roleLabel}</h2>
+        <p className="login-subtitle">
+          Your all-in-one ecosystem for quick restaurant expansion.
+        </p>
+      </div>
 
       <Formik
         initialValues={{ fullName: "", email: "", password: "", phone: "" }}
@@ -117,11 +102,12 @@ export default function Register() {
         onSubmit={handleSubmit}
       >
         {({ errors, touched, values, setFieldValue, setFieldTouched }) => (
-          <Form style={{ marginTop: 24 }}>
+          <Form style={{ marginTop: 20 }}>
             {/* Full Name */}
             <div className="form-field">
               <label className="modal-label">Full Name</label>
               <input
+                id="register-fullname"
                 className={`modal-input ${touched.fullName && errors.fullName ? "modal-input-error" : ""}`}
                 type="text"
                 name="fullName"
@@ -140,6 +126,7 @@ export default function Register() {
               <div className="form-field" style={{ flex: 1 }}>
                 <label className="modal-label">Email</label>
                 <input
+                  id="register-email"
                   className={`modal-input ${touched.email && errors.email ? "modal-input-error" : ""}`}
                   type="email"
                   name="email"
@@ -179,6 +166,7 @@ export default function Register() {
               <label className="modal-label">Password</label>
               <div className="login_password_wrapper">
                 <input
+                  id="register-password"
                   className={`modal-input ${touched.password && errors.password ? "modal-input-error" : ""}`}
                   type={showPassword ? "text" : "password"}
                   name="password"
@@ -193,11 +181,7 @@ export default function Register() {
                   onClick={() => setShowPassword((p) => !p)}
                   tabIndex={-1}
                 >
-                  {showPassword ? (
-                    <IoMdEyeOff size={16} />
-                  ) : (
-                    <IoMdEye size={16} />
-                  )}
+                  {showPassword ? <IoMdEyeOff size={16} /> : <IoMdEye size={16} />}
                 </button>
               </div>
               {touched.password && errors.password && (
@@ -205,35 +189,20 @@ export default function Register() {
               )}
             </div>
 
-            {/* Submit */}
             <button
+              id="register-submit"
               disabled={loading}
               type="submit"
               className={`app_btn app_btn_confirm ${loading ? "btn_loading" : ""}`}
-              style={{
-                width: "100%",
-                marginTop: 8,
-                position: "relative",
-                height: 42,
-              }}
+              style={{ width: "100%", marginTop: 8, position: "relative", height: 44 }}
             >
-              <span className="btn_text">Create Account</span>
-              {loading && (
-                <span
-                  className="btn_loader"
-                  style={{ width: 18, height: 18 }}
-                />
-              )}
+              <span className="btn_text" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                Create Account <MdArrowForward />
+              </span>
+              {loading && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
             </button>
 
-            <p
-              className="muted"
-              style={{
-                marginTop: 24,
-                textAlign: "center",
-                fontSize: "0.875rem",
-              }}
-            >
+            <p className="muted" style={{ marginTop: 20, textAlign: "center", fontSize: "0.875rem" }}>
               Already have an account?{" "}
               <Link to="/auth/login" className="login_signup_link">
                 Sign in

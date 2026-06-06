@@ -136,6 +136,16 @@
   flex-shrink: 0;
 }
 
+/* ── Page header ──────────────────────────────────────────────── */
+
+.wallet-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
 /* ── Layout ───────────────────────────────────────────────────── */
 
 .finance_grid {
@@ -145,11 +155,103 @@
   align-items: start;
 }
 
-@media (max-width: 992px) {
+/* Desktop grid — hidden on mobile */
+.finance_grid--desktop {
+  display: grid;
+}
+
+/* Mobile layout — hidden on desktop */
+.finance_mobile {
+  display: none;
+}
+
+/* ── Mobile breakpoint ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Hide the desktop two-column grid */
+  .finance_grid--desktop {
+    display: none !important;
+  }
+
+  /* Show mobile single-column layout */
+  .finance_mobile {
+    display: block;
+  }
+
+  /* ── Mobile tab switcher ── */
+  .wallet-mobile-tabs {
+    display: flex;
+    gap: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px 14px 0 0;
+    border-bottom: none;
+    padding: 6px 6px 0;
+    margin-top: 16px;
+  }
+
+  .wallet-mobile-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: 10px 10px 0 0;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color 0.15s, background 0.15s;
+    white-space: nowrap;
+    position: relative;
+  }
+
+  .wallet-mobile-tab:hover {
+    color: var(--text-body);
+    background: var(--bg-hover);
+  }
+
+  .wallet-mobile-tab--active {
+    color: var(--accent);
+    background: var(--bg-active);
+  }
+
+  .wallet-mobile-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* ── Mobile panel — animated ── */
+  .wallet-mobile-panel {
+    animation: walletPanelIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes walletPanelIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Tablet single-column (992px → 768px range) — old breakpoint */
+@media (max-width: 992px) and (min-width: 769px) {
   .finance_grid {
     grid-template-columns: 1fr;
   }
 }
+
 
 /* ── Section cards ────────────────────────────────────────────── */
 

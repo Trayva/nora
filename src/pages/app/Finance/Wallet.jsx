@@ -22,6 +22,7 @@ import {
   MdCheckCircle,
   MdCancel,
   MdContentCopy,
+  MdTune,
 } from "react-icons/md";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -65,6 +66,165 @@ function StatusBadge({ status }) {
   );
 }
 
+// ── Right-column content (invoices + accounts + settlement + security) ──────
+function SidebarContent({ wallet, invoices, dedicatedAccount, setShowSettlement, setShowPin, navigate }) {
+  return (
+    <>
+      {/* Quick Invoices */}
+      <div className="section_card mb-4">
+        <div className="wallet_section_header">
+          <h2 className="section_title" style={{ margin: 0 }}>
+            <MdReceipt size={20} color="var(--accent)" />
+            Quick Invoices
+          </h2>
+          <button
+            className="view_all_link"
+            onClick={() => navigate("/app/invoices")}
+          >
+            View All
+          </button>
+        </div>
+        <div className="quick_invoice_list">
+          {invoices.slice(0, 3).map((inv) => (
+            <div
+              key={inv.id}
+              className="quick_invoice_item"
+              onClick={() => navigate(`/app/invoices?open_id=${inv.id}`)}
+            >
+              <div className="quick_inv_main">
+                <div className="quick_inv_info">
+                  <span className="quick_inv_id">
+                    #{inv.id.slice(0, 8).toUpperCase()}
+                  </span>
+                  <span className="quick_inv_date">
+                    Due {new Date(inv.dueDate).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="quick_inv_side">
+                  <div className="quick_inv_amount">
+                    {inv.currency} {Number(inv.total).toLocaleString()}
+                  </div>
+                  <StatusBadge status={inv.status} />
+                </div>
+              </div>
+            </div>
+          ))}
+          {invoices.length === 0 && (
+            <div className="wallet_empty" style={{ padding: "16px 0" }}>
+              <p>No pending invoices</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Dedicated Funding Account */}
+      <div className="section_card mb-4" style={{ background: "linear-gradient(135deg, var(--bg-card), var(--bg-hover))" }}>
+        <div className="wallet_section_header">
+          <h2 className="section_title" style={{ margin: 0 }}>
+            <MdAccountBalance size={20} color="var(--accent)" />
+            Top-up via Transfer
+          </h2>
+        </div>
+        <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginBottom: 16 }}>
+          Transfer specifically to this account to fund your wallet instantly.
+        </p>
+        <div className="wallet_info_block" style={{ border: "1px solid rgba(203,108,220,0.15)", background: "rgba(203,108,220,0.02)" }}>
+          <div className="wallet_info_row">
+            <span className="wallet_info_label">Bank Name</span>
+            <span className="wallet_info_value">{dedicatedAccount?.bankName || "—"}</span>
+          </div>
+          <div className="wallet_info_row">
+            <span className="wallet_info_label">Account Name</span>
+            <span className="wallet_info_value">{dedicatedAccount?.accountName || "—"}</span>
+          </div>
+          <div className="wallet_info_row" style={{ borderTop: "1px dashed var(--border)", paddingTop: 8, marginTop: 4 }}>
+            <span className="wallet_info_label">Account Number</span>
+            <span
+              className="wallet_info_value"
+              style={{
+                fontSize: "1.1rem",
+                fontWeight: 900,
+                color: "var(--accent)",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                cursor: "pointer",
+              }}
+              onClick={() => {
+                if (dedicatedAccount?.accountNumber) {
+                  navigator.clipboard.writeText(dedicatedAccount.accountNumber);
+                  toast.success("Account number copied!");
+                }
+              }}
+            >
+              {dedicatedAccount?.accountNumber || "—"}
+              <MdContentCopy size={14} style={{ opacity: 0.6 }} />
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Settlement */}
+      <div className="section_card mb-4">
+        <h2 className="section_title">
+          <MdAccountBalance size={20} color="var(--accent)" />
+          Settlement
+        </h2>
+        <div className="wallet_info_block">
+          <div className="wallet_info_row">
+            <span className="wallet_info_label">Bank</span>
+            <span className="wallet_info_value">{wallet?.bankName || "—"}</span>
+          </div>
+          <div className="wallet_info_row">
+            <span className="wallet_info_label">Account</span>
+            <span className="wallet_info_value">{wallet?.bankAccount || "Not set"}</span>
+          </div>
+        </div>
+        <button
+          className="app_btn app_btn_cancel w-100"
+          style={{ marginTop: 12 }}
+          onClick={() => setShowSettlement(true)}
+        >
+          Update Account
+        </button>
+      </div>
+
+      {/* Security */}
+      <div className="section_card">
+        <h2 className="section_title">
+          <MdSecurity size={20} color="var(--accent)" />
+          Security
+        </h2>
+        <div className="wallet_info_block">
+          <div className="wallet_info_row">
+            <span className="wallet_info_label">Transaction PIN</span>
+            <span className="wallet_pin_status">
+              {wallet?.transactionPin ? (
+                <>
+                  <MdCheckCircle size={14} style={{ color: "#22c55e" }} /> Active
+                </>
+              ) : (
+                <>
+                  <MdCancel size={14} style={{ color: "#ef4444" }} /> Not set
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+        <button
+          className="app_btn app_btn_cancel w-100"
+          style={{ marginTop: 12 }}
+          onClick={() => setShowPin(true)}
+        >
+          {wallet?.transactionPin ? "Change PIN" : "Set PIN"}
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function Wallet() {
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -78,7 +238,9 @@ export default function Wallet() {
   const [showSettlement, setShowSettlement] = useState(false);
 
   const [dedicatedAccount, setDedicatedAccount] = useState(null);
-  const [dedicatedLoading, setDedicatedLoading] = useState(false);
+
+  // Mobile tab: "transactions" | "settings"
+  const [mobileTab, setMobileTab] = useState("transactions");
 
   const fetchData = async () => {
     try {
@@ -106,74 +268,81 @@ export default function Wallet() {
 
   return (
     <div className="page_wrapper">
-      <div className="mb-4">
-        <h2 className="page_title_big m-0">Wallet</h2>
-        <p className="welcome_message">
-          Manage your funds, transactions, and settlement settings.
-        </p>
+      <div className="wallet-page-header">
+        <div>
+          <h2 className="page_title_big m-0">Wallet</h2>
+          <p className="welcome_message">
+            Manage your funds, transactions, and settlement settings.
+          </p>
+        </div>
       </div>
 
       {loading ? (
         <div className="finance_grid">
           <div className="main_section">
-            <div
-              className="skeleton_shimmer skeleton_rect"
-              style={{ height: 200, borderRadius: 16, marginBottom: 24 }}
-            />
+            <div className="skeleton_shimmer skeleton_rect" style={{ height: 200, borderRadius: 16, marginBottom: 24 }} />
             <div className="section_card">
-              <div
-                className="skeleton_shimmer skeleton_text"
-                style={{ width: "30%", height: 20, marginBottom: 20 }}
-              />
-              {Array(6)
-                .fill(0)
-                .map((_, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      gap: 12,
-                      marginBottom: 16,
-                      alignItems: "center",
-                    }}
-                  >
-                    <div
-                      className="skeleton_shimmer skeleton_circle"
-                      style={{ width: 36, height: 36 }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div
-                        className="skeleton_shimmer skeleton_text"
-                        style={{ width: "40%", height: 14, marginBottom: 6 }}
-                      />
-                      <div
-                        className="skeleton_shimmer skeleton_text"
-                        style={{ width: "60%", height: 10 }}
-                      />
-                    </div>
+              <div className="skeleton_shimmer skeleton_text" style={{ width: "30%", height: 20, marginBottom: 20 }} />
+              {Array(6).fill(0).map((_, i) => (
+                <div key={i} style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
+                  <div className="skeleton_shimmer skeleton_circle" style={{ width: 36, height: 36 }} />
+                  <div style={{ flex: 1 }}>
+                    <div className="skeleton_shimmer skeleton_text" style={{ width: "40%", height: 14, marginBottom: 6 }} />
+                    <div className="skeleton_shimmer skeleton_text" style={{ width: "60%", height: 10 }} />
                   </div>
-                ))}
+                </div>
+              ))}
             </div>
           </div>
           <div className="sidebar_section">
             <div className="section_card mb-4" style={{ height: 180 }}>
-              <div
-                className="skeleton_shimmer skeleton_rect"
-                style={{ height: "100%", borderRadius: 12 }}
-              />
+              <div className="skeleton_shimmer skeleton_rect" style={{ height: "100%", borderRadius: 12 }} />
             </div>
             <div className="section_card mb-4" style={{ height: 150 }}>
-              <div
-                className="skeleton_shimmer skeleton_rect"
-                style={{ height: "100%", borderRadius: 12 }}
-              />
+              <div className="skeleton_shimmer skeleton_rect" style={{ height: "100%", borderRadius: 12 }} />
             </div>
           </div>
         </div>
       ) : (
-        <div className="finance_grid">
-          {/* ── Left column ── */}
-          <div className="main_section">
+        <>
+          {/* ── Desktop layout (untouched two-column grid) ── */}
+          <div className="finance_grid finance_grid--desktop">
+            {/* Left column */}
+            <div className="main_section">
+              <WalletCard
+                balance={wallet?.balance}
+                currency={wallet?.currency}
+                onTopup={() => setShowTopup(true)}
+                onWithdraw={() => setShowWithdraw(true)}
+              />
+              <div className="section_card">
+                <div className="wallet_section_header">
+                  <h2 className="section_title">
+                    <MdHistory size={20} color="var(--accent)" />
+                    Transaction History
+                  </h2>
+                  <span className="wallet_tx_count">{transactions.length} transactions</span>
+                </div>
+                <TransactionList transactions={transactions} currency={wallet?.currency} />
+              </div>
+            </div>
+
+            {/* Right column */}
+            <div className="sidebar_section">
+              <SidebarContent
+                wallet={wallet}
+                invoices={invoices}
+                dedicatedAccount={dedicatedAccount}
+                setShowSettlement={setShowSettlement}
+                setShowPin={setShowPin}
+                navigate={navigate}
+              />
+            </div>
+          </div>
+
+          {/* ── Mobile layout: wallet card always on top, tabs below ── */}
+          <div className="finance_mobile">
+            {/* Wallet card — always visible */}
             <WalletCard
               balance={wallet?.balance}
               currency={wallet?.currency}
@@ -181,207 +350,65 @@ export default function Wallet() {
               onWithdraw={() => setShowWithdraw(true)}
             />
 
-            <div className="section_card">
-              <div className="wallet_section_header">
-                <h2 className="section_title">
-                  <MdHistory size={20} color="var(--accent)" />
-                  Transaction History
-                </h2>
-                <span className="wallet_tx_count">
-                  {transactions.length} transactions
-                </span>
-              </div>
-              <TransactionList
-                transactions={transactions}
-                currency={wallet?.currency}
-              />
-            </div>
-          </div>
-
-          {/* ── Right column ── */}
-          <div className="sidebar_section">
-            {/* Quick Invoices */}
-            <div className="section_card mb-4">
-              <div className="wallet_section_header">
-                <h2 className="section_title" style={{ margin: 0 }}>
-                  <MdReceipt size={20} color="var(--accent)" />
-                  Quick Invoices
-                </h2>
-                <button
-                  className="view_all_link"
-                  onClick={() => navigate("/app/invoices")}
-                >
-                  View All
-                </button>
-              </div>
-              <div className="quick_invoice_list">
-                {invoices.slice(0, 3).map((inv) => (
-                  <div
-                    key={inv.id}
-                    className="quick_invoice_item"
-                    onClick={() => navigate(`/app/invoices?open_id=${inv.id}`)}
-                  >
-                    <div className="quick_inv_main">
-                      <div className="quick_inv_info">
-                        <span className="quick_inv_id">
-                          #{inv.id.slice(0, 8).toUpperCase()}
-                        </span>
-                        <span className="quick_inv_date">
-                          Due {new Date(inv.dueDate).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="quick_inv_side">
-                        <div className="quick_inv_amount">
-                          {inv.currency} {Number(inv.total).toLocaleString()}
-                        </div>
-                        <StatusBadge status={inv.status} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {invoices.length === 0 && (
-                  <div className="wallet_empty" style={{ padding: "16px 0" }}>
-                    <p>No pending invoices</p>
-                  </div>
+            {/* Mobile tab switcher */}
+            <div className="wallet-mobile-tabs">
+              <button
+                id="wallet-tab-transactions"
+                className={`wallet-mobile-tab ${mobileTab === "transactions" ? "wallet-mobile-tab--active" : ""}`}
+                onClick={() => setMobileTab("transactions")}
+              >
+                <MdHistory size={16} />
+                Transactions
+                {transactions.length > 0 && (
+                  <span className="wallet-mobile-tab-badge">{transactions.length}</span>
                 )}
-              </div>
-            </div>
-
-            {/* Dedicated Funding Account */}
-            <div className="section_card mb-4" style={{ background: "linear-gradient(135deg, var(--bg-card), var(--bg-hover))" }}>
-              <div className="wallet_section_header">
-                <h2 className="section_title" style={{ margin: 0 }}>
-                  <MdAccountBalance size={20} color="var(--accent)" />
-                  Top-up via Transfer
-                </h2>
-              </div>
-              <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginBottom: 16 }}>
-                Transfer specifically to this account to fund your wallet instantly.
-              </p>
-
-              <div className="wallet_info_block" style={{ border: "1px solid rgba(203,108,220,0.15)", background: "rgba(203,108,220,0.02)" }}>
-                <div className="wallet_info_row">
-                  <span className="wallet_info_label">Bank Name</span>
-                  <span className="wallet_info_value">{dedicatedAccount?.bankName || "—"}</span>
-                </div>
-                <div className="wallet_info_row">
-                  <span className="wallet_info_label">Account Name</span>
-                  <span className="wallet_info_value">{dedicatedAccount?.accountName || "—"}</span>
-                </div>
-                <div className="wallet_info_row" style={{ borderTop: "1px dashed var(--border)", paddingTop: 8, marginTop: 4 }}>
-                  <span className="wallet_info_label">Account Number</span>
-                  <span
-                    className="wallet_info_value"
-                    style={{
-                      fontSize: "1.1rem",
-                      fontWeight: 900,
-                      color: "var(--accent)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      cursor: "pointer"
-                    }}
-                    onClick={() => {
-                      if (dedicatedAccount?.accountNumber) {
-                        navigator.clipboard.writeText(dedicatedAccount.accountNumber);
-                        toast.success("Account number copied!");
-                      }
-                    }}
-                  >
-                    {dedicatedAccount?.accountNumber || "—"}
-                    <MdContentCopy size={14} style={{ opacity: 0.6 }} />
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Settlement */}
-            <div className="section_card mb-4">
-              <h2 className="section_title">
-                <MdAccountBalance size={20} color="var(--accent)" />
-                Settlement
-              </h2>
-              <div className="wallet_info_block">
-                <div className="wallet_info_row">
-                  <span className="wallet_info_label">Bank</span>
-                  <span className="wallet_info_value">
-                    {wallet?.bankName || "—"}
-                  </span>
-                </div>
-                <div className="wallet_info_row">
-                  <span className="wallet_info_label">Account</span>
-                  <span className="wallet_info_value">
-                    {wallet?.bankAccount || "Not set"}
-                  </span>
-                </div>
-              </div>
+              </button>
               <button
-                className="app_btn app_btn_cancel w-100"
-                style={{ marginTop: 12 }}
-                onClick={() => setShowSettlement(true)}
+                id="wallet-tab-settings"
+                className={`wallet-mobile-tab ${mobileTab === "settings" ? "wallet-mobile-tab--active" : ""}`}
+                onClick={() => setMobileTab("settings")}
               >
-                Update Account
+                <MdTune size={16} />
+                Settings
               </button>
             </div>
 
-            {/* Security */}
-            <div className="section_card">
-              <h2 className="section_title">
-                <MdSecurity size={20} color="var(--accent)" />
-                Security
-              </h2>
-              <div className="wallet_info_block">
-                <div className="wallet_info_row">
-                  <span className="wallet_info_label">Transaction PIN</span>
-                  <span className="wallet_pin_status">
-                    {wallet?.transactionPin ? (
-                      <>
-                        <MdCheckCircle size={14} style={{ color: "#22c55e" }} />{" "}
-                        Active
-                      </>
-                    ) : (
-                      <>
-                        <MdCancel size={14} style={{ color: "#ef4444" }} /> Not
-                        set
-                      </>
-                    )}
-                  </span>
+            {/* Panel content */}
+            <div className="wallet-mobile-panel" key={mobileTab}>
+              {mobileTab === "transactions" && (
+                <div className="section_card" style={{ marginTop: 0, borderRadius: "0 0 16px 16px", borderTop: "none" }}>
+                  <div className="wallet_section_header">
+                    <h2 className="section_title" style={{ margin: 0 }}>
+                      <MdHistory size={20} color="var(--accent)" />
+                      Transaction History
+                    </h2>
+                    <span className="wallet_tx_count">{transactions.length}</span>
+                  </div>
+                  <TransactionList transactions={transactions} currency={wallet?.currency} />
                 </div>
-              </div>
-              <button
-                className="app_btn app_btn_cancel w-100"
-                style={{ marginTop: 12 }}
-                onClick={() => setShowPin(true)}
-              >
-                {wallet?.transactionPin ? "Change PIN" : "Set PIN"}
-              </button>
+              )}
+
+              {mobileTab === "settings" && (
+                <div style={{ marginTop: 15 }}>
+                  <SidebarContent
+                    wallet={wallet}
+                    invoices={invoices}
+                    dedicatedAccount={dedicatedAccount}
+                    setShowSettlement={setShowSettlement}
+                    setShowPin={setShowPin}
+                    navigate={navigate}
+                  />
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        </>
       )}
 
-      <TopupModal
-        isOpen={showTopup}
-        onClose={() => setShowTopup(false)}
-        onSuccess={fetchData}
-      />
-      <WithdrawModal
-        isOpen={showWithdraw}
-        onClose={() => setShowWithdraw(false)}
-        onSuccess={fetchData}
-        balance={wallet?.balance}
-      />
-      <PinModal
-        isOpen={showPin}
-        onClose={() => setShowPin(false)}
-        hasPin={!!wallet?.transactionPin}
-        onSuccess={fetchData}
-      />
-      <SettlementModal
-        isOpen={showSettlement}
-        onClose={() => setShowSettlement(false)}
-        onSuccess={fetchData}
-      />
+      <TopupModal isOpen={showTopup} onClose={() => setShowTopup(false)} onSuccess={fetchData} />
+      <WithdrawModal isOpen={showWithdraw} onClose={() => setShowWithdraw(false)} onSuccess={fetchData} balance={wallet?.balance} />
+      <PinModal isOpen={showPin} onClose={() => setShowPin(false)} hasPin={!!wallet?.transactionPin} onSuccess={fetchData} />
+      <SettlementModal isOpen={showSettlement} onClose={() => setShowSettlement(false)} onSuccess={fetchData} />
     </div>
   );
 }
