@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
@@ -93,6 +93,50 @@ export default function Login() {
   const [showFullForm, setShowFullForm] = useState(false);
 
   const selectedAccount = savedAccounts.find((a) => a.id === selectedAccountId) || null;
+
+  // ── google-login callback ────────────────────────────────────────────────
+  const handleGoogleCredentialResponse = async (response) => {
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/google-login", {
+        idToken: response.credential,
+        role: "CUSTOMER",
+      });
+      const { accessToken, refreshToken, user } = res.data.data;
+      login(user, accessToken, refreshToken);
+      toast.success("Welcome back!");
+      navigate(cbUrl || getDefaultRoute(user));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Google authentication failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    /* global google */
+    if (window.google) {
+      const initializeGoogle = () => {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "your-google-client-id.apps.googleusercontent.com",
+          callback: handleGoogleCredentialResponse,
+        });
+        window.google.accounts.id.renderButton(
+          document.getElementById("google-signin-btn"),
+          { 
+            theme: theme === "dark" ? "filled_black" : "outline", 
+            size: "large", 
+            width: "100%",
+            text: "signin_with",
+            shape: "rectangular"
+          }
+        );
+      };
+
+      const timer = setTimeout(initializeGoogle, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [theme, showFullForm]);
 
   // ── full-login submit ─────────────────────────────────────────────────────
 
@@ -337,18 +381,26 @@ export default function Login() {
                   </span>
                   {loading && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
                 </button>
-
-                <p className="muted" style={{ marginTop: 20, textAlign: "center", fontSize: "0.875rem" }}>
-                  Don't have an account?{" "}
-                  <Link to="/auth/register?role=CUSTOMER" className="login_signup_link">
-                    Sign up
-                  </Link>
-                </p>
               </Form>
             )}
           </Formik>
         </>
       )}
+
+      {/* Google Sign-in Option */}
+      <div className="login-divider">
+        <span>or</span>
+      </div>
+      <div className="google-btn-wrapper">
+        <div id="google-signin-btn"></div>
+      </div>
+
+      <p className="muted" style={{ marginTop: 22, textAlign: "center", fontSize: "0.875rem" }}>
+        Don't have an account?{" "}
+        <Link to="/auth/register?role=CUSTOMER" className="login_signup_link">
+          Sign up
+        </Link>
+      </p>
     </div>
   );
 }

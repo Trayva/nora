@@ -14,6 +14,7 @@ const AUTH_ENDPOINTS = [
   "/auth/request-verification",
   "/auth/verify-otp",
   "/auth/forgot-password",
+  "/auth/google-login",
 ];
 
 const isAuthEndpoint = (url = "") =>

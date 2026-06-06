@@ -460,3 +460,42 @@
     border-radius: 16px;
   }
 }
+
+/* ── Google Sign-in / Sign-up Premium Styling ── */
+.login-divider {
+  display: flex;
+  align-items: center;
+  margin: 22px 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border);
+}
+
+.login-divider:not(:empty)::before {
+  margin-right: 14px;
+}
+
+.login-divider:not(:empty)::after {
+  margin-left: 14px;
+}
+
+.google-btn-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.google-btn-wrapper > div {
+  width: 100% !important;
+}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
@@ -34,6 +34,53 @@ export default function Register() {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // ── google-signup callback ───────────────────────────────────────────────
+  const handleGoogleCredentialResponse = async (response) => {
+    setLoading(true);
+    try {
+      const assignedRoles = roleParamToRoles(roleParam);
+      const primaryRole = assignedRoles && assignedRoles.length > 0 ? assignedRoles[0] : "CUSTOMER";
+
+      const res = await api.post("/auth/google-login", {
+        idToken: response.credential,
+        role: primaryRole,
+      });
+      const { accessToken, refreshToken, user } = res.data.data;
+      login(user, accessToken, refreshToken);
+      toast.success("Welcome to Nora 🎉");
+      navigate(getDefaultRoute(user));
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Google authentication failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    /* global google */
+    if (window.google) {
+      const initializeGoogle = () => {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "your-google-client-id.apps.googleusercontent.com",
+          callback: handleGoogleCredentialResponse,
+        });
+        window.google.accounts.id.renderButton(
+          document.getElementById("google-signup-btn"),
+          { 
+            theme: "outline", 
+            size: "large", 
+            width: "100%",
+            text: "signup_with",
+            shape: "rectangular"
+          }
+        );
+      };
+
+      const timer = setTimeout(initializeGoogle, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [roleParam]);
 
   const handleSubmit = async (values) => {
     setLoading(true);
@@ -201,16 +248,24 @@ export default function Register() {
               </span>
               {loading && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
             </button>
-
-            <p className="muted" style={{ marginTop: 20, textAlign: "center", fontSize: "0.875rem" }}>
-              Already have an account?{" "}
-              <Link to="/auth/login" className="login_signup_link">
-                Sign in
-              </Link>
-            </p>
           </Form>
         )}
       </Formik>
+
+      {/* Google Sign-up Option */}
+      <div className="login-divider">
+        <span>or</span>
+      </div>
+      <div className="google-btn-wrapper">
+        <div id="google-signup-btn"></div>
+      </div>
+
+      <p className="muted" style={{ marginTop: 22, textAlign: "center", fontSize: "0.875rem" }}>
+        Already have an account?{" "}
+        <Link to="/auth/login" className="login_signup_link">
+          Sign in
+        </Link>
+      </p>
     </div>
   );
 }
