@@ -73,7 +73,7 @@ function NotifCard({ title, desc, badge, checked, onChange, disabled }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Profile() {
-  const { user, logout, logoutAll } = useAuth();
+  const { user, logout, logoutAll, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState("personal");
   const [prevTab, setPrevTab] = useState(null);
 
@@ -82,9 +82,10 @@ export default function Profile() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [twoFactorSaving, setTwoFactorSaving] = useState(false);
 
   // Form state (personal)
-  const [formData, setFormData] = useState({ fullName: "", phone: "", image: null });
+  const [formData, setFormData] = useState({ fullName: "", phone: "", image: null, twoFactorEnabled: false });
   const fileInputRef = useRef(null);
   const [imagePreview, setImagePreview] = useState(null);
 
@@ -106,7 +107,13 @@ export default function Profile() {
     try {
       const data = await getProfile();
       setProfile(data.data);
-      setFormData({ fullName: data.data.fullName || "", phone: data.data.phone || "", image: null });
+      setFormData({
+        fullName: data.data.fullName || "",
+        phone: data.data.phone || "",
+        image: null,
+        twoFactorEnabled: data.data.twoFactorEnabled ?? false,
+      });
+      updateUser?.(data.data);
     } catch (err) {
       setProfileError(err.message);
     } finally {
@@ -146,6 +153,32 @@ export default function Profile() {
       toast.error(err.message || "Update failed");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ── Two-factor toggle handler (calls dedicated endpoint) ─────────────────
+  const handleToggleTwoFactor = async (value) => {
+    // optimistic UI update
+    setFormData((p) => ({ ...p, twoFactorEnabled: value }));
+    setTwoFactorSaving(true);
+    try {
+      // simple client-side guard
+      if (value && !profile?.emailVerified && !profile?.phoneVerified) {
+        throw new Error("Verify your email or phone before enabling two-factor authentication.");
+      }
+      const res = await api.patch("/account/profile/two-factor", { twoFactorEnabled: value });
+      const updated = res.data?.data;
+      if (updated) {
+        setProfile(updated);
+        updateUser?.(updated);
+        toast.success("Two-factor preference updated");
+      }
+    } catch (err) {
+      // revert UI
+      setFormData((p) => ({ ...p, twoFactorEnabled: !value }));
+      toast.error(err.response?.data?.message || err.message || "Failed to update two-factor preference");
+    } finally {
+      setTwoFactorSaving(false);
     }
   };
 
@@ -329,6 +362,9 @@ export default function Profile() {
             <span className={`profile-verify-badge ${profile?.phoneVerified ? "profile-verify-badge--ok" : "profile-verify-badge--no"}`}>
               {profile?.phoneVerified ? "✓" : "✗"} Phone
             </span>
+            <span className={`profile-verify-badge ${profile?.twoFactorEnabled ? "profile-verify-badge--ok" : "profile-verify-badge--no"}`}>
+              {profile?.twoFactorEnabled ? "✓" : "✗"} Two-factor
+            </span>
           </div>
         </div>
 
@@ -401,7 +437,12 @@ export default function Profile() {
                   <div className="profile-form-actions">
                     <button
                       className="app_btn app_btn_cancel"
-                      onClick={() => setFormData({ fullName: profile?.fullName || "", phone: profile?.phone || "", image: null })}
+                      onClick={() => setFormData({
+                        fullName: profile?.fullName || "",
+                        phone: profile?.phone || "",
+                        image: null,
+                        twoFactorEnabled: profile?.twoFactorEnabled ?? false,
+                      })}
                     >
                       <MdRefresh size={14} style={{ marginRight: 4 }} />
                       Reset
@@ -426,6 +467,30 @@ export default function Profile() {
               <div className="profile-panel-section">
                 <h3 className="profile-section-heading">Security</h3>
                 <p className="profile-section-sub">Update your password.</p>
+
+                <div className="profile-form-field" style={{ marginBottom: 24 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <label className="profile-form-label" htmlFor="profile-twofactor-toggle">
+                        Two-factor authentication
+                      </label>
+                      <p className="profile-form-sub" style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.875rem" }}>
+                        Add an extra layer of login security for your account.
+                      </p>
+                    </div>
+                    <label className="profile-toggle" style={{ margin: 0 }}>
+                      <input
+                        id="profile-twofactor-toggle"
+                        type="checkbox"
+                        checked={formData.twoFactorEnabled}
+                        onChange={(e) => handleToggleTwoFactor(e.target.checked)}
+                        disabled={twoFactorSaving}
+                      />
+                      <span className="profile-toggle-track" />
+                      <span className="profile-toggle-thumb" />
+                    </label>
+                  </div>
+                </div>
 
                 <Formik
                   initialValues={{ currentPassword: "", newPassword: "", confirmPassword: "" }}

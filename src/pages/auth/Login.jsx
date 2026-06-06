@@ -213,7 +213,20 @@ export default function Login() {
     setLoading(true);
     try {
       const response = await api.post("/auth/login", values);
-      const { accessToken, refreshToken, user } = response.data.data;
+      const result = response.data.data;
+      if (result.requiresTwoFactor) {
+        return navigate("/auth/verify-otp", {
+          state: {
+            flow: "twoFactor",
+            userId: result.userId,
+            email: result.email,
+            phone: result.phone,
+            verificationType: result.method === "email" ? "TWO_FACTOR_EMAIL" : "TWO_FACTOR_PHONE",
+            nextRoute: cbUrl || "/app",
+          },
+        });
+      }
+      const { accessToken, refreshToken, user } = result;
       login(user, accessToken, refreshToken);
       toast.success("Welcome back!");
       navigate(cbUrl || getDefaultRoute(user));
@@ -242,7 +255,20 @@ export default function Login() {
         email: selectedAccount.user?.email,
         password: values.password,
       });
-      const { accessToken, refreshToken, user } = response.data.data;
+      const result = response.data.data;
+      if (result.requiresTwoFactor) {
+        return navigate("/auth/verify-otp", {
+          state: {
+            flow: "twoFactor",
+            userId: result.userId,
+            email: result.email,
+            phone: result.phone,
+            verificationType: result.method === "email" ? "TWO_FACTOR_EMAIL" : "TWO_FACTOR_PHONE",
+            nextRoute: cbUrl || "/app",
+          },
+        });
+      }
+      const { accessToken, refreshToken, user } = result;
       login(user, accessToken, refreshToken);
       toast.success(`Welcome back, ${user?.fullName?.split(" ")[0] || ""}!`);
       navigate(cbUrl || getDefaultRoute(user));

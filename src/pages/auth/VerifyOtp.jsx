@@ -14,12 +14,14 @@ const RESEND_COOLDOWN = 60; // seconds
 export default function VerifyOtp() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, login } = useAuth();
   const { theme } = useTheme();
 
   // State passed from Register or wherever we were redirected from
   const email = state?.email || user?.email || "";
-  const verificationType = state?.verificationType || "email";
+  const flow = state?.flow || "verification";
+  const isTwoFactor = flow === "twoFactor";
+  const verificationType = state?.verificationType || (isTwoFactor ? "TWO_FACTOR_EMAIL" : "email");
   // nextRoute: set by Register after role-based registration
   const nextRoute =
     state?.nextRoute || (user ? getDefaultRoute(user) : "/app/kiosk-home");
@@ -104,16 +106,32 @@ export default function VerifyOtp() {
     if (otpCode.length < OTP_LENGTH) return toast.error("Enter all 6 digits");
     setVerifying(true);
     try {
-      const res = await api.post("/auth/verify-otp", {
-        email,
-        otp: otpCode,
-        type: verificationType,
-      });
+      const res = await api.post(
+        isTwoFactor ? "/auth/verify-2fa" : "/auth/verify-otp",
+        isTwoFactor
+          ? {
+              userId: state?.userId,
+              otp: otpCode,
+              type: verificationType,
+            }
+          : {
+              otp: otpCode,
+              type: verificationType,
+            }
+      );
       // If the response returns updated user data, update the context
       const updatedUser = res.data?.data?.user;
-      if (updatedUser) updateUser(updatedUser);
+      const accessToken = res.data?.data?.accessToken;
+      const refreshToken = res.data?.data?.refreshToken;
+      if (accessToken && refreshToken && updatedUser) {
+        login(updatedUser, accessToken, refreshToken);
+      } else if (updatedUser) {
+        updateUser(updatedUser);
+      }
+      // Ensure user context is updated when login isn't part of this flow
+      if (!accessToken && updatedUser) updateUser(updatedUser);
 
-      toast.success("Email verified! ✓");
+      toast.success(isTwoFactor ? "Login successful!" : "Verification successful! ✓");
       navigate(nextRoute, { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || "Invalid or expired code");
@@ -129,8 +147,17 @@ export default function VerifyOtp() {
     if (cooldown > 0 || resending) return;
     setResending(true);
     try {
-      await api.post("/auth/request-verification", { type: verificationType });
-      toast.success("New code sent to your email");
+      await api.post(
+        isTwoFactor ? "/auth/request-two-factor" : "/auth/request-verification",
+        isTwoFactor
+          ? { userId: state?.userId, type: verificationType }
+          : { type: verificationType }
+      );
+      toast.success(
+        isTwoFactor
+          ? "New login code sent to your contact method"
+          : "New code sent to your email"
+      );
       startCooldown();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to resend code");
@@ -148,11 +175,16 @@ export default function VerifyOtp() {
         alt="nora_logo"
         className="sidebar_logo mb-4"
       />
-      <h3 className="profile_header">Check your email</h3>
+      <h3 className="profile_header">
+        {isTwoFactor ? "Two-factor authentication" : "Check your email"}
+      </h3>
       <p className="welcome_message">
-        We sent a {OTP_LENGTH}-digit code to{" "}
-        <strong style={{ color: "var(--text-heading)" }}>{email}</strong>. Enter
-        it below to verify your account.
+        {isTwoFactor ? "Enter the login code sent to" : "We sent a"} {OTP_LENGTH}-digit
+        code to {" "}
+        <strong style={{ color: "var(--text-heading)" }}>
+          {isTwoFactor ? email || state?.phone : email}
+        </strong>.
+        {isTwoFactor ? " Complete sign-in to continue." : " Enter it below to verify your account."}
       </p>
 
       {/* OTP inputs */}
