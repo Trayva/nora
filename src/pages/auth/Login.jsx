@@ -40,36 +40,61 @@ function AvatarChip({ account, active, onSelect, onRemove }) {
     <button
       type="button"
       id={`account-chip-${account.id}`}
-      className={`login-account-chip ${active ? "login-account-chip--active" : ""}`}
+      className={`login-account-chip ${
+        active ? "login-account-chip--active" : ""
+      }`}
       onClick={onSelect}
     >
       <span
         className="login-account-avatar"
-        style={imgSrc ? { background: "transparent", padding: 0, overflow: "hidden" } : { background: `hsl(${hue}, 60%, 48%)` }}
+        style={
+          imgSrc
+            ? { background: "transparent", padding: 0, overflow: "hidden" }
+            : { background: `hsl(${hue}, 60%, 48%)` }
+        }
       >
         {imgSrc ? (
           <img
             src={imgSrc}
             alt={account.user?.fullName || "Avatar"}
-            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", display: "block" }}
-            onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.parentElement.textContent = initials; }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: "inherit",
+              display: "block",
+            }}
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+              e.currentTarget.parentElement.textContent = initials;
+            }}
           />
-        ) : initials}
+        ) : (
+          initials
+        )}
       </span>
       <span className="login-account-info">
-        <span className="login-account-name">{account.user?.fullName || "Account"}</span>
+        <span className="login-account-name">
+          {account.user?.fullName || "Account"}
+        </span>
         <span className="login-account-email">{account.user?.email || ""}</span>
       </span>
-      {role && (
-        <span className="login-account-role">{role}</span>
-      )}
+      {role && <span className="login-account-role">{role}</span>}
       <span
         className="login-account-remove"
         role="button"
         tabIndex={0}
         title="Remove"
-        onClick={(e) => { e.stopPropagation(); onRemove(); }}
-        onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onRemove(); } }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.stopPropagation();
+            onRemove();
+          }
+        }}
       >
         <MdClose size={12} />
       </span>
@@ -103,7 +128,8 @@ export default function Login() {
   // Start with chips visible so existing accounts are clickable; form is secondary
   const [showFullForm, setShowFullForm] = useState(false);
 
-  const selectedAccount = savedAccounts.find((a) => a.id === selectedAccountId) || null;
+  const selectedAccount =
+    savedAccounts.find((a) => a.id === selectedAccountId) || null;
 
   // ── google-login callback ────────────────────────────────────────────────
   const handleGoogleCredentialResponse = async (response) => {
@@ -118,7 +144,9 @@ export default function Login() {
       toast.success("Welcome back!");
       navigate(cbUrl || getDefaultRoute(user));
     } catch (error) {
-      toast.error(error.response?.data?.message || "Google authentication failed");
+      toast.error(
+        error.response?.data?.message || "Google authentication failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -134,7 +162,7 @@ export default function Login() {
     try {
       const data = await window.AppleID.auth.signIn();
       const idToken = data.authorization.id_token;
-      
+
       let fullName = undefined;
       if (data.user && data.user.name) {
         const { firstName, lastName } = data.user.name;
@@ -154,7 +182,9 @@ export default function Login() {
       if (error?.error === "popup_closed_by_user") {
         return;
       }
-      toast.error(error.response?.data?.message || "Apple authentication failed");
+      toast.error(
+        error.response?.data?.message || "Apple authentication failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -165,18 +195,20 @@ export default function Login() {
       if (window.AppleID) {
         try {
           window.AppleID.auth.init({
-            clientId: import.meta.env.VITE_APPLE_CLIENT_ID || "your-apple-service-id",
+            clientId:
+              import.meta.env.VITE_APPLE_CLIENT_ID || "your-apple-service-id",
             scope: "name email",
-            redirectURI: import.meta.env.VITE_APPLE_REDIRECT_URI || window.location.origin,
+            redirectURI:
+              import.meta.env.VITE_APPLE_REDIRECT_URI || window.location.origin,
             state: "origin:web",
-            usePopup: true
+            usePopup: true,
           });
         } catch (err) {
           console.error("Apple ID initialization failed:", err);
         }
       }
     };
-    
+
     initializeApple();
     const timer = setTimeout(initializeApple, 500);
     return () => clearTimeout(timer);
@@ -187,17 +219,19 @@ export default function Login() {
     if (window.google) {
       const initializeGoogle = () => {
         window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "your-google-client-id.apps.googleusercontent.com",
+          client_id:
+            import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+            "your-google-client-id.apps.googleusercontent.com",
           callback: handleGoogleCredentialResponse,
         });
         window.google.accounts.id.renderButton(
           document.getElementById("google-signin-btn"),
-          { 
-            theme: theme === "dark" ? "filled_black" : "outline", 
-            size: "large", 
+          {
+            theme: theme === "dark" ? "filled_black" : "outline",
+            size: "large",
             width: "100%",
             text: "signin_with",
-            shape: "rectangular"
+            shape: "rectangular",
           }
         );
       };
@@ -221,7 +255,10 @@ export default function Login() {
             userId: result.userId,
             email: result.email,
             phone: result.phone,
-            verificationType: result.method === "email" ? "TWO_FACTOR_EMAIL" : "TWO_FACTOR_PHONE",
+            verificationType:
+              result.method === "email"
+                ? "TWO_FACTOR_EMAIL"
+                : "TWO_FACTOR_PHONE",
             nextRoute: cbUrl || "/app",
           },
         });
@@ -263,7 +300,10 @@ export default function Login() {
             userId: result.userId,
             email: result.email,
             phone: result.phone,
-            verificationType: result.method === "email" ? "TWO_FACTOR_EMAIL" : "TWO_FACTOR_PHONE",
+            verificationType:
+              result.method === "email"
+                ? "TWO_FACTOR_EMAIL"
+                : "TWO_FACTOR_PHONE",
             nextRoute: cbUrl || "/app",
           },
         });
@@ -293,8 +333,12 @@ export default function Login() {
           {isAddingAccount ? (
             <>Log in to add another account to your session</>
           ) : (
-            <>New here?{" "}
-              <Link to="/auth/register?role=CUSTOMER" className="login_signup_link">
+            <>
+              New here?{" "}
+              <Link
+                to="/auth/register?role=CUSTOMER"
+                className="login_signup_link"
+              >
                 Create a free account
               </Link>
             </>
@@ -322,7 +366,8 @@ export default function Login() {
                 }}
                 onRemove={() => {
                   removeAccount(account.id);
-                  if (selectedAccountId === account.id) setSelectedAccountId(null);
+                  if (selectedAccountId === account.id)
+                    setSelectedAccountId(null);
                 }}
               />
             ))}
@@ -337,12 +382,20 @@ export default function Login() {
             >
               {({ errors, touched, values, handleChange, handleBlur }) => (
                 <Form className="login-continue-form">
-                  <p className="login-section-label" style={{ marginBottom: 8 }}>
-                    Enter password for <strong>{selectedAccount.user?.email}</strong>
+                  <p
+                    className="login-section-label"
+                    style={{ marginBottom: 8 }}
+                  >
+                    Enter password for{" "}
+                    <strong>{selectedAccount.user?.email}</strong>
                   </p>
                   <div className="login_password_wrapper">
                     <input
-                      className={`modal-input ${touched.password && errors.password ? "modal-input-error" : ""}`}
+                      className={`modal-input ${
+                        touched.password && errors.password
+                          ? "modal-input-error"
+                          : ""
+                      }`}
                       type={showPassword ? "text" : "password"}
                       name="password"
                       placeholder="Enter password"
@@ -357,7 +410,11 @@ export default function Login() {
                       onClick={() => setShowPassword((p) => !p)}
                       tabIndex={-1}
                     >
-                      {showPassword ? <IoMdEyeOff size={16} /> : <IoMdEye size={16} />}
+                      {showPassword ? (
+                        <IoMdEyeOff size={16} />
+                      ) : (
+                        <IoMdEye size={16} />
+                      )}
                     </button>
                   </div>
                   {touched.password && errors.password && (
@@ -375,11 +432,18 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className={`app_btn app_btn_confirm login-continue-btn ${loading ? "btn_loading" : ""}`}
+                      className={`app_btn app_btn_confirm login-continue-btn ${
+                        loading ? "btn_loading" : ""
+                      }`}
                       style={{ flex: 2, position: "relative", height: 42 }}
                     >
                       <span className="btn_text">Sign In →</span>
-                      {loading && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
+                      {loading && (
+                        <span
+                          className="btn_loader"
+                          style={{ width: 18, height: 18 }}
+                        />
+                      )}
                     </button>
                   </div>
                 </Form>
@@ -395,7 +459,10 @@ export default function Login() {
             type="button"
             id="login-use-different-account"
             className="login-different-btn"
-            onClick={() => { setShowFullForm(true); setSelectedAccountId(null); }}
+            onClick={() => {
+              setShowFullForm(true);
+              setSelectedAccountId(null);
+            }}
           >
             <MdPersonAdd size={16} />
             Sign in with a different account
@@ -426,7 +493,9 @@ export default function Login() {
                   <label className="modal-label">Email address</label>
                   <input
                     id="login-email"
-                    className={`modal-input ${touched.email && errors.email ? "modal-input-error" : ""}`}
+                    className={`modal-input ${
+                      touched.email && errors.email ? "modal-input-error" : ""
+                    }`}
                     type="email"
                     name="email"
                     placeholder="you@company.com"
@@ -443,7 +512,9 @@ export default function Login() {
                   <div className="login-label-row">
                     <label className="modal-label">Password</label>
                     <Link
-                      to={`/auth/forgot-password${isAddingAccount ? "?addAccount=true" : ""}`}
+                      to={`/auth/forgot-password${
+                        isAddingAccount ? "?addAccount=true" : ""
+                      }`}
                       className="login_forgot_link"
                     >
                       Forgot?
@@ -452,7 +523,11 @@ export default function Login() {
                   <div className="login_password_wrapper">
                     <input
                       id="login-password"
-                      className={`modal-input ${touched.password && errors.password ? "modal-input-error" : ""}`}
+                      className={`modal-input ${
+                        touched.password && errors.password
+                          ? "modal-input-error"
+                          : ""
+                      }`}
                       type={showPassword ? "text" : "password"}
                       name="password"
                       placeholder="Enter password"
@@ -466,7 +541,11 @@ export default function Login() {
                       onClick={() => setShowPassword((p) => !p)}
                       tabIndex={-1}
                     >
-                      {showPassword ? <IoMdEyeOff size={16} /> : <IoMdEye size={16} />}
+                      {showPassword ? (
+                        <IoMdEyeOff size={16} />
+                      ) : (
+                        <IoMdEye size={16} />
+                      )}
                     </button>
                   </div>
                   {touched.password && errors.password && (
@@ -478,13 +557,33 @@ export default function Login() {
                   id="login-submit"
                   disabled={loading}
                   type="submit"
-                  className={`app_btn app_btn_confirm ${loading ? "btn_loading" : ""}`}
-                  style={{ width: "100%", marginTop: 20, position: "relative", height: 44 }}
+                  className={`app_btn app_btn_confirm ${
+                    loading ? "btn_loading" : ""
+                  }`}
+                  style={{
+                    width: "100%",
+                    marginTop: 20,
+                    position: "relative",
+                    height: 44,
+                  }}
                 >
-                  <span className="btn_text" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  <span
+                    className="btn_text"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                    }}
+                  >
                     Sign in <MdArrowForward />
                   </span>
-                  {loading && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
+                  {loading && (
+                    <span
+                      className="btn_loader"
+                      style={{ width: 18, height: 18 }}
+                    />
+                  )}
                 </button>
               </Form>
             )}
@@ -501,7 +600,7 @@ export default function Login() {
       </div>
 
       {/* Apple Sign-in Option */}
-      <div className="apple-btn-wrapper">
+      {/* <div className="apple-btn-wrapper">
         <button
           type="button"
           disabled={loading}
@@ -511,12 +610,17 @@ export default function Login() {
           <FaApple size={18} />
           <span>Sign in with Apple</span>
         </button>
-      </div>
+      </div> */}
 
-      <p className="muted" style={{ marginTop: 22, textAlign: "center", fontSize: "0.875rem" }}>
+      <p
+        className="muted"
+        style={{ marginTop: 22, textAlign: "center", fontSize: "0.875rem" }}
+      >
         Don't have an account?{" "}
         <Link
-          to={`/auth/register?role=CUSTOMER${isAddingAccount ? "&addAccount=true" : ""}`}
+          to={`/auth/register?role=CUSTOMER${
+            isAddingAccount ? "&addAccount=true" : ""
+          }`}
           className="login_signup_link"
         >
           Sign up

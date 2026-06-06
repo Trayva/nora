@@ -6,9 +6,17 @@ import { toast } from "react-toastify";
 import avatar from "../../assets/profile.png";
 import moment from "moment";
 import {
-  MdOutlineMailOutline, MdOutlinePhone, MdOutlineCalendarToday,
-  MdOutlinePerson, MdOutlineLock, MdOutlineNotifications, MdOutlineDevices,
-  MdArrowForward, MdRefresh, MdClose, MdUpload,
+  MdOutlineMailOutline,
+  MdOutlinePhone,
+  MdOutlineCalendarToday,
+  MdOutlinePerson,
+  MdOutlineLock,
+  MdOutlineNotifications,
+  MdOutlineDevices,
+  MdArrowForward,
+  MdRefresh,
+  MdClose,
+  MdUpload,
 } from "react-icons/md";
 import { BsPersonCheck, BsShieldLock } from "react-icons/bs";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
@@ -23,7 +31,12 @@ import "./Profile.css";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function getInitials(name = "") {
-  return name.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0].toUpperCase()).join("");
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join("");
 }
 function nameHue(str = "") {
   let h = 0;
@@ -32,15 +45,17 @@ function nameHue(str = "") {
 }
 
 const TABS = [
-  { id: "personal",      label: "Personal Info",   icon: MdOutlinePerson },
-  { id: "security",      label: "Security",         icon: BsShieldLock },
-  { id: "notifications", label: "Notifications",    icon: MdOutlineNotifications },
-  { id: "sessions",      label: "Sessions",         icon: MdOutlineDevices },
+  { id: "personal", label: "Personal Info", icon: MdOutlinePerson },
+  { id: "security", label: "Security", icon: BsShieldLock },
+  { id: "notifications", label: "Notifications", icon: MdOutlineNotifications },
+  { id: "sessions", label: "Sessions", icon: MdOutlineDevices },
 ];
 
 const passwordSchema = Yup.object().shape({
   currentPassword: Yup.string().required("Current password is required"),
-  newPassword: Yup.string().min(6, "At least 6 characters").required("New password is required"),
+  newPassword: Yup.string()
+    .min(6, "At least 6 characters")
+    .required("New password is required"),
   confirmPassword: Yup.string()
     .oneOf([Yup.ref("newPassword")], "Passwords must match")
     .required("Please confirm your password"),
@@ -85,7 +100,12 @@ export default function Profile() {
   const [twoFactorSaving, setTwoFactorSaving] = useState(false);
 
   // Form state (personal)
-  const [formData, setFormData] = useState({ fullName: "", phone: "", image: null, twoFactorEnabled: false });
+  const [formData, setFormData] = useState({
+    fullName: "",
+    phone: "",
+    image: null,
+    twoFactorEnabled: false,
+  });
   const fileInputRef = useRef(null);
   const [imagePreview, setImagePreview] = useState(null);
 
@@ -99,7 +119,8 @@ export default function Profile() {
   const [loggingOutAll, setLoggingOutAll] = useState(false);
 
   // Notifications
-  const { settings, fetchSettings, updateSettings, settingsLoading } = useNotifications();
+  const { settings, fetchSettings, updateSettings, settingsLoading } =
+    useNotifications();
   const [updatingNotif, setUpdatingNotif] = useState(false);
 
   // ── Load profile ─────────────────────────────────────────────
@@ -121,8 +142,12 @@ export default function Profile() {
     }
   };
 
-  useEffect(() => { fetchProfile(); }, []);
-  useEffect(() => { if (activeTab === "notifications") fetchSettings(); }, [activeTab]);
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+  useEffect(() => {
+    if (activeTab === "notifications") fetchSettings();
+  }, [activeTab]);
 
   // ── Tab switch with animation key ───────────────────────────
   const switchTab = (id) => {
@@ -141,7 +166,9 @@ export default function Profile() {
       const payload = new FormData();
       if (formData.fullName) payload.append("fullName", formData.fullName);
       if (formData.phone) {
-        const phone = formData.phone.startsWith("+") ? formData.phone : `+${formData.phone}`;
+        const phone = formData.phone.startsWith("+")
+          ? formData.phone
+          : `+${formData.phone}`;
         payload.append("phone", phone);
       }
       if (formData.image) payload.append("image", formData.image);
@@ -164,9 +191,13 @@ export default function Profile() {
     try {
       // simple client-side guard
       if (value && !profile?.emailVerified && !profile?.phoneVerified) {
-        throw new Error("Verify your email or phone before enabling two-factor authentication.");
+        throw new Error(
+          "Verify your email or phone before enabling two-factor authentication."
+        );
       }
-      const res = await api.patch("/account/profile/two-factor", { twoFactorEnabled: value });
+      const res = await api.patch("/account/profile/two-factor", {
+        twoFactorEnabled: value,
+      });
       const updated = res.data?.data;
       if (updated) {
         setProfile(updated);
@@ -176,7 +207,11 @@ export default function Profile() {
     } catch (err) {
       // revert UI
       setFormData((p) => ({ ...p, twoFactorEnabled: !value }));
-      toast.error(err.response?.data?.message || err.message || "Failed to update two-factor preference");
+      toast.error(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to update two-factor preference"
+      );
     } finally {
       setTwoFactorSaving(false);
     }
@@ -229,10 +264,23 @@ export default function Profile() {
     return (
       <div className="profile-page">
         <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
-          <div className="skeleton_shimmer skeleton_rect" style={{ width: 268, height: 360, borderRadius: 20, flexShrink: 0 }} />
+          <div
+            className="skeleton_shimmer skeleton_rect"
+            style={{ width: 268, height: 360, borderRadius: 20, flexShrink: 0 }}
+          />
           <div style={{ flex: 1 }}>
-            <div className="skeleton_shimmer skeleton_rect" style={{ height: 48, borderRadius: "14px 14px 0 0", marginBottom: 0 }} />
-            <div className="skeleton_shimmer skeleton_rect" style={{ height: 280, borderRadius: "0 0 16px 16px" }} />
+            <div
+              className="skeleton_shimmer skeleton_rect"
+              style={{
+                height: 48,
+                borderRadius: "14px 14px 0 0",
+                marginBottom: 0,
+              }}
+            />
+            <div
+              className="skeleton_shimmer skeleton_rect"
+              style={{ height: 280, borderRadius: "0 0 16px 16px" }}
+            />
           </div>
         </div>
       </div>
@@ -240,10 +288,14 @@ export default function Profile() {
   }
 
   if (profileError) {
-    return <div className="profile-page"><p style={{ color: "#ef4444" }}>Error: {profileError}</p></div>;
+    return (
+      <div className="profile-page">
+        <p style={{ color: "#ef4444" }}>Error: {profileError}</p>
+      </div>
+    );
   }
 
-  const avatarSrc = imagePreview || (profile?.image || null);
+  const avatarSrc = imagePreview || profile?.image || null;
 
   return (
     <div className="profile-page">
@@ -263,20 +315,32 @@ export default function Profile() {
 
       {/* ── Two-column grid ── */}
       <div className="profile-grid">
-
         {/* ── Left: Avatar card ── */}
         <div className="profile-avatar-card">
           <div className="profile-avatar-banner">
             {/* Photo button */}
-            <button className="profile-photo-btn" onClick={() => fileInputRef.current?.click()}>
+            <button
+              className="profile-photo-btn"
+              onClick={() => fileInputRef.current?.click()}
+            >
               <MdUpload size={12} /> Profile photo
             </button>
-            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageChange} />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleImageChange}
+            />
 
             {/* Avatar */}
             <div className="profile-avatar-wrap">
               {avatarSrc ? (
-                <img src={avatarSrc} alt="Avatar" className="profile-avatar-img" />
+                <img
+                  src={avatarSrc}
+                  alt="Avatar"
+                  className="profile-avatar-img"
+                />
               ) : (
                 <div
                   className="profile-avatar-initials"
@@ -312,7 +376,10 @@ export default function Profile() {
                 <button
                   className="app_btn app_btn_cancel"
                   style={{ height: 32, fontSize: "0.75rem", padding: "0 10px" }}
-                  onClick={() => { setImagePreview(null); setFormData((p) => ({ ...p, image: null })); }}
+                  onClick={() => {
+                    setImagePreview(null);
+                    setFormData((p) => ({ ...p, image: null }));
+                  }}
                 >
                   Discard
                 </button>
@@ -323,32 +390,46 @@ export default function Profile() {
           {/* Info rows */}
           <div className="profile-info-list">
             <div className="profile-info-row">
-              <div className="profile-info-icon"><MdOutlineMailOutline /></div>
+              <div className="profile-info-icon">
+                <MdOutlineMailOutline />
+              </div>
               <div className="profile-info-content">
                 <span className="profile-info-label">Email</span>
-                <span className="profile-info-value">{profile?.email || "—"}</span>
+                <span className="profile-info-value">
+                  {profile?.email || "—"}
+                </span>
               </div>
             </div>
             <div className="profile-info-row">
-              <div className="profile-info-icon"><MdOutlinePhone /></div>
+              <div className="profile-info-icon">
+                <MdOutlinePhone />
+              </div>
               <div className="profile-info-content">
                 <span className="profile-info-label">Phone</span>
-                <span className="profile-info-value">{profile?.phone || "No phone"}</span>
+                <span className="profile-info-value">
+                  {profile?.phone || "No phone"}
+                </span>
               </div>
             </div>
             <div className="profile-info-row">
-              <div className="profile-info-icon"><BsPersonCheck /></div>
+              <div className="profile-info-icon">
+                <BsPersonCheck />
+              </div>
               <div className="profile-info-content">
                 <span className="profile-info-label">Role</span>
                 <span className="profile-info-value">{userRole || "—"}</span>
               </div>
             </div>
             <div className="profile-info-row">
-              <div className="profile-info-icon"><MdOutlineCalendarToday /></div>
+              <div className="profile-info-icon">
+                <MdOutlineCalendarToday />
+              </div>
               <div className="profile-info-content">
                 <span className="profile-info-label">Member since</span>
                 <span className="profile-info-value">
-                  {profile?.createdAt ? moment(profile.createdAt).format("MMM YYYY") : "—"}
+                  {profile?.createdAt
+                    ? moment(profile.createdAt).format("MMM YYYY")
+                    : "—"}
                 </span>
               </div>
             </div>
@@ -356,13 +437,31 @@ export default function Profile() {
 
           {/* Verification badges */}
           <div className="profile-badges">
-            <span className={`profile-verify-badge ${profile?.emailVerified ? "profile-verify-badge--ok" : "profile-verify-badge--no"}`}>
+            <span
+              className={`profile-verify-badge ${
+                profile?.emailVerified
+                  ? "profile-verify-badge--ok"
+                  : "profile-verify-badge--no"
+              }`}
+            >
               {profile?.emailVerified ? "✓" : "✗"} Email
             </span>
-            <span className={`profile-verify-badge ${profile?.phoneVerified ? "profile-verify-badge--ok" : "profile-verify-badge--no"}`}>
+            <span
+              className={`profile-verify-badge ${
+                profile?.phoneVerified
+                  ? "profile-verify-badge--ok"
+                  : "profile-verify-badge--no"
+              }`}
+            >
               {profile?.phoneVerified ? "✓" : "✗"} Phone
             </span>
-            <span className={`profile-verify-badge ${profile?.twoFactorEnabled ? "profile-verify-badge--ok" : "profile-verify-badge--no"}`}>
+            <span
+              className={`profile-verify-badge ${
+                profile?.twoFactorEnabled
+                  ? "profile-verify-badge--ok"
+                  : "profile-verify-badge--no"
+              }`}
+            >
               {profile?.twoFactorEnabled ? "✓" : "✗"} Two-factor
             </span>
           </div>
@@ -378,7 +477,9 @@ export default function Profile() {
                 id={`profile-tab-${id}`}
                 role="tab"
                 aria-selected={activeTab === id}
-                className={`profile-tab-btn ${activeTab === id ? "active" : ""}`}
+                className={`profile-tab-btn ${
+                  activeTab === id ? "active" : ""
+                }`}
                 onClick={() => switchTab(id)}
               >
                 <Icon className="profile-tab-icon" />
@@ -389,13 +490,16 @@ export default function Profile() {
 
           {/* Panel */}
           <div className="profile-panel-wrap" key={activeTab}>
-
             {/* ── Personal Information ── */}
             {activeTab === "personal" && (
               <>
                 <div className="profile-panel-section">
-                  <h3 className="profile-section-heading">Personal information</h3>
-                  <p className="profile-section-sub">Name, email, phone and photo.</p>
+                  <h3 className="profile-section-heading">
+                    Personal information
+                  </h3>
+                  <p className="profile-section-sub">
+                    Name, email, phone and photo.
+                  </p>
 
                   <div className="profile-form-row">
                     <div className="profile-form-field">
@@ -406,16 +510,25 @@ export default function Profile() {
                         type="text"
                         placeholder="Your name"
                         value={formData.fullName}
-                        onChange={(e) => setFormData((p) => ({ ...p, fullName: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((p) => ({
+                            ...p,
+                            fullName: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                     <div className="profile-form-field">
-                      <label className="profile-form-label">Contact number</label>
+                      <label className="profile-form-label">
+                        Contact number
+                      </label>
                       <div className="register_phone_wrapper">
                         <PhoneInput
                           country="ae"
                           value={formData.phone}
-                          onChange={(value) => setFormData((p) => ({ ...p, phone: value }))}
+                          onChange={(value) =>
+                            setFormData((p) => ({ ...p, phone: value }))
+                          }
                           enableSearch
                           searchPlaceholder="Search country..."
                           disableSearchIcon
@@ -423,7 +536,9 @@ export default function Profile() {
                       </div>
                     </div>
                     <div className="profile-form-field span-full">
-                      <label className="profile-form-label">Email address</label>
+                      <label className="profile-form-label">
+                        Email address
+                      </label>
                       <input
                         className="modal-input"
                         type="email"
@@ -437,25 +552,34 @@ export default function Profile() {
                   <div className="profile-form-actions">
                     <button
                       className="app_btn app_btn_cancel"
-                      onClick={() => setFormData({
-                        fullName: profile?.fullName || "",
-                        phone: profile?.phone || "",
-                        image: null,
-                        twoFactorEnabled: profile?.twoFactorEnabled ?? false,
-                      })}
+                      onClick={() =>
+                        setFormData({
+                          fullName: profile?.fullName || "",
+                          phone: profile?.phone || "",
+                          image: null,
+                          twoFactorEnabled: profile?.twoFactorEnabled ?? false,
+                        })
+                      }
                     >
                       <MdRefresh size={14} style={{ marginRight: 4 }} />
                       Reset
                     </button>
                     <button
                       id="profile-save-btn"
-                      className={`app_btn app_btn_confirm ${saving ? "btn_loading" : ""}`}
+                      className={`app_btn app_btn_confirm ${
+                        saving ? "btn_loading" : ""
+                      }`}
                       onClick={handleSavePersonal}
                       disabled={saving}
                       style={{ position: "relative", minWidth: 120 }}
                     >
                       <span className="btn_text">✓ Save changes</span>
-                      {saving && <span className="btn_loader" style={{ width: 16, height: 16 }} />}
+                      {saving && (
+                        <span
+                          className="btn_loader"
+                          style={{ width: 16, height: 16 }}
+                        />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -468,13 +592,32 @@ export default function Profile() {
                 <h3 className="profile-section-heading">Security</h3>
                 <p className="profile-section-sub">Update your password.</p>
 
-                <div className="profile-form-field" style={{ marginBottom: 24 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div
+                  className="profile-form-field"
+                  style={{ marginBottom: 24 }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
                     <div>
-                      <label className="profile-form-label" htmlFor="profile-twofactor-toggle">
+                      <label
+                        className="profile-form-label"
+                        htmlFor="profile-twofactor-toggle"
+                      >
                         Two-factor authentication
                       </label>
-                      <p className="profile-form-sub" style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.875rem" }}>
+                      <p
+                        className="profile-form-sub"
+                        style={{
+                          margin: 0,
+                          color: "var(--text-muted)",
+                          fontSize: "0.875rem",
+                        }}
+                      >
                         Add an extra layer of login security for your account.
                       </p>
                     </div>
@@ -483,7 +626,9 @@ export default function Profile() {
                         id="profile-twofactor-toggle"
                         type="checkbox"
                         checked={formData.twoFactorEnabled}
-                        onChange={(e) => handleToggleTwoFactor(e.target.checked)}
+                        onChange={(e) =>
+                          handleToggleTwoFactor(e.target.checked)
+                        }
                         disabled={twoFactorSaving}
                       />
                       <span className="profile-toggle-track" />
@@ -493,18 +638,38 @@ export default function Profile() {
                 </div>
 
                 <Formik
-                  initialValues={{ currentPassword: "", newPassword: "", confirmPassword: "" }}
+                  initialValues={{
+                    currentPassword: "",
+                    newPassword: "",
+                    confirmPassword: "",
+                  }}
                   validationSchema={passwordSchema}
                   onSubmit={handlePasswordChange}
                 >
-                  {({ errors, touched, values, handleChange, handleBlur, isSubmitting }) => (
+                  {({
+                    errors,
+                    touched,
+                    values,
+                    handleChange,
+                    handleBlur,
+                    isSubmitting,
+                  }) => (
                     <Form>
-                      <div className="profile-form-field" style={{ marginBottom: 16 }}>
-                        <label className="profile-form-label">Current password</label>
+                      <div
+                        className="profile-form-field"
+                        style={{ marginBottom: 16 }}
+                      >
+                        <label className="profile-form-label">
+                          Current password
+                        </label>
                         <div className="login_password_wrapper">
                           <input
                             id="profile-current-pw"
-                            className={`modal-input ${touched.currentPassword && errors.currentPassword ? "modal-input-error" : ""}`}
+                            className={`modal-input ${
+                              touched.currentPassword && errors.currentPassword
+                                ? "modal-input-error"
+                                : ""
+                            }`}
                             type={showCurrent ? "text" : "password"}
                             name="currentPassword"
                             placeholder="••••••••"
@@ -512,20 +677,39 @@ export default function Profile() {
                             onChange={handleChange}
                             onBlur={handleBlur}
                           />
-                          <button type="button" className="login_eye_btn" onClick={() => setShowCurrent((p) => !p)} tabIndex={-1}>
-                            {showCurrent ? <IoMdEyeOff size={16} /> : <IoMdEye size={16} />}
+                          <button
+                            type="button"
+                            className="login_eye_btn"
+                            onClick={() => setShowCurrent((p) => !p)}
+                            tabIndex={-1}
+                          >
+                            {showCurrent ? (
+                              <IoMdEyeOff size={16} />
+                            ) : (
+                              <IoMdEye size={16} />
+                            )}
                           </button>
                         </div>
-                        {touched.currentPassword && errors.currentPassword && <span className="login_field_error">{errors.currentPassword}</span>}
+                        {touched.currentPassword && errors.currentPassword && (
+                          <span className="login_field_error">
+                            {errors.currentPassword}
+                          </span>
+                        )}
                       </div>
 
                       <div className="profile-form-row">
                         <div className="profile-form-field">
-                          <label className="profile-form-label">New password</label>
+                          <label className="profile-form-label">
+                            New password
+                          </label>
                           <div className="login_password_wrapper">
                             <input
                               id="profile-new-pw"
-                              className={`modal-input ${touched.newPassword && errors.newPassword ? "modal-input-error" : ""}`}
+                              className={`modal-input ${
+                                touched.newPassword && errors.newPassword
+                                  ? "modal-input-error"
+                                  : ""
+                              }`}
                               type={showNew ? "text" : "password"}
                               name="newPassword"
                               placeholder="••••••••"
@@ -533,18 +717,38 @@ export default function Profile() {
                               onChange={handleChange}
                               onBlur={handleBlur}
                             />
-                            <button type="button" className="login_eye_btn" onClick={() => setShowNew((p) => !p)} tabIndex={-1}>
-                              {showNew ? <IoMdEyeOff size={16} /> : <IoMdEye size={16} />}
+                            <button
+                              type="button"
+                              className="login_eye_btn"
+                              onClick={() => setShowNew((p) => !p)}
+                              tabIndex={-1}
+                            >
+                              {showNew ? (
+                                <IoMdEyeOff size={16} />
+                              ) : (
+                                <IoMdEye size={16} />
+                              )}
                             </button>
                           </div>
-                          {touched.newPassword && errors.newPassword && <span className="login_field_error">{errors.newPassword}</span>}
+                          {touched.newPassword && errors.newPassword && (
+                            <span className="login_field_error">
+                              {errors.newPassword}
+                            </span>
+                          )}
                         </div>
                         <div className="profile-form-field">
-                          <label className="profile-form-label">Confirm password</label>
+                          <label className="profile-form-label">
+                            Confirm password
+                          </label>
                           <div className="login_password_wrapper">
                             <input
                               id="profile-confirm-pw"
-                              className={`modal-input ${touched.confirmPassword && errors.confirmPassword ? "modal-input-error" : ""}`}
+                              className={`modal-input ${
+                                touched.confirmPassword &&
+                                errors.confirmPassword
+                                  ? "modal-input-error"
+                                  : ""
+                              }`}
                               type={showConfirm ? "text" : "password"}
                               name="confirmPassword"
                               placeholder="••••••••"
@@ -552,29 +756,62 @@ export default function Profile() {
                               onChange={handleChange}
                               onBlur={handleBlur}
                             />
-                            <button type="button" className="login_eye_btn" onClick={() => setShowConfirm((p) => !p)} tabIndex={-1}>
-                              {showConfirm ? <IoMdEyeOff size={16} /> : <IoMdEye size={16} />}
+                            <button
+                              type="button"
+                              className="login_eye_btn"
+                              onClick={() => setShowConfirm((p) => !p)}
+                              tabIndex={-1}
+                            >
+                              {showConfirm ? (
+                                <IoMdEyeOff size={16} />
+                              ) : (
+                                <IoMdEye size={16} />
+                              )}
                             </button>
                           </div>
-                          {touched.confirmPassword && errors.confirmPassword && <span className="login_field_error">{errors.confirmPassword}</span>}
+                          {touched.confirmPassword &&
+                            errors.confirmPassword && (
+                              <span className="login_field_error">
+                                {errors.confirmPassword}
+                              </span>
+                            )}
                         </div>
                       </div>
 
                       <div className="profile-form-actions">
-                        <button type="button" className="app_btn app_btn_cancel" onClick={() => {}}>
-                          <MdClose size={14} style={{ marginRight: 4 }} /> Cancel
+                        <button
+                          type="button"
+                          className="app_btn app_btn_cancel"
+                          onClick={() => {}}
+                        >
+                          <MdClose size={14} style={{ marginRight: 4 }} />{" "}
+                          Cancel
                         </button>
                         <button
                           id="profile-update-pw-btn"
                           type="submit"
                           disabled={isSubmitting}
-                          className={`app_btn app_btn_confirm ${isSubmitting ? "btn_loading" : ""}`}
+                          className={`app_btn app_btn_confirm ${
+                            isSubmitting ? "btn_loading" : ""
+                          }`}
                           style={{ position: "relative", minWidth: 140 }}
                         >
-                          <span className="btn_text" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          <span
+                            className="btn_text"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 5,
+                            }}
+                          >
                             <MdArrowForward size={14} /> Update password
                           </span>
-                          {isSubmitting && <span className="btn_loader" style={{ width: 16, height: 16 }} />}
+                          {isSubmitting && (
+                            <span
+                              className="btn_loader"
+                              style={{ width: 16, height: 16 }}
+                            />
+                          )}
                         </button>
                       </div>
                     </Form>
@@ -586,25 +823,37 @@ export default function Profile() {
             {/* ── Notifications ── */}
             {activeTab === "notifications" && (
               <div className="profile-panel-section">
-                <h3 className="profile-section-heading">Notification Preferences</h3>
-                <p className="profile-section-sub">Choose how we notify you about account activity.</p>
+                <h3 className="profile-section-heading">
+                  Notification Preferences
+                </h3>
+                <p className="profile-section-sub">
+                  Choose how we notify you about account activity.
+                </p>
 
                 {settingsLoading && !settings ? (
-                  <div style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}>Loading preferences…</div>
+                  <div
+                    style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}
+                  >
+                    Loading preferences…
+                  </div>
                 ) : (
                   <div className="profile-notif-list">
                     <NotifCard
                       title="Push Notifications"
                       desc="Receive alerts on your device for immediate updates."
                       checked={settings?.pushEnabled ?? true}
-                      onChange={(e) => handleNotifToggle("pushEnabled", e.target.checked)}
+                      onChange={(e) =>
+                        handleNotifToggle("pushEnabled", e.target.checked)
+                      }
                       disabled={updatingNotif}
                     />
                     <NotifCard
                       title="Email Notifications"
                       desc="Receive a summary of important alerts via email."
                       checked={settings?.emailEnabled ?? true}
-                      onChange={(e) => handleNotifToggle("emailEnabled", e.target.checked)}
+                      onChange={(e) =>
+                        handleNotifToggle("emailEnabled", e.target.checked)
+                      }
                       disabled={updatingNotif}
                     />
                     <NotifCard
@@ -612,7 +861,9 @@ export default function Profile() {
                       desc="Receive text messages for urgent activity."
                       badge="Premium"
                       checked={settings?.smsEnabled ?? false}
-                      onChange={(e) => handleNotifToggle("smsEnabled", e.target.checked)}
+                      onChange={(e) =>
+                        handleNotifToggle("smsEnabled", e.target.checked)
+                      }
                       disabled={updatingNotif}
                     />
                   </div>
@@ -625,13 +876,20 @@ export default function Profile() {
               <>
                 <div className="profile-panel-section">
                   <h3 className="profile-section-heading">Sessions</h3>
-                  <p className="profile-section-sub">Manage your active sessions across devices.</p>
+                  <p className="profile-section-sub">
+                    Manage your active sessions across devices.
+                  </p>
                   <div className="profile-session-row">
                     <button
                       id="profile-logout-btn"
-                      onClick={async () => { setLoggingOut(true); await logout(); }}
+                      onClick={async () => {
+                        setLoggingOut(true);
+                        await logout();
+                      }}
                       disabled={loggingOut}
-                      className={`app_btn app_btn_logout ${loggingOut ? "btn_loading" : ""}`}
+                      className={`app_btn app_btn_logout ${
+                        loggingOut ? "btn_loading" : ""
+                      }`}
                       style={{ position: "relative" }}
                     >
                       <span className="btn_text">Logout</span>
@@ -639,9 +897,14 @@ export default function Profile() {
                     </button>
                     <button
                       id="profile-logout-all-btn"
-                      onClick={async () => { setLoggingOutAll(true); await logoutAll(); }}
+                      onClick={async () => {
+                        setLoggingOutAll(true);
+                        await logoutAll();
+                      }}
                       disabled={loggingOutAll}
-                      className={`app_btn app_btn_logout_all ${loggingOutAll ? "btn_loading" : ""}`}
+                      className={`app_btn app_btn_logout_all ${
+                        loggingOutAll ? "btn_loading" : ""
+                      }`}
                       style={{ position: "relative" }}
                     >
                       <span className="btn_text">Logout of all devices</span>
@@ -653,18 +916,29 @@ export default function Profile() {
                 {/* Danger zone */}
                 <div className="profile-danger-zone">
                   <p className="profile-danger-title">Delete account</p>
-                  <p className="profile-danger-sub">Permanently remove your account from Nora.</p>
+                  <p className="profile-danger-sub">
+                    Permanently remove your account from Nora.
+                  </p>
                   <p className="profile-danger-desc">
-                    This will sign you out of every device, anonymize your name and email, and
-                    revoke every saved login. Orders and audit records you created stay attached
-                    to the business so other team members can still see history.{" "}
+                    This will sign you out of every device, anonymize your name
+                    and email, and revoke every saved login. Orders and audit
+                    records you created stay attached to the business so other
+                    team members can still see history.{" "}
                     <strong>You can't undo this.</strong>
                   </p>
                   <button
                     id="profile-delete-btn"
                     className="app_btn"
-                    style={{ background: "rgba(239,68,68,0.1)", color: "#dc2626", border: "1px solid rgba(239,68,68,0.25)" }}
-                    onClick={() => toast.error("Please contact support to delete your account.")}
+                    style={{
+                      background: "rgba(239,68,68,0.1)",
+                      color: "#dc2626",
+                      border: "1px solid rgba(239,68,68,0.25)",
+                    }}
+                    onClick={() =>
+                      toast.error(
+                        "Please contact support to delete your account."
+                      )
+                    }
                   >
                     🗑 Delete my account
                   </button>

@@ -42,7 +42,10 @@ export default function Register() {
     setLoading(true);
     try {
       const assignedRoles = roleParamToRoles(roleParam);
-      const primaryRole = assignedRoles && assignedRoles.length > 0 ? assignedRoles[0] : "CUSTOMER";
+      const primaryRole =
+        assignedRoles && assignedRoles.length > 0
+          ? assignedRoles[0]
+          : "CUSTOMER";
 
       const res = await api.post("/auth/google-login", {
         idToken: response.credential,
@@ -53,7 +56,9 @@ export default function Register() {
       toast.success("Welcome to Nora 🎉");
       navigate(getDefaultRoute(user));
     } catch (error) {
-      toast.error(error.response?.data?.message || "Google authentication failed");
+      toast.error(
+        error.response?.data?.message || "Google authentication failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -68,11 +73,14 @@ export default function Register() {
     setLoading(true);
     try {
       const assignedRoles = roleParamToRoles(roleParam);
-      const primaryRole = assignedRoles && assignedRoles.length > 0 ? assignedRoles[0] : "CUSTOMER";
+      const primaryRole =
+        assignedRoles && assignedRoles.length > 0
+          ? assignedRoles[0]
+          : "CUSTOMER";
 
       const data = await window.AppleID.auth.signIn();
       const idToken = data.authorization.id_token;
-      
+
       let fullName = undefined;
       if (data.user && data.user.name) {
         const { firstName, lastName } = data.user.name;
@@ -92,7 +100,9 @@ export default function Register() {
       if (error?.error === "popup_closed_by_user") {
         return;
       }
-      toast.error(error.response?.data?.message || "Apple authentication failed");
+      toast.error(
+        error.response?.data?.message || "Apple authentication failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -103,18 +113,20 @@ export default function Register() {
       if (window.AppleID) {
         try {
           window.AppleID.auth.init({
-            clientId: import.meta.env.VITE_APPLE_CLIENT_ID || "your-apple-service-id",
+            clientId:
+              import.meta.env.VITE_APPLE_CLIENT_ID || "your-apple-service-id",
             scope: "name email",
-            redirectURI: import.meta.env.VITE_APPLE_REDIRECT_URI || window.location.origin,
+            redirectURI:
+              import.meta.env.VITE_APPLE_REDIRECT_URI || window.location.origin,
             state: "origin:web",
-            usePopup: true
+            usePopup: true,
           });
         } catch (err) {
           console.error("Apple ID initialization failed:", err);
         }
       }
     };
-    
+
     initializeApple();
     const timer = setTimeout(initializeApple, 500);
     return () => clearTimeout(timer);
@@ -125,17 +137,19 @@ export default function Register() {
     if (window.google) {
       const initializeGoogle = () => {
         window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "your-google-client-id.apps.googleusercontent.com",
+          client_id:
+            import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+            "your-google-client-id.apps.googleusercontent.com",
           callback: handleGoogleCredentialResponse,
         });
         window.google.accounts.id.renderButton(
           document.getElementById("google-signup-btn"),
-          { 
-            theme: "outline", 
-            size: "large", 
+          {
+            theme: "outline",
+            size: "large",
             width: "100%",
             text: "signup_with",
-            shape: "rectangular"
+            shape: "rectangular",
           }
         );
       };
@@ -218,7 +232,9 @@ export default function Register() {
               <label className="modal-label">Full Name</label>
               <input
                 id="register-fullname"
-                className={`modal-input ${touched.fullName && errors.fullName ? "modal-input-error" : ""}`}
+                className={`modal-input ${
+                  touched.fullName && errors.fullName ? "modal-input-error" : ""
+                }`}
                 type="text"
                 name="fullName"
                 placeholder="Yasir Hassan"
@@ -237,7 +253,9 @@ export default function Register() {
                 <label className="modal-label">Email</label>
                 <input
                   id="register-email"
-                  className={`modal-input ${touched.email && errors.email ? "modal-input-error" : ""}`}
+                  className={`modal-input ${
+                    touched.email && errors.email ? "modal-input-error" : ""
+                  }`}
                   type="email"
                   name="email"
                   placeholder="your@email.com"
@@ -253,7 +271,9 @@ export default function Register() {
               <div className="form-field" style={{ flex: 1 }}>
                 <label className="modal-label">Phone Number</label>
                 <div
-                  className={`register_phone_wrapper ${touched.phone && errors.phone ? "register_phone_error" : ""}`}
+                  className={`register_phone_wrapper ${
+                    touched.phone && errors.phone ? "register_phone_error" : ""
+                  }`}
                 >
                   <PhoneInput
                     country="ae"
@@ -277,7 +297,11 @@ export default function Register() {
               <div className="login_password_wrapper">
                 <input
                   id="register-password"
-                  className={`modal-input ${touched.password && errors.password ? "modal-input-error" : ""}`}
+                  className={`modal-input ${
+                    touched.password && errors.password
+                      ? "modal-input-error"
+                      : ""
+                  }`}
                   type={showPassword ? "text" : "password"}
                   name="password"
                   placeholder="At least 6 characters"
@@ -291,7 +315,11 @@ export default function Register() {
                   onClick={() => setShowPassword((p) => !p)}
                   tabIndex={-1}
                 >
-                  {showPassword ? <IoMdEyeOff size={16} /> : <IoMdEye size={16} />}
+                  {showPassword ? (
+                    <IoMdEyeOff size={16} />
+                  ) : (
+                    <IoMdEye size={16} />
+                  )}
                 </button>
               </div>
               {touched.password && errors.password && (
@@ -303,13 +331,33 @@ export default function Register() {
               id="register-submit"
               disabled={loading}
               type="submit"
-              className={`app_btn app_btn_confirm ${loading ? "btn_loading" : ""}`}
-              style={{ width: "100%", marginTop: 8, position: "relative", height: 44 }}
+              className={`app_btn app_btn_confirm ${
+                loading ? "btn_loading" : ""
+              }`}
+              style={{
+                width: "100%",
+                marginTop: 8,
+                position: "relative",
+                height: 44,
+              }}
             >
-              <span className="btn_text" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <span
+                className="btn_text"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
+              >
                 Create Account <MdArrowForward />
               </span>
-              {loading && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
+              {loading && (
+                <span
+                  className="btn_loader"
+                  style={{ width: 18, height: 18 }}
+                />
+              )}
             </button>
           </Form>
         )}
@@ -324,7 +372,7 @@ export default function Register() {
       </div>
 
       {/* Apple Sign-up Option */}
-      <div className="apple-btn-wrapper">
+      {/* <div className="apple-btn-wrapper">
         <button
           type="button"
           disabled={loading}
@@ -334,9 +382,12 @@ export default function Register() {
           <FaApple size={18} />
           <span>Sign up with Apple</span>
         </button>
-      </div>
+      </div> */}
 
-      <p className="muted" style={{ marginTop: 22, textAlign: "center", fontSize: "0.875rem" }}>
+      <p
+        className="muted"
+        style={{ marginTop: 22, textAlign: "center", fontSize: "0.875rem" }}
+      >
         Already have an account?{" "}
         <Link
           to={`/auth/login${isAddingAccount ? "?addAccount=true" : ""}`}

@@ -21,7 +21,8 @@ export default function VerifyOtp() {
   const email = state?.email || user?.email || "";
   const flow = state?.flow || "verification";
   const isTwoFactor = flow === "twoFactor";
-  const verificationType = state?.verificationType || (isTwoFactor ? "TWO_FACTOR_EMAIL" : "email");
+  const verificationType =
+    state?.verificationType || (isTwoFactor ? "TWO_FACTOR_EMAIL" : "email");
   // nextRoute: set by Register after role-based registration
   const nextRoute =
     state?.nextRoute || (user ? getDefaultRoute(user) : "/app/kiosk-home");
@@ -131,7 +132,9 @@ export default function VerifyOtp() {
       // Ensure user context is updated when login isn't part of this flow
       if (!accessToken && updatedUser) updateUser(updatedUser);
 
-      toast.success(isTwoFactor ? "Login successful!" : "Verification successful! ✓");
+      toast.success(
+        isTwoFactor ? "Login successful!" : "Verification successful! ✓"
+      );
       navigate(nextRoute, { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || "Invalid or expired code");
@@ -179,12 +182,15 @@ export default function VerifyOtp() {
         {isTwoFactor ? "Two-factor authentication" : "Check your email"}
       </h3>
       <p className="welcome_message">
-        {isTwoFactor ? "Enter the login code sent to" : "We sent a"} {OTP_LENGTH}-digit
-        code to {" "}
+        {isTwoFactor ? "Enter the login code sent to" : "We sent a"}{" "}
+        {OTP_LENGTH}-digit code to{" "}
         <strong style={{ color: "var(--text-heading)" }}>
           {isTwoFactor ? email || state?.phone : email}
-        </strong>.
-        {isTwoFactor ? " Complete sign-in to continue." : " Enter it below to verify your account."}
+        </strong>
+        .
+        {isTwoFactor
+          ? " Complete sign-in to continue."
+          : " Enter it below to verify your account."}
       </p>
 
       {/* OTP inputs */}
@@ -195,6 +201,8 @@ export default function VerifyOtp() {
           marginTop: 28,
           marginBottom: 8,
           justifyContent: "center",
+          width: "100%",
+          maxWidth: 420,
         }}
         onPaste={handlePaste}
       >
@@ -209,19 +217,24 @@ export default function VerifyOtp() {
             onChange={(e) => handleChange(i, e.target.value)}
             onKeyDown={(e) => handleKeyDown(i, e)}
             style={{
-              width: 46,
+              flex: "1 1 40px",
+              minWidth: 36,
+              maxWidth: 64,
               height: 54,
               textAlign: "center",
-              fontSize: "1.4rem",
+              fontSize: "clamp(1rem, 4vw, 1.4rem)",
               fontWeight: 800,
               fontFamily: "monospace",
               borderRadius: 12,
-              border: `1.5px solid ${digit ? "var(--accent)" : "var(--border)"}`,
+              border: `1.5px solid ${
+                digit ? "var(--accent)" : "var(--border)"
+              }`,
               background: digit ? "var(--bg-active)" : "var(--bg-hover)",
               color: "var(--text-heading)",
               outline: "none",
               transition: "border-color 0.15s, background 0.15s",
               caretColor: "var(--accent)",
+              boxSizing: "border-box",
             }}
             onFocus={(e) => {
               e.target.style.borderColor = "var(--accent)";
@@ -279,8 +292,8 @@ export default function VerifyOtp() {
           {cooldown > 0
             ? `Resend in ${cooldown}s`
             : resending
-              ? "Sending…"
-              : "Resend code"}
+            ? "Sending…"
+            : "Resend code"}
         </button>
       </p>
 
