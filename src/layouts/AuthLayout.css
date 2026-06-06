@@ -499,3 +499,49 @@
 .google-btn-wrapper > div {
   width: 100% !important;
 }
+
+/* ── Apple Sign-in / Sign-up Premium Styling ── */
+.apple-btn-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+  width: 100%;
+}
+
+.apple-signin-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  background-color: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.1s, opacity 0.15s;
+}
+
+[data-theme="dark"] .apple-signin-btn {
+  background-color: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}
+
+.apple-signin-btn:hover {
+  opacity: 0.9;
+}
+
+.apple-signin-btn:active {
+  transform: scale(0.97);
+}
+
+.apple-signin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}

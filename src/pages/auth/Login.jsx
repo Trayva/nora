@@ -7,6 +7,7 @@ import api from "../../api/axios";
 import { useAuth } from "../../contexts/AuthContext";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 import { MdClose, MdArrowForward, MdPersonAdd } from "react-icons/md";
+import { FaApple } from "react-icons/fa";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getDefaultRoute, getPrimaryRole } from "../../utils/AuthHelpers";
 import useQuery from "../../hooks/useQuery";
@@ -122,6 +123,64 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  // ── apple-login callback ──────────────────────────────────────────────────
+  const handleAppleLogin = async () => {
+    if (!window.AppleID) {
+      toast.error("Apple Sign-In is loading, please try again.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await window.AppleID.auth.signIn();
+      const idToken = data.authorization.id_token;
+      
+      let fullName = undefined;
+      if (data.user && data.user.name) {
+        const { firstName, lastName } = data.user.name;
+        fullName = [firstName, lastName].filter(Boolean).join(" ");
+      }
+
+      const res = await api.post("/auth/apple-login", {
+        idToken,
+        fullName,
+        role: "CUSTOMER",
+      });
+      const { accessToken, refreshToken, user } = res.data.data;
+      login(user, accessToken, refreshToken);
+      toast.success("Welcome back!");
+      navigate(cbUrl || getDefaultRoute(user));
+    } catch (error) {
+      if (error?.error === "popup_closed_by_user") {
+        return;
+      }
+      toast.error(error.response?.data?.message || "Apple authentication failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const initializeApple = () => {
+      if (window.AppleID) {
+        try {
+          window.AppleID.auth.init({
+            clientId: import.meta.env.VITE_APPLE_CLIENT_ID || "your-apple-service-id",
+            scope: "name email",
+            redirectURI: import.meta.env.VITE_APPLE_REDIRECT_URI || window.location.origin,
+            state: "origin:web",
+            usePopup: true
+          });
+        } catch (err) {
+          console.error("Apple ID initialization failed:", err);
+        }
+      }
+    };
+    
+    initializeApple();
+    const timer = setTimeout(initializeApple, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     /* global google */
@@ -413,6 +472,19 @@ export default function Login() {
       </div>
       <div className="google-btn-wrapper">
         <div id="google-signin-btn"></div>
+      </div>
+
+      {/* Apple Sign-in Option */}
+      <div className="apple-btn-wrapper">
+        <button
+          type="button"
+          disabled={loading}
+          onClick={handleAppleLogin}
+          className="apple-signin-btn"
+        >
+          <FaApple size={18} />
+          <span>Sign in with Apple</span>
+        </button>
       </div>
 
       <p className="muted" style={{ marginTop: 22, textAlign: "center", fontSize: "0.875rem" }}>

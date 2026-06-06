@@ -2307,6 +2307,9 @@ export function MenuDetailDrawer({
   const [useCache, setUseCache] = useState(true);
 
   const [analysisStateId, setAnalysisStateId] = useState(selectedState?.id || "");
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [menuAvailable, setMenuAvailable] = useState(true);
+  const [availableVariants, setAvailableVariants] = useState([]);
   const [calculatedCosts, setCalculatedCosts] = useState({ base: null, variants: {} });
   const [calcLoading, setCalcLoading] = useState(false);
   const [expandedCombo, setExpandedCombo] = useState("base");
@@ -2479,9 +2482,10 @@ export function MenuDetailDrawer({
           try {
             const varRes = await api.get(`/library/calculation/menu/${menuId}/calc`, {
               params: {
-                stateId: activeStateId,
+                stateId: cart ? null : activeStateId,
                 useAverage: "true",
                 variantId: variant.id,
+                kioskId: cart?.id,
                 returnCacheData: useCache ? "true" : "false",
               }
             });
@@ -2573,7 +2577,7 @@ export function MenuDetailDrawer({
     const params = {
       returnCacheData: useCache,
     };
-    if (activeStateId) params.stateId = activeStateId;
+    if (activeStateId && !cart) params.stateId = activeStateId;
     if (cart?.id) params.kioskId = cart.id;
 
     api
@@ -2583,6 +2587,24 @@ export function MenuDetailDrawer({
       .finally(() => setLoading(false));
   }, [menuId, useCache, activeStateId, cart?.id]);
 
+  useEffect(() => {
+    if (cart && menuId) {
+      setSettingsLoading(true);
+      api.get(`/kiosk/${cart.id}/menu/${menuId}/settings`)
+        .then(r => {
+          if (r.data.data) {
+            setMenuAvailable(r.data.data.available);
+            setAvailableVariants(r.data.data.availableVariants || []);
+          } else {
+            setMenuAvailable(true);
+            setAvailableVariants((summary?.variants || []).map(v => v.id));
+          }
+        })
+        .catch(() => { })
+        .finally(() => setSettingsLoading(false));
+    }
+  }, [cart?.id, menuId, summary?.variants]);
+
   const fmt = (n) =>
     n != null
       ? Number(n).toLocaleString("en-NG", { maximumFractionDigits: 0 })
@@ -2590,6 +2612,7 @@ export function MenuDetailDrawer({
 
   const TABS = [
     { key: "overview", label: "Overview" },
+    ...(cart ? [{ key: "settings", label: "Kiosk Settings" }] : []),
     { key: "costing", label: "Live Costing" },
     { key: "machinery", label: "Tools" },
     { key: "ingredients", label: "Ingredients" },
@@ -2788,6 +2811,134 @@ export function MenuDetailDrawer({
               </div>
             ) : (
               <>
+                {activeTab === "settings" && (
+                  <div>
+                    <div
+                      style={{
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 14,
+                        padding: "18px 20px",
+                        marginBottom: 20,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div>
+                          <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "var(--text-heading)" }}>
+                            Menu Item Availability
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
+                            Turn this menu item on or off for this kiosk. When off, customers cannot order it.
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            const newVal = !menuAvailable;
+                            setMenuAvailable(newVal);
+                            try {
+                              await api.patch(`/kiosk/${cart.id}/menu/${menuId}/available`, { available: newVal });
+                              toast.success(`Menu is now ${newVal ? "available" : "unavailable"}`);
+                            } catch (err) {
+                              setMenuAvailable(!newVal);
+                              toast.error("Failed to update availability");
+                            }
+                          }}
+                          style={{
+                            height: 32,
+                            padding: "0 14px",
+                            borderRadius: 8,
+                            border: "1px solid var(--border)",
+                            background: menuAvailable ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+                            color: menuAvailable ? "#16a34a" : "#ef4444",
+                            fontWeight: 800,
+                            fontSize: "0.78rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {menuAvailable ? "Available" : "Unavailable"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {summary?.variants?.length > 0 && (
+                      <div
+                        style={{
+                          background: "var(--bg-card)",
+                          border: "1px solid var(--border)",
+                          borderRadius: 14,
+                          padding: "18px 20px",
+                        }}
+                      >
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "var(--text-heading)" }}>
+                            Available Variants
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
+                            Enable or disable specific variants for this kiosk.
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          {summary.variants.map((v) => {
+                            const isEnabled = availableVariants.includes(v.id);
+                            return (
+                              <div
+                                key={v.id}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  padding: "10px 12px",
+                                  background: "var(--bg-hover)",
+                                  border: "1px solid var(--border)",
+                                  borderRadius: 10,
+                                }}
+                              >
+                                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-body)" }}>
+                                  {v.name || v.prepItem?.name}
+                                </span>
+                                <button
+                                  onClick={async () => {
+                                    let newVariants;
+                                    if (isEnabled) {
+                                      newVariants = availableVariants.filter(id => id !== v.id);
+                                    } else {
+                                      newVariants = [...availableVariants, v.id];
+                                    }
+                                    setAvailableVariants(newVariants);
+                                    try {
+                                      await api.patch(`/kiosk/${cart.id}/menu/${menuId}/variants`, {
+                                        availableVariants: newVariants,
+                                      });
+                                      toast.success("Variants updated");
+                                    } catch (err) {
+                                      setAvailableVariants(availableVariants);
+                                      toast.error("Failed to update variants");
+                                    }
+                                  }}
+                                  style={{
+                                    height: 28,
+                                    padding: "0 10px",
+                                    borderRadius: 6,
+                                    border: "1px solid var(--border)",
+                                    background: isEnabled ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
+                                    color: isEnabled ? "#16a34a" : "#ef4444",
+                                    fontWeight: 700,
+                                    fontSize: "0.74rem",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  {isEnabled ? "Enabled" : "Disabled"}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {activeTab === "costing" && (
                   <div>
                     {/* Controls Row (State Selector & Cache Toggle) */}

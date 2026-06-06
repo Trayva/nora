@@ -546,6 +546,8 @@ function MenuItemCard({ item, concept, cartItems, onOpenModal }) {
   const totalQty = Object.values(cartItems)
     .filter((e) => e.item.id === item.id)
     .reduce((s, e) => s + e.qty, 0);
+  const isAvailable = item.available !== false;
+
   return (
     <div
       style={{
@@ -556,8 +558,30 @@ function MenuItemCard({ item, concept, cartItems, onOpenModal }) {
         display: "flex",
         flexDirection: "column",
         transition: "border-color 0.15s",
+        position: "relative",
+        opacity: isAvailable ? 1 : 0.65,
       }}
     >
+      {!isAvailable && (
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            left: 10,
+            background: "rgba(239, 68, 68, 0.9)",
+            color: "#fff",
+            fontSize: "0.62rem",
+            fontWeight: 800,
+            padding: "3px 8px",
+            borderRadius: 6,
+            zIndex: 2,
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          }}
+        >
+          Unavailable
+        </div>
+      )}
+
       {item.image ? (
         <img
           src={item.image}
@@ -686,15 +710,25 @@ function MenuItemCard({ item, concept, cartItems, onOpenModal }) {
               : "Tap to price"}
           </span>
           <button
-            onClick={() => onOpenModal(item)}
+            onClick={() => isAvailable && onOpenModal(item)}
+            disabled={!isAvailable}
             className="kiosk_icon_action_btn"
             style={{
               width: 30,
               height: 30,
               flexShrink: 0,
-              background: totalQty > 0 ? "var(--accent)" : "var(--bg-active)",
-              borderColor: "rgba(203,108,220,0.3)",
-              color: totalQty > 0 ? "#fff" : "var(--accent)",
+              background: !isAvailable 
+                ? "var(--bg-hover)" 
+                : totalQty > 0 
+                  ? "var(--accent)" 
+                  : "var(--bg-active)",
+              borderColor: !isAvailable ? "var(--border)" : "rgba(203,108,220,0.3)",
+              color: !isAvailable 
+                ? "var(--text-muted)" 
+                : totalQty > 0 
+                  ? "#fff" 
+                  : "var(--accent)",
+              cursor: isAvailable ? "pointer" : "not-allowed",
             }}
           >
             {totalQty > 0 ? (
@@ -1539,7 +1573,8 @@ export default function ShopPage() {
   const filtered = search.trim()
     ? concepts.filter(
       (c) =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        (c.vendor?.businessName || "").toLowerCase().includes(search.toLowerCase()) ||
+        (c.serialNumber || "").toLowerCase().includes(search.toLowerCase()) ||
         c.menu?.some((m) =>
           m.name.toLowerCase().includes(search.toLowerCase()),
         ),
