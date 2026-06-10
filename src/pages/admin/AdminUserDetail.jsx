@@ -134,7 +134,6 @@ function InvoiceRow({ inv, onMarkPaid, onDiscount }) {
   const isPaid = inv.status === "PAID";
   const s = isPaid
     ? {
-
         bg: "rgba(34,197,94,0.1)",
         color: "#16a34a",
         border: "rgba(34,197,94,0.25)",
@@ -230,10 +229,24 @@ function InvoiceRow({ inv, onMarkPaid, onDiscount }) {
           {!isPaid && (
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               {discounting ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: 4 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <input
                     type="number"
-                    style={{ width: 66, height: 26, fontSize: "0.7rem", borderRadius: 6, border: "1px solid var(--accent)", background: "var(--bg-active)", color: "var(--accent)", padding: "0 8px", outline: "none", fontWeight: 700 }}
+                    style={{
+                      width: 66,
+                      height: 26,
+                      fontSize: "0.7rem",
+                      borderRadius: 6,
+                      border: "1px solid var(--accent)",
+                      background: "var(--bg-active)",
+                      color: "var(--accent)",
+                      padding: "0 8px",
+                      outline: "none",
+                      fontWeight: 700,
+                    }}
                     placeholder="Amt"
                     autoFocus
                     value={discountAmount}
@@ -241,7 +254,12 @@ function InvoiceRow({ inv, onMarkPaid, onDiscount }) {
                   />
                   <button
                     className={`app_btn app_btn_confirm${paying ? " btn_loading" : ""}`}
-                    style={{ height: 26, padding: "0 10px", fontSize: "0.7rem", borderRadius: 6 }}
+                    style={{
+                      height: 26,
+                      padding: "0 10px",
+                      fontSize: "0.7rem",
+                      borderRadius: 6,
+                    }}
                     onClick={handleApplyDiscount}
                     disabled={paying || !discountAmount}
                   >
@@ -263,7 +281,18 @@ function InvoiceRow({ inv, onMarkPaid, onDiscount }) {
               ) : (
                 <>
                   <button
-                    style={{ height: 26, padding: "0 8px", fontSize: "0.65rem", fontWeight: 800, color: "var(--text-muted)", background: "var(--bg-card)", border: "1px dashed var(--border)", borderRadius: 6, cursor: "pointer", fontFamily: "inherit" }}
+                    style={{
+                      height: 26,
+                      padding: "0 8px",
+                      fontSize: "0.65rem",
+                      fontWeight: 800,
+                      color: "var(--text-muted)",
+                      background: "var(--bg-card)",
+                      border: "1px dashed var(--border)",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       setDiscounting(true);
@@ -369,7 +398,6 @@ function InvoiceRow({ inv, onMarkPaid, onDiscount }) {
               Paid: {fmtDt(inv.paidAt)} via {inv.paymentMethod}
             </div>
           )}
-
         </div>
       )}
     </div>
@@ -560,10 +588,12 @@ export default function AdminUserDetail({ user, onClose }) {
 
   const handleApplyInvDiscount = async (invId, discount) => {
     try {
-      const res = await api.patch(`/finance/invoice/${invId}/discount`, { discount });
+      const res = await api.patch(`/finance/invoice/${invId}/discount`, {
+        discount,
+      });
       toast.success("Discount applied successfully");
       setInvoices((prev) =>
-        prev.map((i) => (i.id === invId ? res.data.data : i))
+        prev.map((i) => (i.id === invId ? res.data.data : i)),
       );
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to apply discount");
@@ -675,6 +705,238 @@ export default function AdminUserDetail({ user, onClose }) {
                 </div>
               </div>
             ))}
+          </div>
+        </Section>
+
+        {/* KYC Section */}
+        <Section icon={MdOutlinePerson} title="KYC" defaultOpen={true}>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+          >
+            <div
+              style={{
+                padding: 10,
+                borderRadius: 8,
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.7rem",
+                  color: "var(--text-muted)",
+                  marginBottom: 6,
+                }}
+              >
+                Address
+              </div>
+              <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
+                {user.address || "—"}
+              </div>
+            </div>
+            <div
+              style={{
+                padding: 10,
+                borderRadius: 8,
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.7rem",
+                  color: "var(--text-muted)",
+                  marginBottom: 6,
+                }}
+              >
+                City / Country
+              </div>
+              <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
+                {[user.city, user.country].filter(Boolean).join(" / ") || "—"}
+              </div>
+            </div>
+            <div
+              style={{
+                padding: 10,
+                borderRadius: 8,
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.7rem",
+                  color: "var(--text-muted)",
+                  marginBottom: 6,
+                }}
+              >
+                Government ID
+              </div>
+              <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
+                {user.governmentIdType || "—"}{" "}
+                {user.governmentIdNumber ? `· ${user.governmentIdNumber}` : ""}
+              </div>
+            </div>
+            <div
+              style={{
+                padding: 10,
+                borderRadius: 8,
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.7rem",
+                  color: "var(--text-muted)",
+                  marginBottom: 6,
+                }}
+              >
+                BVN
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
+                  {user.bvn || "—"}
+                </div>
+                {user.bvnVerified ? (
+                  <span style={{ color: "green", fontWeight: 700 }}>
+                    Verified
+                  </span>
+                ) : (
+                  <span style={{ color: "var(--text-muted)" }}>
+                    Not verified
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              marginTop: 12,
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+            }}
+          >
+            <div>
+              {user.governmentIdImage ? (
+                <a
+                  href={user.governmentIdImage}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img
+                    src={user.governmentIdImage}
+                    alt="gov-id"
+                    style={{
+                      width: 140,
+                      height: 90,
+                      objectFit: "cover",
+                      borderRadius: 8,
+                      border: "1px solid var(--border)",
+                    }}
+                  />
+                </a>
+              ) : (
+                <div
+                  style={{
+                    width: 140,
+                    height: 90,
+                    borderRadius: 8,
+                    background: "var(--bg-active)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--text-muted)",
+                    border: "1px dashed var(--border)",
+                  }}
+                >
+                  No document
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  className="app_btn app_btn_confirm"
+                  onClick={async () => {
+                    try {
+                      await api.put(`/account/${user.id}`, {
+                        kycStatus: "APPROVED",
+                        kycVerifiedAt: new Date().toISOString(),
+                      });
+                      toast.success("KYC approved");
+                      onClose();
+                    } catch (err) {
+                      toast.error(
+                        err.response?.data?.message || "Failed to approve KYC",
+                      );
+                    }
+                  }}
+                >
+                  <MdCheck /> Approve KYC
+                </button>
+                <button
+                  className="app_btn app_btn_cancel"
+                  onClick={async () => {
+                    try {
+                      await api.put(`/account/${user.id}`, {
+                        kycStatus: "REJECTED",
+                      });
+                      toast.success("KYC rejected");
+                      onClose();
+                    } catch (err) {
+                      toast.error(
+                        err.response?.data?.message || "Failed to reject KYC",
+                      );
+                    }
+                  }}
+                >
+                  Reject
+                </button>
+              </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  className="app_btn"
+                  onClick={async () => {
+                    try {
+                      await api.put(`/account/${user.id}`, {
+                        bvnVerified: true,
+                      });
+                      toast.success("BVN marked verified");
+                      onClose();
+                    } catch (err) {
+                      toast.error(
+                        err.response?.data?.message || "Failed to mark BVN",
+                      );
+                    }
+                  }}
+                >
+                  Mark BVN Verified
+                </button>
+                <button
+                  className="app_btn app_btn_cancel"
+                  onClick={async () => {
+                    try {
+                      await api.put(`/account/${user.id}`, {
+                        bvnVerified: false,
+                      });
+                      toast.success("BVN unverified");
+                      onClose();
+                    } catch (err) {
+                      toast.error(
+                        err.response?.data?.message || "Failed to unverify BVN",
+                      );
+                    }
+                  }}
+                >
+                  Unverify BVN
+                </button>
+              </div>
+            </div>
           </div>
         </Section>
 
@@ -1291,7 +1553,12 @@ export default function AdminUserDetail({ user, onClose }) {
             </div>
           ) : (
             invoices.map((inv) => (
-              <InvoiceRow key={inv.id} inv={inv} onMarkPaid={handleMarkPaid} onDiscount={handleApplyInvDiscount} />
+              <InvoiceRow
+                key={inv.id}
+                inv={inv}
+                onMarkPaid={handleMarkPaid}
+                onDiscount={handleApplyInvDiscount}
+              />
             ))
           )}
         </Section>

@@ -8,13 +8,18 @@ export const getProfile = async () => {
 
 export const updateProfile = async (data) => {
   const response = await api.put("/account/profile", data, {
-    headers: { 
+    headers: {
       "Content-Type": "multipart/form-data",
     },
     // Force HTTP/1.1 behavior by disabling keep-alive on large payloads
     maxBodyLength: Infinity,
     maxContentLength: Infinity,
   });
+  return response.data;
+};
+
+export const verifyBVN = async (bvn) => {
+  const response = await api.post("/account/profile/verify-bvn", { bvn });
   return response.data;
 };
 

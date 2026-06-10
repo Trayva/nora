@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getProfile, updateProfile } from "../../api/account";
+import { getProfile, updateProfile, verifyBVN } from "../../api/account";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../api/axios";
 import { toast } from "react-toastify";
@@ -28,6 +28,7 @@ import { getPrimaryRole } from "../../utils/AuthHelpers";
 import * as Yup from "yup";
 import { Formik, Form } from "formik";
 import "./Profile.css";
+import { COUNTRIES } from "../admin/adminUtils_";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function getInitials(name = "") {
@@ -48,6 +49,7 @@ const TABS = [
   { id: "personal", label: "Personal Info", icon: MdOutlinePerson },
   { id: "security", label: "Security", icon: BsShieldLock },
   { id: "notifications", label: "Notifications", icon: MdOutlineNotifications },
+  { id: "kyc", label: "KYC", icon: BsPersonCheck },
   { id: "sessions", label: "Sessions", icon: MdOutlineDevices },
 ];
 
@@ -105,8 +107,18 @@ export default function Profile() {
     phone: "",
     image: null,
     twoFactorEnabled: false,
+    // KYC fields
+    address: "",
+    city: "",
+    country: "",
+    governmentIdType: "",
+    governmentIdNumber: "",
+    governmentIdImage: null,
+    bvn: "",
+    bvnVerified: false,
   });
   const fileInputRef = useRef(null);
+  const govFileRef = useRef(null);
   const [imagePreview, setImagePreview] = useState(null);
 
   // Password show/hide
@@ -133,6 +145,14 @@ export default function Profile() {
         phone: data.data.phone || "",
         image: null,
         twoFactorEnabled: data.data.twoFactorEnabled ?? false,
+        address: data.data.address || "",
+        city: data.data.city || "",
+        country: data.data.country || "",
+        governmentIdType: data.data.governmentIdType || "",
+        governmentIdNumber: data.data.governmentIdNumber || "",
+        governmentIdImage: data.data.governmentIdImage || null,
+        bvn: data.data.bvn || "",
+        bvnVerified: data.data.bvnVerified || false,
       });
       updateUser?.(data.data);
     } catch (err) {
@@ -171,7 +191,18 @@ export default function Profile() {
           : `+${formData.phone}`;
         payload.append("phone", phone);
       }
+      // KYC fields
+      if (formData.address) payload.append("address", formData.address);
+      if (formData.city) payload.append("city", formData.city);
+      if (formData.country) payload.append("country", formData.country);
+      if (formData.governmentIdType)
+        payload.append("governmentIdType", formData.governmentIdType);
+      if (formData.governmentIdNumber)
+        payload.append("governmentIdNumber", formData.governmentIdNumber);
+      if (formData.bvn) payload.append("bvn", formData.bvn);
       if (formData.image) payload.append("image", formData.image);
+      if (formData.governmentIdImage)
+        payload.append("governmentIdImage", formData.governmentIdImage);
       await updateProfile(payload);
       await fetchProfile();
       setImagePreview(null);
@@ -192,7 +223,7 @@ export default function Profile() {
       // simple client-side guard
       if (value && !profile?.emailVerified && !profile?.phoneVerified) {
         throw new Error(
-          "Verify your email or phone before enabling two-factor authentication."
+          "Verify your email or phone before enabling two-factor authentication.",
         );
       }
       const res = await api.patch("/account/profile/two-factor", {
@@ -210,7 +241,7 @@ export default function Profile() {
       toast.error(
         err.response?.data?.message ||
           err.message ||
-          "Failed to update two-factor preference"
+          "Failed to update two-factor preference",
       );
     } finally {
       setTwoFactorSaving(false);
@@ -252,6 +283,12 @@ export default function Profile() {
     const reader = new FileReader();
     reader.onload = (ev) => setImagePreview(ev.target.result);
     reader.readAsDataURL(file);
+  };
+
+  const handleGovIdChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFormData((p) => ({ ...p, governmentIdImage: file }));
   };
 
   // ── Derived values ────────────────────────────────────────────
@@ -584,6 +621,191 @@ export default function Profile() {
                   </div>
                 </div>
               </>
+            )}
+
+            {/* ── KYC ── */}
+            {activeTab === "kyc" && (
+              <div className="profile-panel-section">
+                <h3 className="profile-section-heading">KYC information</h3>
+                <p className="profile-section-sub">
+                  Provide government ID and address details.
+                </p>
+
+                <div className="profile-form-row">
+                  <div className="profile-form-field">
+                    <label className="profile-form-label">Address</label>
+                    <input
+                      className="modal-input"
+                      type="text"
+                      placeholder="Street address"
+                      value={formData.address}
+                      onChange={(e) =>
+                        setFormData((p) => ({ ...p, address: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="profile-form-field">
+                    <label className="profile-form-label">City</label>
+                    <input
+                      className="modal-input"
+                      type="text"
+                      placeholder="City"
+                      value={formData.city}
+                      onChange={(e) =>
+                        setFormData((p) => ({ ...p, city: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="profile-form-field">
+                    <label className="profile-form-label">Country</label>
+                    <select
+                      className="modal-input"
+                      type="text"
+                      placeholder="Country"
+                      value={formData.country}
+                      onChange={(e) =>
+                        setFormData((p) => ({ ...p, country: e.target.value }))
+                      }
+                    >
+                      <option value="">Select country</option>
+                      {COUNTRIES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <br />
+                <div className="profile-form-row">
+                  <div className="profile-form-field">
+                    <label className="profile-form-label">
+                      Government ID type
+                    </label>
+                    <select
+                      className="modal-input"
+                      value={formData.governmentIdType}
+                      onChange={(e) =>
+                        setFormData((p) => ({
+                          ...p,
+                          governmentIdType: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Select ID type</option>
+                      <option value="NIN">National ID</option>
+                      <option value="PASSPORT">Passport</option>
+                      <option value="DRIVER_LICENSE">Driver's license</option>
+                    </select>
+                  </div>
+                  <div className="profile-form-field">
+                    <label className="profile-form-label">
+                      Government ID number
+                    </label>
+                    <input
+                      className="modal-input"
+                      type="text"
+                      placeholder="ID number"
+                      value={formData.governmentIdNumber}
+                      onChange={(e) =>
+                        setFormData((p) => ({
+                          ...p,
+                          governmentIdNumber: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="profile-form-field">
+                    <label className="profile-form-label">
+                      Upload ID image
+                    </label>
+                    <div>
+                      <button
+                        className="profile-photo-btn"
+                        onClick={() => govFileRef.current?.click()}
+                        type="button"
+                      >
+                        <MdUpload size={12} /> Upload ID
+                      </button>
+                      <input
+                        ref={govFileRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={handleGovIdChange}
+                      />
+                      <span style={{ marginLeft: 8 }}>
+                        {formData.governmentIdImage
+                          ? formData.governmentIdImage.name
+                          : profile?.governmentIdImage
+                            ? "Saved document"
+                            : "No file"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  {/* BVN only for Nigeria */}
+                  <label className="profile-form-label">BVN (Nigeria)</label>
+                  <div
+                    style={{ display: "flex", gap: 8, alignItems: "center" }}
+                  >
+                    <input
+                      className="modal-input"
+                      type="text"
+                      placeholder="Enter BVN"
+                      value={formData.bvn}
+                      onChange={(e) =>
+                        setFormData((p) => ({ ...p, bvn: e.target.value }))
+                      }
+                      style={{ maxWidth: 260 }}
+                    />
+                    <button
+                      className="app_btn app_btn_confirm"
+                      onClick={async () => {
+                        try {
+                          const resp = await verifyBVN(formData.bvn);
+                          toast.success(resp.message || "BVN verified");
+                          await fetchProfile();
+                        } catch (err) {
+                          toast.error(
+                            err.response?.data?.message ||
+                              err.message ||
+                              "BVN verification failed",
+                          );
+                        }
+                      }}
+                    >
+                      Verify BVN
+                    </button>
+                    {formData.bvnVerified || profile?.bvnVerified ? (
+                      <span style={{ color: "green" }}>Verified</span>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)" }}>
+                        Not verified
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="profile-form-actions" style={{ marginTop: 16 }}>
+                  <button
+                    className="app_btn app_btn_cancel"
+                    onClick={() => fetchProfile()}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    id="profile-save-kyc-btn"
+                    className={`app_btn app_btn_confirm ${saving ? "btn_loading" : ""}`}
+                    onClick={handleSavePersonal}
+                    disabled={saving}
+                  >
+                    Save KYC
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* ── Security ── */}
@@ -936,7 +1158,7 @@ export default function Profile() {
                     }}
                     onClick={() =>
                       toast.error(
-                        "Please contact support to delete your account."
+                        "Please contact support to delete your account.",
                       )
                     }
                   >
