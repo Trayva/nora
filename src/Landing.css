@@ -761,7 +761,7 @@
 
   .lp-contact-form-card,
   .lp-col-visual {
-    width: 100%;
+    width: 100% !important;
   }
 
   .hero-float-left,
