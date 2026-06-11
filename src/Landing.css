@@ -759,6 +759,11 @@
 /* Hide float cards on small screens */
 @media (max-width: 900px) {
 
+  .lp-contact-form-card,
+  .lp-col-visual {
+    width: 100%;
+  }
+
   .hero-float-left,
   .hero-float-right {
     display: none;
@@ -3271,6 +3276,7 @@
     transform: scale(1) translateY(0);
   }
 }
+
 /* Kiosk Gallery Mobile Responsiveness */
 @media (max-width: 900px) {
   .kiosk-gallery-frame {
