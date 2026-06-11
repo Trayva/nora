@@ -8,8 +8,8 @@ import {
 
 const PILLARS = [
   { icon: MdOutlineRocketLaunch, label: "Rapid Deployment" },
-  { icon: MdOutlineHub,          label: "Centralized Control" },
-  { icon: MdOutlineAutoAwesome,  label: "AI-Powered Insights" },
+  { icon: MdOutlineHub, label: "Centralized Control" },
+  { icon: MdOutlineAutoAwesome, label: "AI-Powered Insights" },
 ];
 
 function WhoWeAre() {

@@ -1,4 +1,5 @@
-import img from "../../assets/kiosk4.png";
+import img from "../../assets/icart_kiosk_interior_2.jpg";
+
 
 function Trayva() {
   return (

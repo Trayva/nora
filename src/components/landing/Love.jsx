@@ -5,7 +5,8 @@ import "swiper/css";
 import "swiper/css/autoplay";
 import { useNavigate } from "react-router-dom";
 
-import img1 from "../../assets/kiosk11.png";
+import img1 from "../../assets/icart_kiosk_exterior.png";
+import imgInterior1 from "../../assets/icart_kiosk_interior_1.jpg";
 import img2 from "../../assets/cc.jpg";
 import img3 from "../../assets/bb.jpg";
 import img4 from "../../assets/aa.jpg";
@@ -20,7 +21,7 @@ function Love() {
       body: "Fully equipped, ready to operate, and located closer to your customers. Reduce setup time and costs while maximizing efficiency.",
     },
     {
-      img: img1,
+      img: imgInterior1,
       title: "Operations Manager",
       body: "Centralized dashboard for monitoring all kiosks, performance metrics, and operational efficiency.",
     },
