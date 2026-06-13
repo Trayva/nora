@@ -16,6 +16,7 @@ import {
   MdDelete,
   MdOutlineFastfood,
   MdOutlineReceiptLong,
+  MdSupportAgent,
 } from "react-icons/md";
 import { LuPlus } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
@@ -117,6 +118,7 @@ export default function AdminDashboard() {
     operators: 0,
     kiosks: 0,
     suppliers: 0,
+    tickets: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -318,13 +320,14 @@ export default function AdminDashboard() {
   const fetchStats = async () => {
     setStatsLoading(true);
     try {
-      const [usersR, vendorsR, operatorsR, kiosksR, suppliersR] =
+      const [usersR, vendorsR, operatorsR, kiosksR, suppliersR, ticketsR] =
         await Promise.allSettled([
           api.get("/account"),
           api.get("/vendor/profile"),
           api.get("/kiosk/operator/hirable"),
           api.get("/kiosk"),
           api.get("/supplier"),
+          api.get("/admin-tickets?status=OPEN"), // Fetch open tickets count
         ]);
       const count = (r) => {
         if (r.status !== "fulfilled") return 0;
@@ -350,6 +353,7 @@ export default function AdminDashboard() {
         operators: count(operatorsR),
         kiosks: count(kiosksR),
         suppliers: count(suppliersR),
+        tickets: count(ticketsR),
       });
     } catch {
       /* silent */
@@ -448,6 +452,11 @@ export default function AdminDashboard() {
       return;
     }
     // vendors falls through to entity drawer — clicking a row opens AdminVendorDetail
+
+    if (key === "tickets") {
+      navigate("/app/admin/support");
+      return;
+    }
 
     setDrawerPage(1);
     setDrawerSearch("");
@@ -612,7 +621,12 @@ export default function AdminDashboard() {
       icon: MdOutlineLocalShipping,
       color: "#8b5cf6",
     },
-
+    {
+      key: "tickets",
+      label: "Support Tickets",
+      icon: MdSupportAgent,
+      color: "#f43f5e",
+    },
   ];
 
   const renderEntityRow = (item) => {

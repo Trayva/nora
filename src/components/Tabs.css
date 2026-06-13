@@ -1,0 +1,65 @@
+/* Tabs.css */
+.nora-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px 14px 0 0;
+  padding: 6px 6px 0;
+  border-bottom: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.nora-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.nora-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 10px 10px 0 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.nora-tab-btn:hover {
+  color: var(--text-body);
+  background: var(--bg-hover);
+}
+
+.nora-tab-btn.active {
+  color: var(--accent);
+  background: var(--bg-active);
+}
+
+.nora-tab-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* Responsive styles */
+@media (max-width: 640px) {
+  .nora-tabs {
+    border-radius: 12px 12px 0 0;
+    padding: 4px 4px 0;
+  }
+
+  .nora-tab-btn {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    padding: 8px 12px;
+  }
+}

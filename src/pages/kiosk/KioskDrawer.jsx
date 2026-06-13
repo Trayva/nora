@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import {
+  MdStorefront,
+  MdOutlineAssignment,
+  MdOutlinePeople,
+  MdOutlineInventory2,
+  MdBuild,
+  MdAttachMoney,
+  MdReceiptLong,
+  MdOutlineAssessment
+} from "react-icons/md";
 import api from "../../api/axios";
 import Drawer from "../../components/Drawer";
+import Tabs from "../../components/Tabs";
 import KioskOverview from "./KioskOverview";
 import KioskTasks from "./KioskTasks";
 import KioskWorkforce from "./KioskWorkforce";
@@ -11,13 +22,14 @@ import KioskOrders from "./KioskOrders";
 import KioskReports from "./KioskReports"; // ← new
 
 const TABS = [
-  { key: "overview", label: "Overview" },
-  { key: "tasks", label: "Tasks" },
-  { key: "workforce", label: "Workforce" },
-  { key: "inventory", label: "Inventory" },
-  { key: "sales", label: "Sales" },
-  { key: "orders", label: "Orders" },
-  { key: "reports", label: "Reports" }, // ← new
+  { key: "overview", label: "Overview", icon: MdStorefront },
+  { key: "tasks", label: "Tasks", icon: MdOutlineAssignment },
+  { key: "workforce", label: "Workforce", icon: MdOutlinePeople },
+  { key: "inventory", label: "Inventory", icon: MdOutlineInventory2 },
+  { key: "utilities", label: "Utilities", icon: MdBuild },
+  { key: "sales", label: "Sales", icon: MdAttachMoney },
+  { key: "orders", label: "Orders", icon: MdReceiptLong },
+  { key: "reports", label: "Reports", icon: MdOutlineAssessment },
 ];
 
 export default function KioskDrawer({ kioskId, onClose, onUpdate }) {
@@ -61,17 +73,18 @@ export default function KioskDrawer({ kioskId, onClose, onUpdate }) {
       width={520}
     >
       {/* Sticky Tabs */}
-      <div className="drawer_tabs_bar">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            className={`drawer_tab_btn ${activeTab === tab.key ? "drawer_tab_active" : ""}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        tabs={TABS}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        style={{
+          margin: "-20px -24px 20px",
+          borderRadius: 0,
+          borderLeft: "none",
+          borderRight: "none",
+          borderTop: "none",
+        }}
+      />
 
       {/* Content */}
       {loading ? (
@@ -108,7 +121,8 @@ export default function KioskDrawer({ kioskId, onClose, onUpdate }) {
           {activeTab === "workforce" && (
             <KioskWorkforce cart={cart} onRefresh={fetchCart} />
           )}
-          {activeTab === "inventory" && <KioskInventory cart={cart} />}
+          {activeTab === "inventory" && <KioskInventory cart={cart} isUtilities={false} />}
+          {activeTab === "utilities" && <KioskInventory cart={cart} isUtilities={true} />}
           {activeTab === "sales" && <KioskSales cart={cart} />}
           {activeTab === "orders" && <KioskOrders kioskId={cart.id} />}
           {activeTab === "reports" && (

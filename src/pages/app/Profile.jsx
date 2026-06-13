@@ -21,6 +21,7 @@ import {
 import { BsPersonCheck, BsShieldLock } from "react-icons/bs";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 import ButtonLoader from "../../components/ButtonLoader";
+import Tabs from "../../components/Tabs";
 import useNotifications from "../../hooks/useNotifications";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
@@ -507,23 +508,11 @@ export default function Profile() {
         {/* ── Right: Tabs + panels ── */}
         <div className="profile-right">
           {/* Tab bar */}
-          <div className="profile-tabs" role="tablist">
-            {TABS.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                id={`profile-tab-${id}`}
-                role="tab"
-                aria-selected={activeTab === id}
-                className={`profile-tab-btn ${
-                  activeTab === id ? "active" : ""
-                }`}
-                onClick={() => switchTab(id)}
-              >
-                <Icon className="profile-tab-icon" />
-                {label}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            tabs={TABS}
+            activeTab={activeTab}
+            onChange={switchTab}
+          />
 
           {/* Panel */}
           <div className="profile-panel-wrap" key={activeTab}>

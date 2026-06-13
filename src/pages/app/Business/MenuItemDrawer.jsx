@@ -320,6 +320,15 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
   const [confirmDeleteMach, setConfirmDeleteMach] = useState(null);
   const [deletingMach, setDeletingMach] = useState(null);
 
+  const [consumables, setConsumables] = useState([]);
+  const [consLoading, setConsLoading] = useState(false);
+  const [showConsForm, setShowConsForm] = useState(false);
+  const [selectedCons, setSelectedCons] = useState(null);
+  const [consQty, setConsQty] = useState("1");
+  const [savingCons, setSavingCons] = useState(false);
+  const [confirmDeleteCons, setConfirmDeleteCons] = useState(null);
+  const [deletingCons, setDeletingCons] = useState(null);
+
   const [markups, setMarkups] = useState([]);
   const [markupsLoading, setMarkupsLoading] = useState(false);
   const [showMarkupForm, setShowMarkupForm] = useState(false);
@@ -362,6 +371,17 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
     finally { setMachLoading(false); }
   };
 
+  const fetchConsumables = async () => {
+    if (!item) return;
+    setConsLoading(true);
+    try {
+      const r = await api.get(`/vendor/menu/${item.id}/consumables`);
+      const d = r.data.data;
+      setConsumables(Array.isArray(d) ? d : d?.data || d?.consumables || []);
+    } catch { /* silent */ }
+    finally { setConsLoading(false); }
+  };
+
   const fetchMarkups = async () => {
     if (!item) return;
     setMarkupsLoading(true);
@@ -384,8 +404,8 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
   };
 
   useEffect(() => {
-    if (item) { fetchDetail(); fetchMachineries(); fetchMarkups(); fetchTemplates(); }
-    else { setDetail(null); setMachineries([]); setMarkups([]); }
+    if (item) { fetchDetail(); fetchMachineries(); fetchConsumables(); fetchMarkups(); fetchTemplates(); }
+    else { setDetail(null); setMachineries([]); setConsumables([]); setMarkups([]); }
   }, [item?.id]);
 
   const handleAddMachinery = async (e) => {
@@ -410,6 +430,30 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
       setMachineries((p) => p.filter((m) => (m.machineryId || m.id) !== machineryId));
     } catch (err) { toast.error(err.response?.data?.message || "Failed to remove"); }
     finally { setDeletingMach(null); }
+  };
+
+  const handleAddConsumable = async (e) => {
+    e.preventDefault();
+    if (!selectedCons) return;
+    setSavingCons(true);
+    try {
+      await api.post(`/vendor/menu/${item.id}/consumables`, { machineryId: selectedCons.id, quantity: Number(consQty) || 1 });
+      toast.success("Consumable added");
+      setSelectedCons(null); setConsQty("1"); setShowConsForm(false);
+      fetchConsumables();
+    } catch (err) { toast.error(err.response?.data?.message || "Failed to add consumable"); }
+    finally { setSavingCons(false); }
+  };
+
+  const handleRemoveConsumable = async (id) => {
+    setDeletingCons(id);
+    try {
+      await api.delete(`/vendor/menu/consumables/${id}`);
+      toast.success("Consumable removed");
+      setConfirmDeleteCons(null);
+      setConsumables((p) => p.filter((c) => c.id !== id));
+    } catch (err) { toast.error(err.response?.data?.message || "Failed to remove"); }
+    finally { setDeletingCons(null); }
   };
 
   const handleAddMarkup = async (e) => {
@@ -644,6 +688,60 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
               )}
           </Section>
 
+          {/* Consumables */}
+          <Section title="Consumables" count={consumables.length} defaultOpen={false} action={<button className="app_btn app_btn_confirm biz_add_btn" onClick={() => setShowConsForm((v) => !v)}><LuPlus size={13} /> Add</button>}>
+            {showConsForm && (
+              <form onSubmit={handleAddConsumable} className="recipe_add_form">
+                <div className="form-field">
+                  <label className="modal-label">Consumable *</label>
+                  <MachSearchInput onSelect={(m) => setSelectedCons(m)} selectedMach={selectedCons} />
+                </div>
+                <div className="form-field">
+                  <label className="modal-label">Quantity</label>
+                  <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--border)", borderRadius: 9, overflow: "hidden", height: 40, width: 140 }}>
+                    <button type="button" onClick={() => setConsQty((v) => String(Math.max(1, Number(v) - 1)))} style={{ width: 34, height: 40, background: "var(--bg-hover)", border: "none", borderRight: "1px solid var(--border)", cursor: "pointer", fontSize: "1.1rem", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                    <input className="modal-input" type="number" min="1" value={consQty} onChange={(e) => setConsQty(e.target.value)} style={{ flex: 1, height: 40, textAlign: "center", marginBottom: 0, fontSize: "0.88rem", fontWeight: 700, border: "none", borderRadius: 0 }} />
+                    <button type="button" onClick={() => setConsQty((v) => String(Number(v) + 1))} style={{ width: 34, height: 40, background: "var(--bg-hover)", border: "none", borderLeft: "1px solid var(--border)", cursor: "pointer", fontSize: "1.1rem", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                  </div>
+                </div>
+                <div className="recipe_add_actions">
+                  <button className="app_btn app_btn_cancel" type="button" onClick={() => { setShowConsForm(false); setSelectedCons(null); }}>Cancel</button>
+                  <button className={`app_btn app_btn_confirm ${savingCons ? "btn_loading" : ""}`} type="submit" disabled={savingCons || !selectedCons} style={{ position: "relative", minWidth: 90 }}>
+                    <span className="btn_text">Add</span>
+                    {savingCons && <span className="btn_loader" style={{ width: 13, height: 13 }} />}
+                  </button>
+                </div>
+              </form>
+            )}
+            {consLoading ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {[1, 2].map((i) => (
+                  <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 48, borderRadius: 10 }} />
+                ))}
+              </div>
+            ) : consumables.length === 0 ? <div className="biz_empty" style={{ padding: "20px 0" }}><MdBuild size={22} style={{ opacity: 0.3 }} /><p>No consumables added yet.</p></div>
+              : (
+                <div className="drawer_items_list">
+                  {consumables.map((c) => {
+                    const mach = c.machinery || c;
+                    return (
+                      <div key={c.id} className="recipe_step_row">
+                        {mach.image ? <img src={mach.image} alt={mach.name} className="ing_option_img" style={{ borderRadius: 8 }} /> : <div className="ing_option_img ing_option_img_placeholder"><MdBuild size={12} /></div>}
+                        <div className="recipe_step_info">
+                          <span className="recipe_step_id">{mach.name}</span>
+                          {mach.manufacturer && <span className="recipe_step_instruction">{mach.manufacturer}</span>}
+                        </div>
+                        {c.quantity > 1 && <span className="recipe_step_qty">× {c.quantity}</span>}
+                        <button className="biz_icon_btn biz_icon_btn_danger" onClick={() => setConfirmDeleteCons({ id: c.id, name: mach.name })} disabled={deletingCons === c.id} style={{ position: "relative" }}>
+                          {deletingCons === c.id ? <span className="btn_loader" style={{ width: 12, height: 12, borderColor: "#ef4444", borderTopColor: "transparent" }} /> : <LuTrash2 size={13} />}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+          </Section>
+
           {/* Variants */}
           <Section title="Variants" count={variants.length} defaultOpen={false} action={<button className="app_btn app_btn_confirm biz_add_btn" onClick={() => setShowVariantForm((v) => !v)}><LuPlus size={13} /> Add</button>}>
             {showVariantForm && (
@@ -787,6 +885,9 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
           </Modal>
           <Modal isOpen={!!confirmDeleteMach} onClose={() => setConfirmDeleteMach(null)} title="Remove Machinery" description={`Remove "${confirmDeleteMach?.name}" from this menu item?`}>
             <div className="modal-body"><div className="modal-footer"><button className="app_btn app_btn_cancel" onClick={() => setConfirmDeleteMach(null)}>Cancel</button><button className={`app_btn app_btn_confirm ${deletingMach ? "btn_loading" : ""}`} style={{ background: "#ef4444", position: "relative", minWidth: 110 }} onClick={() => handleRemoveMachinery(confirmDeleteMach.id)} disabled={!!deletingMach}><span className="btn_text">Remove</span>{deletingMach && <span className="btn_loader" style={{ width: 14, height: 14 }} />}</button></div></div>
+          </Modal>
+          <Modal isOpen={!!confirmDeleteCons} onClose={() => setConfirmDeleteCons(null)} title="Remove Consumable" description={`Remove "${confirmDeleteCons?.name}" from this menu item?`}>
+            <div className="modal-body"><div className="modal-footer"><button className="app_btn app_btn_cancel" onClick={() => setConfirmDeleteCons(null)}>Cancel</button><button className={`app_btn app_btn_confirm ${deletingCons ? "btn_loading" : ""}`} style={{ background: "#ef4444", position: "relative", minWidth: 110 }} onClick={() => handleRemoveConsumable(confirmDeleteCons.id)} disabled={!!deletingCons}><span className="btn_text">Remove</span>{deletingCons && <span className="btn_loader" style={{ width: 14, height: 14 }} />}</button></div></div>
           </Modal>
           <Modal isOpen={!!confirmExtra} onClose={() => setConfirmExtra(null)} title="Remove Extra" description={`Remove extra "${confirmExtra?.prepItem?.name || "this extra"}"? This cannot be undone.`}>
             <div className="modal-body"><div className="modal-footer"><button className="app_btn app_btn_cancel" onClick={() => setConfirmExtra(null)}>Cancel</button><button className={`app_btn app_btn_confirm ${deletingExtra ? "btn_loading" : ""}`} style={{ background: "#ef4444", position: "relative", minWidth: 110 }} onClick={() => handleDeleteExtra(confirmExtra.id)} disabled={!!deletingExtra}><span className="btn_text">Remove</span>{deletingExtra && <span className="btn_loader" style={{ width: 14, height: 14 }} />}</button></div></div>

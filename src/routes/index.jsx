@@ -150,6 +150,7 @@ import { useAuth } from "../contexts/AuthContext";
 import AppIndex from "../layouts/AppIndex";
 import AuthLayout from "../layouts/AuthLayout";
 import AdminLayout from "../pages/admin/AdminLayout";
+import AdminDashboard from "../pages/admin/AdminDashboard";
 import LandingLayout from "../layouts/LandingLayout";
 
 // Auth Pages
@@ -184,6 +185,10 @@ import { getDefaultRoute } from "../utils/AuthHelpers";
 import AggregatorPage from "../pages/app/Aggregator/AggregatorPage";
 import NotificationBell from "../components/Notifications/NotificationBell";
 import NotificationsPage from "../pages/app/Notifications";
+import UserTickets from "../pages/app/support/UserTickets";
+import TicketDetail from "../pages/app/support/TicketDetail";
+import AdminTickets from "../pages/admin/Support/AdminTickets";
+import AdminTicketDetail from "../pages/admin/Support/AdminTicketDetail";
 
 import { PageSkeleton } from "../components/SkeletonTemplates";
 
@@ -287,6 +292,8 @@ export default function Routes() {
         { path: "operator/kiosk/:kioskId", element: <OperatorKioskPage /> },
         { path: "aggregator", element: <AggregatorPage /> },
         { path: "notifications", element: <NotificationsPage /> },
+        { path: "support", element: <UserTickets /> },
+        { path: "support/:id", element: <TicketDetail /> },
       ],
     },
 
@@ -298,6 +305,11 @@ export default function Routes() {
           <AdminLayout />
         </ProtectedRoute>
       ),
+      children: [
+        { index: true, element: <AdminDashboard /> },
+        { path: "support", element: <AdminTickets /> },
+        { path: "support/:id", element: <AdminTicketDetail /> }
+      ]
     },
 
     // 404

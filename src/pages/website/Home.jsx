@@ -1,7 +1,7 @@
 import Contact from "../../components/landing/Contact";
 import Hero from "../../components/landing/Hero";
-import Love from "../../components/landing/Love";
-import PublicConceptsSection from "../../components/landing/PublicConceptsSection";
+// import Love from "../../components/landing/Love";
+// import PublicConceptsSection from "../../components/landing/PublicConceptsSection";
 import WhoWeAre from "../../components/landing/WhoWeAre";
 import BrandBenefits from "../../components/landing/BrandBenefits";
 import OwnerBenefits from "../../components/landing/OwnerBenefits";
@@ -9,9 +9,10 @@ import ProductEcosystem from "../../components/landing/ProductEcosystem";
 import How from "../../components/landing/How";
 import Why from "../../components/landing/Why";
 import Vision from "../../components/landing/Vision";
-import FinalCTA from "../../components/landing/FinalCTA";
+// import FinalCTA from "../../components/landing/FinalCTA";
 
 import PlansSection from "../../components/landing/PlansSection";
+import PublicSupportSection from "../../components/landing/PublicSupportSection";
 
 function Home(props) {
   return (
@@ -35,6 +36,7 @@ function Home(props) {
         {/* <PublicConceptsSection /> */}
         {/* <Love /> */}
         {/* <FinalCTA /> */}
+        {/* <PublicSupportSection /> */}
         <Contact />
       </section>
     </>
@@ -42,3 +44,4 @@ function Home(props) {
 }
 
 export default Home;
+

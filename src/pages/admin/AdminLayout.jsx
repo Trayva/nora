@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import {
   MdOutlineShield,
   MdChevronLeft,
@@ -58,7 +58,7 @@ export default function AdminLayout() {
 
       {/* Main — full width, no sidebar */}
       <main className="admin_main">
-        <AdminDashboard />
+        <Outlet />
       </main>
     </div>
   );

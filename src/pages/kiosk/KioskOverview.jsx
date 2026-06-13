@@ -30,7 +30,11 @@ import {
   MdAccessTime,
   MdOpenInNew,
   MdLocalShipping,
+  MdInfoOutline,
+  MdSettings,
+  MdAttachMoney,
 } from "react-icons/md";
+import Tabs from "../../components/Tabs";
 import api from "../../api/axios";
 import {
   SupplierPicker,
@@ -2611,18 +2615,20 @@ export function MenuDetailDrawer({
       : "—";
 
   const TABS = [
-    { key: "overview", label: "Overview" },
-    ...(cart ? [{ key: "settings", label: "Kiosk Settings" }] : []),
-    { key: "costing", label: "Live Costing" },
-    { key: "machinery", label: "Tools" },
-    { key: "ingredients", label: "Ingredients" },
-    { key: "preps", label: "Prep Items" },
-    { key: "sops", label: "SOPs" },
+    { key: "overview", label: "Overview", icon: MdInfoOutline },
+    ...(cart ? [{ key: "settings", label: "Kiosk Settings", icon: MdSettings }] : []),
+    { key: "costing", label: "Live Costing", icon: MdAttachMoney },
+    { key: "machinery", label: "Tools", icon: MdBuild },
+    { key: "consumables", label: "Consumables", icon: MdOutlineInventory2 },
+    { key: "ingredients", label: "Ingredients", icon: MdRestaurantMenu },
+    { key: "preps", label: "Prep Items", icon: MdAccessTime },
+    { key: "sops", label: "SOPs", icon: MdMenuBook },
   ];
 
   const item = summary?.menuItem || summary;
   const concept = summary?.concept || {};
   const machineries = summary?.machineries || [];
+  const consumables = summary?.consumables || [];
   const ingredients = summary?.ingredients || [];
   const prepItems = summary?.prepItems || [];
   const sops = summary?.sops || item?.sops || [];
@@ -2765,38 +2771,11 @@ export function MenuDetailDrawer({
           </div>
 
           {/* Tab bar */}
-          <div
-            style={{
-              display: "flex",
-              borderBottom: "1px solid var(--border)",
-              overflowX: "auto",
-              scrollbarWidth: "none",
-              background: "var(--bg-card)",
-              flexShrink: 0,
-            }}
-          >
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setActiveTab(t.key)}
-                style={{
-                  padding: "12px 18px",
-                  background: "transparent",
-                  border: "none",
-                  borderBottom: `2px solid ${activeTab === t.key ? "var(--accent)" : "transparent"}`,
-                  color:
-                    activeTab === t.key ? "var(--accent)" : "var(--text-muted)",
-                  fontSize: "0.8rem",
-                  fontWeight: activeTab === t.key ? 700 : 500,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  fontFamily: "inherit",
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            tabs={TABS}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+          />
 
           {/* Scrollable content */}
           <div style={{ flex: 1, padding: "20px 24px", overflowY: "auto" }}>
@@ -4436,6 +4415,75 @@ export function MenuDetailDrawer({
                     )}
                   </div>
                 )}
+
+                {activeTab === "consumables" && (
+                  <div style={{ paddingBottom: selectedMachIds.length > 0 ? 80 : 0 }}>
+                    {consumables.length === 0 ? (
+                      <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
+                        <MdBuild size={26} style={{ opacity: 0.25 }} />
+                        <span>No consumables listed</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                          <MdLocalShipping size={13} style={{ flexShrink: 0 }} />
+                          Tap the + on any item to add it to a supply request
+                        </div>
+                        {consumables.map((c, i) => {
+                          const mach = c.machinery || c;
+                          const isSel = selectedMachIds.some((s) => s.id === mach.id);
+                          return (
+                            <div
+                              key={c.id || i}
+                              style={{
+                                display: "flex", alignItems: "center", gap: 12,
+                                padding: "11px 12px", borderRadius: 12, marginBottom: 6,
+                                background: isSel ? "var(--bg-active)" : "var(--bg-hover)",
+                                border: `1.5px solid ${isSel ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                                transition: "all 0.12s",
+                              }}
+                            >
+                              {mach.image ? (
+                                <img src={mach.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+                              ) : (
+                                <div style={{ width: 44, height: 44, borderRadius: 10, background: isSel ? "rgba(203,108,220,0.15)" : "var(--bg-card)", border: `1px solid ${isSel ? "rgba(203,108,220,0.3)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                  <MdBuild size={18} style={{ color: isSel ? "var(--accent)" : "var(--text-muted)" }} />
+                                </div>
+                              )}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: "0.88rem", fontWeight: 700, color: isSel ? "var(--accent)" : "var(--text-body)" }}>{mach.name}</div>
+                                {mach.manufacturer && <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{mach.manufacturer}</div>}
+                              </div>
+                              {c.quantity > 0 && (
+                                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", flexShrink: 0 }}>
+                                  x {c.quantity}
+                                </span>
+                              )}
+                              {cart ? (
+                                <button
+                                  onClick={() => toggleMachSelection(mach)}
+                                  title={isSel ? "Remove from order" : "Add to order"}
+                                  style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${isSel ? "var(--accent)" : "var(--border)"}`, background: isSel ? "var(--accent)" : "var(--bg-card)", color: isSel ? "#fff" : "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                                >
+                                  {isSel ? <MdCheck size={15} /> : <MdAdd size={15} />}
+                                </button>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+                    {selectedMachIds.length > 0 && (
+                      <div style={{ position: "sticky", bottom: 0, left: 0, right: 0, padding: "12px 0 4px", background: "linear-gradient(to bottom, transparent, var(--bg-card) 30%)" }}>
+                        <button className="app_btn app_btn_confirm" style={{ width: "100%", height: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: "0.88rem", fontWeight: 800 }} onClick={() => setShowMachSupply(true)}>
+                          <MdLocalShipping size={16} />
+                          Request Supply . {selectedMachIds.length} item{selectedMachIds.length !== 1 ? "s" : ""}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
 
                 {activeTab === "ingredients" && (
                   <div

@@ -12,7 +12,7 @@ const INFO = [
   {
     icon: IoLocationOutline,
     label: "Address",
-    text: "Office 1703 – Fahidi Heights, Alhamriya\nDubai, United Arab Emirates",
+    text: "Office 1703 – Fahidi Heights, Alhamriya\nDubai, United Arab Emirates. \n50 Ebitu Ukiwe Street, Jabi, Abuja",
     href: null,
   },
   {

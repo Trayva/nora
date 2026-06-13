@@ -16,6 +16,7 @@ import SmartSupport from "../components/SmartSupport";
 import { useAuth } from "../contexts/AuthContext";
 import { useAppState } from "../contexts/StateContext";
 import { getPrimaryRole } from "../utils/AuthHelpers";
+import WalkInTutorial, { shouldShowTour, resetTour } from "../components/WalkInTutorial";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function getInitials(name = "") {
@@ -75,6 +76,7 @@ function getMobileTabs(role) {
 
 export default function AppIndex() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
   const location = useLocation();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
@@ -89,6 +91,19 @@ export default function AppIndex() {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
+
+  // Auto-show tour for new users (after layout is mounted)
+  useEffect(() => {
+    if (shouldShowTour()) {
+      const t = setTimeout(() => setTourOpen(true), 800);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  const handleStartTour = () => {
+    resetTour();
+    setTourOpen(true);
+  };
 
   const { section, sub } = useMemo(() => pathLabel(location.pathname), [location.pathname]);
   const userInitials = getInitials(user?.fullName || user?.email || "?");
@@ -194,7 +209,7 @@ export default function AppIndex() {
         )}
 
         {/* Sidebar */}
-        <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
+        <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} onStartTour={handleStartTour} />
 
         {/* Main content */}
         <main className="app-main">
@@ -297,6 +312,13 @@ export default function AppIndex() {
 
       {/* AI Assistant FAB */}
       <SmartSupport />
+
+      {/* Walk-in tutorial overlay */}
+      <WalkInTutorial
+        userRole={getPrimaryRole(user)}
+        show={tourOpen}
+        onClose={() => setTourOpen(false)}
+      />
     </div>
   );
 }

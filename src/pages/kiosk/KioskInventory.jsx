@@ -388,7 +388,7 @@ function MachinerySearchSelect({ value, onChange }) {
 }
 
 /* ── Add Inventory Form ─────────────────────────────────────── */
-function AddInventoryForm({ kioskId, onAdded }) {
+function AddInventoryForm({ kioskId, onAdded, isUtilities }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("g");
@@ -401,7 +401,7 @@ function AddInventoryForm({ kioskId, onAdded }) {
     setTotalCost("");
     setUnit(getDefaultUnit(item?.unit));
   };
-  const type = selectedItem?._type || "INGREDIENT";
+  const type = selectedItem?._type || (isUtilities ? "MACHINERY" : "INGREDIENT");
   const itemIdKey =
     type === "PREP_ITEM"
       ? "prepItemId"
@@ -428,7 +428,7 @@ function AddInventoryForm({ kioskId, onAdded }) {
         quantity: baseQty ?? Number(quantity),
         cost: unitCost ?? (totalCost ? Number(totalCost) : undefined),
       });
-      toast.success("Item added to inventory");
+      toast.success(isUtilities ? "Utility added to kiosk" : "Item added to inventory");
       onAdded();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add item");
@@ -441,7 +441,11 @@ function AddInventoryForm({ kioskId, onAdded }) {
     <div className="kiosk_template_builder">
       <div className="form-field">
         <label className="modal-label">Search & Select Item *</label>
-        <IngredientSearchSelect value={selectedItem} onChange={handleSelect} />
+        {isUtilities ? (
+          <MachinerySearchSelect value={selectedItem} onChange={handleSelect} />
+        ) : (
+          <IngredientSearchSelect value={selectedItem} onChange={handleSelect} />
+        )}
         {selectedItem && (
           <div
             style={{
@@ -655,8 +659,8 @@ function MachineryPriceInline({ machineryId, supplierId, stateId, qty }) {
   return <PriceTag price={price} loading={loading} qty={qty} unit="unit" />;
 }
 
-function SupplyRequestForm({ kioskId, cart, onSubmitted }) {
-  const [supplyTab, setSupplyTab] = useState("ingredients");
+function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities }) {
+  const [supplyTab, setSupplyTab] = useState(isUtilities ? "machinery" : "ingredients");
   const [suppliers, setSuppliers] = useState([]);
   const [suppliersLoading, setSuppliersLoading] = useState(true);
   const [supplierId, setSupplierId] = useState("");
@@ -758,74 +762,76 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div
-        style={{
-          display: "flex",
-          background: "var(--bg-hover)",
-          border: "1px solid var(--border)",
-          borderRadius: 12,
-          padding: 4,
-          gap: 4,
-        }}
-      >
-        {[
-          {
-            key: "ingredients",
-            label: "Ingredients",
-            icon: <MdInventory2 size={14} />,
-          },
-          { key: "machinery", label: "Machinery", icon: <MdBuild size={14} /> },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setSupplyTab(t.key)}
-            style={{
-              flex: 1,
-              height: 36,
-              borderRadius: 9,
-              border: "none",
-              cursor: "pointer",
-              fontFamily: "inherit",
-              fontWeight: 700,
-              fontSize: "0.82rem",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              transition: "all 0.15s",
-              background:
-                supplyTab === t.key ? "var(--bg-card)" : "transparent",
-              color:
-                supplyTab === t.key ? "var(--accent)" : "var(--text-muted)",
-              boxShadow:
-                supplyTab === t.key ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
-            }}
-          >
-            {t.icon}
-            {t.label}
-            {((t.key === "ingredients" && activeIngCount > 0) ||
-              (t.key === "machinery" && activeMachCount > 0)) && (
-              <span
-                style={{
-                  minWidth: 16,
-                  height: 16,
-                  borderRadius: 999,
-                  background: "var(--accent)",
-                  color: "#fff",
-                  fontSize: "0.58rem",
-                  fontWeight: 900,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "0 4px",
-                }}
-              >
-                {t.key === "ingredients" ? activeIngCount : activeMachCount}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      {!isUtilities && (
+        <div
+          style={{
+            display: "flex",
+            background: "var(--bg-hover)",
+            border: "1px solid var(--border)",
+            borderRadius: 12,
+            padding: 4,
+            gap: 4,
+          }}
+        >
+          {[
+            {
+              key: "ingredients",
+              label: "Ingredients",
+              icon: <MdInventory2 size={14} />,
+            },
+            { key: "machinery", label: "Machinery", icon: <MdBuild size={14} /> },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setSupplyTab(t.key)}
+              style={{
+                flex: 1,
+                height: 36,
+                borderRadius: 9,
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontWeight: 700,
+                fontSize: "0.82rem",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                transition: "all 0.15s",
+                background:
+                  supplyTab === t.key ? "var(--bg-card)" : "transparent",
+                color:
+                  supplyTab === t.key ? "var(--accent)" : "var(--text-muted)",
+                boxShadow:
+                  supplyTab === t.key ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+              }}
+            >
+              {t.icon}
+              {t.label}
+              {((t.key === "ingredients" && activeIngCount > 0) ||
+                (t.key === "machinery" && activeMachCount > 0)) && (
+                <span
+                  style={{
+                    minWidth: 16,
+                    height: 16,
+                    borderRadius: 999,
+                    background: "var(--accent)",
+                    color: "#fff",
+                    fontSize: "0.58rem",
+                    fontWeight: 900,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 4px",
+                  }}
+                >
+                  {t.key === "ingredients" ? activeIngCount : activeMachCount}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="form-field">
         <label className="modal-label">Supplier *</label>
         <SupplierPicker
@@ -2142,7 +2148,7 @@ function SupplyRequestRow({ req, onRefresh }) {
 }
 
 /* ── Main KioskInventory ───────────────────────────────────── */
-export default function KioskInventory({ cart }) {
+export default function KioskInventory({ cart, isUtilities = false }) {
   const [view, setView] = useState("stock");
   const [inventory, setInventory] = useState([]);
   const [supplyRequests, setSupplyRequests] = useState([]);
@@ -2192,19 +2198,35 @@ export default function KioskInventory({ cart }) {
     else if (view === "history") fetchHistory();
   }, [view]);
 
-  const totalValue = inventory.reduce(
+  const filteredInventory = inventory.filter((item) => {
+    const isMach = item.type === "MACHINERY";
+    return isUtilities ? isMach : !isMach;
+  });
+
+  const filteredSupplyRequests = supplyRequests.filter((req) => {
+    const hasMach = (req.supplyRequestMachineryItems || []).length > 0;
+    const hasIng = (req.items || []).length > 0;
+    return isUtilities ? hasMach : hasIng;
+  });
+
+  const filteredHistory = history.filter((entry) => {
+    const isMach = entry.type === "MACHINERY";
+    return isUtilities ? isMach : !isMach;
+  });
+
+  const totalValue = filteredInventory.reduce(
     (sum, i) => sum + (i.cost || 0) * (i.quantity || 0),
     0,
   );
-  const lowStock = inventory.filter((i) => i.quantity < 5).length;
+  const lowStock = filteredInventory.filter((i) => i.quantity < 5).length;
 
   return (
     <div className="kiosk_tab_content">
-      {view === "stock" && inventory.length > 0 && (
+      {view === "stock" && filteredInventory.length > 0 && (
         <div className="kiosk_summary_row" style={{ marginBottom: 14 }}>
           <div className="kiosk_summary_chip">
-            <MdInventory2 size={12} />
-            {inventory.length} items
+            {isUtilities ? <MdBuild size={12} /> : <MdInventory2 size={12} />}
+            {filteredInventory.length} items
           </div>
           {lowStock > 0 && (
             <div
@@ -2228,7 +2250,7 @@ export default function KioskInventory({ cart }) {
 
       <div className="kiosk_sub_nav">
         {[
-          { key: "stock", label: "Stock", icon: <MdInventory2 size={13} /> },
+          { key: "stock", label: isUtilities ? "Utilities" : "Stock", icon: isUtilities ? <MdBuild size={13} /> : <MdInventory2 size={13} /> },
           {
             key: "supply",
             label: "Supply",
@@ -2285,6 +2307,7 @@ export default function KioskInventory({ cart }) {
       ) : view === "addItem" ? (
         <AddInventoryForm
           kioskId={cart.id}
+          isUtilities={isUtilities}
           onAdded={() => {
             setView("stock");
             fetchInventory();
@@ -2294,20 +2317,25 @@ export default function KioskInventory({ cart }) {
         <SupplyRequestForm
           kioskId={cart.id}
           cart={cart}
+          isUtilities={isUtilities}
           onSubmitted={() => {
             setView("supply");
             fetchSupply();
           }}
         />
       ) : view === "stock" ? (
-        inventory.length === 0 ? (
+        filteredInventory.length === 0 ? (
           <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
-            <MdInventory2 size={24} style={{ opacity: 0.3 }} />
-            <span>No inventory items</span>
+            {isUtilities ? (
+              <MdBuild size={24} style={{ opacity: 0.3 }} />
+            ) : (
+              <MdInventory2 size={24} style={{ opacity: 0.3 }} />
+            )}
+            <span>{isUtilities ? "No utilities listed" : "No inventory items"}</span>
           </div>
         ) : (
           <div>
-            {inventory.map((item) => (
+            {filteredInventory.map((item) => (
               <InventoryItemRow
                 key={item.id}
                 item={item}
@@ -2317,14 +2345,14 @@ export default function KioskInventory({ cart }) {
           </div>
         )
       ) : view === "supply" ? (
-        supplyRequests.length === 0 ? (
+        filteredSupplyRequests.length === 0 ? (
           <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
             <MdLocalShipping size={24} style={{ opacity: 0.3 }} />
             <span>No supply requests</span>
           </div>
         ) : (
           <div className="kiosk_tasks_list">
-            {supplyRequests.map((req) => (
+            {filteredSupplyRequests.map((req) => (
               <SupplyRequestRow
                 key={req.id}
                 req={req}
@@ -2334,14 +2362,14 @@ export default function KioskInventory({ cart }) {
           </div>
         )
       ) : view === "history" ? (
-        history.length === 0 ? (
+        filteredHistory.length === 0 ? (
           <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
             <MdHistory size={24} style={{ opacity: 0.3 }} />
             <span>No history yet</span>
           </div>
         ) : (
           <div className="kiosk_tasks_list">
-            {history.map((entry, i) => {
+            {filteredHistory.map((entry, i) => {
               const delta = entry.quantityChange ?? entry.delta ?? 0;
               // ── FIX: include prepItem and machinery in name resolution ──
               const entryName =

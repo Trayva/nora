@@ -3,7 +3,7 @@ import {
   MdOutlineSettings, MdOutlinePerson, MdOutlineLightMode, MdOutlineDarkMode,
   MdOutlineKitchen, MdChevronLeft, MdChevronRight, MdOutlineBadge,
   MdLocationOn, MdClose, MdAdminPanelSettings, MdCheck,
-  MdPersonAdd, MdExpandMore,
+  MdPersonAdd, MdExpandMore, MdOutlineTour, MdOutlineHelpOutline,
 } from "react-icons/md";
 import nora_logo_white from "../assets/nora_white.png";
 import nora_icon_white from "../assets/nora_white - icon.png";
@@ -35,18 +35,19 @@ import { getPrimaryRole } from "../utils/AuthHelpers";
 */
 
 const ALL_NAV_ITEMS = [
-  { id: "admin", label: "Admin", icon: MdAdminPanelSettings, path: "/app/admin", forRoles: ["ADMIN"] },
-  { id: "finance", label: "Finance", icon: RxBarChart, path: "/app/finance", forRoles: ["ALL"] },
-  { id: "kiosk", label: "Kiosks", icon: MdOutlineKitchen, path: "/app/kiosk-home", forRoles: ["ADMIN", "VENDOR", "SUPPLIER", "OPERATOR", "CUSTOMER"] },
-  { id: "mybusiness", label: "My Business", icon: BsShop, path: "/app/business", forRoles: ["ADMIN", "VENDOR"] },
-  { id: "supplier", label: "Supplier", icon: PiTruck, path: "/app/supplier", forRoles: ["ADMIN", "SUPPLIER"] },
-  { id: "operator", label: "Operator", icon: MdOutlineBadge, path: "/app/operator", forRoles: ["ADMIN", "OPERATOR"] },
-  { id: "aggregator", label: "Aggregator", icon: TbGridDots, path: "/app/aggregator", forRoles: ["ADMIN", "AGGREGATOR"] },
+  { id: "admin", label: "Admin", icon: MdAdminPanelSettings, path: "/app/admin", forRoles: ["ADMIN"], tourId: "sidebar-nav-admin" },
+  { id: "finance", label: "Finance", icon: RxBarChart, path: "/app/finance", forRoles: ["ALL"], tourId: "sidebar-nav-finance" },
+  { id: "kiosk", label: "Kiosks", icon: MdOutlineKitchen, path: "/app/kiosk-home", forRoles: ["ADMIN", "VENDOR", "SUPPLIER", "OPERATOR", "CUSTOMER"], tourId: "sidebar-nav-kiosk-home" },
+  { id: "mybusiness", label: "My Business", icon: BsShop, path: "/app/business", forRoles: ["ADMIN", "VENDOR"], tourId: "sidebar-nav-business" },
+  { id: "supplier", label: "Supplier", icon: PiTruck, path: "/app/supplier", forRoles: ["ADMIN", "SUPPLIER"], tourId: "sidebar-nav-supplier" },
+  { id: "operator", label: "Operator", icon: MdOutlineBadge, path: "/app/operator", forRoles: ["ADMIN", "OPERATOR"], tourId: "sidebar-nav-operator" },
+  { id: "aggregator", label: "Aggregator", icon: TbGridDots, path: "/app/aggregator", forRoles: ["ADMIN", "AGGREGATOR"], tourId: "sidebar-nav-aggregator" },
 ];
 
 const BOTTOM_ITEMS = [
   // { id: "settings", label: "Settings", icon: MdOutlineSettings, path: "/app/settings" },
-  { id: "profile", label: "Profile", icon: MdOutlinePerson, path: "/app/profile" },
+  { id: "support", label: "Help & Support", icon: MdOutlineHelpOutline, path: "/app/support", tourId: "sidebar-nav-support" },
+  { id: "profile", label: "Profile", icon: MdOutlinePerson, path: "/app/profile", tourId: "sidebar-nav-profile" },
 ];
 
 function getUserNavItems(userRoles = []) {
@@ -110,7 +111,7 @@ function UserAvatar({ user, className = "sidebar-user-avatar", style = {} }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function Sidebar({ mobileOpen = false, onMobileClose }) {
+export default function Sidebar({ mobileOpen = false, onMobileClose, onStartTour }) {
   const { theme, toggle } = useTheme();
   // const { states, selectedState, changeState } = useAppState();
   const { user, savedAccounts, switchAccount, removeAccount } = useAuth();
@@ -201,9 +202,10 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
       {/* Main nav */}
       <nav className="sidebar-nav">
         <ul className="sidebar-list">
-          {visibleNavItems.map(({ id, label, icon: Icon, path }) => (
+          {visibleNavItems.map(({ id, label, icon: Icon, path, tourId }) => (
             <li key={id}>
               <button
+                id={tourId || `sidebar-nav-${id}`}
                 className={`sidebar-item ${active === id ? "active" : ""}`}
                 onClick={() => handleNav(path)}
                 title={collapsed ? label : undefined}
@@ -220,9 +222,10 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
       {/* Bottom nav */}
       <div className="sidebar-bottom">
         <ul className="sidebar-list">
-          {BOTTOM_ITEMS.map(({ id, label, icon: Icon, path }) => (
+          {BOTTOM_ITEMS.map(({ id, label, icon: Icon, path, tourId }) => (
             <li key={id}>
               <button
+                id={tourId || `sidebar-nav-${id}`}
                 className={`sidebar-item ${active === id ? "active" : ""}`}
                 onClick={() => handleNav(path)}
                 title={collapsed ? label : undefined}
@@ -255,7 +258,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
           </div> */}
 
           {/* Theme toggle */}
-          <li>
+          {/* <li>
             <button
               className="sidebar-item"
               onClick={toggle}
@@ -269,7 +272,22 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }) {
                 <span className="sidebar-label">{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
               )}
             </button>
-          </li>
+          </li> */}
+
+          {/* Replay tour */}
+          {/* {onStartTour && (
+            <li>
+              <button
+                id="sidebar-replay-tour"
+                className="sidebar-item"
+                onClick={() => { onStartTour(); if (onMobileClose) onMobileClose(); }}
+                title={collapsed ? "Replay Guide" : undefined}
+              >
+                <MdOutlineTour className="sidebar-icon" />
+                {!collapsed && <span className="sidebar-label">Feature Guide</span>}
+              </button>
+            </li>
+          )} */}
         </ul>
       </div>
 
