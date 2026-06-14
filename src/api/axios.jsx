@@ -15,6 +15,8 @@ const AUTH_ENDPOINTS = [
   "/auth/verify-otp",
   "/auth/forgot-password",
   "/auth/google-login",
+  "/auth/verify-2fa",
+  "/auth/request-two-factor",
 ];
 
 const isAuthEndpoint = (url = "") =>
@@ -33,7 +35,7 @@ const setAuth = (token, refreshToken) => {
 };
 
 const clearAuth = () => {
-  localStorage.clear();
+  localStorage.removeItem("trayva-auth");
   window.location.href = "/auth/login";
 };
 

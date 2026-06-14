@@ -43,7 +43,7 @@ export default function AuthProvider({ children }) {
         setUser(response.data.data);
       } catch (error) {
         console.error("Failed to load user:", error);
-        localStorage.clear();
+        localStorage.removeItem(AUTH_KEY);
       } finally {
         setLoading(false);
       }

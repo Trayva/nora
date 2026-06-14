@@ -249,7 +249,11 @@ export default function Login() {
       const response = await api.post("/auth/login", values);
       const result = response.data.data;
       if (result.requiresTwoFactor) {
-        return navigate("/auth/verify-otp", {
+        const queryParams = new URLSearchParams();
+        if (isAddingAccount) queryParams.set("addAccount", "true");
+        if (cbUrl) queryParams.set("cbUrl", cbUrl);
+        const searchStr = queryParams.toString();
+        return navigate(`/auth/verify-otp${searchStr ? "?" + searchStr : ""}`, {
           state: {
             flow: "twoFactor",
             userId: result.userId,
@@ -294,7 +298,11 @@ export default function Login() {
       });
       const result = response.data.data;
       if (result.requiresTwoFactor) {
-        return navigate("/auth/verify-otp", {
+        const queryParams = new URLSearchParams();
+        if (isAddingAccount) queryParams.set("addAccount", "true");
+        if (cbUrl) queryParams.set("cbUrl", cbUrl);
+        const searchStr = queryParams.toString();
+        return navigate(`/auth/verify-otp${searchStr ? "?" + searchStr : ""}`, {
           state: {
             flow: "twoFactor",
             userId: result.userId,

@@ -33,6 +33,7 @@ export default function Register() {
   const query = useQuery();
   const roleParam = query.get("role");
   const isAddingAccount = query.get("addAccount") === "true";
+  const cbUrl = query.get("cbUrl");
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -186,11 +187,16 @@ export default function Register() {
 
       toast.success("Account created! Welcome to Nora 🎉");
 
-      navigate("/auth/verify-otp", {
+      const queryParams = new URLSearchParams();
+      if (isAddingAccount) queryParams.set("addAccount", "true");
+      if (cbUrl) queryParams.set("cbUrl", cbUrl);
+      const searchStr = queryParams.toString();
+
+      navigate(`/auth/verify-otp${searchStr ? "?" + searchStr : ""}`, {
         state: {
           email: values.email,
           verificationType: "email",
-          nextRoute: getDefaultRoute(user),
+          nextRoute: cbUrl || getDefaultRoute(user),
         },
       });
     } catch (error) {

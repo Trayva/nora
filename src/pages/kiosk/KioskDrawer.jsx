@@ -75,6 +75,7 @@ export default function KioskDrawer({ kioskId, onClose, onUpdate }) {
       {/* Sticky Tabs */}
       <Tabs
         tabs={TABS}
+        className="borderless"
         activeTab={activeTab}
         onChange={setActiveTab}
         style={{

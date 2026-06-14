@@ -194,20 +194,27 @@ import { PageSkeleton } from "../components/SkeletonTemplates";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
+
   if (loading)
     return (
       <div className="page_wrapper">
         <PageSkeleton />
       </div>
     );
-  if (!user) return <Navigate to="/auth/login" replace />;
+  if (!user) {
+    const targetUrl = location.pathname + location.search;
+    return <Navigate to={`/auth/login?cbUrl=${encodeURIComponent(targetUrl)}`} replace />;
+  }
   return children;
 }
 
 function GuestRoute({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const isAddingAccount = new URLSearchParams(location.search).get("addAccount") === "true";
+  const searchParams = new URLSearchParams(location.search);
+  const isAddingAccount = searchParams.get("addAccount") === "true";
+  const cbUrl = searchParams.get("cbUrl");
 
   if (loading)
     return (
@@ -216,7 +223,9 @@ function GuestRoute({ children }) {
       </div>
     );
   // Allow a logged-in user through if they're explicitly adding a new account
-  if (user && !isAddingAccount) return <Navigate to={getDefaultRoute(user)} replace />;
+  if (user && !isAddingAccount) {
+    return <Navigate to={cbUrl || getDefaultRoute(user)} replace />;
+  }
   return children;
 }
 

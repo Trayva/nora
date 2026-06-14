@@ -135,7 +135,10 @@ export default function VerifyOtp() {
       toast.success(
         isTwoFactor ? "Login successful!" : "Verification successful! ✓"
       );
-      navigate(nextRoute, { replace: true });
+      const targetRoute =
+        state?.nextRoute ||
+        (updatedUser ? getDefaultRoute(updatedUser) : "/app/kiosk-home");
+      navigate(targetRoute, { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || "Invalid or expired code");
       // Clear OTP on error

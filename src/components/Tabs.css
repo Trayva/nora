@@ -63,3 +63,7 @@
     padding: 8px 12px;
   }
 }
+
+.borderless {
+  border-radius: 0px;
+}

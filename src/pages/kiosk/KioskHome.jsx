@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import ContractDrawer from "./ContractDrawer";
 import KioskDrawer from "./KioskDrawer";
@@ -108,11 +108,12 @@ import {
 
 export default function KioskHome() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedKioskId = searchParams.get("kioskId");
   const [kiosks, setKiosks] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedContract, setSelectedContract] = useState(null);
-  const [selectedKioskId, setSelectedKioskId] = useState(null);
   const [kiosksOpen, setKiosksOpen] = useState(true);
   const [contractsOpen, setContractsOpen] = useState(true);
   const [deactivatedOpen, setDeactivatedOpen] = useState(false);
@@ -257,7 +258,11 @@ export default function KioskHome() {
                       key={kiosk.id}
                       className="kiosk_item_card"
                       style={{ cursor: "pointer" }}
-                      onClick={() => setSelectedKioskId(kiosk.id)}
+                      onClick={() => {
+                        const params = new URLSearchParams(searchParams);
+                        params.set("kioskId", kiosk.id);
+                        setSearchParams(params);
+                      }}
                     >
                       <div className="kiosk_item_top">
                         <div className="kiosk_item_icon">
@@ -393,7 +398,11 @@ export default function KioskHome() {
                       key={kiosk.id}
                       className="kiosk_item_card"
                       style={{ cursor: "pointer", grayscale: 1 }}
-                      onClick={() => setSelectedKioskId(kiosk.id)}
+                      onClick={() => {
+                        const params = new URLSearchParams(searchParams);
+                        params.set("kioskId", kiosk.id);
+                        setSearchParams(params);
+                      }}
                     >
                       <div className="kiosk_item_top">
                         <div className="kiosk_item_icon">
@@ -567,7 +576,11 @@ export default function KioskHome() {
       {/* Kiosk detail drawer */}
       <KioskDrawer
         kioskId={selectedKioskId}
-        onClose={() => setSelectedKioskId(null)}
+        onClose={() => {
+          const params = new URLSearchParams(searchParams);
+          params.delete("kioskId");
+          setSearchParams(params);
+        }}
         onUpdate={handleKioskUpdate}
       />
     </div>
