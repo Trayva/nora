@@ -45,7 +45,7 @@ export function MenuDetailDrawer({
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [menuAvailable, setMenuAvailable] = useState(true);
   const [availableVariants, setAvailableVariants] = useState([]);
-  const [calculatedCosts, setCalculatedCosts] = useState({ base: null, variants: {} });
+  const [rawMaterialCosts, setRawMaterialCosts] = useState({});
   const [calcLoading, setCalcLoading] = useState(false);
   const [expandedCombo, setExpandedCombo] = useState("base");
   const [packagingCostData, setPackagingCostData] = useState({ totalCost: 0, breakDown: [] });
@@ -99,6 +99,36 @@ export function MenuDetailDrawer({
     return combos;
   };
 
+  const getPrepItemCost = (prepItemId, resolvedIngredientCosts, visited = new Set()) => {
+    if (visited.has(prepItemId)) return 0;
+    const newVisited = new Set(visited).add(prepItemId);
+
+    const prep = summary?.prepItems?.find(p => p.id === prepItemId);
+    if (!prep) return 0;
+
+    let totalCost = 0;
+    const steps = prep.recipeSteps || [];
+    for (const step of steps) {
+      if (step.type === "ingredient") {
+        const price = resolvedIngredientCosts[step.ingredientId] || 0;
+        totalCost += step.quantity * price;
+      } else if (step.type === "prep") {
+        const prepCost = getPrepItemCost(step.prepRefId, resolvedIngredientCosts, newVisited);
+        totalCost += step.quantity * prepCost;
+      }
+    }
+    return totalCost / (prep.recipeOutput || 1);
+  };
+
+  const getPrepStepUnitPrice = (step) => {
+    if (step.type === "ingredient") {
+      return rawMaterialCosts[step.ingredientId] || 0;
+    } else if (step.type === "prep") {
+      return getPrepItemCost(step.prepRefId, rawMaterialCosts);
+    }
+    return 0;
+  };
+
   const getComboData = (combo) => {
     const variant = summary?.variants?.find(v => v.id === combo.variantId) || null;
     const extra = summary?.extras?.find(e => e.id === combo.extraId) || null;
@@ -106,7 +136,7 @@ export function MenuDetailDrawer({
     const recipeItemsList = (summary?.recipe || []).map(step => {
       if (step.type === "ingredient") {
         const ingDetails = summary?.ingredients?.find(i => i.id === step.ingredientId);
-        const costPerUnit = ingDetails?.cost || 0;
+        const costPerUnit = rawMaterialCosts[step.ingredientId] || 0;
         return {
           id: step.ingredientId,
           name: step.ingredient?.name || ingDetails?.name || "Unknown Ingredient",
@@ -119,7 +149,7 @@ export function MenuDetailDrawer({
         };
       } else if (step.type === "prep") {
         const prepDetails = summary?.prepItems?.find(p => p.id === step.prepItemId);
-        const costPerUnit = prepDetails?.cost || 0;
+        const costPerUnit = getPrepItemCost(step.prepItemId, rawMaterialCosts);
         return {
           id: step.prepItemId,
           name: step.prepItem?.name || prepDetails?.name || "Unknown Prep Item",
@@ -139,9 +169,9 @@ export function MenuDetailDrawer({
       name: variant.name || variant.prepItem?.name || "Variant",
       unit: variant.prepItem?.unit || "unit",
       image: variant.prepItem?.image || null,
-      costPerUnit: variant.cost || 0,
+      costPerUnit: getPrepItemCost(variant.prepItemId || variant.prepItem?.id, rawMaterialCosts),
       qty: variant.quantity || 1,
-      totalCostVal: (variant.cost * (variant.quantity || 1)) || 0,
+      totalCostVal: (getPrepItemCost(variant.prepItemId || variant.prepItem?.id, rawMaterialCosts) * (variant.quantity || 1)) || 0,
       type: "variant",
     } : null;
 
@@ -150,16 +180,29 @@ export function MenuDetailDrawer({
       name: extra.name || extra.prepItem?.name || "Extra",
       unit: extra.prepItem?.unit || "unit",
       image: extra.prepItem?.image || null,
-      costPerUnit: extra.cost || 0,
+      costPerUnit: getPrepItemCost(extra.prepItemId || extra.prepItem?.id, rawMaterialCosts),
       qty: 1,
-      totalCostVal: extra.cost || 0,
+      totalCostVal: getPrepItemCost(extra.prepItemId || extra.prepItem?.id, rawMaterialCosts) || 0,
       type: "extra",
+    } : null;
+
+    const totalPackagingCost = packagingCostData?.totalCost || 0;
+    const packagingItem = totalPackagingCost > 0 ? {
+      id: "packaging_summary",
+      name: "Packaging",
+      unit: "pack",
+      image: null,
+      costPerUnit: totalPackagingCost,
+      qty: 1,
+      totalCostVal: totalPackagingCost,
+      type: "packaging",
     } : null;
 
     const allItems = [
       ...recipeItemsList,
       ...(variantItem ? [variantItem] : []),
-      ...(extraItem ? [extraItem] : [])
+      ...(extraItem ? [extraItem] : []),
+      ...(packagingItem ? [packagingItem] : [])
     ]
       .filter(x => x.totalCostVal > 0)
       .sort((a, b) => b.totalCostVal - a.totalCostVal);
@@ -177,76 +220,35 @@ export function MenuDetailDrawer({
     if (!menuId || !activeStateId) return;
 
     let active = true;
-    const fetchCosts = async () => {
+    const fetchRawMaterials = async () => {
       setCalcLoading(true);
       try {
-        // Fetch base cost
-        const baseRes = await api.get(`/library/calculation/menu/${menuId}/calc`, {
+        const res = await api.get(`/library/calculation/menu/${menuId}/raw-materials`, {
           params: {
             stateId: activeStateId,
+            kioskId: cart?.id,
             useAverage: "true",
             returnCacheData: useCache ? "true" : "false",
           }
         });
-        const baseCostVal = baseRes.data.data?.cost;
-
-        // Fetch variants costs
-        const varCostMap = {};
-        const variantList = summary?.variants || [];
-        for (const variant of variantList) {
-          try {
-            const varRes = await api.get(`/library/calculation/menu/${menuId}/calc`, {
-              params: {
-                stateId: cart ? null : activeStateId,
-                useAverage: "true",
-                variantId: variant.id,
-                kioskId: cart?.id,
-                returnCacheData: useCache ? "true" : "false",
-              }
-            });
-            varCostMap[variant.id] = varRes.data.data?.cost;
-          } catch {
-            varCostMap[variant.id] = null;
-          }
-        }
-
-        // Fetch packaging cost
-        let pkgCostData = { totalCost: 0, breakDown: [] };
-        try {
-          const packagingRes = await api.get(`/library/calculation/menu/${menuId}/packaging-cost`, {
-            params: {
-              stateId: activeStateId,
-              useAverage: "true",
-              returnCacheData: useCache ? "true" : "false",
-            }
-          });
-          if (packagingRes.data.data) {
-            pkgCostData = packagingRes.data.data;
-          }
-        } catch (err) {
-          console.error("Failed to fetch packaging cost", err);
-        }
-
-        if (active) {
-          setCalculatedCosts({
-            base: baseCostVal,
-            variants: varCostMap
-          });
-          setPackagingCostData(pkgCostData);
+        
+        if (active && res.data.data) {
+          setRawMaterialCosts(res.data.data.ingredientCosts || {});
+          setPackagingCostData(res.data.data.packagingCostData || { totalCost: 0, breakDown: [] });
         }
       } catch (e) {
-        console.error("Failed to calculate costs", e);
+        console.error("Failed to fetch raw materials", e);
       } finally {
         if (active) setCalcLoading(false);
       }
     };
 
-    fetchCosts();
+    fetchRawMaterials();
 
     return () => {
       active = false;
     };
-  }, [menuId, activeStateId, useCache, summary?.variants, cart, reloadTrigger]);
+  }, [menuId, activeStateId, useCache, cart?.id, reloadTrigger]);
 
   const currency = selectedState?.currency || "NGN";
   const formatCost = (amount) =>
@@ -835,54 +837,60 @@ export function MenuDetailDrawer({
                       ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                           {/* Base Menu bar */}
-                          {calculatedCosts.base != null && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem" }}>
-                                <span style={{ fontWeight: 700, color: "var(--text-body)" }}>{menuName} (Base)</span>
-                                <span style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>
-                                  Cost: <strong style={{ color: "var(--text-heading)" }}>{formatCost(calculatedCosts.base)}</strong> · Price: <strong style={{ color: "var(--accent)" }}>{formatCost(calcSellingPrice(calculatedCosts.base))}</strong>
-                                </span>
-                              </div>
-                              <div style={{ height: 16, background: "var(--bg-hover)", borderRadius: 8, overflow: "hidden", display: "flex" }}>
-                                <div
-                                  style={{
-                                    height: "100%",
-                                    background: "linear-gradient(90deg, #a855f7, #c084fc)",
-                                    width: `${Math.min(100, (calculatedCosts.base / calcSellingPrice(calculatedCosts.base)) * 100)}%`,
-                                    transition: "width 0.3s ease",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "flex-end",
-                                    paddingRight: 6,
-                                    fontSize: "0.58rem",
-                                    fontWeight: 900,
-                                    color: "#fff",
-                                  }}
-                                >
-                                  {calcCostPct(calculatedCosts.base)}% Cost
+                          {(() => {
+                            const baseComboData = getComboData({ variantId: null, extraId: null });
+                            const baseMenuCost = Object.keys(rawMaterialCosts).length > 0 ? baseComboData.totalCost : null;
+                            if (baseMenuCost == null) return null;
+                            return (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem" }}>
+                                  <span style={{ fontWeight: 700, color: "var(--text-body)" }}>{menuName} (Base)</span>
+                                  <span style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>
+                                    Cost: <strong style={{ color: "var(--text-heading)" }}>{formatCost(baseMenuCost)}</strong> · Price: <strong style={{ color: "var(--accent)" }}>{formatCost(calcSellingPrice(baseMenuCost))}</strong>
+                                  </span>
                                 </div>
-                                <div
-                                  style={{
-                                    flex: 1,
-                                    height: "100%",
-                                    background: "rgba(34, 197, 94, 0.15)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    paddingLeft: 6,
-                                    fontSize: "0.58rem",
-                                    fontWeight: 900,
-                                    color: "#16a34a",
-                                  }}
-                                >
-                                  +{markup}% Margin
+                                <div style={{ height: 16, background: "var(--bg-hover)", borderRadius: 8, overflow: "hidden", display: "flex" }}>
+                                  <div
+                                    style={{
+                                      height: "100%",
+                                      background: "linear-gradient(90deg, #a855f7, #c084fc)",
+                                      width: `${Math.min(100, (baseMenuCost / calcSellingPrice(baseMenuCost)) * 100)}%`,
+                                      transition: "width 0.3s ease",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "flex-end",
+                                      paddingRight: 6,
+                                      fontSize: "0.58rem",
+                                      fontWeight: 900,
+                                      color: "#fff",
+                                    }}
+                                  >
+                                    {calcCostPct(baseMenuCost)}% Cost
+                                  </div>
+                                  <div
+                                    style={{
+                                      flex: 1,
+                                      height: "100%",
+                                      background: "rgba(34, 197, 94, 0.15)",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      paddingLeft: 6,
+                                      fontSize: "0.58rem",
+                                      fontWeight: 900,
+                                      color: "#16a34a",
+                                    }}
+                                  >
+                                    +{markup}% Margin
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
 
                           {/* Variants bars */}
                           {(summary?.variants || []).map((variant) => {
-                            const varCost = calculatedCosts.variants[variant.id];
+                            const varComboData = getComboData({ variantId: variant.id, extraId: null });
+                            const varCost = Object.keys(rawMaterialCosts).length > 0 ? varComboData.totalCost : null;
                             if (varCost == null) return null;
                             const varSellingPrice = calcSellingPrice(varCost);
                             const varCostPct = calcCostPct(varCost);
@@ -932,11 +940,22 @@ export function MenuDetailDrawer({
                             );
                           })}
 
-                          {calculatedCosts.base == null && Object.keys(calculatedCosts.variants).length === 0 && (
-                            <div style={{ textAlign: "center", fontSize: "0.78rem", color: "var(--text-muted)", padding: "10px 0" }}>
-                              No calculated price data. Configure suppliers in {selectedState?.name || "the active state"}.
-                            </div>
-                          )}
+                          {(() => {
+                            const baseComboData = getComboData({ variantId: null, extraId: null });
+                            const baseMenuCost = Object.keys(rawMaterialCosts).length > 0 ? baseComboData.totalCost : null;
+                            const hasVariantsWithCosts = (summary?.variants || []).some(variant => {
+                              const varComboData = getComboData({ variantId: variant.id, extraId: null });
+                              return (Object.keys(rawMaterialCosts).length > 0 ? varComboData.totalCost : null) != null;
+                            });
+                            if (baseMenuCost == null && !hasVariantsWithCosts) {
+                              return (
+                                <div style={{ textAlign: "center", fontSize: "0.78rem", color: "var(--text-muted)", padding: "10px 0" }}>
+                                  No calculated price data. Configure suppliers in {selectedState?.name || "the active state"}.
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       )}
                     </div>
@@ -967,7 +986,7 @@ export function MenuDetailDrawer({
                         const prepContributions = (summary?.prepItems || [])
                           .map((prep) => {
                             const qty = prep.usedIn?.reduce((sum, u) => sum + (u.quantity || 0), 0) || 0;
-                            const costPerUnit = prep.cost || 0;
+                            const costPerUnit = Object.keys(rawMaterialCosts).length > 0 ? getPrepItemCost(prep.id, rawMaterialCosts) : 0;
                             const totalCostVal = qty * costPerUnit;
                             return { ...prep, qty, costPerUnit, totalCostVal };
                           })
@@ -1038,46 +1057,50 @@ export function MenuDetailDrawer({
                                           No recipe steps found.
                                         </div>
                                       ) : (
-                                        prep.recipeSteps.map((step) => (
-                                          <div
-                                            key={step.id}
-                                            style={{
-                                              display: "flex",
-                                              justifyContent: "space-between",
-                                              alignItems: "center",
-                                              fontSize: "0.72rem",
-                                              padding: "4px 0",
-                                              borderBottom: "1px dashed var(--border)",
-                                            }}
-                                          >
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                              <div style={{ fontWeight: 700, color: "var(--text-body)" }}>
-                                                {step.name}
-                                                <span
-                                                  style={{
-                                                    marginLeft: 6,
-                                                    fontSize: "0.58rem",
-                                                    fontWeight: 800,
-                                                    padding: "1px 4px",
-                                                    borderRadius: 3,
-                                                    background: step.type === "prep" ? "rgba(59,130,246,0.1)" : "rgba(168,85,247,0.1)",
-                                                    color: step.type === "prep" ? "#3b82f6" : "#a855f7",
-                                                    border: step.type === "prep" ? "1px solid rgba(59,130,246,0.2)" : "1px solid rgba(168,85,247,0.2)",
-                                                  }}
-                                                >
-                                                  {step.type.toUpperCase()}
-                                                </span>
+                                        prep.recipeSteps.map((step) => {
+                                          const stepUnitPrice = getPrepStepUnitPrice(step);
+                                          const stepTotalCost = step.quantity * stepUnitPrice;
+                                          return (
+                                            <div
+                                              key={step.id}
+                                              style={{
+                                                display: "flex",
+                                                justifyContent: "space-between",
+                                                alignItems: "center",
+                                                fontSize: "0.72rem",
+                                                padding: "4px 0",
+                                                borderBottom: "1px dashed var(--border)",
+                                              }}
+                                            >
+                                              <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: 700, color: "var(--text-body)" }}>
+                                                  {step.name}
+                                                  <span
+                                                    style={{
+                                                      marginLeft: 6,
+                                                      fontSize: "0.58rem",
+                                                      fontWeight: 800,
+                                                      padding: "1px 4px",
+                                                      borderRadius: 3,
+                                                      background: step.type === "prep" ? "rgba(59,130,246,0.1)" : "rgba(168,85,247,0.1)",
+                                                      color: step.type === "prep" ? "#3b82f6" : "#a855f7",
+                                                      border: step.type === "prep" ? "1px solid rgba(59,130,246,0.2)" : "1px solid rgba(168,85,247,0.2)",
+                                                    }}
+                                                  >
+                                                    {step.type.toUpperCase()}
+                                                  </span>
+                                                </div>
+                                                <div style={{ color: "var(--text-muted)", fontSize: "0.65rem", marginTop: 2 }}>
+                                                  Qty: <strong>{step.quantity} {step.unit}</strong>
+                                                  {" · "}Price: <strong>{formatCost(stepUnitPrice)} / {step.unit}</strong>
+                                                </div>
                                               </div>
-                                              <div style={{ color: "var(--text-muted)", fontSize: "0.65rem", marginTop: 2 }}>
-                                                Qty: <strong>{step.quantity} {step.unit}</strong>
-                                                {" · "}Price: <strong>{formatCost(step.unitPrice)} / {step.unit}</strong>
+                                              <div style={{ textAlign: "right", fontWeight: 700, color: "var(--text-heading)", marginLeft: 10 }}>
+                                                {formatCost(stepTotalCost)}
                                               </div>
                                             </div>
-                                            <div style={{ textAlign: "right", fontWeight: 700, color: "var(--text-heading)", marginLeft: 10 }}>
-                                              {formatCost(step.totalCost)}
-                                            </div>
-                                          </div>
-                                        ))
+                                          );
+                                        })
                                       )}
                                     </div>
                                   )}
@@ -1410,8 +1433,9 @@ export function MenuDetailDrawer({
                       ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                           {summary.ingredients.map((ing) => {
-                            const hasCost = ing.cost != null;
-                            const totalIngCost = hasCost ? ing.totalQuantity * ing.cost : null;
+                            const ingCost = Object.keys(rawMaterialCosts).length > 0 ? rawMaterialCosts[ing.id] : null;
+                            const hasCost = ingCost != null;
+                            const totalIngCost = hasCost ? ing.totalQuantity * ingCost : null;
                             return (
                               <div
                                 key={ing.id}
@@ -1457,7 +1481,7 @@ export function MenuDetailDrawer({
                                     Qty: <strong style={{ color: "var(--text-heading)" }}>{ing.totalQuantity?.toFixed(3)} {ing.unit}</strong>
                                     {hasCost && (
                                       <>
-                                        {" · "}Price: <strong>{formatCost(ing.cost)} / {ing.unit}</strong>
+                                        {" · "}Price: <strong>{formatCost(ingCost)} / {ing.unit}</strong>
                                       </>
                                     )}
                                   </div>
@@ -1607,11 +1631,16 @@ export function MenuDetailDrawer({
                     )}
 
                     {/* Professional Financial Overview Widget */}
-                    {(baseCost != null || item?.recipeCost != null) && (() => {
-                      const costVal = baseCost ?? item?.recipeCost;
-                      const priceVal = calcSellingPrice(costVal);
-                      const profitVal = calcProfit(costVal);
-                      const marginPct = calcCostPct(costVal);
+                    {(() => {
+                      const derivedBaseCost = Object.keys(rawMaterialCosts).length > 0
+                        ? getComboData({ variantId: null, extraId: null }).totalCost
+                        : (summary?.baseCost ?? item?.recipeCost);
+
+                      if (derivedBaseCost == null) return null;
+
+                      const priceVal = calcSellingPrice(derivedBaseCost);
+                      const profitVal = calcProfit(derivedBaseCost);
+                      const marginPct = calcCostPct(derivedBaseCost);
                       return (
                         <div
                           style={{
@@ -1651,7 +1680,7 @@ export function MenuDetailDrawer({
                                 Cost Price
                               </span>
                               <span style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--text-heading)" }}>
-                                ₦{fmt(costVal)}
+                                ₦{fmt(derivedBaseCost)}
                               </span>
                             </div>
 
@@ -1695,13 +1724,15 @@ export function MenuDetailDrawer({
                       }}
                     >
                       {(() => {
-                        const costValLocal = baseCost ?? item?.recipeCost;
+                        const derivedBaseCost = Object.keys(rawMaterialCosts).length > 0
+                          ? getComboData({ variantId: null, extraId: null }).totalCost
+                          : (summary?.baseCost ?? item?.recipeCost);
                         return [
                           {
                             label: "Selling Price",
                             value:
-                              costValLocal != null
-                                ? `₦${fmt(calcSellingPrice(costValLocal))}`
+                              derivedBaseCost != null
+                                ? `₦${fmt(calcSellingPrice(derivedBaseCost))}`
                                 : item?.sellingPrice > 0
                                   ? `₦${fmt(item.sellingPrice)}`
                                   : null,
@@ -1710,8 +1741,8 @@ export function MenuDetailDrawer({
                           {
                             label: "Recipe Cost",
                             value:
-                              baseCost != null
-                                ? `₦${fmt(baseCost)}`
+                              derivedBaseCost != null
+                                ? `₦${fmt(derivedBaseCost)}`
                                 : item?.recipeCost > 0
                                   ? `₦${fmt(item.recipeCost)}`
                                   : null,
