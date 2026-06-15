@@ -52,3 +52,7 @@ export const addMachineryToConcept = (conceptId, body) =>
 
 export const removeMachineryFromConcept = (conceptId, machineryId) =>
   api.delete(`/library/machinery/concept/${conceptId}/${machineryId}`);
+
+export const getMenuPackagingCost = (id, params) =>
+  api.get(`/library/calculation/menu/${id}/packaging-cost`, { params });
+

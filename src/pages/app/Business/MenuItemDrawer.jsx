@@ -34,6 +34,8 @@ import {
 import { useAppState } from "../../../contexts/StateContext";
 import Modal from "../../../components/Modal";
 import api from "../../../api/axios";
+import { getMenuPackagingCost } from "../../../api/library";
+
 
 const COUNTRIES = [
   "Afghanistan","Albania","Algeria","Angola","Argentina","Australia","Austria",
@@ -328,6 +330,20 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
   const [savingCons, setSavingCons] = useState(false);
   const [confirmDeleteCons, setConfirmDeleteCons] = useState(null);
   const [deletingCons, setDeletingCons] = useState(null);
+  const [packagingCost, setPackagingCost] = useState(null);
+  const [packCostLoading, setPackCostLoading] = useState(false);
+
+  const [editingPackaging, setEditingPackaging] = useState(false);
+  const [packagingDetails, setPackagingDetails] = useState("");
+  const [packagingImageFile, setPackagingImageFile] = useState(null);
+  const [packagingImagePreview, setPackagingImagePreview] = useState(null);
+  const [savingPackaging, setSavingPackaging] = useState(false);
+  const inlinePackRef = useRef(null);
+
+  const [showAddPackItem, setShowAddPackItem] = useState(false);
+  const [selectedPackMach, setSelectedPackMach] = useState(null);
+  const [packMachQty, setPackMachQty] = useState("1");
+  const [savingPackItem, setSavingPackItem] = useState(false);
 
   const [markups, setMarkups] = useState([]);
   const [markupsLoading, setMarkupsLoading] = useState(false);
@@ -349,6 +365,21 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
   const [templateFields, setTemplateFields] = useState([{ type: "checkbox", label: "" }]);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [deletingTemplate, setDeletingTemplate] = useState(null);
+
+  const fetchPackagingCost = async () => {
+    if (!item) return;
+    setPackCostLoading(true);
+    try {
+      const params = {};
+      if (selectedState?.id) {
+        params.stateId = selectedState.id;
+        params.useAverage = "true";
+      }
+      const res = await getMenuPackagingCost(item.id, params);
+      setPackagingCost(res.data.data);
+    } catch { /* silent */ }
+    finally { setPackCostLoading(false); }
+  };
 
   const fetchDetail = async () => {
     if (!item) return;
@@ -404,9 +435,30 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
   };
 
   useEffect(() => {
-    if (item) { fetchDetail(); fetchMachineries(); fetchConsumables(); fetchMarkups(); fetchTemplates(); }
-    else { setDetail(null); setMachineries([]); setConsumables([]); setMarkups([]); }
-  }, [item?.id]);
+    if (item) {
+      fetchDetail();
+      fetchMachineries();
+      fetchConsumables();
+      fetchPackagingCost();
+      fetchMarkups();
+      fetchTemplates();
+    } else {
+      setDetail(null);
+      setMachineries([]);
+      setConsumables([]);
+      setPackagingCost(null);
+      setMarkups([]);
+    }
+  }, [item?.id, selectedState?.id]);
+
+  useEffect(() => {
+    if (detail) {
+      setPackagingDetails(detail.packaging || "");
+      setPackagingImagePreview(detail.packagingImage || null);
+      setPackagingImageFile(null);
+      setEditingPackaging(false);
+    }
+  }, [detail]);
 
   const handleAddMachinery = async (e) => {
     e.preventDefault();
@@ -441,6 +493,7 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
       toast.success("Consumable added");
       setSelectedCons(null); setConsQty("1"); setShowConsForm(false);
       fetchConsumables();
+      fetchPackagingCost();
     } catch (err) { toast.error(err.response?.data?.message || "Failed to add consumable"); }
     finally { setSavingCons(false); }
   };
@@ -452,8 +505,76 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
       toast.success("Consumable removed");
       setConfirmDeleteCons(null);
       setConsumables((p) => p.filter((c) => c.id !== id));
+      fetchPackagingCost();
     } catch (err) { toast.error(err.response?.data?.message || "Failed to remove"); }
     finally { setDeletingCons(null); }
+  };
+
+  const handleAddPackagingItem = async (e) => {
+    e.preventDefault();
+    if (!selectedPackMach) return;
+    setSavingPackItem(true);
+    try {
+      const currentItems = Array.isArray(detail?.packagingItems) ? detail.packagingItems : [];
+      const exists = currentItems.some(i => i.machineryId === selectedPackMach.id);
+      if (exists) {
+        toast.error("Item already added as a packaging item. You can edit its quantity below.");
+        setSavingPackItem(false);
+        return;
+      }
+      const updatedItems = [...currentItems, { machineryId: selectedPackMach.id, quantity: Number(packMachQty) || 1 }];
+      const fd = new FormData();
+      fd.append("packagingItems", JSON.stringify(updatedItems));
+      await updateMenuItem(item.id, fd);
+      toast.success("Packaging item added");
+      setSelectedPackMach(null);
+      setPackMachQty("1");
+      setShowAddPackItem(false);
+      fetchDetail();
+      fetchPackagingCost();
+      onUpdated?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to add packaging item");
+    } finally {
+      setSavingPackItem(false);
+    }
+  };
+
+  const handleRemovePackagingItem = async (machineryId) => {
+    try {
+      const currentItems = Array.isArray(detail?.packagingItems) ? detail.packagingItems : [];
+      const updatedItems = currentItems.filter(i => i.machineryId !== machineryId);
+      const fd = new FormData();
+      fd.append("packagingItems", JSON.stringify(updatedItems));
+      await updateMenuItem(item.id, fd);
+      toast.success("Packaging item removed");
+      fetchDetail();
+      fetchPackagingCost();
+      onUpdated?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to remove packaging item");
+    }
+  };
+
+  const handleUpdatePackagingItemQty = async (machineryId, newQty) => {
+    if (newQty < 1) return;
+    try {
+      const currentItems = Array.isArray(detail?.packagingItems) ? detail.packagingItems : [];
+      const updatedItems = currentItems.map(i => {
+        if (i.machineryId === machineryId) {
+          return { ...i, quantity: newQty };
+        }
+        return i;
+      });
+      const fd = new FormData();
+      fd.append("packagingItems", JSON.stringify(updatedItems));
+      await updateMenuItem(item.id, fd);
+      fetchDetail();
+      fetchPackagingCost();
+      onUpdated?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update quantity");
+    }
   };
 
   const handleAddMarkup = async (e) => {
@@ -816,13 +937,248 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
           </Section>
 
           {/* Packaging */}
-          <Section title="Packaging" defaultOpen={false}>
-            {detail.packaging || detail.packagingImage ? (
-              <div className="pack_preview_row">
-                {detail.packagingImage && <img src={detail.packagingImage} alt="packaging" className="pack_preview_img" />}
-                <div className="recipe_step_info"><span className="recipe_step_id">Packaging Details</span>{detail.packaging && <span className="recipe_step_instruction">{detail.packaging}</span>}</div>
+          <Section
+            title="Packaging & Costs"
+            defaultOpen={false}
+            action={
+              !editingPackaging && (
+                <button
+                  className="app_btn app_btn_confirm biz_add_btn"
+                  onClick={() => setEditingPackaging(true)}
+                  style={{ display: "flex", alignItems: "center", gap: 4 }}
+                >
+                  <LuPencil size={11} /> Edit Info
+                </button>
+              )
+            }
+          >
+            {editingPackaging ? (
+              <div className="recipe_add_form" style={{ marginTop: 8 }}>
+                <div className="form-field">
+                  <label className="modal-label">Packaging Details</label>
+                  <textarea
+                    className="modal-input"
+                    rows={2}
+                    style={{ resize: "none" }}
+                    placeholder="e.g. Sealed paper bag"
+                    value={packagingDetails}
+                    onChange={(e) => setPackagingDetails(e.target.value)}
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="modal-label">Packaging Image</label>
+                  <div
+                    onClick={() => inlinePackRef.current?.click()}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "8px 12px",
+                      background: "var(--bg-hover)",
+                      border: "1px dashed var(--border)",
+                      borderRadius: 10,
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(203,108,220,0.5)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                  >
+                    {packagingImagePreview ? (
+                      <img src={packagingImagePreview} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--bg-active)", border: "1px solid rgba(203,108,220,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <MdUpload size={16} style={{ color: "var(--accent)" }} />
+                      </div>
+                    )}
+                    <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                      {packagingImageFile ? packagingImageFile.name : "Click to upload packaging image"}
+                    </span>
+                  </div>
+                  <input
+                    ref={inlinePackRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const f = e.target.files[0];
+                      if (f) {
+                        setPackagingImageFile(f);
+                        setPackagingImagePreview(URL.createObjectURL(f));
+                      }
+                    }}
+                  />
+                </div>
+                <div className="recipe_add_actions">
+                  <button
+                    className="app_btn app_btn_cancel"
+                    type="button"
+                    onClick={() => {
+                      setEditingPackaging(false);
+                      setPackagingDetails(detail.packaging || "");
+                      setPackagingImagePreview(detail.packagingImage || null);
+                      setPackagingImageFile(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className={`app_btn app_btn_confirm ${savingPackaging ? "btn_loading" : ""}`}
+                    type="button"
+                    onClick={async () => {
+                      setSavingPackaging(true);
+                      try {
+                        const fd = new FormData();
+                        fd.append("packaging", packagingDetails);
+                        if (packagingImageFile) {
+                          fd.append("packagingImage", packagingImageFile);
+                        }
+                        await updateMenuItem(item.id, fd);
+                        toast.success("Packaging details updated");
+                        setEditingPackaging(false);
+                        fetchDetail();
+                        onUpdated?.();
+                      } catch (err) {
+                        toast.error(err.response?.data?.message || "Failed to update packaging details");
+                      } finally {
+                        setSavingPackaging(false);
+                      }
+                    }}
+                    disabled={savingPackaging}
+                    style={{ position: "relative", minWidth: 90 }}
+                  >
+                    <span className="btn_text">Save</span>
+                    {savingPackaging && <span className="btn_loader" style={{ width: 13, height: 13 }} />}
+                  </button>
+                </div>
               </div>
-            ) : <div className="biz_empty" style={{ padding: "16px 0" }}><p>No packaging details. Edit the item above to add packaging info.</p></div>}
+            ) : (
+              <>
+                {detail.packaging || detail.packagingImage ? (
+                  <div className="pack_preview_row" style={{ marginBottom: 14 }}>
+                    {detail.packagingImage && <img src={detail.packagingImage} alt="packaging" className="pack_preview_img" />}
+                    <div className="recipe_step_info">
+                      <span className="recipe_step_id">Packaging Details</span>
+                      {detail.packaging && <span className="recipe_step_instruction">{detail.packaging}</span>}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="biz_empty" style={{ padding: "10px 0 16px" }}>
+                    <p>No packaging details. Click Edit Info to add packaging details.</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Packaging items build cost */}
+            <div style={{ marginTop: 12, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-heading)" }}>Packaging Items Build</span>
+                  {!showAddPackItem && (
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedPackMach(null); setPackMachQty("1"); setShowAddPackItem(true); }}
+                      style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3, padding: 0 }}
+                    >
+                      <LuPlus size={12} /> Add Item
+                    </button>
+                  )}
+                </div>
+                <span style={{ fontSize: "0.88rem", fontWeight: 900, color: "var(--accent)" }}>
+                  Total Cost: ₦{Number(packagingCost?.totalCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              {showAddPackItem && (
+                <form onSubmit={handleAddPackagingItem} className="recipe_add_form" style={{ marginBottom: 12 }}>
+                  <div className="form-field">
+                    <label className="modal-label">Packaging Material / Consumable *</label>
+                    <MachSearchInput onSelect={(m) => setSelectedPackMach(m)} selectedMach={selectedPackMach} />
+                  </div>
+                  <div className="form-field">
+                    <label className="modal-label">Quantity</label>
+                    <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--border)", borderRadius: 9, overflow: "hidden", height: 40, width: 140 }}>
+                      <button type="button" onClick={() => setPackMachQty((v) => String(Math.max(1, Number(v) - 1)))} style={{ width: 34, height: 40, background: "var(--bg-hover)", border: "none", borderRight: "1px solid var(--border)", cursor: "pointer", fontSize: "1.1rem", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                      <input className="modal-input" type="number" min="1" value={packMachQty} onChange={(e) => setPackMachQty(e.target.value)} style={{ flex: 1, height: 40, textAlign: "center", marginBottom: 0, fontSize: "0.88rem", fontWeight: 700, border: "none", borderRadius: 0 }} />
+                      <button type="button" onClick={() => setPackMachQty((v) => String(Number(v) + 1))} style={{ width: 34, height: 40, background: "var(--bg-hover)", border: "none", borderLeft: "1px solid var(--border)", cursor: "pointer", fontSize: "1.1rem", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                    </div>
+                  </div>
+                  <div className="recipe_add_actions">
+                    <button className="app_btn app_btn_cancel" type="button" onClick={() => { setShowAddPackItem(false); setSelectedPackMach(null); }}>Cancel</button>
+                    <button className={`app_btn app_btn_confirm ${savingPackItem ? "btn_loading" : ""}`} type="submit" disabled={savingPackItem || !selectedPackMach} style={{ position: "relative", minWidth: 90 }}>
+                      <span className="btn_text">Add</span>
+                      {savingPackItem && <span className="btn_loader" style={{ width: 13, height: 13 }} />}
+                    </button>
+                  </div>
+                </form>
+              )}
+              
+              {packCostLoading ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div className="skeleton_shimmer skeleton_rect" style={{ height: 40, borderRadius: 8 }} />
+                </div>
+              ) : packagingCost?.breakDown && packagingCost.breakDown.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {packagingCost.breakDown.map((pitem, idx) => (
+                    <div key={pitem.machineryId || idx} className="recipe_step_row" style={{ padding: "8px 10px", background: "var(--bg-hover)", borderRadius: 8, gap: 10 }}>
+                      {pitem.image ? (
+                        <img src={pitem.image} alt={pitem.name} className="ing_option_img" style={{ borderRadius: 6, width: 28, height: 28 }} />
+                      ) : (
+                        <div style={{ width: 28, height: 28, borderRadius: 6, background: "var(--bg-active)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <MdBuild size={12} style={{ color: "var(--accent)" }} />
+                        </div>
+                      )}
+                      
+                      <div className="recipe_step_info" style={{ flex: 1, minWidth: 0 }}>
+                        <span className="recipe_step_id" style={{ fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {pitem.name}
+                        </span>
+                        <span className="recipe_step_instruction" style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                          ₦{Number(pitem.unitPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} each
+                        </span>
+                      </div>
+
+                      {/* Inline Quantity Adjusters */}
+                      <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--border)", borderRadius: 6, overflow: "hidden", height: 26, background: "var(--bg-card)" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdatePackagingItemQty(pitem.machineryId, pitem.quantity - 1)}
+                          style={{ width: 22, height: 26, background: "none", border: "none", borderRight: "1px solid var(--border)", cursor: "pointer", fontSize: "0.8rem", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          −
+                        </button>
+                        <span style={{ minWidth: 26, textAlign: "center", fontSize: "0.76rem", fontWeight: 700, color: "var(--text-body)" }}>
+                          {pitem.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdatePackagingItemQty(pitem.machineryId, pitem.quantity + 1)}
+                          style={{ width: 22, height: 26, background: "none", border: "none", borderLeft: "1px solid var(--border)", cursor: "pointer", fontSize: "0.8rem", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-body)", minWidth: 60, textAlign: "right" }}>
+                        ₦{Number(pitem.cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+
+                      <button
+                        type="button"
+                        className="biz_icon_btn biz_icon_btn_danger"
+                        onClick={() => handleRemovePackagingItem(pitem.machineryId)}
+                        style={{ padding: 4 }}
+                      >
+                        <LuTrash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="biz_empty" style={{ padding: "10px 0" }}>
+                  <p>No packaging items linked yet. Add packaging items above to calculate packaging cost.</p>
+                </div>
+              )}
+            </div>
           </Section>
 
           {/* Task Templates */}
