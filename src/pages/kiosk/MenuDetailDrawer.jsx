@@ -54,6 +54,7 @@ export function MenuDetailDrawer({
   const [expandedPreps, setExpandedPreps] = useState({});
   const [reloadTrigger, setReloadTrigger] = useState(0);
   const [additionalCosts, setAdditionalCosts] = useState([]);
+  const [kioskOperationalCost, setKioskOperationalCost] = useState(0);
 
   useEffect(() => {
     if (menuId) {
@@ -218,10 +219,22 @@ export function MenuDetailDrawer({
       type: "packaging",
     } : null;
 
+    const operationalItem = kioskOperationalCost > 0 ? {
+      id: "kiosk_operational_cost",
+      name: "Kiosk Operational Cost",
+      unit: "order",
+      image: null,
+      costPerUnit: kioskOperationalCost,
+      qty: 1,
+      totalCostVal: kioskOperationalCost,
+      type: "operational",
+    } : null;
+
     const subtotal = recipeItemsList.reduce((sum, item) => sum + item.totalCostVal, 0) +
       (variantItem ? variantItem.totalCostVal : 0) +
       (extraItem ? extraItem.totalCostVal : 0) +
-      (packagingItem ? packagingItem.totalCostVal : 0);
+      (packagingItem ? packagingItem.totalCostVal : 0) +
+      (operationalItem ? operationalItem.totalCostVal : 0);
 
     let sumCostsBeforeMarkup = 0;
     let sumCostsAfterMarkup = 0;
@@ -258,6 +271,7 @@ export function MenuDetailDrawer({
       ...(variantItem ? [variantItem] : []),
       ...(extraItem ? [extraItem] : []),
       ...(packagingItem ? [packagingItem] : []),
+      ...(operationalItem ? [operationalItem] : []),
       ...customItems
     ]
       .filter(x => x.totalCostVal > 0)
@@ -303,6 +317,7 @@ export function MenuDetailDrawer({
         if (active && res.data.data) {
           setRawMaterialCosts(res.data.data.ingredientCosts || {});
           setPackagingCostData(res.data.data.packagingCostData || { totalCost: 0, breakDown: [] });
+          setKioskOperationalCost(res.data.data.operationalCost || 0);
         }
       } catch (e) {
         console.error("Failed to fetch raw materials", e);
@@ -1594,12 +1609,12 @@ export function MenuDetailDrawer({
                                                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
                                                   <span style={{ fontWeight: 600, color: "var(--text-body)" }}>
                                                     {item.name}{" "}
-                                                    {item.type !== "additional" && (
+                                                    {item.type !== "additional" && item.type !== "operational" && (
                                                       <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>
                                                         ({item.qty.toFixed(2)} {item.unit})
                                                       </span>
                                                     )}
-                                                    {(item.type === "extra" || item.type === "prep" || item.type === "variant" || item.type === "packaging" || item.type === "additional") && (
+                                                    {(item.type === "extra" || item.type === "prep" || item.type === "variant" || item.type === "packaging" || item.type === "additional" || item.type === "operational") && (
                                                       <span
                                                         style={{
                                                           marginLeft: 6,
@@ -1615,7 +1630,9 @@ export function MenuDetailDrawer({
                                                                 ? "rgba(168,85,247,0.1)"
                                                                 : item.type === "packaging"
                                                                   ? "rgba(16,185,129,0.1)"
-                                                                  : "rgba(245,158,11,0.1)",
+                                                                  : item.type === "operational"
+                                                                    ? "rgba(99,102,241,0.1)"
+                                                                    : "rgba(245,158,11,0.1)",
                                                           color: item.type === "extra"
                                                             ? "var(--accent)"
                                                             : item.type === "prep"
@@ -1624,7 +1641,9 @@ export function MenuDetailDrawer({
                                                                 ? "#a855f7"
                                                                 : item.type === "packaging"
                                                                   ? "#10b981"
-                                                                  : "#f59e0b",
+                                                                  : item.type === "operational"
+                                                                    ? "#6366f1"
+                                                                    : "#f59e0b",
                                                           border: item.type === "extra"
                                                             ? "1px solid rgba(203,108,220,0.2)"
                                                             : item.type === "prep"
@@ -1633,10 +1652,12 @@ export function MenuDetailDrawer({
                                                                 ? "1px solid rgba(168,85,247,0.2)"
                                                                 : item.type === "packaging"
                                                                   ? "1px solid rgba(16,185,129,0.2)"
-                                                                  : "1px solid rgba(245,158,11,0.2)",
+                                                                  : item.type === "operational"
+                                                                    ? "1px solid rgba(99,102,241,0.2)"
+                                                                    : "1px solid rgba(245,158,11,0.2)",
                                                         }}
                                                       >
-                                                        {item.type.toUpperCase()}
+                                                        {item.type === "operational" ? "OPERATIONAL" : item.type.toUpperCase()}
                                                       </span>
                                                     )}
                                                   </span>
@@ -1658,7 +1679,9 @@ export function MenuDetailDrawer({
                                                               ? "linear-gradient(90deg, #10b981 0%, #34d399 100%)"
                                                               : item.type === "additional"
                                                                 ? "linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)"
-                                                                : "linear-gradient(90deg, #a855f7 0%, var(--accent) 100%)",
+                                                                : item.type === "operational"
+                                                                  ? "linear-gradient(90deg, #6366f1 0%, #818cf8 100%)"
+                                                                  : "linear-gradient(90deg, #a855f7 0%, var(--accent) 100%)",
                                                       width: `${pct}%`,
                                                       borderRadius: 4,
                                                       transition: "width 0.3s ease",

@@ -347,6 +347,54 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
   const [showReactivateModal, setShowReactivateModal] = useState(false);
   const [reactivating, setReactivating] = useState(false);
 
+  const [editingOps, setEditingOps] = useState(false);
+  const [expectedOrders, setExpectedOrders] = useState(cart.expectedMonthlyOrders || "");
+  const [bills, setBills] = useState([]);
+  const [savingOps, setSavingOps] = useState(false);
+
+  useEffect(() => {
+    if (cart.operationalBills && Array.isArray(cart.operationalBills) && cart.operationalBills.length > 0) {
+      setBills(cart.operationalBills);
+    } else {
+      setBills([
+        { name: "Rent", amount: "" },
+        { name: "Electric Bill", amount: "" },
+        { name: "Water Bill", amount: "" }
+      ]);
+    }
+    setExpectedOrders(cart.expectedMonthlyOrders || "");
+  }, [cart]);
+
+  const handleSaveOperationalCosts = async () => {
+    const ordersNum = Number(expectedOrders);
+    if (isNaN(ordersNum) || ordersNum < 0) {
+      return toast.error("Expected monthly orders must be a valid non-negative number");
+    }
+
+    const formattedBills = bills
+      .filter(b => b.name.trim() !== "")
+      .map(b => ({
+        name: b.name.trim(),
+        amount: Number(b.amount) || 0
+      }));
+
+    setSavingOps(true);
+    try {
+      const res = await api.patch(`/kiosk/${cart.id}/operational-costs`, {
+        expectedMonthlyOrders: ordersNum,
+        operationalBills: formattedBills,
+      });
+
+      onUpdate(res.data.data);
+      toast.success("Operational costs updated successfully");
+      setEditingOps(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update operational costs");
+    } finally {
+      setSavingOps(false);
+    }
+  };
+
   const handleToggleOnline = async () => {
     setTogglingOnline(true);
     try {
@@ -710,6 +758,178 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
               {cart.operatingDays || (
                 <span className="kiosk_meta_muted">Not set</span>
               )}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Operational Costs ── */}
+      <div className="drawer_section_title" style={{ marginTop: 20 }}>
+        <span>Operational Costs</span>
+        <button
+          className="kiosk_icon_action_btn"
+          style={{ marginLeft: "auto" }}
+          onClick={() => setEditingOps((v) => !v)}
+          title="Edit operational costs"
+        >
+          <MdEdit size={14} />
+        </button>
+      </div>
+      {editingOps ? (
+        <div
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: 12,
+            padding: "14px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
+          <div className="form-field" style={{ marginBottom: 0 }}>
+            <label className="modal-label">Expected Monthly Orders</label>
+            <input
+              type="number"
+              className="modal-input"
+              value={expectedOrders}
+              onChange={(e) => setExpectedOrders(e.target.value)}
+              placeholder="e.g. 1000"
+              style={{ marginBottom: 0 }}
+            />
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <label className="modal-label" style={{ marginBottom: 0 }}>Monthly Bills</label>
+            {bills.map((bill, index) => (
+              <div key={index} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  type="text"
+                  className="modal-input"
+                  value={bill.name}
+                  onChange={(e) => {
+                    const updated = [...bills];
+                    updated[index].name = e.target.value;
+                    setBills(updated);
+                  }}
+                  placeholder="Bill Name (e.g. Rent)"
+                  style={{ flex: 2, marginBottom: 0 }}
+                />
+                <input
+                  type="number"
+                  className="modal-input"
+                  value={bill.amount}
+                  onChange={(e) => {
+                    const updated = [...bills];
+                    updated[index].amount = e.target.value;
+                    setBills(updated);
+                  }}
+                  placeholder="₦ Amount"
+                  style={{ flex: 1, marginBottom: 0 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBills(bills.filter((_, i) => i !== index));
+                  }}
+                  style={{
+                    height: 38,
+                    width: 38,
+                    borderRadius: 6,
+                    border: "1px solid rgba(239,68,68,0.2)",
+                    background: "rgba(239,68,68,0.08)",
+                    color: "#ef4444",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  title="Remove Bill"
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setBills([...bills, { name: "", amount: "" }])}
+              className="app_btn"
+              style={{
+                height: 32,
+                fontSize: "0.72rem",
+                padding: "0 10px",
+                alignSelf: "flex-start",
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                color: "var(--accent)"
+              }}
+            >
+              + Add Bill
+            </button>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button
+              className="app_btn app_btn_cancel"
+              style={{ flex: 1, height: 38 }}
+              onClick={() => {
+                setEditingOps(false);
+                if (cart.operationalBills && Array.isArray(cart.operationalBills)) {
+                  setBills(cart.operationalBills);
+                } else {
+                  setBills([
+                    { name: "Rent", amount: "" },
+                    { name: "Electric Bill", amount: "" },
+                    { name: "Water Bill", amount: "" }
+                  ]);
+                }
+                setExpectedOrders(cart.expectedMonthlyOrders || "");
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className={`app_btn app_btn_confirm${savingOps ? " btn_loading" : ""}`}
+              style={{ flex: 2, height: 38, position: "relative" }}
+              onClick={handleSaveOperationalCosts}
+              disabled={savingOps}
+            >
+              <span className="btn_text">Save</span>
+              {savingOps && (
+                <span
+                  className="btn_loader"
+                  style={{ width: 14, height: 14 }}
+                />
+              )}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="kiosk_item_meta" style={{ marginBottom: 0 }}>
+          <div className="kiosk_meta_row">
+            <span className="kiosk_meta_key">Monthly Expected Orders</span>
+            <span className="kiosk_meta_val">
+              {cart.expectedMonthlyOrders || 0}
+            </span>
+          </div>
+          {cart.operationalBills && Array.isArray(cart.operationalBills) && cart.operationalBills.length > 0 ? (
+            cart.operationalBills.map((b, idx) => (
+              <div key={idx} className="kiosk_meta_row" style={{ paddingLeft: 12 }}>
+                <span className="kiosk_meta_key" style={{ fontWeight: 500, color: "var(--text-muted)" }}>↳ {b.name}</span>
+                <span className="kiosk_meta_val" style={{ fontWeight: 500 }}>
+                  {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(b.amount || 0)}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="kiosk_meta_row" style={{ paddingLeft: 12 }}>
+              <span className="kiosk_meta_key" style={{ fontStyle: "italic", color: "var(--text-muted)" }}>No bills listed</span>
+            </div>
+          )}
+          <div className="kiosk_meta_row" style={{ borderTop: "1px dashed var(--border)", paddingTop: 8, marginTop: 4 }}>
+            <span className="kiosk_meta_key" style={{ fontWeight: 800, color: "var(--text-heading)" }}>Operational Cost / Order</span>
+            <span className="kiosk_meta_val" style={{ fontWeight: 800, color: "var(--accent)" }}>
+              {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(cart.operationalCost || 0)}
             </span>
           </div>
         </div>
