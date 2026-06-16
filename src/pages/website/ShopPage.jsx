@@ -46,7 +46,7 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
     const fetchPrice = async () => {
       setFetchingPrice(true);
       try {
-        const params = { kioskId: concept.kioskId };
+        const params = { kioskId: concept.id };
         if (selectedVariant) params.variantId = selectedVariant;
         if (selectedExtras.length) params["extras"] = selectedExtras;
         const r = await api.get(`/library/price/menu/${item.id}`, { params });
@@ -717,16 +717,16 @@ function MenuItemCard({ item, concept, cartItems, onOpenModal }) {
               width: 30,
               height: 30,
               flexShrink: 0,
-              background: !isAvailable 
-                ? "var(--bg-hover)" 
-                : totalQty > 0 
-                  ? "var(--accent)" 
+              background: !isAvailable
+                ? "var(--bg-hover)"
+                : totalQty > 0
+                  ? "var(--accent)"
                   : "var(--bg-active)",
               borderColor: !isAvailable ? "var(--border)" : "rgba(203,108,220,0.3)",
-              color: !isAvailable 
-                ? "var(--text-muted)" 
-                : totalQty > 0 
-                  ? "#fff" 
+              color: !isAvailable
+                ? "var(--text-muted)"
+                : totalQty > 0
+                  ? "#fff"
                   : "var(--accent)",
               cursor: isAvailable ? "pointer" : "not-allowed",
             }}
