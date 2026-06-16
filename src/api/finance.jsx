@@ -127,3 +127,36 @@ export const getInvoices = async (from, to, search, pending) => {
   );
   return response.data;
 };
+
+/**
+ * Update wallet-specific settings for a user (Admin only).
+ */
+export const updateWalletSettings = async (userId, blockTransactions, blockWithdrawals) => {
+  const response = await api.patch("/finance/wallet/settings", {
+    userId,
+    blockTransactions,
+    blockWithdrawals,
+  });
+  return response.data;
+};
+
+/**
+ * Get global currency-specific wallet settings (Admin only).
+ */
+export const getGlobalWalletSettings = async () => {
+  const response = await api.get("/finance/wallet/global-settings");
+  return response.data;
+};
+
+/**
+ * Update global wallet settings (Admin only).
+ */
+export const updateGlobalWalletSettings = async (currency, minBalance, blockTransactions, blockWithdrawals) => {
+  const response = await api.patch("/finance/wallet/global-settings", {
+    currency,
+    minBalance,
+    blockTransactions,
+    blockWithdrawals,
+  });
+  return response.data;
+};

@@ -420,6 +420,7 @@ export default function AdminUserDetail({ user, onClose }) {
   const [walletAmount, setWalletAmount] = useState("");
   const [walletNote, setWalletNote] = useState("");
   const [doingWallet, setDoingWallet] = useState(false);
+  const [updatingSettings, setUpdatingSettings] = useState(false);
 
   // Invoice create
   const [showInvForm, setShowInvForm] = useState(false);
@@ -506,6 +507,25 @@ export default function AdminUserDetail({ user, onClose }) {
       toast.error(err.response?.data?.message || "Failed");
     } finally {
       setDoingWallet(false);
+    }
+  };
+
+  const handleToggleBlock = async (field, currentValue) => {
+    try {
+      setUpdatingSettings(true);
+      await api.patch("/finance/wallet/settings", {
+        userId: user.id,
+        [field]: !currentValue,
+      });
+      const r = await api.get("/finance/wallet", {
+        params: { userId: user.id },
+      });
+      setWallet(r.data.data);
+      toast.success("Wallet settings updated");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update wallet settings");
+    } finally {
+      setUpdatingSettings(false);
     }
   };
 
@@ -1073,6 +1093,90 @@ export default function AdminUserDetail({ user, onClose }) {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Wallet blocking controls */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  padding: "10px 12px",
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 10,
+                  marginBottom: 12,
+                }}
+              >
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>Block Transactions</span>
+                  <label className="switch_label" style={{ position: "relative", display: "inline-block", width: 34, height: 20 }}>
+                    <input
+                      type="checkbox"
+                      checked={!!wallet.blockTransactions}
+                      onChange={() => handleToggleBlock("blockTransactions", !!wallet.blockTransactions)}
+                      disabled={updatingSettings}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span
+                      style={{
+                        position: "absolute",
+                        cursor: "pointer",
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: wallet.blockTransactions ? "var(--accent)" : "#ccc",
+                        transition: ".2s",
+                        borderRadius: 20,
+                      }}
+                    >
+                      <span
+                        style={{
+                          position: "absolute",
+                          content: '""',
+                          height: 14, width: 14,
+                          left: wallet.blockTransactions ? 16 : 4,
+                          bottom: 3,
+                          backgroundColor: "white",
+                          transition: ".2s",
+                          borderRadius: "50%",
+                        }}
+                      />
+                    </span>
+                  </label>
+                </div>
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>Block Withdrawals</span>
+                  <label className="switch_label" style={{ position: "relative", display: "inline-block", width: 34, height: 20 }}>
+                    <input
+                      type="checkbox"
+                      checked={!!wallet.blockWithdrawals}
+                      onChange={() => handleToggleBlock("blockWithdrawals", !!wallet.blockWithdrawals)}
+                      disabled={updatingSettings}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span
+                      style={{
+                        position: "absolute",
+                        cursor: "pointer",
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: wallet.blockWithdrawals ? "var(--accent)" : "#ccc",
+                        transition: ".2s",
+                        borderRadius: 20,
+                      }}
+                    >
+                      <span
+                        style={{
+                          position: "absolute",
+                          content: '""',
+                          height: 14, width: 14,
+                          left: wallet.blockWithdrawals ? 16 : 4,
+                          bottom: 3,
+                          backgroundColor: "white",
+                          transition: ".2s",
+                          borderRadius: "50%",
+                        }}
+                      />
+                    </span>
+                  </label>
+                </div>
               </div>
 
               {/* Credit / Debit action */}

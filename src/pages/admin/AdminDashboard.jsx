@@ -33,6 +33,7 @@ import AdminOperators from "./AdminOperators";
 import AdminVendorDetail from "./AdminVendorDetail";
 import AdminKiosks from "./AdminKiosks";
 import AdminInvoiceGenerator from "./AdminInvoiceGenerator";
+import AdminGlobalWalletSettings from "./AdminGlobalWalletSettings";
 
 import {
   DashboardSkeleton,
@@ -1216,6 +1217,7 @@ export default function AdminDashboard() {
           <AdminVendorApplicationSettings />
         </div>
         <AdminContractSettings />
+        <AdminGlobalWalletSettings />
       </div>
 
       {/* ── Tools ── */}
