@@ -293,7 +293,7 @@ export function MenuDetailDrawer({
   };
 
   useEffect(() => {
-    if (!menuId || !activeStateId) return;
+    if (!menuId || (!activeStateId && !cart)) return;
 
     const item = summary?.menuItem || summary;
     console.log(item)
@@ -305,14 +305,15 @@ export function MenuDetailDrawer({
     const fetchRawMaterials = async () => {
       setCalcLoading(true);
       try {
-        const res = await api.get(`/library/calculation/menu/${menuId}/raw-materials`, {
-          params: {
-            stateId: activeStateId,
-            kioskId: cart?.id,
-            useAverage: "true",
-            returnCacheData: useCache ? "true" : "false",
-          }
-        });
+        const params = {
+          kioskId: cart?.id,
+          useAverage: "true",
+          returnCacheData: useCache ? "true" : "false",
+        };
+        if (!cart && activeStateId) {
+          params.stateId = activeStateId;
+        }
+        const res = await api.get(`/library/calculation/menu/${menuId}/raw-materials`, { params });
 
         if (active && res.data.data) {
           setRawMaterialCosts(res.data.data.ingredientCosts || {});
@@ -769,11 +770,12 @@ export function MenuDetailDrawer({
                         <select
                           value={analysisStateId}
                           onChange={(e) => setAnalysisStateId(e.target.value)}
+                          disabled={!!cart}
                           style={{
                             width: "100%",
                             height: 38,
                             borderRadius: 8,
-                            background: "var(--bg-hover)",
+                            background: cart ? "var(--bg-card)" : "var(--bg-hover)",
                             border: "1px solid var(--border)",
                             color: "var(--text-heading)",
                             padding: "0 10px",
@@ -781,7 +783,8 @@ export function MenuDetailDrawer({
                             fontSize: "0.8rem",
                             fontWeight: 700,
                             outline: "none",
-                            cursor: "pointer",
+                            cursor: cart ? "not-allowed" : "pointer",
+                            opacity: cart ? 0.6 : 1,
                           }}
                         >
                           <option value="">Select State</option>
