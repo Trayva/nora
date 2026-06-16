@@ -190,7 +190,8 @@ export default function ShopCheckoutPage() {
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  const group = state?.group; // { kioskId, conceptName, items: [{item, qty, concept, kioskId}] }
+  const group = state?.group; // { kioskId, conceptName, items: [{item, qty, concept, kioskId}], deliveryFee, vatRate }
+  const [orderType, setOrderType] = useState("DELIVERY");
   const [form, setForm] = useState({
     customerName: "",
     customerPhone: "",
@@ -210,20 +211,26 @@ export default function ShopCheckoutPage() {
     (s, e) => s + (e.item.sellingPrice || 0) * e.qty,
     0,
   );
+  
+  const deliveryFee = orderType === "DELIVERY" ? (group.deliveryFee || 0) : 0;
+  const vatRate = group.vatRate || 0;
+  const vatAmount = subtotal * (vatRate / 100);
+  const total = subtotal + vatAmount + deliveryFee;
 
   const set = (name, value) => setForm((p) => ({ ...p, [name]: value }));
 
   const place = async () => {
     if (!form.customerName.trim() || form.customerName.trim().length < 2)
       return toast.error("Enter your name (min 2 characters)");
-    if (!form.deliveryAddress.trim() || form.deliveryAddress.trim().length < 5)
+    if (orderType === "DELIVERY" && (!form.deliveryAddress.trim() || form.deliveryAddress.trim().length < 5))
       return toast.error("Enter your delivery address (min 5 characters)");
 
     setPlacing(true);
     try {
       const payload = {
         kioskId: group.kioskId,
-        deliveryAddress: form.deliveryAddress.trim(),
+        deliveryAddress: orderType === "PICKUP" ? undefined : form.deliveryAddress.trim(),
+        orderType,
         items: group.items.map((e) => ({
           menuItemId: e.item.id,
           quantity: e.qty,
@@ -419,6 +426,68 @@ export default function ShopCheckoutPage() {
               )}
             </div>
           ))}
+           {vatRate > 0 && (
+            <div
+              style={{
+                padding: "6px 16px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                VAT ({vatRate}%)
+              </span>
+              <span
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 800,
+                  color: "var(--text-heading)",
+                }}
+              >
+                ₦{fmt(vatAmount)}
+              </span>
+            </div>
+          )}
+          {orderType === "DELIVERY" && deliveryFee > 0 && (
+            <div
+              style={{
+                padding: "6px 16px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                Delivery Fee
+              </span>
+              <span
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 800,
+                  color: "var(--text-heading)",
+                }}
+              >
+                ₦{fmt(deliveryFee)}
+              </span>
+            </div>
+          )}
           {subtotal > 0 && (
             <div
               style={{
@@ -426,6 +495,7 @@ export default function ShopCheckoutPage() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                borderTop: (vatRate > 0 || (orderType === "DELIVERY" && deliveryFee > 0)) ? "1px solid var(--border)" : "none",
               }}
             >
               <span
@@ -446,10 +516,64 @@ export default function ShopCheckoutPage() {
                   color: "#f97316",
                 }}
               >
-                ₦{fmt(subtotal)}
+                ₦{fmt(total)}
               </span>
             </div>
           )}
+        </div>
+
+        {/* Order Type Selector */}
+        <div
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: 16,
+            padding: "16px 18px",
+            marginBottom: 20,
+            display: "flex",
+            gap: 10,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setOrderType("DELIVERY")}
+            style={{
+              flex: 1,
+              height: 40,
+              borderRadius: 10,
+              border: "1px solid",
+              borderColor: orderType === "DELIVERY" ? "#f97316" : "var(--border)",
+              background: orderType === "DELIVERY" ? "rgba(249,115,22,0.08)" : "transparent",
+              color: orderType === "DELIVERY" ? "#f97316" : "var(--text-muted)",
+              fontSize: "0.82rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              transition: "all 0.15s",
+            }}
+          >
+            Delivery
+          </button>
+          <button
+            type="button"
+            onClick={() => setOrderType("PICKUP")}
+            style={{
+              flex: 1,
+              height: 40,
+              borderRadius: 10,
+              border: "1px solid",
+              borderColor: orderType === "PICKUP" ? "#f97316" : "var(--border)",
+              background: orderType === "PICKUP" ? "rgba(249,115,22,0.08)" : "transparent",
+              color: orderType === "PICKUP" ? "#f97316" : "var(--text-muted)",
+              fontSize: "0.82rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              transition: "all 0.15s",
+            }}
+          >
+            Pickup
+          </button>
         </div>
 
         {/* Delivery details */}
@@ -500,29 +624,31 @@ export default function ShopCheckoutPage() {
             onChange={set}
           />
 
-          <div className="form-field" style={{ marginBottom: 0 }}>
-            <label className="modal-label">Delivery Address *</label>
-            <div style={{ position: "relative" }}>
-              <MdLocationOn
-                size={15}
-                style={{
-                  position: "absolute",
-                  left: 11,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#f97316",
-                  pointerEvents: "none",
-                }}
-              />
-              <input
-                className="modal-input"
-                style={{ paddingLeft: 30 }}
-                placeholder="Street address, estate, city"
-                value={form.deliveryAddress}
-                onChange={(e) => set("deliveryAddress", e.target.value)}
-              />
+          {orderType === "DELIVERY" && (
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <label className="modal-label">Delivery Address *</label>
+              <div style={{ position: "relative" }}>
+                <MdLocationOn
+                  size={15}
+                  style={{
+                    position: "absolute",
+                    left: 11,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "#f97316",
+                    pointerEvents: "none",
+                  }}
+                />
+                <input
+                  className="modal-input"
+                  style={{ paddingLeft: 30 }}
+                  placeholder="Street address, estate, city"
+                  value={form.deliveryAddress}
+                  onChange={(e) => set("deliveryAddress", e.target.value)}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Place order */}
@@ -562,12 +688,12 @@ export default function ShopCheckoutPage() {
                   animation: "spin 0.7s linear infinite",
                 }}
               />{" "}
-              Placing order…
+               Placing order…
             </>
           ) : (
             <>
               <MdCheckCircle size={20} /> Place Order
-              {subtotal > 0 ? ` · ₦${fmt(subtotal)}` : ""}
+              {total > 0 ? ` · ₦${fmt(total)}` : ""}
             </>
           )}
           <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>

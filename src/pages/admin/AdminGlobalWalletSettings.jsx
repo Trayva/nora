@@ -81,64 +81,62 @@ export default function AdminGlobalWalletSettings() {
   };
 
   return (
-    <>
-      <div className="admin_settings_panel" style={{ gridColumn: "1 / -1", marginTop: 16 }}>
-        <div className="admin_settings_panel_header">
-          <span className="admin_settings_panel_title">Global Wallet Settings</span>
-          <button className="app_btn app_btn_confirm biz_add_btn" onClick={openCreate}>
-            <LuPlus size={13} /> Add Config
-          </button>
-        </div>
-        <div className="admin_settings_panel_body">
-          {loading ? (
-            <div className="page_loader" style={{ padding: 24 }}>
-              <div className="page_loader_spinner" />
-            </div>
-          ) : settings.length === 0 ? (
-            <div style={{ padding: "20px 0", textAlign: "center", color: "var(--text-muted)", fontSize: "0.8rem" }}>
-              No global wallet configurations set yet.
-            </div>
-          ) : (
-            settings.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 10,
-                  padding: "10px 0",
-                  borderBottom: "1px solid var(--border)",
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-heading)", marginBottom: 4 }}>
-                    Currency: {item.currency}
-                  </div>
-                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                    <span className="admin_meta_chip">
-                      Min Balance: {item.minBalance.toLocaleString()}
-                    </span>
-                    {item.blockTransactions && (
-                      <span className="admin_meta_chip" style={{ color: "#ef4444", borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.05)" }}>
-                        Txns Blocked
-                      </span>
-                    )}
-                    {item.blockWithdrawals && (
-                      <span className="admin_meta_chip" style={{ color: "#ef4444", borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.05)" }}>
-                        Withdrawals Blocked
-                      </span>
-                    )}
-                  </div>
+    <div className="admin_settings_panel" style={{ marginTop: 16 }}>
+      <div className="admin_settings_panel_header">
+        <span className="admin_settings_panel_title">Global Wallet Settings</span>
+        <button className="app_btn app_btn_confirm biz_add_btn" onClick={openCreate}>
+          <LuPlus size={13} /> Add Config
+        </button>
+      </div>
+      <div className="admin_settings_panel_body">
+        {loading ? (
+          <div className="page_loader" style={{ padding: 24 }}>
+            <div className="page_loader_spinner" />
+          </div>
+        ) : settings.length === 0 ? (
+          <div style={{ padding: "20px 0", textAlign: "center", color: "var(--text-muted)", fontSize: "0.8rem" }}>
+            No global wallet configurations set yet.
+          </div>
+        ) : (
+          settings.map((item) => (
+            <div
+              key={item.id}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
+                padding: "10px 0",
+                borderBottom: "1px solid var(--border)",
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-heading)", marginBottom: 4 }}>
+                  Currency: {item.currency}
                 </div>
-                <div>
-                  <button className="biz_icon_btn" onClick={() => openEdit(item)}>
-                    <MdEdit size={13} />
-                  </button>
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  <span className="admin_meta_chip">
+                    Min Balance: {item.minBalance.toLocaleString()}
+                  </span>
+                  {item.blockTransactions && (
+                    <span className="admin_meta_chip" style={{ color: "#ef4444", borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.05)" }}>
+                      Txns Blocked
+                    </span>
+                  )}
+                  {item.blockWithdrawals && (
+                    <span className="admin_meta_chip" style={{ color: "#ef4444", borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.05)" }}>
+                      Withdrawals Blocked
+                    </span>
+                  )}
                 </div>
               </div>
-            ))
-          )}
-        </div>
+              <div>
+                <button className="biz_icon_btn" onClick={() => openEdit(item)}>
+                  <MdEdit size={13} />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <Drawer
@@ -210,6 +208,6 @@ export default function AdminGlobalWalletSettings() {
           </div>
         </div>
       </Drawer>
-    </>
+    </div>
   );
 }

@@ -34,6 +34,7 @@ import AdminVendorDetail from "./AdminVendorDetail";
 import AdminKiosks from "./AdminKiosks";
 import AdminInvoiceGenerator from "./AdminInvoiceGenerator";
 import AdminGlobalWalletSettings from "./AdminGlobalWalletSettings";
+import AdminVatSettings from "./AdminVatSettings";
 
 import {
   DashboardSkeleton,
@@ -1216,8 +1217,12 @@ export default function AdminDashboard() {
           <AdminSalesFormula />
           <AdminVendorApplicationSettings />
         </div>
+        <div className="admin_two_col">
+          <AdminVatSettings />
+          <AdminGlobalWalletSettings />
+        </div>
+        <br />
         <AdminContractSettings />
-        <AdminGlobalWalletSettings />
       </div>
 
       {/* ── Tools ── */}

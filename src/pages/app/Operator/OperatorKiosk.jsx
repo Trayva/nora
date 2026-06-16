@@ -3484,7 +3484,7 @@ function ItemCustomiser({ item, kioskId, onConfirm, onClose }) {
   );
 }
 
-function RecordSaleForm({ kioskId, menuItems, onSaved }) {
+function RecordSaleForm({ kioskId, menuItems, vatRate = 0, onSaved }) {
   const fmt = (n) =>
     Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
   const [kiosk, setCart] = useState({});
@@ -3911,27 +3911,46 @@ function RecordSaleForm({ kioskId, menuItems, onSaved }) {
               </div>
             ))}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  fontSize: "0.66rem",
-                  color: "var(--text-muted)",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                }}
-              >
-                Total
-              </div>
-              <div
-                style={{
-                  fontSize: "1.1rem",
-                  fontWeight: 900,
-                  color: "var(--accent)",
-                }}
-              >
-                \u20A6{fmt(kioskTotal)}
-              </div>
+              {vatRate > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                    <span>Subtotal:</span>
+                    <span style={{ fontWeight: 700 }}>₦{fmt(kioskTotal)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                    <span>VAT ({vatRate}%):</span>
+                    <span style={{ fontWeight: 700 }}>₦{fmt(kioskTotal * (vatRate / 100))}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", borderTop: "1px solid var(--border)", paddingTop: 4, marginTop: 2 }}>
+                    <span style={{ fontWeight: 800, color: "var(--text-heading)" }}>Total:</span>
+                    <span style={{ fontWeight: 900, color: "var(--accent)" }}>₦{fmt(kioskTotal + kioskTotal * (vatRate / 100))}</span>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div
+                    style={{
+                      fontSize: "0.66rem",
+                      color: "var(--text-muted)",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Total
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "1.1rem",
+                      fontWeight: 900,
+                      color: "var(--accent)",
+                    }}
+                  >
+                    ₦{fmt(kioskTotal)}
+                  </div>
+                </>
+              )}
             </div>
             <button
               onClick={handleSubmit}
@@ -4109,7 +4128,7 @@ function SaleRow({ sale }) {
   );
 }
 
-export function SalesTab({ kioskId, menuItems, isOperator = true }) {
+export function SalesTab({ kioskId, menuItems, isOperator = true, vatRate = 0 }) {
   const [sales, setSales] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -4314,6 +4333,7 @@ export function SalesTab({ kioskId, menuItems, isOperator = true }) {
         <RecordSaleForm
           kioskId={kioskId}
           menuItems={menuItems}
+          vatRate={vatRate}
           onSaved={() => {
             setShowForm(false);
             fetchSales();
@@ -4575,7 +4595,12 @@ export default function OperatorKioskPage() {
       {activeTab === "elearning" && <ELearningTab menuItems={menuItems} />}
       {activeTab === "orders" && <KioskOrders kioskId={kioskId} />}
       {activeTab === "sales" && (
-        <SalesTab kioskId={kioskId} menuItems={menuItems} isOperator={true} />
+        <SalesTab
+          kioskId={kioskId}
+          menuItems={menuItems}
+          isOperator={true}
+          vatRate={kiosk?.vatRate || 0}
+        />
       )}
     </div>
   );

@@ -78,8 +78,8 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
       item.extras?.filter((e) => selectedExtras.includes(e.id)) || [];
     onConfirm({
       item,
-      kioskId: concept.kioskId,
-      conceptName: concept.name,
+      kioskId: concept?.id || concept?.kioskId || "",
+      conceptName: concept?.vendor?.businessName || concept?.name || concept?.conceptName || "Kiosk",
       qty,
       variantId: selectedVariant,
       extraIds: selectedExtras,
@@ -877,8 +877,9 @@ function ConceptSection({ concept, cartItems, onOpenModal }) {
 }
 
 /* ── Checkout form (inside cart drawer) ── */
-function CheckoutForm({ kioskId, conceptName, items, onSuccess, onBack }) {
+function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSuccess, onBack }) {
   const navigate = useNavigate();
+  const [orderType, setOrderType] = useState("DELIVERY");
   const [form, setForm] = useState({
     customerName: "",
     customerEmail: "",
@@ -886,16 +887,21 @@ function CheckoutForm({ kioskId, conceptName, items, onSuccess, onBack }) {
     deliveryAddress: "",
   });
   const [placing, setPlacing] = useState(false);
+  
   const total = items.reduce(
     (s, e) => s + (e.unitPrice || e.item.sellingPrice || 0) * e.qty,
     0,
   );
+  
+  const deliveryFee = orderType === "DELIVERY" ? (concepts?.find((c) => c.id === kioskId)?.deliveryFee || 0) : 0;
+  const vatAmount = total * (vatRate / 100);
+  const grandTotal = total + vatAmount + deliveryFee;
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const place = async () => {
     if (form.customerName.trim().length < 2)
       return toast.error("Enter your name");
-    if (form.deliveryAddress.trim().length < 5)
+    if (orderType === "DELIVERY" && form.deliveryAddress.trim().length < 5)
       return toast.error("Enter your delivery address");
     setPlacing(true);
     try {
@@ -904,7 +910,8 @@ function CheckoutForm({ kioskId, conceptName, items, onSuccess, onBack }) {
         customerName: form.customerName.trim(),
         customerEmail: form.customerEmail.trim() || undefined,
         customerPhone: form.customerPhone.trim() || undefined,
-        deliveryAddress: form.deliveryAddress.trim(),
+        deliveryAddress: orderType === "PICKUP" ? undefined : form.deliveryAddress.trim(),
+        orderType,
         items: items.map((e) => ({
           menuItemId: e.item.id,
           quantity: e.qty,
@@ -961,6 +968,48 @@ function CheckoutForm({ kioskId, conceptName, items, onSuccess, onBack }) {
         }}
       >
         Enter your details to place the order
+      </div>
+
+      {/* Order Type Selector */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <button
+          type="button"
+          onClick={() => setOrderType("DELIVERY")}
+          style={{
+            flex: 1,
+            height: 34,
+            borderRadius: 8,
+            border: "1px solid",
+            borderColor: orderType === "DELIVERY" ? "var(--accent)" : "var(--border)",
+            background: orderType === "DELIVERY" ? "var(--bg-active)" : "transparent",
+            color: orderType === "DELIVERY" ? "var(--accent)" : "var(--text-muted)",
+            fontSize: "0.74rem",
+            fontWeight: 800,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          Delivery
+        </button>
+        <button
+          type="button"
+          onClick={() => setOrderType("PICKUP")}
+          style={{
+            flex: 1,
+            height: 34,
+            borderRadius: 8,
+            border: "1px solid",
+            borderColor: orderType === "PICKUP" ? "var(--accent)" : "var(--border)",
+            background: orderType === "PICKUP" ? "var(--bg-active)" : "transparent",
+            color: orderType === "PICKUP" ? "var(--accent)" : "var(--text-muted)",
+            fontSize: "0.74rem",
+            fontWeight: 800,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          Pickup
+        </button>
       </div>
 
       {/* Summary */}
@@ -1021,6 +1070,38 @@ function CheckoutForm({ kioskId, conceptName, items, onSuccess, onBack }) {
             </span>
           </div>
         ))}
+        {vatRate > 0 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: "0.78rem",
+              padding: "3px 0",
+              color: "var(--text-body)"
+            }}
+          >
+            <span>VAT ({vatRate}%)</span>
+            <span style={{ fontWeight: 700, color: "var(--text-heading)" }}>
+              ₦{fmt(vatAmount)}
+            </span>
+          </div>
+        )}
+        {orderType === "DELIVERY" && deliveryFee > 0 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: "0.78rem",
+              padding: "3px 0",
+              color: "var(--text-body)"
+            }}
+          >
+            <span>Delivery Fee</span>
+            <span style={{ fontWeight: 700, color: "var(--text-heading)" }}>
+              ₦{fmt(deliveryFee)}
+            </span>
+          </div>
+        )}
         <div
           style={{
             borderTop: "1px solid var(--border)",
@@ -1040,7 +1121,7 @@ function CheckoutForm({ kioskId, conceptName, items, onSuccess, onBack }) {
               color: "var(--accent)",
             }}
           >
-            ₦{fmt(total)}
+            ₦{fmt(grandTotal)}
           </span>
         </div>
       </div>
@@ -1070,18 +1151,20 @@ function CheckoutForm({ kioskId, conceptName, items, onSuccess, onBack }) {
           t: "text",
           p: "Street, Estate, City",
         },
-      ].map(({ k, l, t, p }) => (
-        <div key={k} className="form-field" style={{ marginBottom: 10 }}>
-          <label className="modal-label">{l}</label>
-          <input
-            className="modal-input"
-            type={t}
-            placeholder={p}
-            value={form[k]}
-            onChange={(e) => set(k, e.target.value)}
-          />
-        </div>
-      ))}
+      ]
+        .filter(({ k }) => orderType === "DELIVERY" || k !== "deliveryAddress")
+        .map(({ k, l, t, p }) => (
+          <div key={k} className="form-field" style={{ marginBottom: 10 }}>
+            <label className="modal-label">{l}</label>
+            <input
+              className="modal-input"
+              type={t}
+              placeholder={p}
+              value={form[k]}
+              onChange={(e) => set(k, e.target.value)}
+            />
+          </div>
+        ))}
 
       <button
         onClick={place}
@@ -1109,7 +1192,7 @@ function CheckoutForm({ kioskId, conceptName, items, onSuccess, onBack }) {
    CART DRAWER — strictly grouped by kioskId
    Each kioskId = one Kiosk = one separate checkout
    ───────────────────────────────────────────────────────────── */
-function CartDrawer({ cartItems, setCartItems, open, onClose }) {
+function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
   const [checkoutCartId, setCheckoutCartId] = useState(null);
   const [orderedCarts, setOrderedCarts] = useState(new Set());
 
@@ -1117,8 +1200,17 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
   // Items with same kioskId but different concepts still merge under one Kiosk group
   const groupMap = Object.entries(cartItems).reduce((acc, [key, entry]) => {
     const { kioskId, conceptName } = entry;
-    if (!acc[kioskId])
-      acc[kioskId] = { kioskId, conceptName, items: [], keys: [] };
+    if (!acc[kioskId]) {
+      const kiosk = concepts?.find((c) => c.id === kioskId);
+      acc[kioskId] = {
+        kioskId,
+        conceptName,
+        vatRate: kiosk?.vatRate || 0,
+        deliveryFee: kiosk?.deliveryFee || 0,
+        items: [],
+        keys: [],
+      };
+    }
     acc[kioskId].items.push(entry);
     acc[kioskId].keys.push(key);
     return acc;
@@ -1242,6 +1334,8 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
               kioskId={checkoutGroup.kioskId}
               conceptName={checkoutGroup.conceptName}
               items={checkoutGroup.items}
+              concepts={concepts}
+              vatRate={concepts?.find((c) => c.id === checkoutGroup.kioskId)?.vatRate || 0}
               onSuccess={(orderData) => {
                 setOrderedCarts(
                   (prev) => new Set([...prev, checkoutGroup.kioskId]),
@@ -1335,7 +1429,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose }) {
                             fontFamily: "monospace",
                           }}
                         >
-                          Kiosk #{group.kioskId.slice(0, 8).toUpperCase()}
+                          Kiosk #{group?.kioskId?.slice?.(0, 8)?.toUpperCase() || "UNKNOWN"}
                         </div>
                       </div>
                       {isOrdered && (
@@ -1894,6 +1988,7 @@ export default function ShopPage() {
         setCartItems={setCartItems}
         open={cartOpen}
         onClose={() => setCartOpen(false)}
+        concepts={concepts}
       />
     </div>
   );
