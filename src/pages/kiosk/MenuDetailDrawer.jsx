@@ -20,6 +20,7 @@ import {
 import Tabs from "../../components/Tabs";
 import api from "../../api/axios";
 import { useAppState } from "../../contexts/StateContext";
+import { useAuth } from "../../contexts/AuthContext";
 import MachinerySupplyModal from "./MachinerySupplyModal";
 import IngredientSupplyModal from "./IngredientSupplyModal";
 
@@ -34,6 +35,7 @@ export function MenuDetailDrawer({
   onClose,
   cart,
 }) {
+  const { user } = useAuth();
   const { selectedState, states } = useAppState();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,24 @@ export function MenuDetailDrawer({
   const [packagingCostData, setPackagingCostData] = useState({ totalCost: 0, breakDown: [] });
   const [expandedPreps, setExpandedPreps] = useState({});
   const [reloadTrigger, setReloadTrigger] = useState(0);
+  const [additionalCosts, setAdditionalCosts] = useState([]);
+
+  useEffect(() => {
+    if (menuId) {
+      try {
+        const saved = localStorage.getItem(`additional_costs_${menuId}`);
+        setAdditionalCosts(saved ? JSON.parse(saved) : []);
+      } catch {
+        setAdditionalCosts([]);
+      }
+    }
+  }, [menuId]);
+
+  useEffect(() => {
+    if (menuId) {
+      localStorage.setItem(`additional_costs_${menuId}`, JSON.stringify(additionalCosts));
+    }
+  }, [additionalCosts, menuId]);
 
   useEffect(() => {
     if (selectedState?.id && !analysisStateId) {
@@ -198,19 +218,61 @@ export function MenuDetailDrawer({
       type: "packaging",
     } : null;
 
+    const subtotal = recipeItemsList.reduce((sum, item) => sum + item.totalCostVal, 0) +
+      (variantItem ? variantItem.totalCostVal : 0) +
+      (extraItem ? extraItem.totalCostVal : 0) +
+      (packagingItem ? packagingItem.totalCostVal : 0);
+
+    let sumCostsBeforeMarkup = 0;
+    let sumCostsAfterMarkup = 0;
+
+    const customItems = (additionalCosts || [])
+      .filter(ac => ac.title && Number(ac.amount) > 0)
+      .map(ac => {
+        const isPercent = ac.type === "percentage";
+        const val = isPercent ? (Number(ac.amount) / 100) * subtotal : Number(ac.amount);
+        const isPriceTarget = ac.target === "price";
+
+        if (isPriceTarget) {
+          sumCostsAfterMarkup += val;
+        } else {
+          sumCostsBeforeMarkup += val;
+        }
+
+        return {
+          id: `additional_${ac.id}`,
+          name: isPercent
+            ? `${ac.title} (${ac.amount}%) [${isPriceTarget ? "Price" : "Cost"}]`
+            : `${ac.title} [${isPriceTarget ? "Price" : "Cost"}]`,
+          unit: isPercent ? "%" : "cost",
+          image: null,
+          costPerUnit: val,
+          qty: 1,
+          totalCostVal: val,
+          type: "additional",
+        };
+      });
+
     const allItems = [
       ...recipeItemsList,
       ...(variantItem ? [variantItem] : []),
       ...(extraItem ? [extraItem] : []),
-      ...(packagingItem ? [packagingItem] : [])
+      ...(packagingItem ? [packagingItem] : []),
+      ...customItems
     ]
       .filter(x => x.totalCostVal > 0)
       .sort((a, b) => b.totalCostVal - a.totalCostVal);
 
-    const totalCost = allItems.reduce((sum, item) => sum + item.totalCostVal, 0);
+    const totalCost = subtotal + sumCostsBeforeMarkup + sumCostsAfterMarkup;
+    const sellingPrice = (subtotal + sumCostsBeforeMarkup) * (1 + markup / 100) + sumCostsAfterMarkup;
+    const profit = sellingPrice - totalCost;
+    const costPct = sellingPrice > 0 ? ((totalCost / sellingPrice) * 100).toFixed(1) : "0.0";
 
     return {
       totalCost,
+      sellingPrice,
+      profit,
+      costPct,
       items: allItems,
       extraUsed: extra,
     };
@@ -218,6 +280,12 @@ export function MenuDetailDrawer({
 
   useEffect(() => {
     if (!menuId || !activeStateId) return;
+
+    const item = summary?.menuItem || summary;
+    console.log(item)
+    if (!item) return;
+    const isOwner = user?.roles?.includes("ADMIN") || (user?.roles?.includes("VENDOR") && user?.Vendor?.id && user?.Vendor?.id === item?.vendorId);
+    if (!isOwner) return;
 
     let active = true;
     const fetchRawMaterials = async () => {
@@ -231,7 +299,7 @@ export function MenuDetailDrawer({
             returnCacheData: useCache ? "true" : "false",
           }
         });
-        
+
         if (active && res.data.data) {
           setRawMaterialCosts(res.data.data.ingredientCosts || {});
           setPackagingCostData(res.data.data.packagingCostData || { totalCost: 0, breakDown: [] });
@@ -248,7 +316,7 @@ export function MenuDetailDrawer({
     return () => {
       active = false;
     };
-  }, [menuId, activeStateId, useCache, cart?.id, reloadTrigger]);
+  }, [menuId, activeStateId, useCache, cart?.id, reloadTrigger, summary, user]);
 
   const currency = selectedState?.currency || "NGN";
   const formatCost = (amount) =>
@@ -349,18 +417,19 @@ export function MenuDetailDrawer({
       ? Number(n).toLocaleString("en-NG", { maximumFractionDigits: 0 })
       : "—";
 
+  const item = summary?.menuItem || summary;
+  const isOwner = user?.roles?.includes("ADMIN") || (user?.roles?.includes("VENDOR") && user?.Vendor?.id && user?.Vendor?.id === item?.vendorId);
+
   const TABS = [
     { key: "overview", label: "Overview", icon: MdInfoOutline },
     ...(cart ? [{ key: "settings", label: "Kiosk Settings", icon: MdSettings }] : []),
-    { key: "costing", label: "Live Costing", icon: MdAttachMoney },
+    ...(isOwner ? [{ key: "costing", label: "Live Costing", icon: MdAttachMoney }] : []),
     { key: "machinery", label: "Tools", icon: MdBuild },
     { key: "consumables", label: "Consumables", icon: MdOutlineInventory2 },
     { key: "ingredients", label: "Ingredients", icon: MdRestaurantMenu },
     { key: "preps", label: "Prep Items", icon: MdAccessTime },
     { key: "sops", label: "SOPs", icon: MdMenuBook },
   ];
-
-  const item = summary?.menuItem || summary;
   const concept = summary?.concept || {};
   const machineries = summary?.machineries || [];
   const consumables = summary?.consumables || [];
@@ -653,7 +722,7 @@ export function MenuDetailDrawer({
                   </div>
                 )}
 
-                {activeTab === "costing" && (
+                {activeTab === "costing" && isOwner && (
                   <div>
                     {/* Controls Row (State Selector & Cache Toggle & Reload) */}
                     <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
@@ -804,6 +873,185 @@ export function MenuDetailDrawer({
                       </div>
                     </div>
 
+                    {/* Additional Costs Section */}
+                    <div
+                      style={{
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 14,
+                        padding: "16px 18px",
+                        marginBottom: 20,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: 12,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.75rem",
+                            fontWeight: 800,
+                            color: "var(--text-heading)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                          }}
+                        >
+                          Additional Costs (Frontend Only)
+                        </span>
+                        <button
+                           type="button"
+                           onClick={() => setAdditionalCosts(prev => [...prev, { id: Date.now(), title: "", amount: "", type: "fixed", target: "cost" }])}
+                           style={{
+                             height: 28,
+                             padding: "0 10px",
+                             borderRadius: 6,
+                             border: "1px solid var(--border)",
+                             background: "var(--bg-hover)",
+                             color: "var(--accent)",
+                             fontSize: "0.72rem",
+                             fontWeight: 800,
+                             cursor: "pointer",
+                             display: "flex",
+                             alignItems: "center",
+                             gap: 4,
+                           }}
+                         >
+                           <MdAdd size={14} /> Add Cost
+                         </button>
+                      </div>
+
+                      {additionalCosts.length === 0 ? (
+                        <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "6px 0" }}>
+                          No additional costs added.
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                          {additionalCosts.map((ac) => (
+                            <div key={ac.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                              <input
+                                type="text"
+                                placeholder="Cost Title (e.g. Labor)"
+                                value={ac.title}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setAdditionalCosts(prev => prev.map(item => item.id === ac.id ? { ...item, title: val } : item));
+                                }}
+                                style={{
+                                  flex: 1,
+                                  height: 34,
+                                  borderRadius: 6,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg-hover)",
+                                  color: "var(--text-heading)",
+                                  padding: "0 10px",
+                                  fontSize: "0.78rem",
+                                  fontWeight: 700,
+                                  outline: "none",
+                                }}
+                              />
+                              <select
+                                value={ac.type || "fixed"}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setAdditionalCosts(prev => prev.map(item => item.id === ac.id ? { ...item, type: val } : item));
+                                }}
+                                style={{
+                                  width: 85,
+                                  height: 34,
+                                  borderRadius: 6,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg-hover)",
+                                  color: "var(--text-heading)",
+                                  padding: "0 4px",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 700,
+                                  outline: "none",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <option value="fixed">Flat (₦)</option>
+                                <option value="percentage">Percent (%)</option>
+                              </select>
+                              <div style={{ position: "relative", width: 100 }}>
+                                {ac.type !== "percentage" ? (
+                                  <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: "0.78rem", color: "var(--text-muted)" }}>₦</span>
+                                ) : (
+                                  <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", fontSize: "0.78rem", color: "var(--text-muted)" }}>%</span>
+                                )}
+                                <input
+                                  type="number"
+                                  placeholder="Amount"
+                                  value={ac.amount}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setAdditionalCosts(prev => prev.map(item => item.id === ac.id ? { ...item, amount: val } : item));
+                                  }}
+                                  style={{
+                                    width: "100%",
+                                    height: 34,
+                                    borderRadius: 6,
+                                    border: "1px solid var(--border)",
+                                    background: "var(--bg-hover)",
+                                    color: "var(--text-heading)",
+                                    padding: ac.type === "percentage" ? "0 20px 0 10px" : "0 10px 0 20px",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 700,
+                                    outline: "none",
+                                  }}
+                                />
+                              </div>
+                              <select
+                                value={ac.target || "cost"}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setAdditionalCosts(prev => prev.map(item => item.id === ac.id ? { ...item, target: val } : item));
+                                }}
+                                style={{
+                                  width: 110,
+                                  height: 34,
+                                  borderRadius: 6,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg-hover)",
+                                  color: "var(--text-heading)",
+                                  padding: "0 4px",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 700,
+                                  outline: "none",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <option value="cost">Add to Cost</option>
+                                <option value="price">Add to Price</option>
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => setAdditionalCosts(prev => prev.filter(item => item.id !== ac.id))}
+                                style={{
+                                  height: 34,
+                                  width: 34,
+                                  borderRadius: 6,
+                                  border: "1px solid rgba(239,68,68,0.2)",
+                                  background: "rgba(239,68,68,0.08)",
+                                  color: "#ef4444",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                                title="Remove Cost"
+                              >
+                                &times;
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     {/* Comparative Analytics Chart */}
                     <div
                       style={{
@@ -846,7 +1094,7 @@ export function MenuDetailDrawer({
                                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem" }}>
                                   <span style={{ fontWeight: 700, color: "var(--text-body)" }}>{menuName} (Base)</span>
                                   <span style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>
-                                    Cost: <strong style={{ color: "var(--text-heading)" }}>{formatCost(baseMenuCost)}</strong> · Price: <strong style={{ color: "var(--accent)" }}>{formatCost(calcSellingPrice(baseMenuCost))}</strong>
+                                    Cost: <strong style={{ color: "var(--text-heading)" }}>{formatCost(baseMenuCost)}</strong> · Price: <strong style={{ color: "var(--accent)" }}>{formatCost(baseComboData.sellingPrice)}</strong>
                                   </span>
                                 </div>
                                 <div style={{ height: 16, background: "var(--bg-hover)", borderRadius: 8, overflow: "hidden", display: "flex" }}>
@@ -854,7 +1102,7 @@ export function MenuDetailDrawer({
                                     style={{
                                       height: "100%",
                                       background: "linear-gradient(90deg, #a855f7, #c084fc)",
-                                      width: `${Math.min(100, (baseMenuCost / calcSellingPrice(baseMenuCost)) * 100)}%`,
+                                      width: `${Math.min(100, baseComboData.costPct)}%`,
                                       transition: "width 0.3s ease",
                                       display: "flex",
                                       alignItems: "center",
@@ -865,7 +1113,7 @@ export function MenuDetailDrawer({
                                       color: "#fff",
                                     }}
                                   >
-                                    {calcCostPct(baseMenuCost)}% Cost
+                                    {baseComboData.costPct}% Cost
                                   </div>
                                   <div
                                     style={{
@@ -892,8 +1140,8 @@ export function MenuDetailDrawer({
                             const varComboData = getComboData({ variantId: variant.id, extraId: null });
                             const varCost = Object.keys(rawMaterialCosts).length > 0 ? varComboData.totalCost : null;
                             if (varCost == null) return null;
-                            const varSellingPrice = calcSellingPrice(varCost);
-                            const varCostPct = calcCostPct(varCost);
+                            const varSellingPrice = varComboData.sellingPrice;
+                            const varCostPct = varComboData.costPct;
                             return (
                               <div key={variant.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem" }}>
@@ -907,7 +1155,7 @@ export function MenuDetailDrawer({
                                     style={{
                                       height: "100%",
                                       background: "linear-gradient(90deg, #a855f7, #c084fc)",
-                                      width: `${Math.min(100, (varCost / varSellingPrice) * 100)}%`,
+                                      width: `${Math.min(100, varCostPct)}%`,
                                       transition: "width 0.3s ease",
                                       display: "flex",
                                       alignItems: "center",
@@ -1247,8 +1495,8 @@ export function MenuDetailDrawer({
                             {combos.map((combo) => {
                               const comboData = getComboData(combo);
                               const isExpanded = expandedCombo === combo.key;
-                              const sellingPrice = calcSellingPrice(comboData.totalCost);
-                              const profit = calcProfit(comboData.totalCost);
+                              const sellingPrice = comboData.sellingPrice;
+                              const profit = comboData.profit;
 
                               return (
                                 <div
@@ -1346,10 +1594,12 @@ export function MenuDetailDrawer({
                                                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
                                                   <span style={{ fontWeight: 600, color: "var(--text-body)" }}>
                                                     {item.name}{" "}
-                                                    <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>
-                                                      ({item.qty.toFixed(2)} {item.unit})
-                                                    </span>
-                                                    {(item.type === "extra" || item.type === "prep" || item.type === "variant") && (
+                                                    {item.type !== "additional" && (
+                                                      <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>
+                                                        ({item.qty.toFixed(2)} {item.unit})
+                                                      </span>
+                                                    )}
+                                                    {(item.type === "extra" || item.type === "prep" || item.type === "variant" || item.type === "packaging" || item.type === "additional") && (
                                                       <span
                                                         style={{
                                                           marginLeft: 6,
@@ -1361,17 +1611,29 @@ export function MenuDetailDrawer({
                                                             ? "var(--bg-active)"
                                                             : item.type === "prep"
                                                               ? "rgba(59,130,246,0.1)"
-                                                              : "rgba(168,85,247,0.1)",
+                                                              : item.type === "variant"
+                                                                ? "rgba(168,85,247,0.1)"
+                                                                : item.type === "packaging"
+                                                                  ? "rgba(16,185,129,0.1)"
+                                                                  : "rgba(245,158,11,0.1)",
                                                           color: item.type === "extra"
                                                             ? "var(--accent)"
                                                             : item.type === "prep"
                                                               ? "#3b82f6"
-                                                              : "#a855f7",
+                                                              : item.type === "variant"
+                                                                ? "#a855f7"
+                                                                : item.type === "packaging"
+                                                                  ? "#10b981"
+                                                                  : "#f59e0b",
                                                           border: item.type === "extra"
                                                             ? "1px solid rgba(203,108,220,0.2)"
                                                             : item.type === "prep"
                                                               ? "1px solid rgba(59,130,246,0.2)"
-                                                              : "1px solid rgba(168,85,247,0.2)",
+                                                              : item.type === "variant"
+                                                                ? "1px solid rgba(168,85,247,0.2)"
+                                                                : item.type === "packaging"
+                                                                  ? "1px solid rgba(16,185,129,0.2)"
+                                                                  : "1px solid rgba(245,158,11,0.2)",
                                                         }}
                                                       >
                                                         {item.type.toUpperCase()}
@@ -1388,9 +1650,15 @@ export function MenuDetailDrawer({
                                                       height: "100%",
                                                       background: item.type === "extra"
                                                         ? "linear-gradient(90deg, #ec4899 0%, #f472b6 100%)"
-                                                        : item.type === "prep" || item.type === "variant"
+                                                        : item.type === "prep"
                                                           ? "linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%)"
-                                                          : "linear-gradient(90deg, #a855f7 0%, var(--accent) 100%)",
+                                                          : item.type === "variant"
+                                                            ? "linear-gradient(90deg, #a855f7 0%, #c084fc 100%)"
+                                                            : item.type === "packaging"
+                                                              ? "linear-gradient(90deg, #10b981 0%, #34d399 100%)"
+                                                              : item.type === "additional"
+                                                                ? "linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)"
+                                                                : "linear-gradient(90deg, #a855f7 0%, var(--accent) 100%)",
                                                       width: `${pct}%`,
                                                       borderRadius: 4,
                                                       transition: "width 0.3s ease",
@@ -1631,16 +1899,17 @@ export function MenuDetailDrawer({
                     )}
 
                     {/* Professional Financial Overview Widget */}
-                    {(() => {
-                      const derivedBaseCost = Object.keys(rawMaterialCosts).length > 0
-                        ? getComboData({ variantId: null, extraId: null }).totalCost
-                        : (summary?.baseCost ?? item?.recipeCost);
+                    {isOwner && (() => {
+                      const baseComboData = Object.keys(rawMaterialCosts).length > 0
+                        ? getComboData({ variantId: null, extraId: null })
+                        : null;
+                      const derivedBaseCost = baseComboData ? baseComboData.totalCost : (summary?.baseCost ?? item?.recipeCost);
 
                       if (derivedBaseCost == null) return null;
 
-                      const priceVal = calcSellingPrice(derivedBaseCost);
-                      const profitVal = calcProfit(derivedBaseCost);
-                      const marginPct = calcCostPct(derivedBaseCost);
+                      const priceVal = baseComboData ? baseComboData.sellingPrice : calcSellingPrice(derivedBaseCost);
+                      const profitVal = baseComboData ? baseComboData.profit : calcProfit(derivedBaseCost);
+                      const marginPct = baseComboData ? baseComboData.costPct : calcCostPct(derivedBaseCost);
                       return (
                         <div
                           style={{
@@ -1724,15 +1993,17 @@ export function MenuDetailDrawer({
                       }}
                     >
                       {(() => {
-                        const derivedBaseCost = Object.keys(rawMaterialCosts).length > 0
-                          ? getComboData({ variantId: null, extraId: null }).totalCost
-                          : (summary?.baseCost ?? item?.recipeCost);
+                        const baseComboData = Object.keys(rawMaterialCosts).length > 0
+                          ? getComboData({ variantId: null, extraId: null })
+                          : null;
+                        const derivedBaseCost = baseComboData ? baseComboData.totalCost : (summary?.baseCost ?? item?.recipeCost);
+                        const sellingPriceVal = baseComboData ? baseComboData.sellingPrice : (derivedBaseCost != null ? calcSellingPrice(derivedBaseCost) : null);
                         return [
                           {
                             label: "Selling Price",
                             value:
-                              derivedBaseCost != null
-                                ? `₦${fmt(calcSellingPrice(derivedBaseCost))}`
+                              sellingPriceVal != null
+                                ? `₦${fmt(sellingPriceVal)}`
                                 : item?.sellingPrice > 0
                                   ? `₦${fmt(item.sellingPrice)}`
                                   : null,
