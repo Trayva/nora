@@ -921,25 +921,25 @@ export function MenuDetailDrawer({
                           Additional Costs (Frontend Only)
                         </span>
                         <button
-                           type="button"
-                           onClick={() => setAdditionalCosts(prev => [...prev, { id: Date.now(), title: "", amount: "", type: "fixed", target: "cost" }])}
-                           style={{
-                             height: 28,
-                             padding: "0 10px",
-                             borderRadius: 6,
-                             border: "1px solid var(--border)",
-                             background: "var(--bg-hover)",
-                             color: "var(--accent)",
-                             fontSize: "0.72rem",
-                             fontWeight: 800,
-                             cursor: "pointer",
-                             display: "flex",
-                             alignItems: "center",
-                             gap: 4,
-                           }}
-                         >
-                           <MdAdd size={14} /> Add Cost
-                         </button>
+                          type="button"
+                          onClick={() => setAdditionalCosts(prev => [...prev, { id: Date.now(), title: "", amount: "", type: "fixed", target: "cost" }])}
+                          style={{
+                            height: 28,
+                            padding: "0 10px",
+                            borderRadius: 6,
+                            border: "1px solid var(--border)",
+                            background: "var(--bg-hover)",
+                            color: "var(--accent)",
+                            fontSize: "0.72rem",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <MdAdd size={14} /> Add Cost
+                        </button>
                       </div>
 
                       {additionalCosts.length === 0 ? (
@@ -1972,7 +1972,7 @@ export function MenuDetailDrawer({
                             {/* Cost */}
                             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                               <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>
-                                Cost Price
+                                Cost Pricessss
                               </span>
                               <span style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--text-heading)" }}>
                                 ₦{fmt(derivedBaseCost)}

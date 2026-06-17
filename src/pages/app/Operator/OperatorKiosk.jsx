@@ -42,10 +42,10 @@ import {
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "—";
 
 function StatusChip({ status }) {
@@ -445,7 +445,7 @@ export function InventoryTab({ kioskId }) {
         const d = r.data.data;
         setSuppliers(Array.isArray(d) ? d : d?.suppliers || d?.items || []);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const handleRecordUsage = async () => {
@@ -940,8 +940,8 @@ export function InventoryTab({ kioskId }) {
                               borderBottom: "1px solid var(--border)",
                             }}
                             onMouseEnter={(e) =>
-                              (e.currentTarget.style.background =
-                                "var(--bg-hover)")
+                            (e.currentTarget.style.background =
+                              "var(--bg-hover)")
                             }
                             onMouseLeave={(e) =>
                               (e.currentTarget.style.background = "transparent")
@@ -1405,21 +1405,21 @@ function LearnRecipeStep({ step, index }) {
   const typeColor =
     step.type === "variant"
       ? {
-          bg: "rgba(203,108,220,0.1)",
-          color: "var(--accent)",
-          border: "rgba(203,108,220,0.25)",
-        }
+        bg: "rgba(203,108,220,0.1)",
+        color: "var(--accent)",
+        border: "rgba(203,108,220,0.25)",
+      }
       : step.type === "prep"
         ? {
-            bg: "rgba(59,130,246,0.1)",
-            color: "#3b82f6",
-            border: "rgba(59,130,246,0.25)",
-          }
+          bg: "rgba(59,130,246,0.1)",
+          color: "#3b82f6",
+          border: "rgba(59,130,246,0.25)",
+        }
         : {
-            bg: "rgba(34,197,94,0.1)",
-            color: "#16a34a",
-            border: "rgba(34,197,94,0.25)",
-          };
+          bg: "rgba(34,197,94,0.1)",
+          color: "#16a34a",
+          border: "rgba(34,197,94,0.25)",
+        };
   return (
     <div
       style={{
@@ -1940,48 +1940,48 @@ function TestResultView({ result, onRetake, onDone }) {
       ? null
       : pct >= 90
         ? {
-            letter: "A",
-            label: "Distinction",
-            color: "#16a34a",
-            bg: "rgba(34,197,94,0.1)",
-            border: "rgba(34,197,94,0.3)",
-            range: "90–100%",
-          }
+          letter: "A",
+          label: "Distinction",
+          color: "#16a34a",
+          bg: "rgba(34,197,94,0.1)",
+          border: "rgba(34,197,94,0.3)",
+          range: "90–100%",
+        }
         : pct >= 75
           ? {
-              letter: "B",
-              label: "Credit",
-              color: "#3b82f6",
-              bg: "rgba(59,130,246,0.1)",
-              border: "rgba(59,130,246,0.3)",
-              range: "75–89%",
-            }
+            letter: "B",
+            label: "Credit",
+            color: "#3b82f6",
+            bg: "rgba(59,130,246,0.1)",
+            border: "rgba(59,130,246,0.3)",
+            range: "75–89%",
+          }
           : pct >= 60
             ? {
-                letter: "C",
-                label: "Merit",
-                color: "#ca8a04",
-                bg: "rgba(234,179,8,0.1)",
-                border: "rgba(234,179,8,0.3)",
-                range: "60–74%",
-              }
+              letter: "C",
+              label: "Merit",
+              color: "#ca8a04",
+              bg: "rgba(234,179,8,0.1)",
+              border: "rgba(234,179,8,0.3)",
+              range: "60–74%",
+            }
             : pct >= 50
               ? {
-                  letter: "D",
-                  label: "Pass",
-                  color: "#f97316",
-                  bg: "rgba(249,115,22,0.1)",
-                  border: "rgba(249,115,22,0.3)",
-                  range: "50–59%",
-                }
+                letter: "D",
+                label: "Pass",
+                color: "#f97316",
+                bg: "rgba(249,115,22,0.1)",
+                border: "rgba(249,115,22,0.3)",
+                range: "50–59%",
+              }
               : {
-                  letter: "F",
-                  label: "Fail — Retake Required",
-                  color: "#ef4444",
-                  bg: "rgba(239,68,68,0.1)",
-                  border: "rgba(239,68,68,0.3)",
-                  range: "under 90%",
-                };
+                letter: "F",
+                label: "Fail — Retake Required",
+                color: "#ef4444",
+                bg: "rgba(239,68,68,0.1)",
+                border: "rgba(239,68,68,0.3)",
+                range: "under 90%",
+              };
   return (
     <div
       style={{
@@ -2881,11 +2881,11 @@ export function ELearningTab({ menuItems }) {
         onRetake={
           !testResult.passed
             ? () => {
-                setActiveTest(null);
-                setTestResult(null);
-                if (selectedId) unmarkWatched(selectedId);
-                setMode("learn");
-              }
+              setActiveTest(null);
+              setTestResult(null);
+              if (selectedId) unmarkWatched(selectedId);
+              setMode("learn");
+            }
             : undefined
         }
         onDone={() => {
@@ -3508,14 +3508,14 @@ function RecordSaleForm({ kioskId, menuItems, vatRate = 0, onSaved }) {
       [key]: prev[key]
         ? { ...prev[key], qty: prev[key].qty + qty }
         : {
-            item,
-            qty,
-            variantId,
-            extraIds,
-            variantLabel,
-            extrasLabels,
-            unitPrice,
-          },
+          item,
+          qty,
+          variantId,
+          extraIds,
+          variantLabel,
+          extrasLabels,
+          unitPrice,
+        },
     }));
     toast.success(`${item.name} added`, { autoClose: 800 });
   };
@@ -3952,32 +3952,33 @@ function RecordSaleForm({ kioskId, menuItems, vatRate = 0, onSaved }) {
                 </>
               )}
             </div>
-            <button
-              onClick={handleSubmit}
-              disabled={saving}
-              className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
-              style={{
-                height: 44,
-                padding: "0 24px",
-                position: "relative",
-                fontSize: "0.88rem",
-                fontWeight: 800,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 7,
-              }}
-            >
-              <span className="btn_text">
-                <MdPointOfSale size={16} /> Submit Sale
-              </span>
-              {saving && (
-                <span
-                  className="btn_loader"
-                  style={{ width: 14, height: 14 }}
-                />
-              )}
-            </button>
           </div>
+          <br />
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+            style={{
+              height: 44,
+              padding: "0 24px",
+              position: "relative",
+              fontSize: "0.88rem",
+              fontWeight: 800,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+            }}
+          >
+            <span className="btn_text">
+              <MdPointOfSale size={16} /> Submit Sale
+            </span>
+            {saving && (
+              <span
+                className="btn_loader"
+                style={{ width: 14, height: 14 }}
+              />
+            )}
+          </button>
         </div>
       )}
       {customising && (
@@ -4160,9 +4161,9 @@ export function SalesTab({ kioskId, menuItems, isOperator = true, vatRate = 0 })
   const fmtChartDate = (d) =>
     d
       ? new Date(d).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-        })
+        day: "2-digit",
+        month: "short",
+      })
       : "";
   const fmtTick = (v) => `\u20A6${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`;
   return (
@@ -4372,10 +4373,14 @@ export default function OperatorKioskPage() {
   useEffect(() => {
     api
       .get(`/kiosk/${kioskId}`)
-      .then((r) => setCart(r.data.data))
+      .then((r) => {
+        console.log("FETCHED KIOSK DETAILS:", r.data.data);
+        setCart(r.data.data);
+      })
       .catch(() => toast.error("Failed to load kiosk"))
       .finally(() => setLoading(false));
   }, [kioskId]);
+  console.log(kioskId)
   if (loading)
     return (
       <div className="page_wrapper">

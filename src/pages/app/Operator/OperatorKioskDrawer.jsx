@@ -106,6 +106,7 @@ export default function OperatorKioskDrawer({ kioskId, onClose }) {
           )}
           {activeTab === "sales" && (
             <SalesTab
+              vatRate={kiosk.vatRate}
               kioskId={kioskId}
               menuItems={kiosk.menuItems || []}
               isOperator={true}

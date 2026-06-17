@@ -50,12 +50,12 @@ export default function InvoicePayModal({ invoice, application, onPaid, onClose 
       .finally(() => setWalletLoading(false));
   }, []);
 
-  const handlePay = async (method) => {
-    setPaying(method);
+  const handlePay = async (method, gateway = "paystack") => {
+    setPaying(method === "online" ? gateway : method);
     setShowMethods(false);
     try {
       const res = await api.get(`/finance/invoice/${invoice.id}/pay`, {
-        params: { method, shouldRedirect: false },
+        params: { method, shouldRedirect: false, gateway },
       });
       const paymentLink = res.data?.data?.paymentLink;
       if (method === "online" && paymentLink) {
@@ -377,11 +377,11 @@ export default function InvoicePayModal({ invoice, application, onPaid, onClose 
           {invoice.status === "PENDING" &&
             (showMethods ? (
               <>
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <button
                     className={`app_btn app_btn_confirm${paying === "wallet" ? " btn_loading" : ""}`}
                     style={{
-                      flex: 1,
+                      width: "100%",
                       height: 42,
                       position: "relative",
                       opacity: !sufficient && !walletLoading ? 0.5 : 1,
@@ -397,20 +397,36 @@ export default function InvoicePayModal({ invoice, application, onPaid, onClose 
                       />
                     )}
                   </button>
-                  <button
-                    className={`app_btn app_btn_confirm${paying === "online" ? " btn_loading" : ""}`}
-                    style={{ flex: 1, height: 42, position: "relative" }}
-                    onClick={() => handlePay("online")}
-                    disabled={!!paying}
-                  >
-                    <span className="btn_text">Pay Online</span>
-                    {paying === "online" && (
-                      <span
-                        className="btn_loader"
-                        style={{ width: 14, height: 14 }}
-                      />
-                    )}
-                  </button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      className={`app_btn app_btn_confirm${paying === "paystack" ? " btn_loading" : ""}`}
+                      style={{ flex: 1, height: 42, position: "relative" }}
+                      onClick={() => handlePay("online", "paystack")}
+                      disabled={!!paying}
+                    >
+                      <span className="btn_text">Pay via Paystack</span>
+                      {paying === "paystack" && (
+                        <span
+                          className="btn_loader"
+                          style={{ width: 14, height: 14 }}
+                        />
+                      )}
+                    </button>
+                    <button
+                      className={`app_btn app_btn_confirm${paying === "stripe" ? " btn_loading" : ""}`}
+                      style={{ flex: 1, height: 42, position: "relative" }}
+                      onClick={() => handlePay("online", "stripe")}
+                      disabled={!!paying}
+                    >
+                      <span className="btn_text">Pay via Stripe</span>
+                      {paying === "stripe" && (
+                        <span
+                          className="btn_loader"
+                          style={{ width: 14, height: 14 }}
+                        />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <button
                   className="app_btn app_btn_cancel"

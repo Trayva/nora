@@ -90,11 +90,13 @@ export const updateSettlementAccount = async (accountNumber, bankCode, bankName)
 /**
  * Initiate a wallet topup.
  * @param {number} amount
+ * @param {string} [gateway]
  */
-export const initiateTopup = async (amount) => {
-  const response = await api.post("/finance/wallet/topup/initiate", { amount });
+export const initiateTopup = async (amount, gateway = "paystack") => {
+  const response = await api.post("/finance/wallet/topup/initiate", { amount, gateway });
   return response.data;
 };
+
 
 /**
  * Withdraw funds from the wallet.

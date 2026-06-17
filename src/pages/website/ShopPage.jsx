@@ -887,6 +887,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
     deliveryAddress: "",
   });
   const [placing, setPlacing] = useState(false);
+  const [gateway, setGateway] = useState("paystack");
   
   const total = items.reduce(
     (s, e) => s + (e.unitPrice || e.item.sellingPrice || 0) * e.qty,
@@ -912,6 +913,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
         customerPhone: form.customerPhone.trim() || undefined,
         deliveryAddress: orderType === "PICKUP" ? undefined : form.deliveryAddress.trim(),
         orderType,
+        gateway,
         items: items.map((e) => ({
           menuItemId: e.item.id,
           quantity: e.qty,
@@ -1165,6 +1167,52 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
             />
           </div>
         ))}
+
+      <div className="form-field" style={{ marginTop: 14, marginBottom: 16 }}>
+        <label className="modal-label">Payment Gateway</label>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
+          <button
+            type="button"
+            onClick={() => setGateway("paystack")}
+            style={{
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: gateway === "paystack" ? "2px solid var(--accent)" : "1px solid var(--border)",
+              background: gateway === "paystack" ? "var(--bg-active)" : "var(--bg-card)",
+              color: "var(--text-heading)",
+              fontWeight: 700,
+              fontSize: "0.82rem",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s"
+            }}
+          >
+            Paystack
+          </button>
+          <button
+            type="button"
+            onClick={() => setGateway("stripe")}
+            style={{
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: gateway === "stripe" ? "2px solid var(--accent)" : "1px solid var(--border)",
+              background: gateway === "stripe" ? "var(--bg-active)" : "var(--bg-card)",
+              color: "var(--text-heading)",
+              fontWeight: 700,
+              fontSize: "0.82rem",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s"
+            }}
+          >
+            Stripe
+          </button>
+        </div>
+      </div>
 
       <button
         onClick={place}

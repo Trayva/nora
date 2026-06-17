@@ -11,6 +11,7 @@ import {
 
 export function TopupModal({ isOpen, onClose, onSuccess }) {
   const [amount, setAmount] = useState("");
+  const [gateway, setGateway] = useState("paystack");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -19,7 +20,7 @@ export function TopupModal({ isOpen, onClose, onSuccess }) {
       return toast.error("Please enter a valid amount (min 100)");
     setLoading(true);
     try {
-      const res = await initiateTopup(Number(amount));
+      const res = await initiateTopup(Number(amount), gateway);
       if (res.data?.checkoutUrl) {
         window.location.href = res.data.checkoutUrl;
       } else {
@@ -36,7 +37,7 @@ export function TopupModal({ isOpen, onClose, onSuccess }) {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Topup Wallet"
-      description="Enter the amount you'd like to add to your wallet.">
+      description="Enter the amount and select your payment gateway.">
       <form onSubmit={handleSubmit}>
         <div className="modal-body">
           <div className="form-field">
@@ -49,6 +50,51 @@ export function TopupModal({ isOpen, onClose, onSuccess }) {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
+          </div>
+          <div className="form-field" style={{ marginBottom: 16 }}>
+            <label className="modal-label">Payment Gateway</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
+              <button
+                type="button"
+                onClick={() => setGateway("paystack")}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: gateway === "paystack" ? "2px solid var(--accent)" : "1px solid var(--border)",
+                  background: gateway === "paystack" ? "var(--bg-active)" : "var(--bg-card)",
+                  color: "var(--text-heading)",
+                  fontWeight: 700,
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s"
+                }}
+              >
+                Paystack
+              </button>
+              <button
+                type="button"
+                onClick={() => setGateway("stripe")}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: gateway === "stripe" ? "2px solid var(--accent)" : "1px solid var(--border)",
+                  background: gateway === "stripe" ? "var(--bg-active)" : "var(--bg-card)",
+                  color: "var(--text-heading)",
+                  fontWeight: 700,
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s"
+                }}
+              >
+                Stripe
+              </button>
+            </div>
           </div>
           <div className="modal-footer">
             <button className="app_btn app_btn_cancel" type="button" onClick={onClose}>
