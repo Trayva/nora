@@ -11,7 +11,7 @@ import moment from "moment";
 
 // ── Topup Modal ──────────────────────────────────────────────────
 
-export function TopupModal({ isOpen, onClose, onSuccess }) {
+export function TopupModal({ isOpen, onClose, onSuccess, currency }) {
   const [amount, setAmount] = useState("");
   const [gateway, setGateway] = useState("paystack");
   const [loading, setLoading] = useState(false);
@@ -43,7 +43,7 @@ export function TopupModal({ isOpen, onClose, onSuccess }) {
       <form onSubmit={handleSubmit}>
         <div className="modal-body">
           <div className="form-field">
-            <label className="modal-label">Amount (NGN)</label>
+            <label className="modal-label">Amount ({currency})</label>
             <input
               className="modal-input"
               type="number"

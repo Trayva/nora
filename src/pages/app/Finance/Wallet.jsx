@@ -408,7 +408,7 @@ export default function Wallet() {
         </>
       )}
 
-      <TopupModal isOpen={showTopup} onClose={() => setShowTopup(false)} onSuccess={fetchData} />
+      <TopupModal currency={wallet?.currency} isOpen={showTopup} onClose={() => setShowTopup(false)} onSuccess={fetchData} />
       <WithdrawModal isOpen={showWithdraw} onClose={() => setShowWithdraw(false)} onSuccess={fetchData} balance={wallet?.balance} />
       <PinModal isOpen={showPin} onClose={() => setShowPin(false)} hasPin={!!wallet?.transactionPin} onSuccess={fetchData} />
       <SettlementModal isOpen={showSettlement} onClose={() => setShowSettlement(false)} onSuccess={fetchData} />
