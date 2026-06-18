@@ -215,15 +215,39 @@ export function PinInput({ length = 4, value, onChange, type = "password" }) {
 // ── Withdraw Modal ────────────────────────────────────────────────
 
 export function WithdrawModal({ isOpen, onClose, onSuccess, balance }) {
+  const [step, setStep] = useState(1);
   const [amount, setAmount] = useState("");
   const [pin, setPinValue] = useState("");
   const [desc, setDesc] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      setAmount("");
+      setPinValue("");
+      setDesc("");
+    }
+  }, [isOpen]);
+
+  const handleNext = () => {
+    if (step === 1) {
+      if (!amount || amount <= 0 || amount > balance) return toast.error("Invalid amount");
+      setStep(2);
+    } else if (step === 2) {
+      if (!pin || pin.length !== 4) return toast.error("Transaction pin must be 4 digits");
+      setStep(3);
+    }
+  };
+
+  const handleBack = () => setStep((s) => s - 1);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!amount || amount > balance) return toast.error("Invalid amount");
-    if (!pin || pin.length !== 4) return toast.error("Transaction pin must be 4 digits");
+    if (step < 3) {
+      handleNext();
+      return;
+    }
     setLoading(true);
     try {
       await withdrawFunds(pin, Number(amount), desc);
@@ -237,51 +261,69 @@ export function WithdrawModal({ isOpen, onClose, onSuccess, balance }) {
     }
   };
 
+  const descText =
+    step === 1 ? "Enter amount to withdraw." :
+    step === 2 ? "Enter your 4-digit transaction pin." :
+    "Add an optional note for this withdrawal.";
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Withdraw Funds"
-      description="Transfer funds from your wallet to your settlement account.">
+    <Modal isOpen={isOpen} onClose={onClose} title="Withdraw Funds" description={descText}>
       <form onSubmit={handleSubmit}>
         <div className="modal-body">
-          <div className="form-field">
-            <label className="modal-label">Amount (NGN)</label>
-            <input
-              className="modal-input"
-              type="number"
-              placeholder="e.g. 1000"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-          <div className="form-field">
-            <label className="modal-label">Transaction Pin</label>
-            <PinInput
-              length={4}
-              value={pin}
-              onChange={setPinValue}
-              type="password"
-            />
-          </div>
-          <div className="form-field">
-            <label className="modal-label">Description (Optional)</label>
-            <input
-              className="modal-input"
-              type="text"
-              placeholder="e.g. For supplies"
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-            />
-          </div>
-          <div className="modal-footer">
-            <button className="app_btn app_btn_cancel" type="button" onClick={onClose}>
-              Cancel
-            </button>
+          {step === 1 && (
+            <div className="form-field">
+              <label className="modal-label">Amount (NGN)</label>
+              <input
+                className="modal-input"
+                type="number"
+                placeholder="e.g. 1000"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                autoFocus
+              />
+            </div>
+          )}
+          {step === 2 && (
+            <div className="form-field">
+              <label className="modal-label">Transaction Pin</label>
+              <PinInput
+                length={4}
+                value={pin}
+                onChange={setPinValue}
+                type="password"
+              />
+            </div>
+          )}
+          {step === 3 && (
+            <div className="form-field">
+              <label className="modal-label">Description (Optional)</label>
+              <input
+                className="modal-input"
+                type="text"
+                placeholder="e.g. For supplies"
+                value={desc}
+                onChange={(e) => setDesc(e.target.value)}
+                autoFocus
+              />
+            </div>
+          )}
+          <div className="modal-footer" style={{ display: "flex", justifyContent: "space-between" }}>
+            {step > 1 ? (
+              <button className="app_btn app_btn_cancel" type="button" onClick={handleBack} disabled={loading}>
+                Back
+              </button>
+            ) : (
+              <button className="app_btn app_btn_cancel" type="button" onClick={onClose} disabled={loading}>
+                Cancel
+              </button>
+            )}
             <button
               className={`app_btn app_btn_confirm ${loading ? "btn_loading" : ""}`}
               type="submit"
               disabled={loading}
               style={{ position: "relative", minWidth: 120 }}
             >
-              <span className="btn_text">Withdraw</span>
+              <span className="btn_text">{step < 3 ? "Next" : "Withdraw"}</span>
               {loading && <span className="btn_loader" style={{ width: 16, height: 16 }} />}
             </button>
           </div>
@@ -296,6 +338,7 @@ export function WithdrawModal({ isOpen, onClose, onSuccess, balance }) {
 export function PinModal({ isOpen, onClose, hasPin, onSuccess }) {
   const { user } = useAuth();
   const [mode, setMode] = useState("set");
+  const [step, setStep] = useState(1);
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -304,14 +347,38 @@ export function PinModal({ isOpen, onClose, hasPin, onSuccess }) {
   useEffect(() => {
     if (isOpen) {
       setMode(hasPin ? "change" : "set");
+      setStep(1);
       setCurrentPin(""); setNewPin(""); setConfirmPin("");
     }
   }, [isOpen, hasPin]);
 
+  const handleNext = () => {
+    if (mode === "change") {
+      if (step === 1) {
+        if (!currentPin || currentPin.length !== 4) return toast.error("Pin must be 4 digits");
+        setStep(2);
+      } else if (step === 2) {
+        if (!newPin || newPin.length !== 4) return toast.error("Pin must be 4 digits");
+        setStep(3);
+      }
+    } else {
+      if (step === 1) {
+        if (!newPin || newPin.length !== 4) return toast.error("Pin must be 4 digits");
+        setStep(2);
+      }
+    }
+  };
+
+  const handleBack = () => setStep((s) => s - 1);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const isLastStep = (mode === "change" && step === 3) || (mode !== "change" && step === 2);
+    if (!isLastStep) {
+      handleNext();
+      return;
+    }
     if (newPin !== confirmPin) return toast.error("Pins do not match");
-    if (newPin.length !== 4) return toast.error("Pin must be 4 digits");
     setLoading(true);
     try {
       if (mode === "change") await changePin(currentPin, newPin);
@@ -328,15 +395,19 @@ export function PinModal({ isOpen, onClose, hasPin, onSuccess }) {
 
   const title = mode === "reset" ? "Reset Transaction Pin"
     : hasPin ? "Change Transaction Pin" : "Set Transaction Pin";
-  const desc = mode === "reset" ? "Enter a new 4-digit pin to reset your access."
-    : hasPin ? "Enter your current pin and a new 4-digit pin."
-      : "Create a 4-digit pin to secure your transactions.";
+
+  let desc = "";
+  if (mode === "change") {
+    desc = step === 1 ? "Enter your current 4-digit pin." : step === 2 ? "Enter a new 4-digit pin." : "Confirm your new 4-digit pin.";
+  } else {
+    desc = step === 1 ? (mode === "reset" ? "Enter a new 4-digit pin to reset your access." : "Create a 4-digit pin to secure your transactions.") : "Confirm your new 4-digit pin.";
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} description={desc}>
       <form onSubmit={handleSubmit}>
         <div className="modal-body">
-          {mode === "change" && (
+          {mode === "change" && step === 1 && (
             <div className="form-field">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <label className="modal-label">Current Pin</label>
@@ -344,7 +415,7 @@ export function PinModal({ isOpen, onClose, hasPin, onSuccess }) {
                   type="button"
                   className="login_forgot_link"
                   style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
-                  onClick={() => setMode("reset")}
+                  onClick={() => { setMode("reset"); setStep(1); }}
                 >
                   Forgot Pin?
                 </button>
@@ -357,35 +428,44 @@ export function PinModal({ isOpen, onClose, hasPin, onSuccess }) {
               />
             </div>
           )}
-          <div className="form-field">
-            <label className="modal-label">New Pin</label>
-            <PinInput
-              length={4}
-              value={newPin}
-              onChange={setNewPin}
-              type="password"
-            />
-          </div>
-          <div className="form-field">
-            <label className="modal-label">Confirm New Pin</label>
-            <PinInput
-              length={4}
-              value={confirmPin}
-              onChange={setConfirmPin}
-              type="password"
-            />
-          </div>
-          <div className="modal-footer">
-            {mode === "reset" ? (
+          {((mode === "change" && step === 2) || (mode !== "change" && step === 1)) && (
+            <div className="form-field">
+              <label className="modal-label">New Pin</label>
+              <PinInput
+                length={4}
+                value={newPin}
+                onChange={setNewPin}
+                type="password"
+              />
+            </div>
+          )}
+          {((mode === "change" && step === 3) || (mode !== "change" && step === 2)) && (
+            <div className="form-field">
+              <label className="modal-label">Confirm New Pin</label>
+              <PinInput
+                length={4}
+                value={confirmPin}
+                onChange={setConfirmPin}
+                type="password"
+              />
+            </div>
+          )}
+          <div className="modal-footer" style={{ display: "flex", justifyContent: "space-between" }}>
+            {step > 1 ? (
+              <button className="app_btn app_btn_cancel" type="button" onClick={handleBack} disabled={loading}>
+                Back
+              </button>
+            ) : mode === "reset" ? (
               <button
                 type="button"
                 className="app_btn app_btn_cancel"
-                onClick={() => setMode("change")}
+                onClick={() => { setMode("change"); setStep(1); }}
+                disabled={loading}
               >
-                ← Back
+                Back
               </button>
             ) : (
-              <button className="app_btn app_btn_cancel" type="button" onClick={onClose}>
+              <button className="app_btn app_btn_cancel" type="button" onClick={onClose} disabled={loading}>
                 Cancel
               </button>
             )}
@@ -396,7 +476,9 @@ export function PinModal({ isOpen, onClose, hasPin, onSuccess }) {
               style={{ position: "relative", minWidth: 120 }}
             >
               <span className="btn_text">
-                {mode === "reset" ? "Reset Pin" : hasPin ? "Update Pin" : "Set Pin"}
+                {((mode === "change" && step === 3) || (mode !== "change" && step === 2))
+                  ? (mode === "reset" ? "Reset Pin" : hasPin ? "Update Pin" : "Set Pin")
+                  : "Next"}
               </span>
               {loading && <span className="btn_loader" style={{ width: 16, height: 16 }} />}
             </button>

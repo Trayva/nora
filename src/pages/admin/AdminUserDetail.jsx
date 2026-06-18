@@ -459,7 +459,6 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
   const [country, setCountry] = useState(initialUser.country || "");
   const [govIdType, setGovIdType] = useState(initialUser.governmentIdType || "");
   const [govIdNumber, setGovIdNumber] = useState(initialUser.governmentIdNumber || "");
-  const [bvn, setBvn] = useState(initialUser.bvn || "");
   const [bvnVerified, setBvnVerified] = useState(initialUser.bvnVerified ?? false);
   const [kycStatus, setKycStatus] = useState(initialUser.kycStatus || "PENDING");
   const [govIdImageFile, setGovIdImageFile] = useState(null);
@@ -501,7 +500,6 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
       payload.append("country", country);
       payload.append("governmentIdType", govIdType);
       payload.append("governmentIdNumber", govIdNumber);
-      payload.append("bvn", bvn);
       payload.append("bvnVerified", bvnVerified);
       payload.append("kycStatus", kycStatus);
       if (govIdImageFile) {
@@ -538,7 +536,6 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
     setCountry(currentUser?.country || "");
     setGovIdType(currentUser?.governmentIdType || "");
     setGovIdNumber(currentUser?.governmentIdNumber || "");
-    setBvn(currentUser?.bvn || "");
     setBvnVerified(currentUser?.bvnVerified ?? false);
     setKycStatus(currentUser?.kycStatus || "PENDING");
     setRoles(currentUser?.roles?.map((r) => r.role || r) || []);
@@ -1093,7 +1090,7 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
                     placeholder="Country"
                   />
                 </div>
-                <div className="form-field" style={{ marginBottom: 0 }}>
+                {/* <div className="form-field" style={{ marginBottom: 0 }}>
                   <label className="modal-label">BVN</label>
                   <input
                     className="modal-input"
@@ -1101,7 +1098,7 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
                     onChange={(e) => setBvn(e.target.value)}
                     placeholder="Bank Verification Number"
                   />
-                </div>
+                </div> */}
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <label className="modal-label">BVN Verified</label>
                   <select
@@ -1237,7 +1234,6 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
                     setCountry(currentUser?.country || "");
                     setGovIdType(currentUser?.governmentIdType || "");
                     setGovIdNumber(currentUser?.governmentIdNumber || "");
-                    setBvn(currentUser?.bvn || "");
                     setBvnVerified(currentUser?.bvnVerified ?? false);
                     setKycStatus(currentUser?.kycStatus || "PENDING");
                   }}
