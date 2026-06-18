@@ -23,10 +23,10 @@ const fmt = (n) =>
 const fmtDt = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "—";
 
 const ALL_ROLES = [
@@ -138,15 +138,15 @@ function InvoiceRow({ inv, onMarkPaid, onDiscount }) {
   const isPaid = inv.status === "PAID";
   const s = isPaid
     ? {
-        bg: "rgba(34,197,94,0.1)",
-        color: "#16a34a",
-        border: "rgba(34,197,94,0.25)",
-      }
+      bg: "rgba(34,197,94,0.1)",
+      color: "#16a34a",
+      border: "rgba(34,197,94,0.25)",
+    }
     : {
-        bg: "rgba(234,179,8,0.1)",
-        color: "#ca8a04",
-        border: "rgba(234,179,8,0.25)",
-      };
+      bg: "rgba(234,179,8,0.1)",
+      color: "#ca8a04",
+      border: "rgba(234,179,8,0.25)",
+    };
 
   const handleMark = async () => {
     setPaying(true);
@@ -1319,13 +1319,31 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
                     BVN
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
-                      {user.bvn || "—"}
-                    </div>
                     {user.bvnVerified ? (
                       <span style={{ color: "green", fontWeight: 700 }}>Verified</span>
                     ) : (
                       <span style={{ color: "var(--text-muted)" }}>Not verified</span>
+                    )}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 8,
+                    background: "var(--bg-hover)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: 6 }}>
+                    KYC Status
+                  </div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
+                    {user.kycStatus === "APPROVED" ? (
+                      <span style={{ color: "green" }}>{user.kycStatus}</span>
+                    ) : user.kycStatus === "REJECTED" ? (
+                      <span style={{ color: "red" }}>{user.kycStatus}</span>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)" }}>{user.kycStatus || "PENDING"}</span>
                     )}
                   </div>
                 </div>
@@ -1859,9 +1877,9 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
                         position: "relative",
                         ...(walletAction === "debit"
                           ? {
-                              background: "rgba(239,68,68,0.9)",
-                              borderColor: "transparent",
-                            }
+                            background: "rgba(239,68,68,0.9)",
+                            borderColor: "transparent",
+                          }
                           : {}),
                       }}
                       onClick={handleWalletAction}
