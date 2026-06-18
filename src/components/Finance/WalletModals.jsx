@@ -13,7 +13,7 @@ import moment from "moment";
 
 export function TopupModal({ isOpen, onClose, onSuccess, currency }) {
   const [amount, setAmount] = useState("");
-  const [gateway, setGateway] = useState("paystack");
+  const [gateway, setGateway] = useState(currency === 'NGN' ? "paystack" : "stripe");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
