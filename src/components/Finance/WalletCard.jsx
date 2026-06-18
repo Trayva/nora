@@ -8,16 +8,16 @@ import { useState } from "react";
 
 export default function WalletCard({
   balance,
-  currency = "NGN",
+  currency,
   onTopup,
   onWithdraw,
 }) {
   const [hidden, setHidden] = useState(false);
 
   const formatCurrency = (amount) =>
-    new Intl.NumberFormat("en-NG", { style: "currency", currency }).format(
+    currency ? new Intl.NumberFormat("en-NG", { style: "currency", currency }).format(
       amount || 0,
-    );
+    ) : 0;
 
   return (
     <div className="wallet_card">
