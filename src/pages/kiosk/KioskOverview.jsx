@@ -359,7 +359,9 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
       setBills([
         { name: "Rent", amount: "" },
         { name: "Electric Bill", amount: "" },
-        { name: "Water Bill", amount: "" }
+        { name: "Water Bill", amount: "" },
+        { name: "Consumables", amount: "" },
+        { name: "Salary", amount: "" }
       ]);
     }
     setExpectedOrders(cart.expectedMonthlyOrders || "");

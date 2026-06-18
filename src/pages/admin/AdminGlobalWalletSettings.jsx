@@ -10,6 +10,7 @@ const EMPTY_FORM = {
   minBalance: -1000000,
   blockTransactions: false,
   blockWithdrawals: false,
+  withdrawalLimit: "",
 };
 
 export default function AdminGlobalWalletSettings() {
@@ -48,6 +49,7 @@ export default function AdminGlobalWalletSettings() {
       minBalance: item.minBalance,
       blockTransactions: !!item.blockTransactions,
       blockWithdrawals: !!item.blockWithdrawals,
+      withdrawalLimit: item.withdrawalLimit != null ? String(item.withdrawalLimit) : "",
     });
     setEditing(item);
     setOpen(true);
@@ -69,6 +71,7 @@ export default function AdminGlobalWalletSettings() {
         minBalance: Number(form.minBalance),
         blockTransactions: form.blockTransactions,
         blockWithdrawals: form.blockWithdrawals,
+        withdrawalLimit: form.withdrawalLimit ? Number(form.withdrawalLimit) : null,
       });
       toast.success(editing ? "Global wallet settings updated" : "Global wallet settings created");
       setOpen(false);
@@ -116,6 +119,9 @@ export default function AdminGlobalWalletSettings() {
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                   <span className="admin_meta_chip">
                     Min Balance: {item.minBalance.toLocaleString()}
+                  </span>
+                  <span className="admin_meta_chip">
+                    Withdrawal Limit: {item.withdrawalLimit != null ? item.withdrawalLimit.toLocaleString() : "None"}
                   </span>
                   {item.blockTransactions && (
                     <span className="admin_meta_chip" style={{ color: "#ef4444", borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.05)" }}>
@@ -166,6 +172,16 @@ export default function AdminGlobalWalletSettings() {
                 placeholder="e.g. -1000000"
                 value={form.minBalance}
                 onChange={set("minBalance")}
+              />
+            </div>
+            <div className="form-field">
+              <label className="modal-label">Withdrawal Limit</label>
+              <input
+                className="modal-input"
+                type="number"
+                placeholder="e.g. 50000 (Empty for none)"
+                value={form.withdrawalLimit}
+                onChange={set("withdrawalLimit")}
               />
             </div>
           </div>

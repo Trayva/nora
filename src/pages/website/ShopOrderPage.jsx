@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
+import { toast } from "react-toastify";
 import {
   MdCheckCircle,
   MdAccessTime,
@@ -22,17 +23,30 @@ import { useTheme } from "../../contexts/ThemeContext";
 import nora_logo_white from "../../assets/nora_white.png";
 import nora_logo_dark from "../../assets/nora_dark.png";
 
+
 const fmt = (n) =>
   Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
 const fmtDt = (d) =>
   d
     ? new Date(d).toLocaleString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
     : "—";
+
+const getCurrencySymbol = (currency) => {
+  switch (currency?.toUpperCase()) {
+    case "USD": return "$";
+    case "GBP": return "£";
+    case "EUR": return "€";
+    case "AED": return "AED ";
+    case "NGN":
+    default:
+      return "₦";
+  }
+};
 
 /* ── Order status pipeline ── */
 const STEPS = [
@@ -392,6 +406,33 @@ export default function ShopOrderPage() {
     ? PMT_COLOR[order.paymentStatus] || PMT_COLOR.PENDING
     : null;
   const payLink = order?.paymentLink || order?.paymentUrl;
+  const [paying, setPaying] = useState(false);
+
+  const handlePay = async () => {
+    if (!order || paying) return;
+    setPaying(true);
+    const gateway = order.gateway || "paystack";
+    try {
+      const res = await api.get("/kiosk/shop/checkout", {
+        params: { id: order.id, gateway }
+      });
+      const freshLink = res.data?.data?.paymentLink || res.data?.paymentLink || payLink;
+      if (freshLink) {
+        window.open(freshLink, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error("Could not retrieve payment link");
+      }
+    } catch (err) {
+      console.error(err);
+      if (payLink) {
+        window.open(payLink, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error(err.response?.data?.message || "Failed to retrieve payment link");
+      }
+    } finally {
+      setPaying(false);
+    }
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-main)" }}>
@@ -710,7 +751,7 @@ export default function ShopOrderPage() {
                   {[
                     {
                       label: "Total",
-                      value: `₦${fmt(order.totalAmount)}`,
+                      value: `${getCurrencySymbol(order.currency)}${fmt(order.totalAmount)}`,
                       accent: true,
                     },
                     { label: "Queue #", value: `#${order.queueNumber}` },
@@ -754,28 +795,31 @@ export default function ShopOrderPage() {
                 </div>
 
                 {/* Pay Now — if payment still pending */}
-                {payLink && order.paymentStatus === "PENDING" && (
-                  <a
-                    href={payLink}
-                    target="_blank"
-                    rel="noreferrer"
+                {order.paymentStatus === "PENDING" && order.status !== "CANCELLED" && (
+                  <button
+                    onClick={handlePay}
+                    disabled={paying}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       gap: 8,
+                      width: "100%",
                       height: 44,
                       marginTop: 14,
                       borderRadius: 11,
                       background: "var(--accent)",
+                      border: "none",
+                      cursor: paying ? "not-allowed" : "pointer",
                       color: "#fff",
                       fontWeight: 800,
                       fontSize: "0.9rem",
-                      textDecoration: "none",
+                      opacity: paying ? 0.7 : 1,
+                      transition: "all 0.2s",
                     }}
                   >
-                    Complete Payment <MdOpenInNew size={16} />
-                  </a>
+                    {paying ? "Preparing Payment..." : "Complete Payment"} <MdOpenInNew size={16} />
+                  </button>
                 )}
 
                 {/* Refresh button */}
@@ -937,7 +981,7 @@ export default function ShopOrderPage() {
                   marginBottom: 14,
                 }}
               >
-                Delivery Details
+                {order.orderType === "PICKUP" ? "Pickup Details" : "Delivery Details"}
               </div>
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 10 }}
@@ -971,7 +1015,7 @@ export default function ShopOrderPage() {
                         marginBottom: 2,
                       }}
                     >
-                      Delivery Address
+                      {order.orderType === "PICKUP" ? "Pickup Address" : "Delivery Address"}
                     </div>
                     <div
                       style={{
@@ -981,7 +1025,37 @@ export default function ShopOrderPage() {
                         lineHeight: 1.4,
                       }}
                     >
-                      {order.deliveryAddress}
+                      {order.orderType === "PICKUP" ? (
+                        order.kiosk?.location?.latitude && order.kiosk?.location?.longitude ? (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${order.kiosk.location.latitude},${order.kiosk.location.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: "var(--accent)", textDecoration: "underline", textUnderlineOffset: 2 }}
+                          >
+                            {order.kiosk?.location?.name ? `${order.kiosk.location.name}, ` : ""}
+                            {order.kiosk?.location?.address}
+                            {order.kiosk?.location?.city ? `, ${order.kiosk.location.city}` : ""}
+                          </a>
+                        ) : (
+                          <>
+                            {order.kiosk?.location?.name ? `${order.kiosk.location.name}, ` : ""}
+                            {order.kiosk?.location?.address}
+                            {order.kiosk?.location?.city ? `, ${order.kiosk.location.city}` : ""}
+                          </>
+                        )
+                      ) : order.deliveryLat && order.deliveryLng ? (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${order.deliveryLat},${order.deliveryLng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "var(--accent)", textDecoration: "underline", textUnderlineOffset: 2 }}
+                        >
+                          {order.deliveryAddress}
+                        </a>
+                      ) : (
+                        order.deliveryAddress
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1234,7 +1308,7 @@ export default function ShopOrderPage() {
                           color: "var(--text-heading)",
                         }}
                       >
-                        ₦{fmt(item.priceAtTime * item.quantity)}
+                        {getCurrencySymbol(order.currency)}{fmt(item.priceAtTime * item.quantity)}
                       </div>
                       <div
                         style={{
@@ -1242,7 +1316,7 @@ export default function ShopOrderPage() {
                           color: "var(--text-muted)",
                         }}
                       >
-                        ₦{fmt(item.priceAtTime)} each
+                        {getCurrencySymbol(order.currency)}{fmt(item.priceAtTime)} each
                       </div>
                     </div>
                   </div>
@@ -1274,7 +1348,7 @@ export default function ShopOrderPage() {
                       color: "var(--accent)",
                     }}
                   >
-                    ₦{fmt(order.totalAmount)}
+                    {getCurrencySymbol(order.currency)}{fmt(order.totalAmount)}
                   </span>
                 </div>
               </div>
@@ -1282,27 +1356,30 @@ export default function ShopOrderPage() {
 
             {/* ── Actions ── */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {payLink && order.paymentStatus === "PENDING" && (
-                <a
-                  href={payLink}
-                  target="_blank"
-                  rel="noreferrer"
+              {order.paymentStatus === "PENDING" && order.status !== "CANCELLED" && (
+                <button
+                  onClick={handlePay}
+                  disabled={paying}
                   style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     gap: 8,
+                    width: "100%",
                     height: 46,
                     borderRadius: 11,
                     background: "var(--accent)",
+                    border: "none",
+                    cursor: paying ? "not-allowed" : "pointer",
                     fontSize: "0.9rem",
                     fontWeight: 800,
                     color: "#fff",
-                    textDecoration: "none",
+                    opacity: paying ? 0.7 : 1,
+                    transition: "all 0.2s",
                   }}
                 >
-                  Pay Now <MdOpenInNew size={16} />
-                </a>
+                  {paying ? "Preparing Payment..." : "Pay Now"} <MdOpenInNew size={16} />
+                </button>
               )}
               <div style={{ display: "flex", gap: 10 }}>
                 <Link

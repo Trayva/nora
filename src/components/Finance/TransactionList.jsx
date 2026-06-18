@@ -1,7 +1,7 @@
 import moment from "moment";
 import { MdArrowDownward, MdArrowUpward } from "react-icons/md";
 
-export default function TransactionList({ transactions, currency = "NGN" }) {
+export default function TransactionList({ transactions, currency = "NGN", onTransactionClick }) {
   const formatCurrency = (amount) =>
     new Intl.NumberFormat("en-NG", { style: "currency", currency }).format(
       Math.abs(amount || 0),
@@ -24,7 +24,12 @@ export default function TransactionList({ transactions, currency = "NGN" }) {
       {transactions.map((tx) => {
         const isCredit = tx.type === "CREDIT";
         return (
-          <div key={tx.id} className="transaction_item">
+          <div
+            key={tx.id}
+            className="transaction_item"
+            onClick={() => onTransactionClick?.(tx)}
+            style={{ cursor: onTransactionClick ? "pointer" : "default" }}
+          >
             <div className="transaction_info">
               <div
                 className={`transaction_icon ${isCredit ? "icon_credit" : "icon_debit"}`}

@@ -15,6 +15,7 @@ import {
   MdRemoveCircleOutline,
   MdCheck,
   MdBuild,
+  MdAutorenew,
 } from "react-icons/md";
 import api from "../../api/axios";
 import {
@@ -659,13 +660,41 @@ function MachineryPriceInline({ machineryId, supplierId, stateId, qty }) {
   return <PriceTag price={price} loading={loading} qty={qty} unit="unit" />;
 }
 
-function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities }) {
-  const [supplyTab, setSupplyTab] = useState(isUtilities ? "machinery" : "ingredients");
+function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderData }) {
+  const [supplyTab, setSupplyTab] = useState(() => {
+    if (isUtilities) return "machinery";
+    if (reorderData) {
+      const hasMach = (reorderData.supplyRequestMachineryItems || []).length > 0;
+      return hasMach ? "machinery" : "ingredients";
+    }
+    return "ingredients";
+  });
   const [suppliers, setSuppliers] = useState([]);
   const [suppliersLoading, setSuppliersLoading] = useState(true);
-  const [supplierId, setSupplierId] = useState("");
-  const [ingRows, setIngRows] = useState([makeIngredientRow()]);
-  const [machRows, setMachRows] = useState([makeMachineryRow()]);
+  const [supplierId, setSupplierId] = useState(reorderData?.supplierId || "");
+  const [ingRows, setIngRows] = useState(() => {
+    if (reorderData && (reorderData.items || []).length > 0) {
+      return reorderData.items.map(it => ({
+        item: it.ingredient,
+        query: it.ingredient?.name || "",
+        quantity: String(it.quantity),
+        unit: it.ingredient?.unit || "g",
+      }));
+    }
+    return [makeIngredientRow()];
+  });
+  const [machRows, setMachRows] = useState(() => {
+    if (reorderData && (reorderData.supplyRequestMachineryItems || []).length > 0) {
+      return reorderData.supplyRequestMachineryItems.map(it => ({
+        item: it.machinery,
+        quantity: String(it.quantity),
+        unit: "unit",
+      }));
+    }
+    return [makeMachineryRow()];
+  });
+  const [isRepeating, setIsRepeating] = useState(false);
+  const [repeatInterval, setRepeatInterval] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -705,6 +734,9 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities }) {
 
   const handleSubmit = async () => {
     if (!supplierId) return toast.error("Select a supplier");
+    if (isRepeating && (!repeatInterval || Number(repeatInterval) <= 0)) {
+      return toast.error("Please enter a valid repeat interval in days");
+    }
     const isIng = supplyTab === "ingredients";
     if (isIng) {
       const valid = ingRows.filter(
@@ -721,6 +753,8 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities }) {
             ingredientId: row.item.id,
             quantity: toBaseQuantity(row.quantity, row.unit),
           })),
+          isRepeating,
+          repeatInterval: isRepeating ? Number(repeatInterval) : null,
         });
         toast.success("Supply request created");
         onSubmitted();
@@ -744,6 +778,8 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities }) {
             machineryId: row.item.id,
             quantity: Number(row.quantity),
           })),
+          isRepeating,
+          repeatInterval: isRepeating ? Number(repeatInterval) : null,
         });
         toast.success("Machinery request created");
         onSubmitted();
@@ -1322,6 +1358,54 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities }) {
           </span>
         </div>
       )}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          background: "var(--bg-active)",
+          padding: 12,
+          border: "1px solid var(--border)",
+          borderRadius: 8,
+          marginBottom: 8,
+        }}
+      >
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            cursor: "pointer",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            color: "var(--text-heading)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={isRepeating}
+            onChange={(e) => setIsRepeating(e.target.checked)}
+            style={{ width: 16, height: 16 }}
+          />
+          <span>Repeat this supply request automatically</span>
+        </label>
+        {isRepeating && (
+          <div className="form-field" style={{ marginBottom: 0, paddingLeft: 24 }}>
+            <label className="modal-label" style={{ fontSize: "0.75rem", marginBottom: 4 }}>
+              Repeat Interval (days) *
+            </label>
+            <input
+              className="modal-input"
+              type="number"
+              min="1"
+              placeholder="e.g. 7"
+              value={repeatInterval}
+              onChange={(e) => setRepeatInterval(e.target.value)}
+              style={{ width: "100%", maxWidth: 150 }}
+            />
+          </div>
+        )}
+      </div>
       <button
         className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
         style={{ width: "100%", height: 42, position: "relative" }}
@@ -1861,7 +1945,7 @@ function InventoryItemRow({ item, onRefresh }) {
 }
 
 /* ── Supply Request Row ─────────────────────────────────────── */
-function SupplyRequestRow({ req, onRefresh }) {
+function SupplyRequestRow({ req, onRefresh, onReorder }) {
   const [expanded, setExpanded] = useState(false);
   const [receiving, setReceiving] = useState(false);
   const fmt = (n) =>
@@ -1953,6 +2037,49 @@ function SupplyRequestRow({ req, onRefresh }) {
                   <span>₦{fmt(req.totalAmount)}</span>
                 </>
               )}
+              {req.isRepeating && (
+                <>
+                  <span className="contract_row_dot">·</span>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 2,
+                      color: "var(--accent)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    <MdAutorenew size={11} className="spin-hover" /> {req.repeatInterval}d
+                  </span>
+                  <button
+                    style={{
+                      marginLeft: 4,
+                      padding: "1px 5px",
+                      background: "rgba(239,68,68,0.08)",
+                      border: "1px solid rgba(239,68,68,0.2)",
+                      borderRadius: 4,
+                      color: "#ef4444",
+                      fontSize: "0.58rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      height: 16,
+                      lineHeight: "12px",
+                    }}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await api.patch(`/kiosk/supply/${req.id}/repeating`, { isRepeating: false });
+                        toast.success("Repeating request cancelled");
+                        onRefresh?.();
+                      } catch {
+                        toast.error("Failed to cancel repeat settings");
+                      }
+                    }}
+                  >
+                    Stop
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1985,6 +2112,24 @@ function SupplyRequestRow({ req, onRefresh }) {
               )}
             </button>
           )}
+          <button
+            className="app_btn"
+            style={{
+              height: 28,
+              padding: "0 10px",
+              fontSize: "0.72rem",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              flexShrink: 0,
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onReorder?.(req);
+            }}
+          >
+            <MdAutorenew size={12} /> Re-Order
+          </button>
           {expanded ? (
             <MdExpandLess size={16} style={{ color: "var(--text-muted)" }} />
           ) : (
@@ -2154,6 +2299,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
   const [supplyRequests, setSupplyRequests] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [reorderData, setReorderData] = useState(null);
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -2261,14 +2407,20 @@ export default function KioskInventory({ cart, isUtilities = false }) {
           <button
             key={sv.key}
             className={`kiosk_sub_nav_btn ${view === sv.key ? "kiosk_sub_nav_active" : ""}`}
-            onClick={() => setView(sv.key)}
+            onClick={() => {
+              setReorderData(null);
+              setView(sv.key);
+            }}
           >
             {sv.icon} {sv.label}
           </button>
         ))}
         <button
           className={`kiosk_sub_nav_btn ${view === "addItem" || view === "addSupply" ? "kiosk_sub_nav_active" : ""}`}
-          onClick={() => setView(view === "supply" ? "addSupply" : "addItem")}
+          onClick={() => {
+            setReorderData(null);
+            setView(view === "supply" ? "addSupply" : "addItem");
+          }}
           style={{ marginLeft: "auto" }}
         >
           <MdAdd size={13} /> Add
@@ -2318,7 +2470,9 @@ export default function KioskInventory({ cart, isUtilities = false }) {
           kioskId={cart.id}
           cart={cart}
           isUtilities={isUtilities}
+          reorderData={reorderData}
           onSubmitted={() => {
+            setReorderData(null);
             setView("supply");
             fetchSupply();
           }}
@@ -2357,6 +2511,10 @@ export default function KioskInventory({ cart, isUtilities = false }) {
                 key={req.id}
                 req={req}
                 onRefresh={fetchSupply}
+                onReorder={(r) => {
+                  setReorderData(r);
+                  setView("addSupply");
+                }}
               />
             ))}
           </div>

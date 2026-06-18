@@ -620,6 +620,24 @@ export default function Profile() {
                   Provide government ID and address details.
                 </p>
 
+                {profile?.kycStatus === "APPROVED" && (
+                  <div style={{
+                    padding: "12px 16px",
+                    borderRadius: 10,
+                    background: "rgba(34, 197, 94, 0.1)",
+                    color: "#16a34a",
+                    border: "1px solid rgba(34, 197, 94, 0.25)",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    marginBottom: 20,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8
+                  }}>
+                    <span>✓</span> Your KYC has been verified. Editing is disabled.
+                  </div>
+                )}
+
                 <div className="profile-form-row">
                   <div className="profile-form-field">
                     <label className="profile-form-label">Address</label>
@@ -631,6 +649,7 @@ export default function Profile() {
                       onChange={(e) =>
                         setFormData((p) => ({ ...p, address: e.target.value }))
                       }
+                      disabled={profile?.kycStatus === "APPROVED"}
                     />
                   </div>
                   <div className="profile-form-field">
@@ -643,6 +662,7 @@ export default function Profile() {
                       onChange={(e) =>
                         setFormData((p) => ({ ...p, city: e.target.value }))
                       }
+                      disabled={profile?.kycStatus === "APPROVED"}
                     />
                   </div>
                   <div className="profile-form-field">
@@ -655,6 +675,7 @@ export default function Profile() {
                       onChange={(e) =>
                         setFormData((p) => ({ ...p, country: e.target.value }))
                       }
+                      disabled={profile?.kycStatus === "APPROVED"}
                     >
                       <option value="">Select country</option>
                       {COUNTRIES.map((c) => (
@@ -680,6 +701,7 @@ export default function Profile() {
                           governmentIdType: e.target.value,
                         }))
                       }
+                      disabled={profile?.kycStatus === "APPROVED"}
                     >
                       <option value="">Select ID type</option>
                       <option value="NIN">National ID</option>
@@ -702,6 +724,7 @@ export default function Profile() {
                           governmentIdNumber: e.target.value,
                         }))
                       }
+                      disabled={profile?.kycStatus === "APPROVED"}
                     />
                   </div>
                   <div className="profile-form-field">
@@ -713,6 +736,11 @@ export default function Profile() {
                         className="profile-photo-btn"
                         onClick={() => govFileRef.current?.click()}
                         type="button"
+                        disabled={profile?.kycStatus === "APPROVED"}
+                        style={{
+                          opacity: profile?.kycStatus === "APPROVED" ? 0.6 : 1,
+                          cursor: profile?.kycStatus === "APPROVED" ? "not-allowed" : "pointer"
+                        }}
                       >
                         <MdUpload size={12} /> Upload ID
                       </button>
@@ -722,6 +750,7 @@ export default function Profile() {
                         accept="image/*"
                         style={{ display: "none" }}
                         onChange={handleGovIdChange}
+                        disabled={profile?.kycStatus === "APPROVED"}
                       />
                       <span style={{ marginLeft: 8 }}>
                         {formData.governmentIdImage
@@ -749,6 +778,7 @@ export default function Profile() {
                         setFormData((p) => ({ ...p, bvn: e.target.value }))
                       }
                       style={{ maxWidth: 260 }}
+                      disabled={profile?.kycStatus === "APPROVED"}
                     />
                     <button
                       className="app_btn app_btn_confirm"
@@ -765,6 +795,7 @@ export default function Profile() {
                           );
                         }
                       }}
+                      disabled={profile?.kycStatus === "APPROVED" || !formData.bvn}
                     >
                       Verify BVN
                     </button>
@@ -782,6 +813,7 @@ export default function Profile() {
                   <button
                     className="app_btn app_btn_cancel"
                     onClick={() => fetchProfile()}
+                    disabled={profile?.kycStatus === "APPROVED"}
                   >
                     Cancel
                   </button>
@@ -789,14 +821,13 @@ export default function Profile() {
                     id="profile-save-kyc-btn"
                     className={`app_btn app_btn_confirm ${saving ? "btn_loading" : ""}`}
                     onClick={handleSavePersonal}
-                    disabled={saving}
+                    disabled={saving || profile?.kycStatus === "APPROVED"}
                   >
                     Save KYC
                   </button>
                 </div>
               </div>
             )}
-
             {/* ── Security ── */}
             {activeTab === "security" && (
               <div className="profile-panel-section">

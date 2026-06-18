@@ -7,6 +7,7 @@ import {
   WithdrawModal,
   PinModal,
   SettlementModal,
+  TransactionDetailModal,
 } from "../../../components/Finance/WalletModals";
 import {
   getWallet,
@@ -236,6 +237,7 @@ export default function Wallet() {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [showSettlement, setShowSettlement] = useState(false);
+  const [selectedTx, setSelectedTx] = useState(null);
 
   const [dedicatedAccount, setDedicatedAccount] = useState(null);
 
@@ -251,11 +253,12 @@ export default function Wallet() {
         getDedicatedAccount(),
       ]);
 
-      if (walletRes.status === "fulfilled") setWallet(walletRes.value.data);
+      if (walletRes.status === "fulfilled") setWallet(walletRes.value.data)
+      else toast.error(walletRes.reason.response?.data?.message || "Failed to load wallet data");
       if (transRes.status === "fulfilled") setTransactions(transRes.value.data || []);
       if (invRes.status === "fulfilled") setInvoices(invRes.value.data || []);
       if (dedicatedRes.status === "fulfilled") setDedicatedAccount(dedicatedRes.value.data);
-    } catch {
+    } catch (error) {
       toast.error("Failed to load wallet data");
     } finally {
       setLoading(false);
@@ -323,7 +326,7 @@ export default function Wallet() {
                   </h2>
                   <span className="wallet_tx_count">{transactions.length} transactions</span>
                 </div>
-                <TransactionList transactions={transactions} currency={wallet?.currency} />
+                <TransactionList transactions={transactions} currency={wallet?.currency} onTransactionClick={setSelectedTx} />
               </div>
             </div>
 
@@ -384,7 +387,7 @@ export default function Wallet() {
                     </h2>
                     <span className="wallet_tx_count">{transactions.length}</span>
                   </div>
-                  <TransactionList transactions={transactions} currency={wallet?.currency} />
+                  <TransactionList transactions={transactions} currency={wallet?.currency} onTransactionClick={setSelectedTx} />
                 </div>
               )}
 
@@ -409,6 +412,7 @@ export default function Wallet() {
       <WithdrawModal isOpen={showWithdraw} onClose={() => setShowWithdraw(false)} onSuccess={fetchData} balance={wallet?.balance} />
       <PinModal isOpen={showPin} onClose={() => setShowPin(false)} hasPin={!!wallet?.transactionPin} onSuccess={fetchData} />
       <SettlementModal isOpen={showSettlement} onClose={() => setShowSettlement(false)} onSuccess={fetchData} />
+      <TransactionDetailModal isOpen={!!selectedTx} onClose={() => setSelectedTx(null)} transaction={selectedTx} currency={wallet?.currency} />
     </div>
   );
 }

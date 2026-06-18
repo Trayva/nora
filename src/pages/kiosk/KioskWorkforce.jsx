@@ -117,7 +117,6 @@ function HireForm({ kioskId, onHired }) {
   const [selectedOperator, setSelectedOperator] = useState(null);
   const [duration, setDuration] = useState("1m"); // option key
   const [salary, setSalary] = useState("");
-  const [workingHours, setWorkingHours] = useState("");
   const [note, setNote] = useState("");
   const [onCommission, setOnCommission] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -161,7 +160,6 @@ function HireForm({ kioskId, onHired }) {
         durationDays:
           DURATION_OPTIONS.find((d) => d.key === duration)?.days || 30,
         salary: onCommission ? undefined : (salary ? Number(salary) : undefined),
-        workingHours: workingHours.trim() || undefined,
         note: note.trim() || undefined,
         onCommission,
       });
@@ -285,29 +283,18 @@ function HireForm({ kioskId, onHired }) {
         </label>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <div className="form-field">
-          <label className="modal-label">Proposed Salary (NGN)</label>
-          <input
-            className="modal-input"
-            type="number"
-            min={0}
-            placeholder={onCommission ? "N/A (Commission-based)" : "e.g. 50000"}
-            value={salary}
-            onChange={(e) => setSalary(e.target.value)}
-            disabled={onCommission}
-            style={{ opacity: onCommission ? 0.6 : 1 }}
-          />
-        </div>
-        <div className="form-field">
-          <label className="modal-label">Working Hours</label>
-          <input
-            className="modal-input"
-            placeholder="e.g. 8am – 5pm"
-            value={workingHours}
-            onChange={(e) => setWorkingHours(e.target.value)}
-          />
-        </div>
+      <div className="form-field">
+        <label className="modal-label">Proposed Salary (NGN)</label>
+        <input
+          className="modal-input"
+          type="number"
+          min={0}
+          placeholder={onCommission ? "N/A (Commission-based)" : "e.g. 50000"}
+          value={salary}
+          onChange={(e) => setSalary(e.target.value)}
+          disabled={onCommission}
+          style={{ opacity: onCommission ? 0.6 : 1 }}
+        />
       </div>
 
       <div className="form-field">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
+import { APIProvider, Map, Marker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import {
   MdSearch,
   MdClose,
@@ -12,6 +13,7 @@ import {
   MdExpandLess,
   MdArrowBack,
   MdCheckCircle,
+  MdOpenInNew,
   MdOutlineShoppingBag,
   MdChevronRight,
   MdOutlineLightMode,
@@ -876,6 +878,72 @@ function ConceptSection({ concept, cartItems, onOpenModal }) {
   );
 }
 
+/* ── Map events listener helper ── */
+function MapEventsListener({ onMapClick }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    const listener = map.addListener("click", (e) => {
+      if (e.latLng) {
+        onMapClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+      }
+    });
+    return () => {
+      if (window.google) {
+        window.google.maps.event.clearListeners(map, "click");
+      }
+    };
+  }, [map, onMapClick]);
+  return null;
+}
+
+/* ── Address autocomplete input component ── */
+function AddressAutocompleteInput({ value, onChange, onPlaceSelected, style }) {
+  const inputRef = useRef(null);
+  const placesLibrary = useMapsLibrary("places");
+  const [autocomplete, setAutocomplete] = useState(null);
+
+  useEffect(() => {
+    if (!placesLibrary || !inputRef.current) return;
+
+    const gAutocomplete = new placesLibrary.Autocomplete(inputRef.current);
+    setAutocomplete(gAutocomplete);
+
+    return () => {
+      if (placesLibrary.event) {
+        placesLibrary.event.clearInstanceListeners(gAutocomplete);
+      }
+    };
+  }, [placesLibrary]);
+
+  useEffect(() => {
+    if (!autocomplete) return;
+
+    const listener = autocomplete.addListener("place_changed", () => {
+      const place = autocomplete.getPlace();
+      onPlaceSelected(place);
+    });
+
+    return () => {
+      if (listener) {
+        listener.remove();
+      }
+    };
+  }, [autocomplete, onPlaceSelected]);
+
+  return (
+    <input
+      ref={inputRef}
+      className="modal-input"
+      type="text"
+      placeholder="Search delivery address..."
+      value={value}
+      onChange={onChange}
+      style={style}
+    />
+  );
+}
+
 /* ── Checkout form (inside cart drawer) ── */
 function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSuccess, onBack }) {
   const navigate = useNavigate();
@@ -885,15 +953,19 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
     customerEmail: "",
     customerPhone: "",
     deliveryAddress: "",
+    deliveryLat: null,
+    deliveryLng: null,
   });
   const [placing, setPlacing] = useState(false);
   const [gateway, setGateway] = useState("paystack");
-  
+  const [orderResult, setOrderResult] = useState(null);
+  const [paying, setPaying] = useState(false);
+
   const total = items.reduce(
     (s, e) => s + (e.unitPrice || e.item.sellingPrice || 0) * e.qty,
     0,
   );
-  
+
   const deliveryFee = orderType === "DELIVERY" ? (concepts?.find((c) => c.id === kioskId)?.deliveryFee || 0) : 0;
   const vatAmount = total * (vatRate / 100);
   const grandTotal = total + vatAmount + deliveryFee;
@@ -912,6 +984,8 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
         customerEmail: form.customerEmail.trim() || undefined,
         customerPhone: form.customerPhone.trim() || undefined,
         deliveryAddress: orderType === "PICKUP" ? undefined : form.deliveryAddress.trim(),
+        deliveryLat: orderType === "PICKUP" ? null : form.deliveryLat,
+        deliveryLng: orderType === "PICKUP" ? null : form.deliveryLng,
         orderType,
         gateway,
         items: items.map((e) => ({
@@ -923,14 +997,159 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
       });
       const orderData = res.data.data;
       onSuccess(orderData);
-      // Navigate to order tracking page
-      navigate(`/shop/order?id=${orderData.orderNumber}`);
+      setOrderResult(orderData);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to place order");
     } finally {
       setPlacing(false);
     }
   };
+
+  const handlePay = async () => {
+    if (!orderResult || paying) return;
+    setPaying(true);
+    const orderNumber = orderResult.orderNumber || orderResult.data?.orderNumber || orderResult.id || "";
+    const originalLink =
+      orderResult.paymentLink ||
+      orderResult.paymentUrl ||
+      orderResult.data?.paymentLink ||
+      orderResult.data?.paymentUrl ||
+      null;
+    try {
+      const res = await api.get("/kiosk/shop/checkout", {
+        params: { id: orderNumber, gateway }
+      });
+      const freshLink = res.data?.data?.paymentLink || res.data?.paymentLink || originalLink;
+      if (freshLink) {
+        window.open(freshLink, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error("Could not retrieve payment link");
+      }
+    } catch (err) {
+      console.error(err);
+      if (originalLink) {
+        window.open(originalLink, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error(err.response?.data?.message || "Failed to retrieve payment link");
+      }
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  if (orderResult) {
+    const orderNumber =
+      orderResult.orderNumber || orderResult.data?.orderNumber || orderResult.id || "";
+    const paymentLink =
+      orderResult.paymentLink ||
+      orderResult.paymentUrl ||
+      orderResult.data?.paymentLink ||
+      orderResult.data?.paymentUrl ||
+      null;
+
+    return (
+      <div style={{ textAlign: "center", padding: "24px 12px" }}>
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: "50%",
+            background: "rgba(34,197,94,0.12)",
+            border: "2px solid rgba(34,197,94,0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 16px",
+          }}
+        >
+          <MdCheckCircle size={32} style={{ color: "#16a34a" }} />
+        </div>
+        <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 6px" }}>
+          Order Placed! 🎉
+        </h3>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "3px 10px",
+            background: "var(--bg-hover)",
+            border: "1px solid var(--border)",
+            borderRadius: 999,
+            marginBottom: 12,
+          }}
+        >
+          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>Order</span>
+          <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "var(--text-heading)", fontFamily: "monospace" }}>
+            {orderNumber}
+          </span>
+        </div>
+        <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", lineHeight: 1.5, margin: "0 0 20px" }}>
+          Your order has been received successfully.
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {paymentLink && (
+            <button
+              onClick={handlePay}
+              disabled={paying}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                height: 40,
+                borderRadius: 8,
+                background: "linear-gradient(135deg,#f97316,#ef4444)",
+                color: "#fff",
+                fontWeight: 800,
+                fontSize: "0.85rem",
+                border: "none",
+                cursor: paying ? "not-allowed" : "pointer",
+                boxShadow: "0 4px 12px rgba(249,115,22,0.2)",
+              }}
+            >
+              {paying ? "Preparing payment..." : "Pay Now"} <MdOpenInNew size={14} />
+            </button>
+          )}
+          <button
+            onClick={() => {
+              onBack(); // Closes the drawer
+              navigate(`/shop/order?id=${orderNumber}`);
+            }}
+            style={{
+              height: 40,
+              borderRadius: 8,
+              background: "var(--bg-active)",
+              color: "var(--text-heading)",
+              border: "1px solid var(--border)",
+              fontWeight: 700,
+              fontSize: "0.82rem",
+              cursor: "pointer",
+            }}
+          >
+            Track Order
+          </button>
+          <button
+            onClick={() => {
+              onBack(); // Closes the drawer
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--text-muted)",
+              fontSize: "0.76rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              marginTop: 4,
+            }}
+          >
+            Back to Shop
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -1147,26 +1366,69 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
           t: "email",
           p: "your@email.com",
         },
-        {
-          k: "deliveryAddress",
-          l: "Delivery Address *",
-          t: "text",
-          p: "Street, Estate, City",
-        },
-      ]
-        .filter(({ k }) => orderType === "DELIVERY" || k !== "deliveryAddress")
-        .map(({ k, l, t, p }) => (
-          <div key={k} className="form-field" style={{ marginBottom: 10 }}>
-            <label className="modal-label">{l}</label>
-            <input
-              className="modal-input"
-              type={t}
-              placeholder={p}
-              value={form[k]}
-              onChange={(e) => set(k, e.target.value)}
+      ].map(({ k, l, t, p }) => (
+        <div key={k} className="form-field" style={{ marginBottom: 10 }}>
+          <label className="modal-label">{l}</label>
+          <input
+            className="modal-input"
+            type={t}
+            placeholder={p}
+            value={form[k]}
+            onChange={(e) => set(k, e.target.value)}
+          />
+        </div>
+      ))}
+
+      {orderType === "DELIVERY" && (
+        <APIProvider apiKey={import.meta.env.VITE_APP_MAP_API_KEY} libraries={["places"]}>
+          <div className="form-field" style={{ marginBottom: 10 }}>
+            <label className="modal-label">Delivery Address *</label>
+            <AddressAutocompleteInput
+              value={form.deliveryAddress}
+              onChange={(e) => set("deliveryAddress", e.target.value)}
+              onPlaceSelected={(place) => {
+                if (place.geometry && place.geometry.location) {
+                  const lat = place.geometry.location.lat();
+                  const lng = place.geometry.location.lng();
+                  const address = place.formatted_address || place.name || "";
+                  setForm((p) => ({
+                    ...p,
+                    deliveryAddress: address,
+                    deliveryLat: lat,
+                    deliveryLng: lng,
+                  }));
+                }
+              }}
             />
           </div>
-        ))}
+
+          <div style={{ height: 160, borderRadius: 10, overflow: "hidden", marginBottom: 14, border: "1px solid var(--border)" }}>
+            <Map
+              defaultZoom={15}
+              center={
+                form.deliveryLat && form.deliveryLng
+                  ? { lat: form.deliveryLat, lng: form.deliveryLng }
+                  : { lat: 6.5244, lng: 3.3792 } // Lagos default
+              }
+              disableDefaultUI={true}
+              gestureHandling="greedy"
+            >
+              <MapEventsListener
+                onMapClick={(coords) => {
+                  setForm((p) => ({
+                    ...p,
+                    deliveryLat: coords.lat,
+                    deliveryLng: coords.lng
+                  }));
+                }}
+              />
+              {form.deliveryLat && form.deliveryLng && (
+                <Marker position={{ lat: form.deliveryLat, lng: form.deliveryLng }} />
+              )}
+            </Map>
+          </div>
+        </APIProvider>
+      )}
 
       <div className="form-field" style={{ marginTop: 14, marginBottom: 16 }}>
         <label className="modal-label">Payment Gateway</label>
@@ -1283,6 +1545,15 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
     });
 
   const checkoutGroup = groups.find((g) => g.kioskId === checkoutCartId) || null;
+  const [activeCheckoutGroup, setActiveCheckoutGroup] = useState(null);
+
+  useEffect(() => {
+    if (checkoutCartId === null) {
+      setActiveCheckoutGroup(null);
+    } else if (checkoutGroup) {
+      setActiveCheckoutGroup(checkoutGroup);
+    }
+  }, [checkoutCartId, checkoutGroup]);
 
   if (!open) return null;
 
@@ -1333,11 +1604,11 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
               flex: 1,
             }}
           >
-            {checkoutGroup
-              ? `Checkout — ${checkoutGroup.conceptName}`
+            {activeCheckoutGroup
+              ? `Checkout — ${activeCheckoutGroup.conceptName}`
               : "Your Cart"}
           </span>
-          {!checkoutGroup && totalItems > 0 && (
+          {!activeCheckoutGroup && totalItems > 0 && (
             <span
               style={{
                 fontSize: "0.65rem",
@@ -1354,19 +1625,23 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
           )}
           <button
             onClick={() => {
-              if (checkoutGroup) setCheckoutCartId(null);
-              else onClose();
+              if (activeCheckoutGroup) {
+                setCheckoutCartId(null);
+                setActiveCheckoutGroup(null);
+              } else {
+                onClose();
+              }
             }}
             className="kiosk_icon_action_btn"
             style={{ width: 28, height: 28 }}
           >
-            {checkoutGroup ? <MdArrowBack size={14} /> : <MdClose size={14} />}
+            {activeCheckoutGroup ? <MdArrowBack size={14} /> : <MdClose size={14} />}
           </button>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
           {/* Empty state */}
-          {totalItems === 0 && (
+          {totalItems === 0 && !activeCheckoutGroup && (
             <div className="kiosk_empty_state" style={{ padding: "60px 0" }}>
               <LuShoppingCart size={28} style={{ opacity: 0.25 }} />
               <p className="kiosk_empty_title">Your cart is empty</p>
@@ -1377,26 +1652,28 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
           )}
 
           {/* Checkout form for selected Kiosk */}
-          {checkoutGroup && (
+          {activeCheckoutGroup && (
             <CheckoutForm
-              kioskId={checkoutGroup.kioskId}
-              conceptName={checkoutGroup.conceptName}
-              items={checkoutGroup.items}
+              kioskId={activeCheckoutGroup.kioskId}
+              conceptName={activeCheckoutGroup.conceptName}
+              items={activeCheckoutGroup.items}
               concepts={concepts}
-              vatRate={concepts?.find((c) => c.id === checkoutGroup.kioskId)?.vatRate || 0}
+              vatRate={concepts?.find((c) => c.id === activeCheckoutGroup.kioskId)?.vatRate || 0}
               onSuccess={(orderData) => {
                 setOrderedCarts(
-                  (prev) => new Set([...prev, checkoutGroup.kioskId]),
+                  (prev) => new Set([...prev, activeCheckoutGroup.kioskId]),
                 );
-                clearCart(checkoutGroup.kioskId);
-                setCheckoutCartId(null);
+                clearCart(activeCheckoutGroup.kioskId);
               }}
-              onBack={() => setCheckoutCartId(null)}
+              onBack={() => {
+                setCheckoutCartId(null);
+                setActiveCheckoutGroup(null);
+              }}
             />
           )}
 
           {/* All Kiosk groups — shown when not in checkout */}
-          {!checkoutGroup && totalItems > 0 && (
+          {!activeCheckoutGroup && totalItems > 0 && (
             <>
               {groups.length > 1 && (
                 <div

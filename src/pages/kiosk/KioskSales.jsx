@@ -24,16 +24,16 @@ const fmt = (n) =>
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-      })
+      day: "2-digit",
+      month: "short",
+    })
     : "—";
 const fmtChartDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-      })
+      day: "2-digit",
+      month: "short",
+    })
     : "";
 
 const pmColors = {
@@ -811,3 +811,4 @@ export default function KioskSales({ cart }) {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   MdOutlineClose,
   MdOutlineMarkEmailUnread,
@@ -9,6 +9,8 @@ import api from "../api/axios";
 import { toast } from "react-toastify";
 import Modal from "../components/Modal";
 
+const OTP_LENGTH = 6;
+
 export default function VerificationBanner() {
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState(false);
@@ -16,9 +18,19 @@ export default function VerificationBanner() {
 
   // OTP modal state
   const [otpModal, setOtpModal] = useState(null); // { type: "email" | "phone" }
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
+  const inputRefs = useRef([]);
+
+  // Auto-focus first input when modal opens
+  useEffect(() => {
+    if (otpModal) {
+      setTimeout(() => {
+        inputRefs.current[0]?.focus();
+      }, 50);
+    }
+  }, [otpModal]);
 
   if (!user || dismissed) return null;
 
@@ -32,7 +44,7 @@ export default function VerificationBanner() {
     try {
       await api.post("/auth/request-verification", { type });
       toast.success(`Verification code sent to your ${type}!`);
-      setOtp("");
+      setOtp(Array(OTP_LENGTH).fill(""));
       setOtpModal({ type });
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to send code");
@@ -54,28 +66,75 @@ export default function VerificationBanner() {
     }
   };
 
-  const handleVerify = async () => {
-    if (!otp || otp.length !== 6) return toast.error("Enter the 6-digit code");
+  const handleVerify = async (code) => {
+    const otpCode = code || otp.join("");
+    if (otpCode.length !== OTP_LENGTH) return toast.error("Enter the 6-digit code");
     setVerifying(true);
     try {
-      await api.post("/auth/verify-otp", { otp, type: otpModal.type });
+      await api.post("/auth/verify-otp", { otp: otpCode, type: otpModal.type });
       toast.success(
         `${otpModal.type === "email" ? "Email" : "Phone"} verified!`,
       );
       setOtpModal(null);
-      setOtp("");
+      setOtp(Array(OTP_LENGTH).fill(""));
       // Refresh user so banner disappears
       window.location.reload();
     } catch (err) {
       toast.error(err.response?.data?.message || "Verification failed");
+      setOtp(Array(OTP_LENGTH).fill(""));
+      inputRefs.current[0]?.focus();
     } finally {
       setVerifying(false);
     }
   };
 
+  const handleChange = (i, val) => {
+    const digit = val.replace(/\D/g, "").slice(-1);
+    const next = [...otp];
+    next[i] = digit;
+    setOtp(next);
+    // Move focus forward
+    if (digit && i < OTP_LENGTH - 1) inputRefs.current[i + 1]?.focus();
+    // Auto-submit when all filled
+    if (digit && i === OTP_LENGTH - 1 && next.every((d) => d)) {
+      handleVerify(next.join(""));
+    }
+  };
+
+  const handleKeyDown = (i, e) => {
+    if (e.key === "Backspace") {
+      if (otp[i]) {
+        const next = [...otp];
+        next[i] = "";
+        setOtp(next);
+      } else if (i > 0) {
+        inputRefs.current[i - 1]?.focus();
+      }
+    }
+    if (e.key === "ArrowLeft" && i > 0) inputRefs.current[i - 1]?.focus();
+    if (e.key === "ArrowRight" && i < OTP_LENGTH - 1)
+      inputRefs.current[i + 1]?.focus();
+  };
+
+  const handlePaste = (e) => {
+    const pasted = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, OTP_LENGTH);
+    if (!pasted) return;
+    const next = Array(OTP_LENGTH).fill("");
+    pasted.split("").forEach((d, i) => {
+      next[i] = d;
+    });
+    setOtp(next);
+    const lastIdx = Math.min(pasted.length, OTP_LENGTH - 1);
+    inputRefs.current[lastIdx]?.focus();
+    if (pasted.length === OTP_LENGTH) handleVerify(pasted);
+  };
+
   const closeModal = () => {
     setOtpModal(null);
-    setOtp("");
+    setOtp(Array(OTP_LENGTH).fill(""));
   };
 
   return (
@@ -144,16 +203,60 @@ export default function VerificationBanner() {
         <div className="modal-body">
           <div className="form-field">
             <label className="modal-label">6-digit verification code</label>
-            <input
-              className="modal-input otp_input"
-              type="text"
-              placeholder="• • • • • •"
-              maxLength={6}
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-              autoComplete="one-time-code"
-              inputMode="numeric"
-            />
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                marginTop: 14,
+                marginBottom: 8,
+                justifyContent: "center",
+                width: "100%",
+              }}
+              onPaste={handlePaste}
+            >
+              {otp.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={(el) => (inputRefs.current[i] = el)}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleChange(i, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(i, e)}
+                  style={{
+                    flex: "1 1 40px",
+                    minWidth: 32,
+                    maxWidth: 54,
+                    height: 48,
+                    textAlign: "center",
+                    fontSize: "1.2rem",
+                    fontWeight: 800,
+                    fontFamily: "monospace",
+                    borderRadius: 10,
+                    border: `1.5px solid ${
+                      digit ? "var(--accent)" : "var(--border)"
+                    }`,
+                    background: digit ? "var(--bg-active)" : "var(--bg-hover)",
+                    color: "var(--text-heading)",
+                    outline: "none",
+                    transition: "border-color 0.15s, background 0.15s",
+                    caretColor: "var(--accent)",
+                    boxSizing: "border-box",
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "var(--accent)";
+                    e.target.style.boxShadow = "0 0 0 3px rgba(203,108,220,0.15)";
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = digit
+                      ? "var(--accent)"
+                      : "var(--border)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                />
+              ))}
+            </div>
           </div>
 
           <div className="modal-footer">
@@ -180,8 +283,8 @@ export default function VerificationBanner() {
             <button
               type="button"
               className={`app_btn app_btn_confirm ${verifying ? "btn_loading" : ""}`}
-              onClick={handleVerify}
-              disabled={verifying || otp.length !== 6}
+              onClick={() => handleVerify()}
+              disabled={verifying || otp.some((d) => !d)}
               style={{ position: "relative", minWidth: 120 }}
             >
               <span className="btn_text">Verify</span>

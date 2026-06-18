@@ -2787,7 +2787,7 @@ function StartTestView({ menuItems, onStarted, onCancel }) {
         <span className="btn_text">
           <MdSchool size={16} /> Start Test
           {selectedIds.length > 0 &&
-            ` \u00B7 ${selectedIds.length} item${selectedIds.length !== 1 ? "s" : ""}`}
+            `  ${selectedIds.length} item${selectedIds.length !== 1 ? "s" : ""}`}
         </span>
         {starting && (
           <span className="btn_loader" style={{ width: 15, height: 15 }} />
@@ -3286,7 +3286,7 @@ function ItemCustomiser({ item, kioskId, onConfirm, onClose }) {
                     Calculating…
                   </span>
                 ) : price > 0 ? (
-                  `\u20A6${fmt(price)}`
+                  `${fmt(price)}`
                 ) : (
                   "Price TBD"
                 )}
@@ -3379,7 +3379,7 @@ function ItemCustomiser({ item, kioskId, onConfirm, onClose }) {
                             color: "var(--text-muted)",
                           }}
                         >
-                          +\u20A6{fmt(v.priceAddition)}
+                          +{fmt(v.priceAddition)}
                         </span>
                       )}
                     </button>
@@ -3473,7 +3473,7 @@ function ItemCustomiser({ item, kioskId, onConfirm, onClose }) {
               <MdAdd size={17} /> Add to Order{" "}
               {!fetchingPrice && totalPrice > 0 && (
                 <span style={{ opacity: 0.85 }}>
-                  \u00B7 \u20A6{fmt(totalPrice)}
+                  {fmt(totalPrice)}
                 </span>
               )}
             </button>
@@ -3724,7 +3724,7 @@ function RecordSaleForm({ kioskId, menuItems, vatRate = 0, onSaved }) {
                     }}
                   >
                     {price > 0
-                      ? `\u20A6${Number(price).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`
+                      ? `${Number(price).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`
                       : "—"}
                   </div>
                   {inCart > 0 && (
@@ -3887,7 +3887,7 @@ function RecordSaleForm({ kioskId, menuItems, vatRate = 0, onSaved }) {
                   }}
                 >
                   {entry.unitPrice > 0
-                    ? `\u20A6${fmt(entry.unitPrice * entry.qty)}`
+                    ? `${fmt(entry.unitPrice * entry.qty)}`
                     : "—"}
                 </div>
                 <button
@@ -4044,7 +4044,7 @@ function SaleRow({ sale }) {
               {sale.items?.length || 0} item
               {sale.items?.length !== 1 ? "s" : ""}
             </span>
-            <span className="contract_row_dot">\u00B7</span>
+            <span className="contract_row_dot"></span>
             <span>{fmtDate(sale.createdAt)}</span>
           </div>
         </div>
@@ -4056,7 +4056,7 @@ function SaleRow({ sale }) {
             textAlign: "right",
           }}
         >
-          \u20A6
+
           {Number(sale.totalAmount || 0).toLocaleString(undefined, {
             maximumFractionDigits: 0,
           })}
@@ -4116,7 +4116,7 @@ function SaleRow({ sale }) {
                   flexShrink: 0,
                 }}
               >
-                \u20A6
+
                 {Number(item.priceAtTime || 0).toLocaleString(undefined, {
                   maximumFractionDigits: 0,
                 })}
@@ -4165,7 +4165,7 @@ export function SalesTab({ kioskId, menuItems, isOperator = true, vatRate = 0 })
         month: "short",
       })
       : "";
-  const fmtTick = (v) => `\u20A6${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`;
+  const fmtTick = (v) => `${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`;
   return (
     <div>
       {analytics?.totals && (
@@ -4180,12 +4180,12 @@ export function SalesTab({ kioskId, menuItems, isOperator = true, vatRate = 0 })
           {[
             {
               label: "Revenue",
-              value: `\u20A6${Number(analytics.totals.totalSales || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+              value: `${Number(analytics.totals.totalSales || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
               accent: false,
             },
             {
               label: "Profit",
-              value: `\u20A6${Number(analytics.totals.totalProfit || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+              value: `${Number(analytics.totals.totalProfit || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
               accent: true,
             },
           ].map((s) => (
@@ -4278,7 +4278,7 @@ export function SalesTab({ kioskId, menuItems, isOperator = true, vatRate = 0 })
               />
               <Tooltip
                 formatter={(v, name) => [
-                  `\u20A6${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                  `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
                   name === "sales" ? "Revenue" : "Profit",
                 ]}
                 labelFormatter={fmtChartDate}
@@ -4526,7 +4526,7 @@ export default function OperatorKioskPage() {
               >
                 <MdRestaurantMenu size={13} />
                 {kiosk.location.name}
-                {kiosk.location.city ? ` \u00B7 ${kiosk.location.city}` : ""}
+                {kiosk.location.city ? `  ${kiosk.location.city}` : ""}
               </div>
             )}
           </div>

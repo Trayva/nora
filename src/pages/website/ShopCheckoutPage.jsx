@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { APIProvider, Map, Marker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import {
   MdArrowBack,
   MdCheckCircle,
@@ -54,6 +55,34 @@ function OrderSuccess({ order, onClose }) {
     null;
   const orderNumber =
     order?.orderNumber || order?.data?.orderNumber || order?.id || "";
+
+  const [paying, setPaying] = useState(false);
+
+  const handlePay = async () => {
+    if (paying) return;
+    setPaying(true);
+    const gateway = order?.gateway || order?.data?.gateway || "paystack";
+    try {
+      const res = await api.get("/kiosk/shop/checkout", {
+        params: { id: orderNumber, gateway }
+      });
+      const freshLink = res.data?.data?.paymentLink || res.data?.paymentLink || paymentLink;
+      if (freshLink) {
+        window.open(freshLink, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error("Could not retrieve payment link");
+      }
+    } catch (err) {
+      console.error(err);
+      if (paymentLink) {
+        window.open(paymentLink, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error(err.response?.data?.message || "Failed to retrieve payment link");
+      }
+    } finally {
+      setPaying(false);
+    }
+  };
 
   return (
     <div
@@ -136,29 +165,32 @@ function OrderSuccess({ order, onClose }) {
       </p>
 
       {paymentLink ? (
-        <a
-          href={paymentLink}
-          target="_blank"
-          rel="noreferrer"
+        <button
+          onClick={handlePay}
+          disabled={paying}
           style={{
             display: "inline-flex",
             alignItems: "center",
+            justifyContent: "center",
             gap: 8,
             height: 50,
             padding: "0 32px",
             borderRadius: 999,
             background: "linear-gradient(135deg,#f97316,#ef4444)",
-            textDecoration: "none",
+            border: "none",
+            cursor: paying ? "not-allowed" : "pointer",
             fontFamily: "inherit",
             fontWeight: 800,
             fontSize: "1rem",
             color: "#fff",
             boxShadow: "0 8px 28px rgba(249,115,22,0.35)",
             marginBottom: 16,
+            opacity: paying ? 0.7 : 1,
+            transition: "all 0.2s",
           }}
         >
-          Pay Now <MdOpenInNew size={18} />
-        </a>
+          {paying ? "Preparing Payment..." : "Pay Now"} <MdOpenInNew size={18} />
+        </button>
       ) : null}
 
       <div>
@@ -185,6 +217,72 @@ function OrderSuccess({ order, onClose }) {
   );
 }
 
+/* ── Map events listener helper ── */
+function MapEventsListener({ onMapClick }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    const listener = map.addListener("click", (e) => {
+      if (e.latLng) {
+        onMapClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+      }
+    });
+    return () => {
+      if (window.google) {
+        window.google.maps.event.clearListeners(map, "click");
+      }
+    };
+  }, [map, onMapClick]);
+  return null;
+}
+
+/* ── Address autocomplete input component ── */
+function AddressAutocompleteInput({ value, onChange, onPlaceSelected, style }) {
+  const inputRef = useRef(null);
+  const placesLibrary = useMapsLibrary("places");
+  const [autocomplete, setAutocomplete] = useState(null);
+
+  useEffect(() => {
+    if (!placesLibrary || !inputRef.current) return;
+
+    const gAutocomplete = new placesLibrary.Autocomplete(inputRef.current);
+    setAutocomplete(gAutocomplete);
+
+    return () => {
+      if (placesLibrary.event) {
+        placesLibrary.event.clearInstanceListeners(gAutocomplete);
+      }
+    };
+  }, [placesLibrary]);
+
+  useEffect(() => {
+    if (!autocomplete) return;
+
+    const listener = autocomplete.addListener("place_changed", () => {
+      const place = autocomplete.getPlace();
+      onPlaceSelected(place);
+    });
+
+    return () => {
+      if (listener) {
+        listener.remove();
+      }
+    };
+  }, [autocomplete, onPlaceSelected]);
+
+  return (
+    <input
+      ref={inputRef}
+      className="modal-input"
+      type="text"
+      placeholder="Search delivery address..."
+      value={value}
+      onChange={onChange}
+      style={style}
+    />
+  );
+}
+
 /* ── Main checkout page ── */
 export default function ShopCheckoutPage() {
   const { state } = useLocation();
@@ -197,6 +295,8 @@ export default function ShopCheckoutPage() {
     customerPhone: "",
     customerEmail: "",
     deliveryAddress: "",
+    deliveryLat: null,
+    deliveryLng: null,
   });
   const [placing, setPlacing] = useState(false);
   const [gateway, setGateway] = useState("paystack");
@@ -212,7 +312,7 @@ export default function ShopCheckoutPage() {
     (s, e) => s + (e.item.sellingPrice || 0) * e.qty,
     0,
   );
-  
+
   const deliveryFee = orderType === "DELIVERY" ? (group.deliveryFee || 0) : 0;
   const vatRate = group.vatRate || 0;
   const vatAmount = subtotal * (vatRate / 100);
@@ -231,6 +331,8 @@ export default function ShopCheckoutPage() {
       const payload = {
         kioskId: group.kioskId,
         deliveryAddress: orderType === "PICKUP" ? undefined : form.deliveryAddress.trim(),
+        deliveryLat: orderType === "PICKUP" ? null : form.deliveryLat,
+        deliveryLng: orderType === "PICKUP" ? null : form.deliveryLng,
         orderType,
         gateway,
         items: group.items.map((e) => ({
@@ -428,7 +530,7 @@ export default function ShopCheckoutPage() {
               )}
             </div>
           ))}
-           {vatRate > 0 && (
+          {vatRate > 0 && (
             <div
               style={{
                 padding: "6px 16px",
@@ -627,29 +729,68 @@ export default function ShopCheckoutPage() {
           />
 
           {orderType === "DELIVERY" && (
-            <div className="form-field" style={{ marginBottom: 0 }}>
-              <label className="modal-label">Delivery Address *</label>
-              <div style={{ position: "relative" }}>
-                <MdLocationOn
-                  size={15}
-                  style={{
-                    position: "absolute",
-                    left: 11,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "#f97316",
-                    pointerEvents: "none",
-                  }}
-                />
-                <input
-                  className="modal-input"
-                  style={{ paddingLeft: 30 }}
-                  placeholder="Street address, estate, city"
-                  value={form.deliveryAddress}
-                  onChange={(e) => set("deliveryAddress", e.target.value)}
-                />
+            <APIProvider apiKey={import.meta.env.VITE_APP_MAP_API_KEY} libraries={["places"]}>
+              <div className="form-field" style={{ marginBottom: 10 }}>
+                <label className="modal-label">Delivery Address *</label>
+                <div style={{ position: "relative" }}>
+                  <MdLocationOn
+                    size={15}
+                    style={{
+                      position: "absolute",
+                      left: 11,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "#f97316",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <AddressAutocompleteInput
+                    style={{ paddingLeft: 30 }}
+                    value={form.deliveryAddress}
+                    onChange={(e) => set("deliveryAddress", e.target.value)}
+                    onPlaceSelected={(place) => {
+                      if (place.geometry && place.geometry.location) {
+                        const lat = place.geometry.location.lat();
+                        const lng = place.geometry.location.lng();
+                        const address = place.formatted_address || place.name || "";
+                        setForm((p) => ({
+                          ...p,
+                          deliveryAddress: address,
+                          deliveryLat: lat,
+                          deliveryLng: lng,
+                        }));
+                      }
+                    }}
+                  />
+                </div>
               </div>
-            </div>
+
+              <div style={{ height: 160, borderRadius: 10, overflow: "hidden", marginBottom: 14, border: "1px solid var(--border)" }}>
+                <Map
+                  defaultZoom={15}
+                  center={
+                    form.deliveryLat && form.deliveryLng
+                      ? { lat: form.deliveryLat, lng: form.deliveryLng }
+                      : { lat: 6.5244, lng: 3.3792 } // Lagos default
+                  }
+                  disableDefaultUI={true}
+                  gestureHandling="greedy"
+                >
+                  <MapEventsListener
+                    onMapClick={(coords) => {
+                      setForm((p) => ({
+                        ...p,
+                        deliveryLat: coords.lat,
+                        deliveryLng: coords.lng
+                      }));
+                    }}
+                  />
+                  {form.deliveryLat && form.deliveryLng && (
+                    <Marker position={{ lat: form.deliveryLat, lng: form.deliveryLng }} />
+                  )}
+                </Map>
+              </div>
+            </APIProvider>
           )}
 
           <div className="form-field" style={{ marginTop: 14, marginBottom: 0 }}>
@@ -736,7 +877,7 @@ export default function ShopCheckoutPage() {
                   animation: "spin 0.7s linear infinite",
                 }}
               />{" "}
-               Placing order…
+              Placing order…
             </>
           ) : (
             <>

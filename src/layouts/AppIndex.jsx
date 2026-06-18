@@ -120,55 +120,6 @@ export default function AppIndex() {
   return (
     <div className="app-layout">
 
-      {/* ════════════════════════════════════════════════════════
-          DESKTOP TOP HEADER
-          ════════════════════════════════════════════════════════ */}
-      {/* <header className="desktop-header" id="app-desktop-header">
-        <div className="desktop-header-left">
-          <span className="desktop-header-breadcrumb">{section}</span>
-          {sub && (
-            <>
-              <span className="desktop-header-sep">/</span>
-              <span className="desktop-header-sub">{sub}</span>
-            </>
-          )}
-        </div>
-
-        <div className="desktop-header-right">
-          <button
-            id="header-theme-toggle"
-            className="desktop-header-icon-btn"
-            onClick={toggle}
-            title={theme === "dark" ? "Light Mode" : "Dark Mode"}
-          >
-            {theme === "dark" ? <MdOutlineLightMode size={18} /> : <MdOutlineDarkMode size={18} />}
-          </button>
-          <NotificationBell className="desktop-header-icon-btn" />
-          {user && (
-            <button
-              id="header-account-btn"
-              className="desktop-header-account-btn"
-              onClick={() => navigate("/app/profile")}
-              title="Profile"
-            >
-              <span
-                className="desktop-header-avatar"
-                style={{ background: `hsl(${userHue}, 60%, 48%)` }}
-              >
-                {userInitials}
-              </span>
-              <span className="desktop-header-account-name">
-                {user.fullName?.split(" ")[0] || user.email}
-              </span>
-              <MdExpandMore size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-            </button>
-          )}
-        </div>
-      </header> */}
-
-      {/* ════════════════════════════════════════════════════════
-          MOBILE TOP NAVBAR — upgraded design
-          ════════════════════════════════════════════════════════ */}
       <header className="mobile-navbar" id="mobile-top-navbar">
         {/* Left: Logo + business name pill */}
         <div className="mobile-navbar-brand">
@@ -179,12 +130,7 @@ export default function AppIndex() {
               className="mobile-navbar-logo"
             />
           </div>
-          {/* {selectedState?.name && (
-            <div className="mobile-navbar-location">
-              <span className="mobile-navbar-biz-name">{selectedState.name}</span>
-              <MdExpandMore size={14} style={{ color: "var(--text-muted)" }} />
-            </div>
-          )} */}
+
         </div>
 
         {/* Right: theme + bell */}

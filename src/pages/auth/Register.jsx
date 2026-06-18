@@ -13,6 +13,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import useQuery from "../../hooks/useQuery";
 import { roleParamToRoles, getDefaultRoute } from "../../utils/AuthHelpers";
 
+import { CountrySelect } from "../admin/adminUtils_";
+
 const registerSchema = Yup.object().shape({
   fullName: Yup.string()
     .min(3, "Full name must be at least 3 characters")
@@ -26,6 +28,9 @@ const registerSchema = Yup.object().shape({
   phone: Yup.string()
     .min(7, "Phone number is too short")
     .required("Phone number is required"),
+  address: Yup.string().required("Address is required"),
+  city: Yup.string().required("City is required"),
+  country: Yup.string().required("Country is required"),
 });
 
 export default function Register() {
@@ -227,7 +232,7 @@ export default function Register() {
       </div>
 
       <Formik
-        initialValues={{ fullName: "", email: "", password: "", phone: "" }}
+        initialValues={{ fullName: "", email: "", password: "", phone: "", address: "", city: "", country: "" }}
         validationSchema={registerSchema}
         onSubmit={handleSubmit}
       >
@@ -293,6 +298,60 @@ export default function Register() {
                 </div>
                 {touched.phone && errors.phone && (
                   <span className="login_field_error">{errors.phone}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Address */}
+            <div className="form-field">
+              <label className="modal-label">Address</label>
+              <input
+                id="register-address"
+                className={`modal-input ${
+                  touched.address && errors.address ? "modal-input-error" : ""
+                }`}
+                type="text"
+                name="address"
+                placeholder="e.g. 123 Nora Boulevard"
+                value={values.address}
+                onChange={(e) => setFieldValue("address", e.target.value)}
+                onBlur={() => setFieldTouched("address")}
+              />
+              {touched.address && errors.address && (
+                <span className="login_field_error">{errors.address}</span>
+              )}
+            </div>
+
+            {/* City + Country row */}
+            <div className="register_row">
+              <div className="form-field" style={{ flex: 1 }}>
+                <label className="modal-label">City</label>
+                <input
+                  id="register-city"
+                  className={`modal-input ${
+                    touched.city && errors.city ? "modal-input-error" : ""
+                  }`}
+                  type="text"
+                  name="city"
+                  placeholder="e.g. Lagos"
+                  value={values.city}
+                  onChange={(e) => setFieldValue("city", e.target.value)}
+                  onBlur={() => setFieldTouched("city")}
+                />
+                {touched.city && errors.city && (
+                  <span className="login_field_error">{errors.city}</span>
+                )}
+              </div>
+
+              <div className="form-field" style={{ flex: 1 }}>
+                <label className="modal-label">Country</label>
+                <CountrySelect
+                  value={values.country}
+                  onChange={(e) => setFieldValue("country", e.target.value)}
+                  required
+                />
+                {touched.country && errors.country && (
+                  <span className="login_field_error">{errors.country}</span>
                 )}
               </div>
             </div>

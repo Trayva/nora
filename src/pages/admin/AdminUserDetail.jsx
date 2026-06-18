@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import {
   MdClose,
@@ -12,6 +12,7 @@ import {
   MdOutlineShield,
   MdExpandMore,
   MdExpandLess,
+  MdUpload,
 } from "react-icons/md";
 import { LuPlus } from "react-icons/lu";
 import Drawer from "../../components/Drawer";
@@ -70,57 +71,60 @@ const ROLE_COLORS = {
   },
 };
 
-function Section({ icon: Icon, title, children, defaultOpen = true }) {
+function Section({ icon: Icon, title, children, defaultOpen = true, extra }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div style={{ marginBottom: 16 }}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          width: "100%",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          padding: "8px 0",
-          fontFamily: "inherit",
-        }}
-      >
-        <div
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <button
+          onClick={() => setOpen((v) => !v)}
           style={{
-            width: 28,
-            height: 28,
-            borderRadius: 8,
-            background: "var(--bg-active)",
-            border: "1px solid rgba(203,108,220,0.2)",
-            color: "var(--accent)",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <Icon size={14} />
-        </div>
-        <span
-          style={{
-            fontSize: "0.82rem",
-            fontWeight: 800,
-            color: "var(--text-heading)",
+            gap: 8,
             flex: 1,
-            textAlign: "left",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "8px 0",
+            fontFamily: "inherit",
           }}
         >
-          {title}
-        </span>
-        {open ? (
-          <MdExpandLess size={16} style={{ color: "var(--text-muted)" }} />
-        ) : (
-          <MdExpandMore size={16} style={{ color: "var(--text-muted)" }} />
-        )}
-      </button>
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              background: "var(--bg-active)",
+              border: "1px solid rgba(203,108,220,0.2)",
+              color: "var(--accent)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Icon size={14} />
+          </div>
+          <span
+            style={{
+              fontSize: "0.82rem",
+              fontWeight: 800,
+              color: "var(--text-heading)",
+              flex: 1,
+              textAlign: "left",
+            }}
+          >
+            {title}
+          </span>
+          {open ? (
+            <MdExpandLess size={16} style={{ color: "var(--text-muted)" }} />
+          ) : (
+            <MdExpandMore size={16} style={{ color: "var(--text-muted)" }} />
+          )}
+        </button>
+        {extra && <div style={{ paddingLeft: 8 }}>{extra}</div>}
+      </div>
       {open && <div style={{ paddingTop: 6 }}>{children}</div>}
     </div>
   );
@@ -404,7 +408,10 @@ function InvoiceRow({ inv, onMarkPaid, onDiscount }) {
   );
 }
 
-export default function AdminUserDetail({ user, onClose }) {
+export default function AdminUserDetail({ user: initialUser, onClose }) {
+  const [currentUser, setCurrentUser] = useState(initialUser);
+  const user = currentUser;
+
   const [wallet, setWallet] = useState(null);
   const [transactions, setTxns] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -421,6 +428,9 @@ export default function AdminUserDetail({ user, onClose }) {
   const [walletNote, setWalletNote] = useState("");
   const [doingWallet, setDoingWallet] = useState(false);
   const [updatingSettings, setUpdatingSettings] = useState(false);
+  const [isEditingWalletSettings, setIsEditingWalletSettings] = useState(false);
+  const [editCurrency, setEditCurrency] = useState("");
+  const [editWithdrawalLimit, setEditWithdrawalLimit] = useState("");
 
   // Invoice create
   const [showInvForm, setShowInvForm] = useState(false);
@@ -431,9 +441,111 @@ export default function AdminUserDetail({ user, onClose }) {
   });
   const [creatingInv, setCreatingInv] = useState(false);
 
+  // Profile Edit State
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [fullName, setFullName] = useState(initialUser.fullName || "");
+  const [email, setEmail] = useState(initialUser.email || "");
+  const [phone, setPhone] = useState(initialUser.phone || "");
+  const [isActive, setIsActive] = useState(initialUser.isActive ?? true);
+  const [profileImageFile, setProfileImageFile] = useState(null);
+  const [profileImagePreview, setProfileImagePreview] = useState(null);
+
+  // KYC Edit State
+  const [isEditingKyc, setIsEditingKyc] = useState(false);
+  const [savingKyc, setSavingKyc] = useState(false);
+  const [address, setAddress] = useState(initialUser.address || "");
+  const [city, setCity] = useState(initialUser.city || "");
+  const [country, setCountry] = useState(initialUser.country || "");
+  const [govIdType, setGovIdType] = useState(initialUser.governmentIdType || "");
+  const [govIdNumber, setGovIdNumber] = useState(initialUser.governmentIdNumber || "");
+  const [bvn, setBvn] = useState(initialUser.bvn || "");
+  const [bvnVerified, setBvnVerified] = useState(initialUser.bvnVerified ?? false);
+  const [kycStatus, setKycStatus] = useState(initialUser.kycStatus || "PENDING");
+  const [govIdImageFile, setGovIdImageFile] = useState(null);
+  const [govIdImagePreview, setGovIdImagePreview] = useState(null);
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      const payload = new FormData();
+      payload.append("fullName", fullName);
+      payload.append("email", email);
+      payload.append("phone", phone);
+      payload.append("isActive", isActive);
+      if (profileImageFile) {
+        payload.append("image", profileImageFile);
+      }
+
+      const res = await api.put(`/account/${currentUser.id}`, payload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setCurrentUser(res.data.data);
+      setIsEditingProfile(false);
+      setProfileImageFile(null);
+      setProfileImagePreview(null);
+      toast.success("Profile details updated successfully");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update profile");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleSaveKyc = async () => {
+    setSavingKyc(true);
+    try {
+      const payload = new FormData();
+      payload.append("address", address);
+      payload.append("city", city);
+      payload.append("country", country);
+      payload.append("governmentIdType", govIdType);
+      payload.append("governmentIdNumber", govIdNumber);
+      payload.append("bvn", bvn);
+      payload.append("bvnVerified", bvnVerified);
+      payload.append("kycStatus", kycStatus);
+      if (govIdImageFile) {
+        payload.append("governmentIdImage", govIdImageFile);
+      }
+
+      const res = await api.put(`/account/${currentUser.id}`, payload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setCurrentUser(res.data.data);
+      setIsEditingKyc(false);
+      setGovIdImageFile(null);
+      setGovIdImagePreview(null);
+      toast.success("KYC details updated successfully");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update KYC");
+    } finally {
+      setSavingKyc(false);
+    }
+  };
+
   useEffect(() => {
-    // Extract current roles
-    setRoles(user.roles?.map((r) => r.role || r) || []);
+    setCurrentUser(initialUser);
+  }, [initialUser]);
+
+  useEffect(() => {
+    // Sync if currentUser changes
+    setFullName(currentUser?.fullName || "");
+    setEmail(currentUser?.email || "");
+    setPhone(currentUser?.phone || "");
+    setIsActive(currentUser?.isActive ?? true);
+    setAddress(currentUser?.address || "");
+    setCity(currentUser?.city || "");
+    setCountry(currentUser?.country || "");
+    setGovIdType(currentUser?.governmentIdType || "");
+    setGovIdNumber(currentUser?.governmentIdNumber || "");
+    setBvn(currentUser?.bvn || "");
+    setBvnVerified(currentUser?.bvnVerified ?? false);
+    setKycStatus(currentUser?.kycStatus || "PENDING");
+    setRoles(currentUser?.roles?.map((r) => r.role || r) || []);
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!user?.id) return;
     // Fetch wallet + invoices in parallel
     setLoading(true);
     Promise.allSettled([
@@ -453,7 +565,7 @@ export default function AdminUserDetail({ user, onClose }) {
         }
       })
       .finally(() => setLoading(false));
-  }, [user.id]);
+  }, [user?.id]);
 
   const handleSaveRoles = async () => {
     if (!roles.length) return toast.error("Select at least one role");
@@ -521,6 +633,27 @@ export default function AdminUserDetail({ user, onClose }) {
         params: { userId: user.id },
       });
       setWallet(r.data.data);
+      toast.success("Wallet settings updated");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update wallet settings");
+    } finally {
+      setUpdatingSettings(false);
+    }
+  };
+
+  const handleSaveWalletSettings = async () => {
+    try {
+      setUpdatingSettings(true);
+      await api.patch("/finance/wallet/settings", {
+        userId: user.id,
+        currency: editCurrency.trim().toUpperCase(),
+        withdrawalLimit: editWithdrawalLimit ? Number(editWithdrawalLimit) : null,
+      });
+      const r = await api.get("/finance/wallet", {
+        params: { userId: user.id },
+      });
+      setWallet(r.data.data);
+      setIsEditingWalletSettings(false);
       toast.success("Wallet settings updated");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update wallet settings");
@@ -639,6 +772,78 @@ export default function AdminUserDetail({ user, onClose }) {
         description={user.email}
         width={540}
       >
+        {/* Profile Header Card */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            padding: 16,
+            background: "var(--bg-active)",
+            border: "1px solid rgba(203,108,220,0.2)",
+            borderRadius: 12,
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ position: "relative", width: 72, height: 72, flexShrink: 0 }}>
+            <img
+              src={profileImagePreview || user.image || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}
+              alt={user.fullName}
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "50%",
+                objectFit: "cover",
+                border: "2px solid var(--accent)",
+              }}
+              onError={(e) => {
+                e.target.src = "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
+              }}
+            />
+            {isEditingProfile && (
+              <label
+                style={{
+                  position: "absolute",
+                  bottom: -2,
+                  right: -2,
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  background: "var(--accent)",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  border: "2px solid var(--bg-card)",
+                }}
+              >
+                <MdUpload size={14} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setProfileImageFile(file);
+                      setProfileImagePreview(URL.createObjectURL(file));
+                    }
+                  }}
+                />
+              </label>
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{ margin: "0 0 4px 0", fontSize: "1.1rem", fontWeight: 800, color: "var(--text-heading)" }}>
+              {user.fullName || "User"}
+            </h3>
+            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", wordBreak: "break-all" }}>
+              {user.email}
+            </span>
+          </div>
+        </div>
+
         {/* Header chips */}
         <div
           style={{
@@ -681,283 +886,561 @@ export default function AdminUserDetail({ user, onClose }) {
         </div>
 
         {/* Basic info */}
-        <Section icon={MdOutlinePerson} title="Profile">
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
-          >
-            {[
-              { l: "Phone", v: user.phone || "—" },
-              { l: "Joined", v: fmtDt(user.createdAt) },
-              { l: "Email Verified", v: user.emailVerified ? "Yes" : "No" },
-              { l: "Phone Verified", v: user.phoneVerified ? "Yes" : "No" },
-              { l: "Active", v: user.isActive ? "Yes" : "No" },
-              { l: "Attempts", v: user.passwordAttempts ?? "—" },
-            ].map(({ l, v }) => (
-              <div
-                key={l}
+        <Section
+          icon={MdOutlinePerson}
+          title="Profile"
+          extra={
+            !isEditingProfile && (
+              <button
+                onClick={() => setIsEditingProfile(true)}
                 style={{
-                  padding: "8px 10px",
-                  background: "var(--bg-hover)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 9,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--accent)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  fontFamily: "inherit",
                 }}
               >
-                <div
-                  style={{
-                    fontSize: "0.6rem",
-                    fontWeight: 700,
-                    color: "var(--text-muted)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    marginBottom: 3,
-                  }}
-                >
-                  {l}
+                <MdEdit size={14} /> Edit
+              </button>
+            )
+          }
+        >
+          {isEditingProfile ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="admin_form_grid" style={{ marginBottom: 0 }}>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">Full Name</label>
+                  <input
+                    className="modal-input"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Full Name"
+                  />
                 </div>
-                <div
-                  style={{
-                    fontSize: "0.8rem",
-                    fontWeight: 700,
-                    color: "var(--text-body)",
-                  }}
-                >
-                  {String(v)}
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">Email</label>
+                  <input
+                    className="modal-input"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email Address"
+                  />
+                </div>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">Phone</label>
+                  <input
+                    className="modal-input"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Phone Number"
+                  />
+                </div>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">Status</label>
+                  <select
+                    className="modal-input"
+                    value={String(isActive)}
+                    onChange={(e) => setIsActive(e.target.value === "true")}
+                    style={{
+                      background: "var(--bg-active)",
+                      color: "var(--text-body)",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </select>
                 </div>
               </div>
-            ))}
-          </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button
+                  className="app_btn app_btn_cancel"
+                  style={{ height: 34 }}
+                  onClick={() => {
+                    setIsEditingProfile(false);
+                    setProfileImageFile(null);
+                    setProfileImagePreview(null);
+                    setFullName(currentUser?.fullName || "");
+                    setEmail(currentUser?.email || "");
+                    setPhone(currentUser?.phone || "");
+                    setIsActive(currentUser?.isActive ?? true);
+                  }}
+                  disabled={savingProfile}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={`app_btn app_btn_confirm${savingProfile ? " btn_loading" : ""}`}
+                  style={{ height: 34, minWidth: 90, position: "relative" }}
+                  onClick={handleSaveProfile}
+                  disabled={savingProfile}
+                >
+                  <span className="btn_text">Save</span>
+                  {savingProfile && (
+                    <span className="btn_loader" style={{ width: 12, height: 12 }} />
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+            >
+              {[
+                { l: "Phone", v: user.phone || "—" },
+                { l: "Joined", v: fmtDt(user.createdAt) },
+                { l: "Email Verified", v: user.emailVerified ? "Yes" : "No" },
+                { l: "Phone Verified", v: user.phoneVerified ? "Yes" : "No" },
+                { l: "Active", v: user.isActive ? "Yes" : "No" },
+                { l: "Attempts", v: user.passwordAttempts ?? "—" },
+              ].map(({ l, v }) => (
+                <div
+                  key={l}
+                  style={{
+                    padding: "8px 10px",
+                    background: "var(--bg-hover)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 9,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.6rem",
+                      fontWeight: 700,
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      marginBottom: 3,
+                    }}
+                  >
+                    {l}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      color: "var(--text-body)",
+                    }}
+                  >
+                    {String(v)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Section>
 
         {/* KYC Section */}
-        <Section icon={MdOutlinePerson} title="KYC" defaultOpen={true}>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
-          >
-            <div
-              style={{
-                padding: 10,
-                borderRadius: 8,
-                background: "var(--bg-hover)",
-                border: "1px solid var(--border)",
-              }}
-            >
-              <div
+        <Section
+          icon={MdOutlinePerson}
+          title="KYC"
+          defaultOpen={true}
+          extra={
+            !isEditingKyc && (
+              <button
+                onClick={() => setIsEditingKyc(true)}
                 style={{
-                  fontSize: "0.7rem",
-                  color: "var(--text-muted)",
-                  marginBottom: 6,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--accent)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  fontFamily: "inherit",
                 }}
               >
-                Address
-              </div>
-              <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
-                {user.address || "—"}
-              </div>
-            </div>
-            <div
-              style={{
-                padding: 10,
-                borderRadius: 8,
-                background: "var(--bg-hover)",
-                border: "1px solid var(--border)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.7rem",
-                  color: "var(--text-muted)",
-                  marginBottom: 6,
-                }}
-              >
-                City / Country
-              </div>
-              <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
-                {[user.city, user.country].filter(Boolean).join(" / ") || "—"}
-              </div>
-            </div>
-            <div
-              style={{
-                padding: 10,
-                borderRadius: 8,
-                background: "var(--bg-hover)",
-                border: "1px solid var(--border)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.7rem",
-                  color: "var(--text-muted)",
-                  marginBottom: 6,
-                }}
-              >
-                Government ID
-              </div>
-              <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
-                {user.governmentIdType || "—"}{" "}
-                {user.governmentIdNumber ? `· ${user.governmentIdNumber}` : ""}
-              </div>
-            </div>
-            <div
-              style={{
-                padding: 10,
-                borderRadius: 8,
-                background: "var(--bg-hover)",
-                border: "1px solid var(--border)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.7rem",
-                  color: "var(--text-muted)",
-                  marginBottom: 6,
-                }}
-              >
-                BVN
-              </div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
-                  {user.bvn || "—"}
+                <MdEdit size={14} /> Edit
+              </button>
+            )
+          }
+        >
+          {isEditingKyc ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="admin_form_grid" style={{ marginBottom: 0 }}>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">Address</label>
+                  <input
+                    className="modal-input"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Street Address"
+                  />
                 </div>
-                {user.bvnVerified ? (
-                  <span style={{ color: "green", fontWeight: 700 }}>
-                    Verified
-                  </span>
-                ) : (
-                  <span style={{ color: "var(--text-muted)" }}>
-                    Not verified
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              marginTop: 12,
-              display: "flex",
-              gap: 8,
-              alignItems: "center",
-            }}
-          >
-            <div>
-              {user.governmentIdImage ? (
-                <a
-                  href={user.governmentIdImage}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <img
-                    src={user.governmentIdImage}
-                    alt="gov-id"
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">City</label>
+                  <input
+                    className="modal-input"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="City"
+                  />
+                </div>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">Country</label>
+                  <input
+                    className="modal-input"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    placeholder="Country"
+                  />
+                </div>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">BVN</label>
+                  <input
+                    className="modal-input"
+                    value={bvn}
+                    onChange={(e) => setBvn(e.target.value)}
+                    placeholder="Bank Verification Number"
+                  />
+                </div>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">BVN Verified</label>
+                  <select
+                    className="modal-input"
+                    value={String(bvnVerified)}
+                    onChange={(e) => setBvnVerified(e.target.value === "true")}
                     style={{
-                      width: 140,
-                      height: 90,
-                      objectFit: "cover",
-                      borderRadius: 8,
+                      background: "var(--bg-active)",
+                      color: "var(--text-body)",
                       border: "1px solid var(--border)",
                     }}
+                  >
+                    <option value="true">Verified</option>
+                    <option value="false">Not Verified</option>
+                  </select>
+                </div>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">KYC Status</label>
+                  <select
+                    className="modal-input"
+                    value={kycStatus}
+                    onChange={(e) => setKycStatus(e.target.value)}
+                    style={{
+                      background: "var(--bg-active)",
+                      color: "var(--text-body)",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <option value="PENDING">PENDING</option>
+                    <option value="APPROVED">APPROVED</option>
+                    <option value="REJECTED">REJECTED</option>
+                  </select>
+                </div>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">Gov ID Type</label>
+                  <input
+                    className="modal-input"
+                    value={govIdType}
+                    onChange={(e) => setGovIdType(e.target.value)}
+                    placeholder="e.g. National ID, Passport"
                   />
-                </a>
-              ) : (
+                </div>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <label className="modal-label">Gov ID Number</label>
+                  <input
+                    className="modal-input"
+                    value={govIdNumber}
+                    onChange={(e) => setGovIdNumber(e.target.value)}
+                    placeholder="ID Number"
+                  />
+                </div>
+              </div>
+
+              {/* Gov ID Image Upload/Preview */}
+              <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 4 }}>
+                <div style={{ position: "relative" }}>
+                  {govIdImagePreview || user.governmentIdImage ? (
+                    <img
+                      src={govIdImagePreview || user.governmentIdImage}
+                      alt="gov-id-preview"
+                      style={{
+                        width: 140,
+                        height: 90,
+                        objectFit: "cover",
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 140,
+                        height: 90,
+                        borderRadius: 8,
+                        background: "var(--bg-active)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "var(--text-muted)",
+                        border: "1px dashed var(--border)",
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      No document
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label
+                    className="app_btn"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      cursor: "pointer",
+                      height: 30,
+                      padding: "0 12px",
+                      fontSize: "0.75rem",
+                    }}
+                  >
+                    <MdUpload size={14} /> Upload Document
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setGovIdImageFile(file);
+                          setGovIdImagePreview(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                  </label>
+                  {govIdImageFile && (
+                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", wordBreak: "break-all" }}>
+                      Selected: {govIdImageFile.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                <button
+                  className="app_btn app_btn_cancel"
+                  style={{ height: 34 }}
+                  onClick={() => {
+                    setIsEditingKyc(false);
+                    setGovIdImageFile(null);
+                    setGovIdImagePreview(null);
+                    setAddress(currentUser?.address || "");
+                    setCity(currentUser?.city || "");
+                    setCountry(currentUser?.country || "");
+                    setGovIdType(currentUser?.governmentIdType || "");
+                    setGovIdNumber(currentUser?.governmentIdNumber || "");
+                    setBvn(currentUser?.bvn || "");
+                    setBvnVerified(currentUser?.bvnVerified ?? false);
+                    setKycStatus(currentUser?.kycStatus || "PENDING");
+                  }}
+                  disabled={savingKyc}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={`app_btn app_btn_confirm${savingKyc ? " btn_loading" : ""}`}
+                  style={{ height: 34, minWidth: 90, position: "relative" }}
+                  onClick={handleSaveKyc}
+                  disabled={savingKyc}
+                >
+                  <span className="btn_text">Save</span>
+                  {savingKyc && (
+                    <span className="btn_loader" style={{ width: 12, height: 12 }} />
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 <div
                   style={{
-                    width: 140,
-                    height: 90,
+                    padding: 10,
                     borderRadius: 8,
-                    background: "var(--bg-active)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--text-muted)",
-                    border: "1px dashed var(--border)",
+                    background: "var(--bg-hover)",
+                    border: "1px solid var(--border)",
                   }}
                 >
-                  No document
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: 6 }}>
+                    Address
+                  </div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
+                    {user.address || "—"}
+                  </div>
                 </div>
-              )}
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  className="app_btn app_btn_confirm"
-                  onClick={async () => {
-                    try {
-                      await api.put(`/account/${user.id}`, {
-                        kycStatus: "APPROVED",
-                        kycVerifiedAt: new Date().toISOString(),
-                      });
-                      toast.success("KYC approved");
-                      onClose();
-                    } catch (err) {
-                      toast.error(
-                        err.response?.data?.message || "Failed to approve KYC",
-                      );
-                    }
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 8,
+                    background: "var(--bg-hover)",
+                    border: "1px solid var(--border)",
                   }}
                 >
-                  <MdCheck /> Approve KYC
-                </button>
-                <button
-                  className="app_btn app_btn_cancel"
-                  onClick={async () => {
-                    try {
-                      await api.put(`/account/${user.id}`, {
-                        kycStatus: "REJECTED",
-                      });
-                      toast.success("KYC rejected");
-                      onClose();
-                    } catch (err) {
-                      toast.error(
-                        err.response?.data?.message || "Failed to reject KYC",
-                      );
-                    }
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: 6 }}>
+                    City / Country
+                  </div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
+                    {[user.city, user.country].filter(Boolean).join(" / ") || "—"}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 8,
+                    background: "var(--bg-hover)",
+                    border: "1px solid var(--border)",
                   }}
                 >
-                  Reject
-                </button>
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: 6 }}>
+                    Government ID
+                  </div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
+                    {user.governmentIdType || "—"}{" "}
+                    {user.governmentIdNumber ? `· ${user.governmentIdNumber}` : ""}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 8,
+                    background: "var(--bg-hover)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: 6 }}>
+                    BVN
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>
+                      {user.bvn || "—"}
+                    </div>
+                    {user.bvnVerified ? (
+                      <span style={{ color: "green", fontWeight: 700 }}>Verified</span>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)" }}>Not verified</span>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  className="app_btn"
-                  onClick={async () => {
-                    try {
-                      await api.put(`/account/${user.id}`, {
-                        bvnVerified: true,
-                      });
-                      toast.success("BVN marked verified");
-                      onClose();
-                    } catch (err) {
-                      toast.error(
-                        err.response?.data?.message || "Failed to mark BVN",
-                      );
-                    }
-                  }}
-                >
-                  Mark BVN Verified
-                </button>
-                <button
-                  className="app_btn app_btn_cancel"
-                  onClick={async () => {
-                    try {
-                      await api.put(`/account/${user.id}`, {
-                        bvnVerified: false,
-                      });
-                      toast.success("BVN unverified");
-                      onClose();
-                    } catch (err) {
-                      toast.error(
-                        err.response?.data?.message || "Failed to unverify BVN",
-                      );
-                    }
-                  }}
-                >
-                  Unverify BVN
-                </button>
+              <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
+                <div>
+                  {user.governmentIdImage ? (
+                    <a href={user.governmentIdImage} target="_blank" rel="noreferrer">
+                      <img
+                        src={user.governmentIdImage}
+                        alt="gov-id"
+                        style={{
+                          width: 140,
+                          height: 90,
+                          objectFit: "cover",
+                          borderRadius: 8,
+                          border: "1px solid var(--border)",
+                        }}
+                      />
+                    </a>
+                  ) : (
+                    <div
+                      style={{
+                        width: 140,
+                        height: 90,
+                        borderRadius: 8,
+                        background: "var(--bg-active)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "var(--text-muted)",
+                        border: "1px dashed var(--border)",
+                      }}
+                    >
+                      No document
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      className="app_btn app_btn_confirm"
+                      onClick={async () => {
+                        try {
+                          await api.put(`/account/${user.id}`, {
+                            kycStatus: "APPROVED",
+                            kycVerifiedAt: new Date().toISOString(),
+                          });
+                          toast.success("KYC approved");
+                          onClose();
+                        } catch (err) {
+                          toast.error(err.response?.data?.message || "Failed to approve KYC");
+                        }
+                      }}
+                    >
+                      <MdCheck /> Approve KYC
+                    </button>
+                    <button
+                      className="app_btn app_btn_cancel"
+                      onClick={async () => {
+                        try {
+                          await api.put(`/account/${user.id}`, {
+                            kycStatus: "REJECTED",
+                          });
+                          toast.success("KYC rejected");
+                          onClose();
+                        } catch (err) {
+                          toast.error(err.response?.data?.message || "Failed to reject KYC");
+                        }
+                      }}
+                    >
+                      Reject
+                    </button>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      className="app_btn"
+                      onClick={async () => {
+                        try {
+                          await api.put(`/account/${user.id}`, {
+                            bvnVerified: true,
+                          });
+                          toast.success("BVN marked verified");
+                          onClose();
+                        } catch (err) {
+                          toast.error(err.response?.data?.message || "Failed to mark BVN");
+                        }
+                      }}
+                    >
+                      Mark BVN Verified
+                    </button>
+                    <button
+                      className="app_btn app_btn_cancel"
+                      onClick={async () => {
+                        try {
+                          await api.put(`/account/${user.id}`, {
+                            bvnVerified: false,
+                          });
+                          toast.success("BVN unverified");
+                          onClose();
+                        } catch (err) {
+                          toast.error(err.response?.data?.message || "Failed to unverify BVN");
+                        }
+                      }}
+                    >
+                      Unverify BVN
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </Section>
 
         {/* Roles editor */}
@@ -1178,6 +1661,71 @@ export default function AdminUserDetail({ user, onClose }) {
                   </label>
                 </div>
               </div>
+
+              {/* Edit Wallet Limit & Currency form */}
+              {isEditingWalletSettings ? (
+                <div className="admin_form_card" style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                    <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                      Edit Wallet Configurations
+                    </span>
+                    <button className="biz_icon_btn" onClick={() => setIsEditingWalletSettings(false)}>
+                      <MdClose size={13} />
+                    </button>
+                  </div>
+                  <div className="admin_form_grid" style={{ marginBottom: 10 }}>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">Currency Code</label>
+                      <input
+                        className="modal-input"
+                        placeholder="e.g. USD"
+                        value={editCurrency}
+                        onChange={(e) => setEditCurrency(e.target.value.toUpperCase())}
+                      />
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">Withdrawal Limit</label>
+                      <input
+                        className="modal-input"
+                        type="number"
+                        placeholder="e.g. 50000 (Empty for none)"
+                        value={editWithdrawalLimit}
+                        onChange={(e) => setEditWithdrawalLimit(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                    <button className="app_btn app_btn_cancel" style={{ height: 30 }} onClick={() => setIsEditingWalletSettings(false)}>
+                      Cancel
+                    </button>
+                    <button
+                      className={`app_btn app_btn_confirm${updatingSettings ? " btn_loading" : ""}`}
+                      style={{ height: 30, minWidth: 70 }}
+                      onClick={handleSaveWalletSettings}
+                      disabled={updatingSettings}
+                    >
+                      <span className="btn_text">Save</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 10, marginBottom: 12 }}>
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-body)", fontWeight: 700 }}>
+                    Withdrawal Limit: <span style={{ color: "var(--accent)" }}>{wallet.withdrawalLimit != null ? `${wallet.currency} ${wallet.withdrawalLimit.toLocaleString()}` : "None"}</span>
+                  </div>
+                  <button
+                    className="app_btn"
+                    style={{ height: 26, fontSize: "0.7rem", padding: "0 8px" }}
+                    onClick={() => {
+                      setEditCurrency(wallet.currency || "NGN");
+                      setEditWithdrawalLimit(wallet.withdrawalLimit != null ? String(wallet.withdrawalLimit) : "");
+                      setIsEditingWalletSettings(true);
+                    }}
+                  >
+                    Edit Config
+                  </button>
+                </div>
+              )}
 
               {/* Credit / Debit action */}
               {walletAction ? (
