@@ -23,6 +23,7 @@ import {
 import { LuShoppingCart } from "react-icons/lu";
 import api from "../../api/axios";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useAuth } from "../../contexts/AuthContext";
 import nora_logo_white from "../../assets/nora_white.png";
 import nora_logo_dark from "../../assets/nora_dark.png";
 
@@ -947,26 +948,57 @@ function AddressAutocompleteInput({ value, onChange, onPlaceSelected, style }) {
 /* ── Checkout form (inside cart drawer) ── */
 function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSuccess, onBack }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlLat = parseFloat(searchParams.get("lat"));
+  const urlLng = parseFloat(searchParams.get("lng"));
+
   const [orderType, setOrderType] = useState("DELIVERY");
   const [form, setForm] = useState({
     customerName: "",
     customerEmail: "",
     customerPhone: "",
     deliveryAddress: "",
-    deliveryLat: null,
-    deliveryLng: null,
+    // customerName: user?.fullName || "",
+    // customerEmail: user?.email || "",
+    // customerPhone: user?.phone || "",
+    // deliveryAddress: user?.address || "",
+    deliveryLat: isNaN(urlLat) ? null : urlLat,
+    deliveryLng: isNaN(urlLng) ? null : urlLng,
   });
   const [placing, setPlacing] = useState(false);
   const [gateway, setGateway] = useState("paystack");
   const [orderResult, setOrderResult] = useState(null);
   const [paying, setPaying] = useState(false);
+  const [dynamicDeliveryFee, setDynamicDeliveryFee] = useState(0);
 
   const total = items.reduce(
     (s, e) => s + (e.unitPrice || e.item.sellingPrice || 0) * e.qty,
     0,
   );
 
-  const deliveryFee = orderType === "DELIVERY" ? (concepts?.find((c) => c.id === kioskId)?.deliveryFee || 0) : 0;
+  useEffect(() => {
+    if (orderType !== "DELIVERY" || !form.deliveryLat || !form.deliveryLng || !kioskId) {
+      setDynamicDeliveryFee(0);
+      return;
+    }
+    let isMounted = true;
+    const getFee = async () => {
+      try {
+        const res = await api.post("/kiosk/shop/delivery-cost", {
+          kioskId,
+          lat: form.deliveryLat,
+          lng: form.deliveryLng
+        });
+        if (isMounted) setDynamicDeliveryFee(res.data.data.cost);
+      } catch (e) {
+        if (isMounted) setDynamicDeliveryFee(concepts?.find((c) => c.id === kioskId)?.deliveryFee || 0);
+      }
+    };
+    getFee();
+    return () => { isMounted = false; };
+  }, [orderType, form.deliveryLat, form.deliveryLng, kioskId, concepts]);
+
+  const deliveryFee = orderType === "DELIVERY" ? dynamicDeliveryFee : 0;
   const vatAmount = total * (vatRate / 100);
   const grandTotal = total + vatAmount + deliveryFee;
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));

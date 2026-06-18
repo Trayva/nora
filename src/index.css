@@ -1839,3 +1839,37 @@ span {
 /* * {
   border-radius: 0px !important;
 } */
+
+/* ── Google Places Autocomplete ───────────────────────── */
+
+.pac-container {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+  font-family: inherit !important;
+  padding: 4px 0 !important;
+}
+
+.pac-item {
+  padding: 10px 12px !important;
+  border-top: 1px solid var(--border) !important;
+  cursor: pointer !important;
+  color: var(--text-body) !important;
+  font-family: inherit !important;
+  transition: background-color 0.15s !important;
+}
+
+.pac-item:hover {
+  background-color: var(--bg-hover) !important;
+}
+
+.pac-item-query {
+  color: var(--text-heading) !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+}
+
+.pac-icon {
+  display: none !important;
+}
