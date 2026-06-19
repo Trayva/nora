@@ -176,6 +176,7 @@ import ConceptPage from "../pages/app/Business/ConceptPage";
 import OperatorHome from "../pages/app/Operator/OperatorHome";
 import OperatorKioskPage from "../pages/app/Operator/OperatorKiosk";
 import SupplierHome from "../pages/app/Supplier/SupplierHome";
+import RiderHome from "../pages/app/Rider/RiderHome";
 import ShopPage from "../pages/website/ShopPage";
 import ShopCheckoutPage from "../pages/website/ShopCheckoutPage";
 import ShopOrderPage from "../pages/website/ShopOrderPage";
@@ -299,6 +300,7 @@ export default function Routes() {
         { path: "business/concept/:id", element: <ConceptPage /> },
         { path: "operator", element: <OperatorHome /> },
         { path: "operator/kiosk/:kioskId", element: <OperatorKioskPage /> },
+        { path: "rider", element: <RiderHome /> },
         { path: "aggregator", element: <AggregatorPage /> },
         { path: "notifications", element: <NotificationsPage /> },
         { path: "support", element: <UserTickets /> },

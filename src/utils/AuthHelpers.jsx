@@ -10,6 +10,7 @@ export function getPrimaryRole(user) {
   if (roles.includes("ADMIN")) return "ADMIN";
   if (roles.includes("VENDOR")) return "VENDOR";
   if (roles.includes("SUPPLIER")) return "SUPPLIER";
+  if (roles.includes("RIDER")) return "RIDER";
   if (roles.includes("OPERATOR")) return "OPERATOR";
   return "CUSTOMER";
 }
@@ -26,6 +27,8 @@ export function getDefaultRoute(user) {
       return "/app/business";
     case "SUPPLIER":
       return "/app/supplier";
+    case "RIDER":
+      return "/app/rider";
     case "OPERATOR":
       return "/app/operator";
     default:
@@ -42,6 +45,7 @@ export function roleParamToRoles(roleParam) {
     vendor: ["VENDOR"],
     supplier: ["SUPPLIER"],
     operator: ["OPERATOR"],
+    rider: ["RIDER"],
     customer: ["CUSTOMER"],
   };
   return map[roleParam.toLowerCase()] || ["CUSTOMER"];

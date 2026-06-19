@@ -25,6 +25,9 @@ import {
   MdCircle,
   MdBuild,
   MdAdd,
+  MdAccessTime,
+  MdOutlineHistory,
+  MdPerson,
 } from "react-icons/md";
 import { PiTruck } from "react-icons/pi";
 import api from "../../../api/axios";
@@ -4335,6 +4338,139 @@ export default function SupplierHome() {
         </div>
       </div>
     );
+
+  // State 2: Profile Awaiting Approval
+  if (profile && !profile.isApproved && !editing) {
+    return (
+      <div className="app-pending-container">
+        <div className="app-pending-card">
+          <div className="app-pending-header">
+            <div className="app-pending-badge">
+              <span className="pulse-dot" />
+              Under Review
+            </div>
+            <h2 className="app-pending-title">Application Submitted</h2>
+            <p className="app-pending-subtitle">
+              Your supplier profile is currently pending administrator approval.
+              Once approved, you will be able to receive and fulfill supply requests.
+            </p>
+          </div>
+
+          {/* Stepper Timeline */}
+          <div className="app-timeline">
+            <div className="app-timeline-step completed">
+              <div className="app-step-node">
+                <MdCheck size={18} />
+              </div>
+              <span className="app-step-label">Apply</span>
+              <span className="app-step-desc">Business registered</span>
+            </div>
+            <div className="app-timeline-step active">
+              <div className="app-step-node">
+                <MdAccessTime size={18} />
+              </div>
+              <span className="app-step-label">Review</span>
+              <span className="app-step-desc">Supplier verification</span>
+            </div>
+            <div className="app-timeline-step">
+              <div className="app-step-node">3</div>
+              <span className="app-step-label">Activate</span>
+              <span className="app-step-desc">Fulfil requests</span>
+            </div>
+          </div>
+
+          {/* Submitted Info Grid */}
+          <div className="app-review-details">
+            <div className="app-review-sec">
+              <h4 className="app-review-sectitle">Business Details</h4>
+              <div className="app-review-info-list">
+                <div className="app-review-info-item">
+                  <span className="app-review-label">Business Name</span>
+                  <span className="app-review-value">{profile.businessName || "—"}</span>
+                </div>
+                <div className="app-review-info-item">
+                  <span className="app-review-label">Operating State</span>
+                  <span className="app-review-value">{profile.state?.name || "—"}</span>
+                </div>
+                <div className="app-review-info-item">
+                  <span className="app-review-label">Submitted On</span>
+                  <span className="app-review-value">{new Date(profile.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="app-review-sec">
+              <h4 className="app-review-sectitle">Uploaded Documents</h4>
+              <div className="app-doc-cards">
+                {profile.businessRegDoc ? (
+                  <a
+                    href={profile.businessRegDoc}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="app-doc-card"
+                  >
+                    <div className="app-doc-icon">
+                      <MdBusiness size={16} />
+                    </div>
+                    <div className="app-doc-meta">
+                      <span className="app-doc-name">Reg. Certificate</span>
+                      <span className="app-doc-action">View Document →</span>
+                    </div>
+                  </a>
+                ) : (
+                  <div className="app-doc-card" style={{ opacity: 0.5, cursor: "default" }}>
+                    <div className="app-doc-icon" style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-muted)" }}>
+                      <MdBusiness size={16} />
+                    </div>
+                    <div className="app-doc-meta">
+                      <span className="app-doc-name" style={{ color: "var(--text-muted)" }}>Reg. Certificate</span>
+                      <span className="app-doc-action" style={{ color: "var(--text-muted)" }}>Not Provided</span>
+                    </div>
+                  </div>
+                )}
+
+                {profile.brandLogo ? (
+                  <a
+                    href={profile.brandLogo}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="app-doc-card"
+                  >
+                    <div className="app-doc-icon">
+                      <MdUpload size={16} />
+                    </div>
+                    <div className="app-doc-meta">
+                      <span className="app-doc-name">Brand Logo</span>
+                      <span className="app-doc-action">View Logo →</span>
+                    </div>
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 12, width: "100%", justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              className="app-refresh-btn-glowing"
+              onClick={() => setEditing(true)}
+              style={{ display: "flex", alignItems: "center", gap: 8 }}
+            >
+              <MdPerson size={18} />
+              <span>Edit Profile</span>
+            </button>
+
+            <button
+              className="app-refresh-btn-glowing"
+              onClick={fetchProfile}
+            >
+              <MdOutlineHistory size={18} />
+              <span>Check Status</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page_wrapper">

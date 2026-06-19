@@ -4,6 +4,7 @@ import {
   MdOutlineKitchen, MdChevronLeft, MdChevronRight, MdOutlineBadge,
   MdLocationOn, MdClose, MdAdminPanelSettings, MdCheck,
   MdPersonAdd, MdExpandMore, MdOutlineTour, MdOutlineHelpOutline,
+  MdDeliveryDining,
 } from "react-icons/md";
 import nora_logo_white from "../assets/nora_white.png";
 import nora_icon_white from "../assets/nora_white - icon.png";
@@ -41,6 +42,7 @@ const ALL_NAV_ITEMS = [
   { id: "mybusiness", label: "My Business", icon: BsShop, path: "/app/business", forRoles: ["ADMIN", "VENDOR"], tourId: "sidebar-nav-business" },
   { id: "supplier", label: "Supplier", icon: PiTruck, path: "/app/supplier", forRoles: ["ADMIN", "SUPPLIER"], tourId: "sidebar-nav-supplier" },
   { id: "operator", label: "Operator", icon: MdOutlineBadge, path: "/app/operator", forRoles: ["ADMIN", "OPERATOR"], tourId: "sidebar-nav-operator" },
+  { id: "rider", label: "Rider", icon: MdDeliveryDining, path: "/app/rider", forRoles: ["ADMIN", "RIDER"], tourId: "sidebar-nav-rider" },
   { id: "aggregator", label: "Aggregator", icon: TbGridDots, path: "/app/aggregator", forRoles: ["ADMIN", "AGGREGATOR"], tourId: "sidebar-nav-aggregator" },
 ];
 

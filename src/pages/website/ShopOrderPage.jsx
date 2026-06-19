@@ -16,6 +16,7 @@ import {
   MdOutlineDarkMode,
   MdImage,
   MdOutlineReceiptLong,
+  MdDirectionsBike,
 } from "react-icons/md";
 import { LuShoppingCart, LuChefHat, LuPackageCheck } from "react-icons/lu";
 import api from "../../api/axios";
@@ -878,6 +879,105 @@ export default function ShopOrderPage() {
               </div>
               <Stepper status={order.status} />
             </div>
+
+            {/* ── Rider details ── */}
+            {order.rider && (
+              <div
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 16,
+                  padding: "16px 18px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    fontWeight: 800,
+                    color: "var(--text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    marginBottom: 14,
+                  }}
+                >
+                  Delivery Rider
+                </div>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: 12 }}
+                >
+                  {order.rider.image ? (
+                    <img
+                      src={order.rider.image}
+                      alt={order.rider.fullName}
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        border: "1px solid var(--border)",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: "50%",
+                        background: "var(--bg-active)",
+                        border: "1px solid rgba(203,108,220,0.2)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "var(--accent)",
+                      }}
+                    >
+                      <MdDirectionsBike size={20} />
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "0.82rem",
+                        fontWeight: 700,
+                        color: "var(--text-heading)",
+                        marginBottom: 2,
+                      }}
+                    >
+                      {order.rider.fullName}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.74rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      Assigned Courier
+                    </div>
+                  </div>
+                  {order.rider.phone && (
+                    <a
+                      href={`tel:${order.rider.phone}`}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        background: "var(--bg-hover)",
+                        border: "1px solid var(--border)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "var(--accent)",
+                        textDecoration: "none",
+                        transition: "all 0.2s",
+                      }}
+                      title="Call Rider"
+                    >
+                      <MdPhone size={16} />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* ── Kiosk location ── */}
             {order.cart?.location && (

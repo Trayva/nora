@@ -7,25 +7,25 @@ import {
 import api from "../../api/axios";
 
 /* ── helpers ──────────────────────────────────────────────── */
-const fmt     = (n) => Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
+const fmt = (n) => Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
 const fmtTime = (d) => d ? new Date(d).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "—";
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—";
 
 const ORDER_STATUSES = ["PENDING", "ACCEPTED", "PREPARING", "COMPLETED", "DISPATCHED", "DELIVERED", "CANCELLED"];
 
 const STATUS_STYLE = {
-  PENDING:    { bg: "rgba(234,179,8,0.1)",   color: "#ca8a04",       border: "rgba(234,179,8,0.25)"   },
-  ACCEPTED:   { bg: "rgba(59,130,246,0.1)",  color: "#3b82f6",       border: "rgba(59,130,246,0.25)"  },
-  PREPARING:  { bg: "rgba(168,85,247,0.1)",  color: "#a855f7",       border: "rgba(168,85,247,0.25)"  },
-  COMPLETED:  { bg: "rgba(34,197,94,0.1)",   color: "#16a34a",       border: "rgba(34,197,94,0.25)"   },
+  PENDING: { bg: "rgba(234,179,8,0.1)", color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
+  ACCEPTED: { bg: "rgba(59,130,246,0.1)", color: "#3b82f6", border: "rgba(59,130,246,0.25)" },
+  PREPARING: { bg: "rgba(168,85,247,0.1)", color: "#a855f7", border: "rgba(168,85,247,0.25)" },
+  COMPLETED: { bg: "rgba(34,197,94,0.1)", color: "#16a34a", border: "rgba(34,197,94,0.25)" },
   DISPATCHED: { bg: "rgba(203,108,220,0.1)", color: "var(--accent)", border: "rgba(203,108,220,0.25)" },
-  DELIVERED:  { bg: "rgba(34,197,94,0.1)",   color: "#16a34a",       border: "rgba(34,197,94,0.25)"   },
-  CANCELLED:  { bg: "rgba(107,114,128,0.1)", color: "#6b7280",       border: "rgba(107,114,128,0.25)" },
+  DELIVERED: { bg: "rgba(34,197,94,0.1)", color: "#16a34a", border: "rgba(34,197,94,0.25)" },
+  CANCELLED: { bg: "rgba(107,114,128,0.1)", color: "#6b7280", border: "rgba(107,114,128,0.25)" },
 };
 const PMT_STYLE = {
-  PAID:    { bg: "rgba(34,197,94,0.1)",   color: "#16a34a", border: "rgba(34,197,94,0.25)"   },
-  PENDING: { bg: "rgba(234,179,8,0.1)",   color: "#ca8a04", border: "rgba(234,179,8,0.25)"   },
-  FAILED:  { bg: "rgba(239,68,68,0.1)",   color: "#ef4444", border: "rgba(239,68,68,0.25)"   },
+  PAID: { bg: "rgba(34,197,94,0.1)", color: "#16a34a", border: "rgba(34,197,94,0.25)" },
+  PENDING: { bg: "rgba(234,179,8,0.1)", color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
+  FAILED: { bg: "rgba(239,68,68,0.1)", color: "#ef4444", border: "rgba(239,68,68,0.25)" },
 };
 
 function StatusChip({ status, colors = STATUS_STYLE }) {
@@ -39,21 +39,21 @@ function StatusChip({ status, colors = STATUS_STYLE }) {
 
 /* ── Next statuses a user can transition to ── */
 const NEXT_STATUSES = {
-  PENDING:    ["ACCEPTED", "CANCELLED"],
-  ACCEPTED:   ["PREPARING", "CANCELLED"],
-  PREPARING:  ["COMPLETED", "DISPATCHED", "CANCELLED"],
-  COMPLETED:  [],
+  PENDING: ["ACCEPTED", "CANCELLED"],
+  ACCEPTED: ["PREPARING"],
+  PREPARING: ["COMPLETED", "DISPATCHED"],
+  COMPLETED: ["DISPATCHED"],
   DISPATCHED: ["DELIVERED"],
-  DELIVERED:  [],
-  CANCELLED:  [],
+  DELIVERED: [],
+  CANCELLED: [],
 };
 
 /* ── Single order card ── */
 function OrderCard({ order, onUpdated }) {
-  const [expanded, setExpanded]   = useState(false);
-  const [updating, setUpdating]   = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const [updating, setUpdating] = useState(null);
 
-  const s  = STATUS_STYLE[order.status] || STATUS_STYLE.PENDING;
+  const s = STATUS_STYLE[order.status] || STATUS_STYLE.PENDING;
   const ps = PMT_STYLE[order.paymentStatus] || PMT_STYLE.PENDING;
   const nextStatuses = NEXT_STATUSES[order.status] || [];
 
@@ -102,7 +102,7 @@ function OrderCard({ order, onUpdated }) {
         </div>
 
         {expanded ? <MdExpandLess size={16} style={{ color: "var(--text-muted)", flexShrink: 0, marginTop: 2 }} />
-                  : <MdExpandMore size={16} style={{ color: "var(--text-muted)", flexShrink: 0, marginTop: 2 }} />}
+          : <MdExpandMore size={16} style={{ color: "var(--text-muted)", flexShrink: 0, marginTop: 2 }} />}
       </div>
 
       {/* Expanded detail */}
@@ -162,7 +162,7 @@ function OrderCard({ order, onUpdated }) {
               {nextStatuses.map((ns) => {
                 const ns_s = STATUS_STYLE[ns];
                 const isLoading = updating === ns;
-                const isDanger  = ns === "CANCELLED";
+                const isDanger = ns === "CANCELLED";
                 return (
                   <button
                     key={ns}
@@ -194,10 +194,10 @@ function OrderCard({ order, onUpdated }) {
 
 /* ── Main KioskOrders tab ── */
 export default function KioskOrders({ kioskId }) {
-  const [orders, setOrders]       = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [filter, setFilter]       = useState("ALL");
-  const [stats, setStats]         = useState({});
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("ALL");
+  const [stats, setStats] = useState({});
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -218,7 +218,7 @@ export default function KioskOrders({ kioskId }) {
   };
 
   const filtered = filter === "ALL" ? orders : orders.filter((o) => o.status === filter);
-  const pending  = stats.PENDING || 0;
+  const pending = stats.PENDING || 0;
 
   return (
     <div className="kiosk_tab_content">

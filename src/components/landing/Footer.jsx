@@ -34,7 +34,7 @@ function Footer() {
         navigate(appPath);
       }
     } else {
-      navigate(`/auth/register?role=${targetRole}`);
+      navigate(`/auth/register?role=${targetRole.toUpperCase()}`);
     }
   };
 
@@ -116,6 +116,12 @@ function Footer() {
               onClick={() => handleRoleLink("/app/supplier", "supplier")}
             >
               Become a Supplier
+            </button>
+            <button
+              className="footer-link-btn"
+              onClick={() => handleRoleLink("/app/rider", "rider")}
+            >
+              Become a Rider
             </button>
             <button
               className="footer-link-btn"

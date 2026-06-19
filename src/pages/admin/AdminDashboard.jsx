@@ -30,6 +30,7 @@ import AdminSalesAnalytics from "./AdminSalesAnalytics";
 import AdminUsers from "./AdminUsers";
 import AdminApplications from "./AdminApplications";
 import AdminOperators from "./AdminOperators";
+import AdminRiders from "./AdminRiders";
 import AdminVendorDetail from "./AdminVendorDetail";
 import AdminSupplierDetail from "./AdminSupplierDetail";
 import AdminKiosks from "./AdminKiosks";
@@ -122,6 +123,7 @@ export default function AdminDashboard() {
     kiosks: 0,
     suppliers: 0,
     tickets: 0,
+    riders: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -134,6 +136,7 @@ export default function AdminDashboard() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [appsDrawerOpen, setAppsDrawerOpen] = useState(false);
   const [operatorsOpen, setOperatorsOpen] = useState(false);
+  const [ridersOpen, setRidersOpen] = useState(false);
   // Section drawers
   const [usersOpen, setUsersOpen] = useState(false);
   const [kiosksOpen, setKiosksOpen] = useState(false);
@@ -333,6 +336,7 @@ export default function AdminDashboard() {
         kiosks: d?.kiosks || 0,
         suppliers: d?.suppliers || 0,
         tickets: d?.tickets || 0,
+        riders: d?.riders || 0,
       });
     } catch {
       /* silent */
@@ -633,6 +637,12 @@ export default function AdminDashboard() {
       color: "#8b5cf6",
     },
     {
+      key: "riders",
+      label: "Riders",
+      icon: MdOutlineLocalShipping,
+      color: "#ec4899",
+    },
+    {
       key: "tickets",
       label: "Support Tickets",
       icon: MdSupportAgent,
@@ -857,6 +867,7 @@ export default function AdminDashboard() {
               if (key === "users") setUsersOpen(true);
               else if (key === "kiosks") setKiosksOpen(true);
               else if (key === "operators") setOperatorsOpen(true);
+              else if (key === "riders") setRidersOpen(true);
               else openDrawer(key);
             }}
           >
@@ -1222,6 +1233,12 @@ export default function AdminDashboard() {
       <AdminOperators
         open={operatorsOpen}
         onClose={() => setOperatorsOpen(false)}
+      />
+
+      {/* Riders drawer */}
+      <AdminRiders
+        open={ridersOpen}
+        onClose={() => setRidersOpen(false)}
       />
 
       {/* Kiosks drawer */}

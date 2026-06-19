@@ -85,16 +85,18 @@ function MetaChip({ icon: Icon, label, color, bg, border }) {
 }
 
 /* ── Create Profile Form ─────────────────────────────────────── */
-function CreateProfileForm({ states, onCreated, submitting, setSubmitting }) {
-  const [stateId, setStateId] = useState("");
+function CreateProfileForm({ states, onCreated, submitting, setSubmitting, existing, onCancel }) {
+  const [stateId, setStateId] = useState(existing?.state?.id || existing?.stateId || "");
   const [certFile, setCertFile] = useState(null);
-  const [certPreview, setCertPreview] = useState(null);
+  const [certPreview, setCertPreview] = useState(existing?.certification || null);
+  const [certName, setCertName] = useState(existing?.certification ? "Uploaded · change" : "");
   const certRef = useRef(null);
 
   const handleCertFile = (e) => {
     const f = e.target.files[0];
     if (!f) return;
     setCertFile(f);
+    setCertName(f.name);
     if (f.type.startsWith("image/")) setCertPreview(URL.createObjectURL(f));
     else setCertPreview(null);
   };
@@ -106,10 +108,10 @@ function CreateProfileForm({ states, onCreated, submitting, setSubmitting }) {
       if (stateId) fd.append("stateId", stateId);
       if (certFile) fd.append("certification", certFile);
       await api.post("/kiosk/operator/profile", fd);
-      toast.success("Operator profile created!");
+      toast.success(existing ? "Operator profile updated!" : "Operator profile created!");
       onCreated();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to create profile");
+      toast.error(err.response?.data?.message || "Failed to save profile");
     } finally {
       setSubmitting(false);
     }
@@ -120,9 +122,9 @@ function CreateProfileForm({ states, onCreated, submitting, setSubmitting }) {
       <div className="op-onboard-icon">
         <MdOutlineWorkOutline size={32} />
       </div>
-      <h3 className="op-onboard-title">Become an Operator</h3>
+      <h3 className="op-onboard-title">{existing ? "Update Operator Profile" : "Become an Operator"}</h3>
       <p className="op-onboard-sub">
-        Create your operator profile to receive job offers from Kiosk owners.
+        {existing ? "Update your operator location and certification documents." : "Create your operator profile to receive job offers from Kiosk owners."}
       </p>
 
       <div className="op-onboard-form">
@@ -134,7 +136,15 @@ function CreateProfileForm({ states, onCreated, submitting, setSubmitting }) {
             onClick={() => certRef.current?.click()}
           >
             {certPreview ? (
-              <img src={certPreview} alt="" className="op-upload-preview" />
+              <div className="op-upload-preview-wrap">
+                {certPreview.startsWith("blob:") || certPreview.includes("res.cloudinary.com") ? (
+                  <img src={certPreview} alt="" className="op-upload-preview" />
+                ) : (
+                  <div className="op-upload-icon">
+                    <MdUpload size={16} style={{ color: "var(--accent)" }} />
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="op-upload-icon">
                 <MdUpload size={16} style={{ color: "var(--accent)" }} />
@@ -142,7 +152,7 @@ function CreateProfileForm({ states, onCreated, submitting, setSubmitting }) {
             )}
             <div className="op-upload-text">
               <span className="op-upload-name">
-                {certFile ? certFile.name : "Upload certificate"}
+                {certName || "Upload certificate"}
               </span>
               <span className="op-upload-hint">PDF or image · Food Handler Certificate</span>
             </div>
@@ -168,16 +178,29 @@ function CreateProfileForm({ states, onCreated, submitting, setSubmitting }) {
           </div>
         )}
 
-        <button
-          id="op-create-profile-btn"
-          className={`app_btn app_btn_confirm${submitting ? " btn_loading" : ""}`}
-          style={{ width: "100%", height: 44, position: "relative" }}
-          onClick={handleSubmit}
-          disabled={submitting}
-        >
-          <span className="btn_text">Create Profile</span>
-          {submitting && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
-        </button>
+        <div style={{ display: "flex", gap: 10, width: "100%" }}>
+          {onCancel && (
+            <button
+              type="button"
+              className="app_btn app_btn_cancel"
+              style={{ flex: 1, height: 44 }}
+              onClick={onCancel}
+              disabled={submitting}
+            >
+              Cancel Edit
+            </button>
+          )}
+          <button
+            id="op-create-profile-btn"
+            className={`app_btn app_btn_confirm${submitting ? " btn_loading" : ""}`}
+            style={{ flex: 1, height: 44, position: "relative" }}
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
+            <span className="btn_text">{existing ? "Update Profile" : "Create Profile"}</span>
+            {submitting && <span className="btn_loader" style={{ width: 18, height: 18 }} />}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -389,6 +412,7 @@ export default function OperatorHome() {
   const [loading, setLoading] = useState(true);
   const [creatingProfile, setCreatingProfile] = useState(false);
   const [activeTab, setActiveTab] = useState("pending"); // pending | active | history
+  const [isEditing, setIsEditing] = useState(false);
 
   const fetchAll = async () => {
     try {
@@ -471,6 +495,122 @@ export default function OperatorHome() {
 
   const tabOffers = activeTab === "pending" ? pendingOffers : activeTab === "active" ? activeOffers : pastOffers;
 
+  // State 2: Profile Awaiting Approval
+  if (profile && !profile.isApproved && !isEditing) {
+    return (
+      <div className="app-pending-container">
+        <div className="app-pending-card">
+          <div className="app-pending-header">
+            <div className="app-pending-badge">
+              <span className="pulse-dot" />
+              Under Review
+            </div>
+            <h2 className="app-pending-title">Application Submitted</h2>
+            <p className="app-pending-subtitle">
+              Your operator profile is currently pending administrator approval.
+              Once approved, you will be able to receive job offers and manage kiosks.
+            </p>
+          </div>
+
+          {/* Stepper Timeline */}
+          <div className="app-timeline">
+            <div className="app-timeline-step completed">
+              <div className="app-step-node">
+                <MdCheck size={18} />
+              </div>
+              <span className="app-step-label">Apply</span>
+              <span className="app-step-desc">Profile created</span>
+            </div>
+            <div className="app-timeline-step active">
+              <div className="app-step-node">
+                <MdAccessTime size={18} />
+              </div>
+              <span className="app-step-label">Review</span>
+              <span className="app-step-desc">Operator verification</span>
+            </div>
+            <div className="app-timeline-step">
+              <div className="app-step-node">3</div>
+              <span className="app-step-label">Activate</span>
+              <span className="app-step-desc">Receive job offers</span>
+            </div>
+          </div>
+
+          {/* Submitted Info Grid */}
+          <div className="app-review-details">
+            <div className="app-review-sec">
+              <h4 className="app-review-sectitle">Profile Details</h4>
+              <div className="app-review-info-list">
+                <div className="app-review-info-item">
+                  <span className="app-review-label">Operating State</span>
+                  <span className="app-review-value">{profile.state?.name || "—"}</span>
+                </div>
+                <div className="app-review-info-item">
+                  <span className="app-review-label">Role Type</span>
+                  <span className="app-review-value">Kiosk Operator</span>
+                </div>
+                <div className="app-review-info-item">
+                  <span className="app-review-label">Submitted On</span>
+                  <span className="app-review-value">{formatDate(profile.createdAt)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="app-review-sec">
+              <h4 className="app-review-sectitle">Uploaded Documents</h4>
+              <div className="app-doc-cards">
+                {profile.certification ? (
+                  <a
+                    href={profile.certification}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="app-doc-card"
+                  >
+                    <div className="app-doc-icon">
+                      <MdOutlineWorkOutline size={16} />
+                    </div>
+                    <div className="app-doc-meta">
+                      <span className="app-doc-name">Food Handler Certificate</span>
+                      <span className="app-doc-action">View Document →</span>
+                    </div>
+                  </a>
+                ) : (
+                  <div className="app-doc-card" style={{ opacity: 0.5, cursor: "default" }}>
+                    <div className="app-doc-icon" style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-muted)" }}>
+                      <MdOutlineWorkOutline size={16} />
+                    </div>
+                    <div className="app-doc-meta">
+                      <span className="app-doc-name" style={{ color: "var(--text-muted)" }}>Food Handler Certificate</span>
+                      <span className="app-doc-action" style={{ color: "var(--text-muted)" }}>Not Provided</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 12, width: "100%", justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              className="app-refresh-btn-glowing"
+              onClick={() => setIsEditing(true)}
+              style={{ display: "flex", alignItems: "center", gap: 8 }}
+            >
+              <MdPerson size={18} />
+              <span>Edit Profile</span>
+            </button>
+
+            <button
+              className="app-refresh-btn-glowing"
+              onClick={fetchAll}
+            >
+              <MdOutlineHistory size={18} />
+              <span>Check Status</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page_wrapper op-page">
       {/* ── Page header ── */}
@@ -490,12 +630,17 @@ export default function OperatorHome() {
       </div>
 
       {/* ── Profile or Onboarding ── */}
-      {!profile ? (
+      {!profile || isEditing ? (
         <CreateProfileForm
           states={states}
-          onCreated={fetchAll}
+          onCreated={() => {
+            fetchAll();
+            setIsEditing(false);
+          }}
           submitting={creatingProfile}
           setSubmitting={setCreatingProfile}
+          existing={isEditing ? profile : null}
+          onCancel={isEditing ? () => setIsEditing(false) : null}
         />
       ) : (
         <div className="op-profile-card">
