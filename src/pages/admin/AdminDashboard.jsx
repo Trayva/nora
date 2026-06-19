@@ -31,6 +31,7 @@ import AdminUsers from "./AdminUsers";
 import AdminApplications from "./AdminApplications";
 import AdminOperators from "./AdminOperators";
 import AdminVendorDetail from "./AdminVendorDetail";
+import AdminSupplierDetail from "./AdminSupplierDetail";
 import AdminKiosks from "./AdminKiosks";
 import AdminInvoiceGenerator from "./AdminInvoiceGenerator";
 import AdminGlobalWalletSettings from "./AdminGlobalWalletSettings";
@@ -138,6 +139,7 @@ export default function AdminDashboard() {
   const [kiosksOpen, setKiosksOpen] = useState(false);
   const [invoiceGeneratorOpen, setInvoiceGeneratorOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
 
   // Entity drawers
   const [drawer, setDrawer] = useState(null); // "users"|"vendors"|"operators"|"suppliers"|"kiosks"|"locations"
@@ -712,11 +714,14 @@ export default function AdminDashboard() {
       <div
         key={item.id}
         className="admin_drawer_row"
-        style={{ cursor: drawer === "vendors" ? "pointer" : "default" }}
+        style={{ cursor: ["vendors", "suppliers"].includes(drawer) ? "pointer" : "default" }}
         onClick={() => {
           if (drawer === "vendors") {
             setDrawer(null);
             setSelectedVendor(item);
+          } else if (drawer === "suppliers") {
+            setDrawer(null);
+            setSelectedSupplier(item);
           }
         }}
       >
@@ -1237,6 +1242,22 @@ export default function AdminDashboard() {
           onClose={() => {
             setSelectedVendor(null);
             openDrawer("vendors");
+          }}
+        />
+      )}
+
+      {/* Supplier detail drawer */}
+      {selectedSupplier && (
+        <AdminSupplierDetail
+          supplier={selectedSupplier}
+          onClose={() => {
+            setSelectedSupplier(null);
+            openDrawer("suppliers");
+          }}
+          onStatusChange={() => {
+            fetchStats();
+            fetchDrawerItems();
+            setSelectedSupplier(prev => prev ? { ...prev, isApproved: !prev.isApproved } : null);
           }}
         />
       )}

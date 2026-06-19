@@ -13,6 +13,7 @@ import {
   MdExpandLess,
   MdPointOfSale,
   MdImage,
+  MdOutlineDateRange,
 } from "react-icons/md";
 import {
   AreaChart,
@@ -76,13 +77,55 @@ const pmColors = {
   },
 };
 
+
 /* ── Operator detail drawer ───────────────────────────────── */
+function SaleItemTable({ items }) {
+  if (!items || items.length === 0) {
+    return <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", padding: 8 }}>No items listed.</div>;
+  }
+
+  return (
+    <div
+      style={{
+        marginTop: 6,
+        padding: "8px 10px",
+        background: "var(--bg-active)",
+        borderRadius: 8,
+        border: "1px solid var(--border)",
+      }}
+    >
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+        <thead>
+          <tr style={{ borderBottom: "1px solid var(--border)", color: "var(--text-muted)", fontWeight: 600 }}>
+            <th style={{ textAlign: "left", paddingBottom: 4 }}>Item</th>
+            <th style={{ textAlign: "right", paddingBottom: 4 }}>Qty</th>
+            <th style={{ textAlign: "right", paddingBottom: 4 }}>Price</th>
+            <th style={{ textAlign: "right", paddingBottom: 4 }}>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((it) => (
+            <tr key={it.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.02)", color: "var(--text)" }}>
+              <td style={{ padding: "6px 0", fontWeight: 500 }}>{it.menuItem?.name || "Menu Item"}</td>
+              <td style={{ padding: "6px 0", textAlign: "right" }}>{it.quantity}</td>
+              <td style={{ padding: "6px 0", textAlign: "right" }}>₦{fmt(it.priceAtTime)}</td>
+              <td style={{ padding: "6px 0", textAlign: "right", fontWeight: 600 }}>
+                ₦{fmt(it.quantity * it.priceAtTime)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function OperatorDetail({ operator, onClose, onApprove }) {
   const [sales, setSales] = useState([]);
   const [analytics, setAnalytics] = useState(null);
-  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState(false);
+  const [expandedSales, setExpandedSales] = useState({});
 
   const [preset, setPreset] = useState("30d");
   const [from, setFrom] = useState(() => {
@@ -168,12 +211,17 @@ function OperatorDetail({ operator, onClose, onApprove }) {
     }
   };
 
+  const toggleSaleExpand = (id) => {
+    setExpandedSales((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
   const totals = analytics?.totals;
   const chartData = (analytics?.chartData || []).map((d) => ({
     ...d,
     sales: Math.round(d.sales || 0),
     profit: Math.round(d.profit || 0),
   }));
+
   const pmBreak = ["CASH", "POS", "TRANSFER", "OTHER"]
     .map((m) => ({
       method: m,
@@ -184,535 +232,498 @@ function OperatorDetail({ operator, onClose, onApprove }) {
     }))
     .filter((m) => m.count > 0);
 
+  const statusStyle = operator.isApproved
+    ? {
+      background: "rgba(34,197,94,0.1)",
+      color: "#16a34a",
+      border: "1px solid rgba(34,197,94,0.25)",
+    }
+    : {
+      background: "rgba(234,179,8,0.1)",
+      color: "#ca8a04",
+      border: "1px solid rgba(234,179,8,0.25)",
+    };
+
   return (
     <Drawer
       isOpen
       onClose={onClose}
-      title={u.fullName || "Operator"}
+      title={u.fullName || "Operator Details"}
       description={u.email || ""}
       width={560}
     >
-      {/* Status + meta */}
-      <div
-        style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 18 }}
-      >
-        <span
-          style={{
-            fontSize: "0.62rem",
-            fontWeight: 800,
-            padding: "2px 9px",
-            borderRadius: 999,
-            ...(operator.isApproved
-              ? {
-                background: "rgba(34,197,94,0.1)",
-                color: "#16a34a",
-                border: "1px solid rgba(34,197,94,0.25)",
-              }
-              : {
-                background: "rgba(234,179,8,0.1)",
-                color: "#ca8a04",
-                border: "1px solid rgba(234,179,8,0.25)",
-              }),
-            textTransform: "uppercase",
-          }}
-        >
-          {operator.isApproved ? "APPROVED" : "PENDING"}
-        </span>
-        {st.name && (
-          <span className="admin_meta_chip">
-            <MdOutlineLocationOn size={11} /> {st.name}
-            {st.country ? `, ${st.country}` : ""}
-          </span>
-        )}
-        {operator.kioskId ? (
-          <span className="admin_meta_chip" style={{ color: "#16a34a" }}>
-            <MdOutlineShoppingCart size={11} /> Assigned to cart
-          </span>
-        ) : (
-          <span className="admin_meta_chip" style={{ color: "#6b7280" }}>
-            No cart assigned
-          </span>
-        )}
-        {u.phone && <span className="admin_meta_chip">{u.phone}</span>}
-        {!operator.isApproved && (
-          <button
-            className={`app_btn app_btn_confirm${approving ? " btn_loading" : ""}`}
-            style={{
-              height: 28,
-              padding: "0 12px",
-              fontSize: "0.72rem",
-              position: "relative",
-              marginLeft: "auto",
-            }}
-            onClick={handleApprove}
-            disabled={approving}
-          >
-            <span className="btn_text">
-              <MdCheck size={12} /> Approve
-            </span>
-            {approving && (
-              <span className="btn_loader" style={{ width: 11, height: 11 }} />
-            )}
-          </button>
-        )}
-        {operator.isApproved && (
-          <button
-            className={`app_btn app_btn_cancel${approving ? " btn_loading" : ""}`}
-            style={{
-              height: 28,
-              padding: "0 12px",
-              fontSize: "0.72rem",
-              position: "relative",
-              marginLeft: "auto",
-            }}
-            onClick={handleUnapprove}
-            disabled={approving}
-          >
-            <span className="btn_text">
-              Unapprove
-            </span>
-            {approving && (
-              <span className="btn_loader" style={{ width: 11, height: 11 }} />
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* Current cart info */}
-      {operator.kioskId && (
-        <div
-          style={{
-            background: "var(--bg-hover)",
-            border: "1px solid var(--border)",
-            borderRadius: 11,
-            padding: "10px 14px",
-            marginBottom: 16,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 9,
-              background: "rgba(34,197,94,0.1)",
-              border: "1px solid rgba(34,197,94,0.2)",
-              color: "#16a34a",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <MdOutlineShoppingCart size={16} />
-          </div>
-          <div>
-            <div
-              style={{
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                color: "var(--text-heading)",
-              }}
-            >
-              Currently Assigned
-            </div>
-            <div
-              style={{
-                fontSize: "0.68rem",
-                color: "var(--text-muted)",
-                fontFamily: "monospace",
-              }}
-            >
-              {operator.kioskId}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Date presets */}
-      <div
-        style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}
-      >
-        {PRESETS.map((p) => (
-          <button
-            key={p.label}
-            onClick={() => applyPreset(p)}
-            style={{
-              height: 30,
-              padding: "0 11px",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontFamily: "inherit",
-              fontWeight: 700,
-              fontSize: "0.72rem",
-              background:
-                preset === p.label ? "var(--bg-active)" : "var(--bg-hover)",
-              color: preset === p.label ? "var(--accent)" : "var(--text-muted)",
-              border: `1px solid ${preset === p.label ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-            }}
-          >
-            {p.label}
-          </button>
-        ))}
-        <button
-          onClick={() => {
-            setPreset("custom");
-            setShowCustom((v) => !v);
-          }}
-          style={{
-            height: 30,
-            padding: "0 11px",
-            borderRadius: 8,
-            cursor: "pointer",
-            fontFamily: "inherit",
-            fontWeight: 700,
-            fontSize: "0.72rem",
-            background:
-              preset === "custom" ? "var(--bg-active)" : "var(--bg-hover)",
-            color: preset === "custom" ? "var(--accent)" : "var(--text-muted)",
-            border: `1px solid ${preset === "custom" ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-          }}
-        >
-          Custom
-        </button>
-        {loading && (
-          <div
-            className="page_loader_spinner"
-            style={{ width: 14, height: 14, alignSelf: "center" }}
-          />
-        )}
-      </div>
-      {showCustom && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <div className="form-field" style={{ marginBottom: 0, flex: 1 }}>
-            <label className="modal-label">From</label>
-            <input
-              className="modal-input"
-              type="date"
-              value={from}
-              onChange={(e) => {
-                setFrom(e.target.value);
-                setPreset("custom");
-              }}
-            />
-          </div>
-          <div className="form-field" style={{ marginBottom: 0, flex: 1 }}>
-            <label className="modal-label">To</label>
-            <input
-              className="modal-input"
-              type="date"
-              value={to}
-              onChange={(e) => {
-                setTo(e.target.value);
-                setPreset("custom");
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Summary cards */}
-      {totals && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: 8,
-            marginBottom: 16,
-          }}
-        >
-          {[
-            { l: "Revenue", v: totals.totalSales, accent: true },
-            { l: "Profit", v: totals.totalProfit, accent: false },
-            { l: "Cost", v: totals.totalCostOfSales, accent: false },
-            { l: "Expenses", v: totals.totalExpenses, accent: false },
-            { l: "Owner", v: totals.ownerProfit, accent: false },
-            { l: "Nora", v: totals.noraProfit, accent: false },
-          ].map((s) => (
-            <div
-              key={s.l}
-              style={{
-                padding: "10px 12px",
-                background: s.accent ? "var(--bg-active)" : "var(--bg-hover)",
-                border: `1px solid ${s.accent ? "rgba(203,108,220,0.2)" : "var(--border)"}`,
-                borderRadius: 10,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.58rem",
-                  fontWeight: 700,
-                  color: "var(--text-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  marginBottom: 3,
-                }}
-              >
-                {s.l}
-              </div>
-              <div
-                style={{
-                  fontSize: "0.85rem",
-                  fontWeight: 900,
-                  color: s.accent ? "var(--accent)" : "var(--text-heading)",
-                }}
-              >
-                ₦{fmt(s.v)}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Chart */}
-      {chartData.length > 0 && (
-        <div
-          style={{
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-            padding: 14,
-            marginBottom: 16,
-          }}
-        >
-          <ResponsiveContainer width="100%" height={130}>
-            <AreaChart
-              data={chartData}
-              margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="opSalesG" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="rgba(203,108,220,0.3)" />
-                  <stop offset="95%" stopColor="rgba(203,108,220,0)" />
-                </linearGradient>
-                <linearGradient id="opProfitG" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="rgba(34,197,94,0.25)" />
-                  <stop offset="95%" stopColor="rgba(34,197,94,0)" />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="var(--border)"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="date"
-                tickFormatter={fmtChart}
-                tick={{ fontSize: 9, fill: "var(--text-muted)" }}
-                axisLine={false}
-                tickLine={false}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                tick={{ fontSize: 9, fill: "var(--text-muted)" }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) =>
-                  `₦${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
-                }
-                width={38}
-              />
-              <Tooltip
-                formatter={(v, n) => [
-                  `₦${fmt(v)}`,
-                  n === "sales" ? "Revenue" : "Profit",
-                ]}
-                labelFormatter={fmtChart}
-                contentStyle={{
-                  background: "var(--bg-card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                  fontSize: "0.72rem",
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="sales"
-                stroke="var(--accent)"
-                strokeWidth={2}
-                fill="url(#opSalesG)"
-                dot={false}
-                activeDot={{ r: 3 }}
-              />
-              <Area
-                type="monotone"
-                dataKey="profit"
-                stroke="#22c55e"
-                strokeWidth={2}
-                fill="url(#opProfitG)"
-                dot={false}
-                activeDot={{ r: 3 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* Payment breakdown */}
-      {pmBreak.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            gap: 6,
-            marginBottom: 16,
-            flexWrap: "wrap",
-          }}
-        >
-          {pmBreak.map(({ method, count, total }) => {
-            const c = pmColors[method] || pmColors.OTHER;
-            return (
-              <div
-                key={method}
-                style={{
-                  flex: 1,
-                  minWidth: 70,
-                  padding: "8px 10px",
-                  background: c.bg,
-                  border: `1px solid ${c.border}`,
-                  borderRadius: 9,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "0.62rem",
-                    fontWeight: 800,
-                    color: c.color,
-                    textTransform: "uppercase",
-                    marginBottom: 3,
-                  }}
-                >
-                  {method}
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.82rem",
-                    fontWeight: 900,
-                    color: "var(--text-heading)",
-                  }}
-                >
-                  {count}
-                </div>
-                <div
-                  style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}
-                >
-                  ₦{fmt(total)}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Sales list */}
+      {/* Operator Profile Header Card */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 8,
-          marginBottom: 10,
+          gap: 14,
+          marginBottom: 20,
+          padding: "14px 16px",
+          background: "var(--bg-hover)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
         }}
       >
-        <span
+        <div
           style={{
-            fontSize: "0.72rem",
-            fontWeight: 700,
-            color: "var(--text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
+            width: 52,
+            height: 52,
+            borderRadius: 10,
+            background: "rgba(203,108,220,0.1)",
+            border: "2px solid rgba(203,108,220,0.25)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "1.3rem",
+            fontWeight: 900,
+            color: "var(--accent)",
+            flexShrink: 0,
           }}
         >
-          Transactions
-        </span>
-        <span className="admin_section_count">{sales.length}</span>
+          {(u.fullName || u.name || "O").charAt(0).toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: "0.95rem",
+              fontWeight: 800,
+              color: "var(--text-heading)",
+              marginBottom: 4,
+            }}
+          >
+            {u.fullName || "Operator"}
+          </div>
+          <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: 4 }}>
+            State: {st.name || "No State assigned"}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="admin_status_badge" style={{ ...statusStyle, textTransform: "uppercase" }}>
+              <MdCircle size={5} />
+              {operator.isApproved ? "APPROVED" : "PENDING"}
+            </span>
+            {operator.kioskId ? (
+              <span className="admin_meta_chip" style={{ fontSize: "0.7rem", color: "#16a34a" }}>
+                <MdOutlineShoppingCart size={11} /> {operator.kiosk?.serialNumber || "Assigned"}
+              </span>
+            ) : (
+              <span className="admin_meta_chip" style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                No Cart Assigned
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <div>
+          {operator.isApproved ? (
+            <button
+              className={`app_btn app_btn_cancel${approving ? " btn_loading" : ""}`}
+              style={{ height: 32, padding: "0 12px", fontSize: "0.78rem", position: "relative" }}
+              onClick={handleUnapprove}
+              disabled={approving}
+            >
+              <span className="btn_text">Unapprove</span>
+              {approving && <span className="btn_loader" style={{ width: 12, height: 12 }} />}
+            </button>
+          ) : (
+            <button
+              className={`app_btn app_btn_confirm${approving ? " btn_loading" : ""}`}
+              style={{ height: 32, padding: "0 12px", fontSize: "0.78rem", position: "relative" }}
+              onClick={handleApprove}
+              disabled={approving}
+            >
+              <span className="btn_text">
+                <MdCheck size={12} /> Approve
+              </span>
+              {approving && <span className="btn_loader" style={{ width: 12, height: 12 }} />}
+            </button>
+          )}
+        </div>
       </div>
 
-      {loading ? (
-        <div className="page_loader">
+      {/* Date Filter presets */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 16,
+          background: "var(--bg-hover)",
+          border: "1px solid var(--border)",
+          borderRadius: 10,
+          padding: 6,
+        }}
+      >
+        <div style={{ display: "flex", gap: 4 }}>
+          {PRESETS.map((p) => (
+            <button
+              key={p.label}
+              className={`app_btn`}
+              style={{
+                height: 28,
+                padding: "0 12px",
+                fontSize: "0.75rem",
+                borderRadius: 6,
+                background: preset === p.label ? "var(--bg-card)" : "transparent",
+                color: preset === p.label ? "var(--text-heading)" : "var(--text-muted)",
+                border: "none",
+                fontWeight: preset === p.label ? 700 : 500,
+                boxShadow: preset === p.label ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+              }}
+              onClick={() => applyPreset(p)}
+            >
+              {p.label}
+            </button>
+          ))}
+          <button
+            className={`app_btn`}
+            style={{
+              height: 28,
+              padding: "0 12px",
+              fontSize: "0.75rem",
+              borderRadius: 6,
+              background: showCustom ? "var(--bg-card)" : "transparent",
+              color: showCustom ? "var(--text-heading)" : "var(--text-muted)",
+              border: "none",
+              fontWeight: showCustom ? 700 : 500,
+            }}
+            onClick={() => {
+              setShowCustom(true);
+              setPreset("");
+            }}
+          >
+            Custom
+          </button>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", color: "var(--text-muted)", fontSize: "0.7rem", gap: 4 }}>
+          <MdOutlineDateRange size={14} />
+          {from ? fmtDate(from) : "Start"} – {to ? fmtDate(to) : "End"}
+        </div>
+      </div>
+
+      {/* Custom range inputs */}
+      {showCustom && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 10,
+            marginBottom: 16,
+            background: "var(--bg-hover)",
+            border: "1px solid var(--border)",
+            borderRadius: 10,
+            padding: 10,
+          }}
+        >
+          <div>
+            <label style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+              From Date
+            </label>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="modal-input"
+              style={{ height: 32, fontSize: "0.78rem" }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+              To Date
+            </label>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="modal-input"
+              style={{ height: 32, fontSize: "0.78rem" }}
+            />
+          </div>
+        </div>
+      )}
+
+      {loading && (
+        <div className="page_loader" style={{ padding: 12 }}>
           <div className="page_loader_spinner" />
         </div>
-      ) : sales.length === 0 ? (
-        <div className="admin_empty">
-          <p style={{ margin: 0, fontSize: "0.8rem" }}>
-            No transactions in this period.
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-          {sales.map((sale) => {
-            const pm = pmColors[sale.paymentMethod] || pmColors.OTHER;
-            return (
-              <div
-                key={sale.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "9px 12px",
-                  background: "var(--bg-hover)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 10,
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      marginBottom: 2,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        fontWeight: 700,
-                        color: "var(--text-body)",
-                        fontFamily: "monospace",
-                      }}
-                    >
-                      #{sale.id.slice(0, 8).toUpperCase()}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "0.58rem",
-                        fontWeight: 800,
-                        padding: "1px 6px",
-                        borderRadius: 999,
-                        background: pm.bg,
-                        color: pm.color,
-                        border: `1px solid ${pm.border}`,
-                      }}
-                    >
-                      {sale.paymentMethod}
-                    </span>
-                  </div>
-                  <div
-                    style={{ fontSize: "0.64rem", color: "var(--text-muted)" }}
-                  >
-                    {sale.items?.length || 0} items
-                    {sale.cart?.serialNumber
-                      ? ` · ${sale.cart.serialNumber}`
-                      : ""}
-                    {" · "}
-                    {fmtDate(sale.createdAt)}
-                  </div>
-                </div>
+      )}
+
+      {!loading && (
+        <>
+          {/* Statistics Grid */}
+          {totals && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr",
+                gap: 10,
+                marginBottom: 16,
+              }}
+            >
+              {[
+                { label: "Total Revenue", val: totals.totalSales, accent: true, color: "var(--accent)" },
+                { label: "Gross Profit", val: totals.totalProfit, accent: false, color: "#22c55e" },
+                { label: "Cost of Sales", val: totals.totalCostOfSales, accent: false, color: "#ef4444" },
+                { label: "Expenses", val: totals.totalExpenses, accent: false, color: "#f59e0b" },
+                { label: "Owner split", val: totals.ownerProfit, accent: false, color: "var(--text-heading)" },
+                { label: "Nora split", val: totals.noraProfit, accent: false, color: "var(--text-heading)" },
+              ].map((s) => (
                 <div
+                  key={s.label}
                   style={{
-                    fontSize: "0.82rem",
-                    fontWeight: 900,
-                    color: "var(--text-heading)",
-                    flexShrink: 0,
+                    padding: 12,
+                    background: "var(--bg-card)",
+                    border: `1px solid ${s.accent ? "rgba(203,108,220,0.25)" : "var(--border)"}`,
+                    borderRadius: 10,
                   }}
                 >
-                  ₦{fmt(sale.totalAmount)}
+                  <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginBottom: 4 }}>{s.label}</div>
+                  <div
+                    style={{
+                      fontSize: "1.02rem",
+                      fontWeight: 800,
+                      color: s.accent ? "var(--accent)" : "var(--text-heading)",
+                    }}
+                  >
+                    ₦{fmt(s.val)}
+                  </div>
                 </div>
+              ))}
+            </div>
+          )}
+
+          {/* Recharts Area Chart */}
+          {chartData.length > 0 && (
+            <div
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid var(--border)",
+                borderRadius: 12,
+                padding: 14,
+                marginBottom: 16,
+              }}
+            >
+              <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--text-heading)", marginBottom: 10 }}>
+                Revenue & Profit Trend
               </div>
-            );
-          })}
-        </div>
+              <ResponsiveContainer width="100%" height={130}>
+                <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="opSalesG" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="rgba(203,108,220,0.3)" />
+                      <stop offset="95%" stopColor="rgba(203,108,220,0)" />
+                    </linearGradient>
+                    <linearGradient id="opProfitG" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="rgba(34,197,94,0.25)" />
+                      <stop offset="95%" stopColor="rgba(34,197,94,0)" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={fmtChart}
+                    tick={{ fontSize: 9, fill: "var(--text-muted)" }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 9, fill: "var(--text-muted)" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => `₦${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
+                    width={38}
+                  />
+                  <Tooltip
+                    formatter={(v, n) => [`₦${fmt(v)}`, n === "sales" ? "Revenue" : "Profit"]}
+                    labelFormatter={fmtChart}
+                    contentStyle={{
+                      background: "var(--bg-card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      fontSize: "0.72rem",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="sales"
+                    stroke="var(--accent)"
+                    strokeWidth={2}
+                    fill="url(#opSalesG)"
+                    dot={false}
+                    activeDot={{ r: 3 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="profit"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    fill="url(#opProfitG)"
+                    dot={false}
+                    activeDot={{ r: 3 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Payment Method breakdown */}
+          {pmBreak.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                marginBottom: 16,
+                flexWrap: "wrap",
+              }}
+            >
+              {pmBreak.map(({ method, count, total }) => {
+                const c = pmColors[method] || pmColors.OTHER;
+                return (
+                  <div
+                    key={method}
+                    style={{
+                      flex: 1,
+                      minWidth: 90,
+                      padding: "8px 10px",
+                      background: c.bg,
+                      border: `1px solid ${c.border}`,
+                      borderRadius: 9,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "0.62rem",
+                        fontWeight: 800,
+                        color: c.color,
+                        textTransform: "uppercase",
+                        marginBottom: 3,
+                      }}
+                    >
+                      {method}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.85rem",
+                        fontWeight: 900,
+                        color: "var(--text-heading)",
+                      }}
+                    >
+                      {count} <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 500 }}>tx</span>
+                    </div>
+                    <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: 2 }}>
+                      ₦{fmt(total)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Transactions list */}
+          <div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 12,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 800,
+                  color: "var(--text-heading)",
+                }}
+              >
+                Recent Transactions
+              </span>
+              <span className="admin_section_count">{sales.length}</span>
+            </div>
+
+            {sales.length === 0 ? (
+              <div className="admin_empty">
+                <p style={{ margin: 0, fontSize: "0.8rem" }}>No transactions in this period.</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {sales.map((sale) => {
+                  const isExpanded = !!expandedSales[sale.id];
+                  const pm = pmColors[sale.paymentMethod] || pmColors.OTHER;
+                  return (
+                    <div
+                      key={sale.id}
+                      style={{
+                        padding: 12,
+                        background: "var(--bg-hover)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 10,
+                        cursor: "pointer",
+                      }}
+                      onClick={() => toggleSaleExpand(sale.id)}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 10,
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                            <span
+                              style={{
+                                fontSize: "0.78rem",
+                                fontWeight: 700,
+                                color: "var(--text-heading)",
+                                fontFamily: "monospace",
+                              }}
+                            >
+                              #{sale.id.slice(0, 8).toUpperCase()}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.58rem",
+                                fontWeight: 800,
+                                padding: "2px 6px",
+                                borderRadius: 999,
+                                background: pm.bg,
+                                color: pm.color,
+                                border: `1px solid ${pm.border}`,
+                              }}
+                            >
+                              {sale.paymentMethod}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                            {fmtDate(sale.createdAt)} · {sale.items?.length || 0} items
+                            {sale.kiosk?.serialNumber ? ` · ${sale.kiosk.serialNumber}` : ""}
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                          <span style={{ fontSize: "0.85rem", fontWeight: 900, color: "var(--text-heading)" }}>
+                            ₦{fmt(sale.totalAmount)}
+                          </span>
+                          {isExpanded ? <MdExpandLess size={18} /> : <MdExpandMore size={18} />}
+                        </div>
+                      </div>
+
+                      {isExpanded && (
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <SaleItemTable items={sale.items} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </Drawer>
   );
