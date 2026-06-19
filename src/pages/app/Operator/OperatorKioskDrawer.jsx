@@ -26,6 +26,7 @@ import {
   SalesTab,
 } from "./OperatorKiosk";
 import KioskOrders from "../../kiosk/KioskOrders";
+import KioskInventory from "../../kiosk/KioskInventory";
 
 const TABS = [
   { key: "tasks", label: "Tasks", icon: <MdTask size={13} /> },
@@ -99,7 +100,7 @@ export default function OperatorKioskDrawer({ kioskId, onClose }) {
       ) : !kiosk ? null : (
         <>
           {activeTab === "tasks" && <TasksTab kioskId={kioskId} />}
-          {activeTab === "inventory" && <InventoryTab kioskId={kioskId} />}
+          {activeTab === "inventory" && <KioskInventory cart={kiosk} />}
           {activeTab === "menu" && <MenuTab menuItems={kiosk.menuItems || []} />}
           {activeTab === "elearning" && (
             <ELearningTab menuItems={kiosk.menuItems || []} />
