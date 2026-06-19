@@ -39,19 +39,19 @@ const DURATION_OPTIONS = [
 
 /* ── status colour maps ──────────────────────────────────────── */
 const offerStatusColors = {
-  PENDING:    { bg: "rgba(234,179,8,0.1)",   color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
-  ACCEPTED:   { bg: "rgba(34,197,94,0.1)",   color: "#16a34a", border: "rgba(34,197,94,0.25)" },
-  REJECTED:   { bg: "rgba(239,68,68,0.1)",   color: "#ef4444", border: "rgba(239,68,68,0.25)" },
+  PENDING: { bg: "rgba(234,179,8,0.1)", color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
+  ACCEPTED: { bg: "rgba(34,197,94,0.1)", color: "#16a34a", border: "rgba(34,197,94,0.25)" },
+  REJECTED: { bg: "rgba(239,68,68,0.1)", color: "#ef4444", border: "rgba(239,68,68,0.25)" },
   TERMINATED: { bg: "rgba(107,114,128,0.1)", color: "#6b7280", border: "rgba(107,114,128,0.25)" },
-  EXPIRED:    { bg: "rgba(107,114,128,0.1)", color: "#6b7280", border: "rgba(107,114,128,0.25)" },
-  ACTIVE:     { bg: "rgba(34,197,94,0.1)",   color: "#16a34a", border: "rgba(34,197,94,0.25)" },
+  EXPIRED: { bg: "rgba(107,114,128,0.1)", color: "#6b7280", border: "rgba(107,114,128,0.25)" },
+  ACTIVE: { bg: "rgba(34,197,94,0.1)", color: "#16a34a", border: "rgba(34,197,94,0.25)" },
 };
 
 const profileStatusColors = {
-  PENDING:   { bg: "rgba(234,179,8,0.1)",   color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
-  APPROVED:  { bg: "rgba(34,197,94,0.1)",   color: "#16a34a", border: "rgba(34,197,94,0.25)" },
-  REJECTED:  { bg: "rgba(239,68,68,0.1)",   color: "#ef4444", border: "rgba(239,68,68,0.25)" },
-  SUSPENDED: { bg: "rgba(239,68,68,0.1)",   color: "#ef4444", border: "rgba(239,68,68,0.25)" },
+  PENDING: { bg: "rgba(234,179,8,0.1)", color: "#ca8a04", border: "rgba(234,179,8,0.25)" },
+  APPROVED: { bg: "rgba(34,197,94,0.1)", color: "#16a34a", border: "rgba(34,197,94,0.25)" },
+  REJECTED: { bg: "rgba(239,68,68,0.1)", color: "#ef4444", border: "rgba(239,68,68,0.25)" },
+  SUSPENDED: { bg: "rgba(239,68,68,0.1)", color: "#ef4444", border: "rgba(239,68,68,0.25)" },
 };
 
 function StatusBadge({ status, colors }) {
@@ -283,8 +283,8 @@ function JobOfferCard({ offer, onAction }) {
   // Accent top stripe color
   const stripe =
     offer.status === "PENDING" ? "#f59e0b" :
-    (offer.status === "ACTIVE" || offer.status === "ACCEPTED") ? "#22c55e" :
-    "transparent";
+      (offer.status === "ACTIVE" || offer.status === "ACCEPTED") ? "#22c55e" :
+        "transparent";
 
   return (
     <div className="op-offer-card">
@@ -419,12 +419,12 @@ export default function OperatorHome() {
     api.get("/config/state").then((res) => {
       const d = res.data.data;
       setStates(Array.isArray(d) ? d : d?.items || []);
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
-  const pendingOffers   = offers.filter((o) => o.status === "PENDING");
-  const activeOffers    = offers.filter((o) => o.status === "ACTIVE" || o.status === "ACCEPTED");
-  const pastOffers      = offers.filter((o) => o.status !== "PENDING" && o.status !== "ACTIVE" && o.status !== "ACCEPTED");
+  const pendingOffers = offers.filter((o) => o.status === "PENDING");
+  const activeOffers = offers.filter((o) => o.status === "ACTIVE" || o.status === "ACCEPTED");
+  const pastOffers = offers.filter((o) => o.status !== "PENDING" && o.status !== "ACTIVE" && o.status !== "ACCEPTED");
 
   // Auto-select a non-empty tab on load
   useEffect(() => {
@@ -475,10 +475,10 @@ export default function OperatorHome() {
     <div className="page_wrapper op-page">
       {/* ── Page header ── */}
       <div className="op-page-header">
-        <div>
+        {/* <div>
           <h1 className="op-page-title">Operator</h1>
           <p className="op-page-sub">Manage your profile and job offers</p>
-        </div>
+        </div> */}
         {profile && (
           <div className="op-hirable-chip">
             {profile.isApproved
@@ -616,8 +616,8 @@ export default function OperatorHome() {
                 <MdWork size={30} style={{ opacity: 0.2 }} />
                 <p className="kiosk_empty_title">
                   {activeTab === "pending" ? "No pending offers" :
-                   activeTab === "active"  ? "No active contracts" :
-                   "No past offers"}
+                    activeTab === "active" ? "No active contracts" :
+                      "No past offers"}
                 </p>
                 <p className="kiosk_empty_sub">
                   {activeTab === "pending" && (profile.isApproved
