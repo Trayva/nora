@@ -29,6 +29,10 @@ function generateReceiptHTML(inv) {
     0
   );
   const total = Math.max(0, subtotal - Number(inv.discount || 0));
+  const isDepositPaid = inv.depositStatus === "paid";
+  const finalTotal = isDepositPaid && Number(inv.deposit || 0) > 0 ? Math.max(0, total - Number(inv.deposit)) : total;
+
+
 
   const itemRows = items
     .map(
@@ -385,15 +389,35 @@ function generateReceiptHTML(inv) {
       <tbody>
         ${itemRows}
         ${discountRow}
+        ${Number(inv.deposit || 0) > 0 ? `
+          <tr>
+            <td colspan="3" class="td-r" style="color:var(--ink-sub);font-size:12px;padding:6px 12px">Deposit (${isDepositPaid ? "Paid" : "Required"})</td>
+            <td class="td-r td-strong" style="font-size:12px;padding:6px 12px;font-weight:700">${cur} ${Number(inv.deposit).toLocaleString()}</td>
+          </tr>
+          <tr>
+            <td colspan="3" class="td-r" style="color:var(--ink-sub);font-size:12px;padding:6px 12px">Remaining Balance</td>
+            <td class="td-r td-strong" style="font-size:12px;padding:6px 12px;font-weight:700">${cur} ${Number(total - inv.deposit).toLocaleString()}</td>
+          </tr>
+        ` : ""}
       </tbody>
     </table>
   </div>
 
   <!-- Total -->
   <div class="total-box">
-    <div class="total-label">Total Amount</div>
-    <div class="total-amount">${cur} ${Number(total).toLocaleString()}</div>
+    <div class="total-label">${isDepositPaid && Number(inv.deposit || 0) > 0 ? "Remaining Balance Due" : "Total Amount"}</div>
+    <div class="total-amount">${cur} ${Number(finalTotal).toLocaleString()}</div>
   </div>
+
+
+
+  ${inv.terms ? `
+  <div style="margin-top: 24px; margin-bottom: 28px; padding-top: 16px; border-top: 1px dashed var(--border)">
+    <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 4px; letter-spacing: 0.1em">Terms & Conditions</div>
+    <div style="font-size: 11px; color: var(--ink-sub); line-height: 1.45; white-space: pre-wrap">${inv.terms}</div>
+  </div>
+  ` : ""}
+
 
   <!-- Footer -->
   <div class="footer">
@@ -424,6 +448,11 @@ const getInitialForm = () => ({
   paymentMethod: "bank_transfer",
   paymentReference: "",
   discount: "",
+  deposit: "",
+  depositStatus: "paid",
+  terms: "",
+
+
 
   customerName: "",
   customerEmail: "",
@@ -512,6 +541,10 @@ export default function AdminInvoiceGenerator({ isOpen, onClose }) {
     0
   );
   const total = Math.max(0, subtotal - Number(form.discount || 0));
+  const showSubtractedTotal = form.depositStatus === "paid" && Number(form.deposit || 0) > 0;
+  const finalFormTotal = showSubtractedTotal ? Math.max(0, total - Number(form.deposit)) : total;
+
+
 
   return (
     <Drawer
@@ -812,7 +845,7 @@ export default function AdminInvoiceGenerator({ isOpen, onClose }) {
           </div>
 
           <div style={{ borderTop: "1px solid var(--border)", marginTop: 14, paddingTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
-            <div className="admin_form_grid">
+            <div className="admin_form_grid_3" style={{ marginBottom: 10 }}>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <label className="modal-label">Discount Amount</label>
                 <input
@@ -824,12 +857,52 @@ export default function AdminInvoiceGenerator({ isOpen, onClose }) {
                   onChange={(e) => handleField("discount", e.target.value)}
                 />
               </div>
-              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", textAlign: "right" }}>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Subtotal: {form.currency} {subtotal.toLocaleString()}</div>
-                <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "var(--text-heading)" }}>Total: {form.currency} {total.toLocaleString()}</div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <label className="modal-label">Deposit Amount</label>
+                <input
+                  className="modal-input"
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 20000"
+                  value={form.deposit}
+                  onChange={(e) => handleField("deposit", e.target.value)}
+                />
+              </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <label className="modal-label">Deposit Status</label>
+                <select
+                  className="modal-input"
+                  value={form.depositStatus}
+                  onChange={(e) => handleField("depositStatus", e.target.value)}
+                >
+                  <option value="paid">Paid</option>
+                  <option value="required">Required</option>
+                </select>
               </div>
             </div>
+
+
+            <div className="form-field" style={{ marginBottom: 10 }}>
+              <label className="modal-label">Terms & Conditions</label>
+              <textarea
+                className="modal-input"
+                style={{ height: 60, resize: "vertical", padding: 8 }}
+                placeholder="Enter invoice terms and conditions..."
+                value={form.terms}
+                onChange={(e) => handleField("terms", e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Subtotal: {form.currency} {subtotal.toLocaleString()}</div>
+              <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "var(--text-heading)" }}>
+                {showSubtractedTotal ? "Remaining Due: " : "Total: "}
+                {form.currency} {finalFormTotal.toLocaleString()}
+              </div>
+            </div>
+
           </div>
+
         </div>
 
         {/* Action buttons */}

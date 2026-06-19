@@ -32,17 +32,17 @@ const fmt = (n) =>
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "—";
 const fmtChart = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-      })
+      day: "2-digit",
+      month: "short",
+    })
     : "";
 const toISO = (d) => d.toISOString().split("T")[0];
 
@@ -155,6 +155,19 @@ function OperatorDetail({ operator, onClose, onApprove }) {
     }
   };
 
+  const handleUnapprove = async () => {
+    setApproving(true);
+    try {
+      await api.patch(`/kiosk/operator/${operator.id}/unapprove`, {});
+      toast.success("Operator unapproved");
+      onApprove?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed");
+    } finally {
+      setApproving(false);
+    }
+  };
+
   const totals = analytics?.totals;
   const chartData = (analytics?.chartData || []).map((d) => ({
     ...d,
@@ -191,15 +204,15 @@ function OperatorDetail({ operator, onClose, onApprove }) {
             borderRadius: 999,
             ...(operator.isApproved
               ? {
-                  background: "rgba(34,197,94,0.1)",
-                  color: "#16a34a",
-                  border: "1px solid rgba(34,197,94,0.25)",
-                }
+                background: "rgba(34,197,94,0.1)",
+                color: "#16a34a",
+                border: "1px solid rgba(34,197,94,0.25)",
+              }
               : {
-                  background: "rgba(234,179,8,0.1)",
-                  color: "#ca8a04",
-                  border: "1px solid rgba(234,179,8,0.25)",
-                }),
+                background: "rgba(234,179,8,0.1)",
+                color: "#ca8a04",
+                border: "1px solid rgba(234,179,8,0.25)",
+              }),
             textTransform: "uppercase",
           }}
         >
@@ -236,6 +249,27 @@ function OperatorDetail({ operator, onClose, onApprove }) {
           >
             <span className="btn_text">
               <MdCheck size={12} /> Approve
+            </span>
+            {approving && (
+              <span className="btn_loader" style={{ width: 11, height: 11 }} />
+            )}
+          </button>
+        )}
+        {operator.isApproved && (
+          <button
+            className={`app_btn app_btn_cancel${approving ? " btn_loading" : ""}`}
+            style={{
+              height: 28,
+              padding: "0 12px",
+              fontSize: "0.72rem",
+              position: "relative",
+              marginLeft: "auto",
+            }}
+            onClick={handleUnapprove}
+            disabled={approving}
+          >
+            <span className="btn_text">
+              Unapprove
             </span>
             {approving && (
               <span className="btn_loader" style={{ width: 11, height: 11 }} />
@@ -705,7 +739,7 @@ export default function AdminOperators({ open, onClose }) {
         const d = r.data.data;
         setStates(Array.isArray(d) ? d : d?.states || d?.items || []);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const fetchOps = async (
@@ -870,7 +904,7 @@ export default function AdminOperators({ open, onClose }) {
                       border: "1px solid rgba(245,158,11,0.2)",
                     }}
                   >
-                    {(u.fullName || "O").charAt(0).toUpperCase()}
+                    {u.image ? <img className="img-profile" src={u.image} alt="" /> : (u.fullName || "O").charAt(0).toUpperCase()}
                   </div>
                   <div className="admin_drawer_info">
                     <div className="admin_drawer_name">
@@ -899,15 +933,15 @@ export default function AdminOperators({ open, onClose }) {
                         textTransform: "uppercase",
                         ...(op.isApproved
                           ? {
-                              background: "rgba(34,197,94,0.1)",
-                              color: "#16a34a",
-                              border: "1px solid rgba(34,197,94,0.25)",
-                            }
+                            background: "rgba(34,197,94,0.1)",
+                            color: "#16a34a",
+                            border: "1px solid rgba(34,197,94,0.25)",
+                          }
                           : {
-                              background: "rgba(234,179,8,0.1)",
-                              color: "#ca8a04",
-                              border: "1px solid rgba(234,179,8,0.25)",
-                            }),
+                            background: "rgba(234,179,8,0.1)",
+                            color: "#ca8a04",
+                            border: "1px solid rgba(234,179,8,0.25)",
+                          }),
                       }}
                     >
                       {op.isApproved ? "APPROVED" : "PENDING"}

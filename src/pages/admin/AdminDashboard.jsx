@@ -322,40 +322,15 @@ export default function AdminDashboard() {
   const fetchStats = async () => {
     setStatsLoading(true);
     try {
-      const [usersR, vendorsR, operatorsR, kiosksR, suppliersR, ticketsR] =
-        await Promise.allSettled([
-          api.get("/account"),
-          api.get("/vendor/profile"),
-          api.get("/kiosk/operator/hirable"),
-          api.get("/kiosk"),
-          api.get("/supplier"),
-          api.get("/admin-tickets?status=OPEN"), // Fetch open tickets count
-        ]);
-      const count = (r) => {
-        if (r.status !== "fulfilled") return 0;
-        const d = r.value.data.data;
-        if (!d) return 0;
-        if (typeof d.total === "number") return d.total;
-        // named array key
-        const k = [
-          "vendors",
-          "operators",
-          "suppliers",
-          "users",
-          "kiosks",
-          "states",
-        ].find((k) => Array.isArray(d[k]));
-        if (k) return d[k].length;
-        if (Array.isArray(d)) return d.length;
-        return d.items?.length || 0;
-      };
+      const r = await api.get("/account/counts");
+      const d = r.data.data;
       setStats({
-        users: count(usersR),
-        vendors: count(vendorsR),
-        operators: count(operatorsR),
-        kiosks: count(kiosksR),
-        suppliers: count(suppliersR),
-        tickets: count(ticketsR),
+        users: d?.users || 0,
+        vendors: d?.vendors || 0,
+        operators: d?.operators || 0,
+        kiosks: d?.kiosks || 0,
+        suppliers: d?.suppliers || 0,
+        tickets: d?.tickets || 0,
       });
     } catch {
       /* silent */
@@ -363,6 +338,7 @@ export default function AdminDashboard() {
       setStatsLoading(false);
     }
   };
+
 
   const fetchApplications = async () => {
     setAppsLoading(true);
@@ -468,26 +444,57 @@ export default function AdminDashboard() {
   };
 
   const handleEntityApprove = async (id) => {
-    const endpoints = {
-      vendors: `/vendor/profile/${id}/status`,
-      operators: `/kiosk/operator/${id}/approve`,
-      suppliers: `/supplier/${id}/approve`,
-    };
-    const url = endpoints[drawer];
-    if (!url) return;
     setEntityApproving(id);
     try {
-      // vendors need { status } body; operators/suppliers are no-body endpoints
-      const body = drawer === "vendors" ? { status: "ACTIVE" } : {};
-      await api.patch(url, body);
-      toast.success("Approved");
+      if (drawer === "kiosks") {
+        await api.post(`/kiosk/${id}/activate`);
+      } else {
+        const endpoints = {
+          vendors: `/vendor/profile/${id}/status`,
+          operators: `/kiosk/operator/${id}/approve`,
+          suppliers: `/supplier/${id}/approve`,
+        };
+        const url = endpoints[drawer];
+        if (!url) return;
+        const body = drawer === "vendors" ? { status: "ACTIVE" } : {};
+        await api.patch(url, body);
+      }
+      toast.success(drawer === "kiosks" ? "Kiosk activated" : "Approved successfully");
       openDrawer(drawer);
+      fetchStats();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed");
     } finally {
       setEntityApproving(null);
     }
   };
+
+  const handleEntityUnapprove = async (id) => {
+    setEntityApproving(id);
+    try {
+      if (drawer === "kiosks") {
+        await api.post(`/kiosk/${id}/deactivate`);
+      } else if (drawer === "vendors") {
+        await api.patch(`/vendor/profile/${id}/status`, { status: "PENDING" });
+      } else {
+        const endpoints = {
+          operators: `/kiosk/operator/${id}/unapprove`,
+          suppliers: `/supplier/${id}/unapprove`,
+        };
+        const url = endpoints[drawer];
+        if (!url) return;
+        await api.patch(url);
+      }
+      toast.success(drawer === "kiosks" ? "Kiosk deactivated" : "Unapproved successfully");
+      openDrawer(drawer);
+      fetchStats();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed");
+    } finally {
+      setEntityApproving(null);
+    }
+  };
+
 
   const handleUnlockUser = async (id) => {
     setEntityApproving(id);
@@ -674,7 +681,9 @@ export default function AdminDashboard() {
       item.status === "ACTIVE";
 
     const canApprove =
-      ["vendors", "operators", "suppliers"].includes(drawer) && !approved;
+      ["vendors", "operators", "suppliers", "kiosks"].includes(drawer) && !approved;
+    const canUnapprove =
+      ["vendors", "operators", "suppliers", "kiosks"].includes(drawer) && approved;
     const isUsersDrawer = drawer === "users";
 
     const statusLabel =
@@ -761,7 +770,7 @@ export default function AdminDashboard() {
               disabled={!!entityApproving}
             >
               <span className="btn_text">
-                <MdCheck size={12} /> Approve
+                <MdCheck size={12} /> {drawer === "kiosks" ? "Activate" : "Approve"}
               </span>
               {entityApproving === item.id && (
                 <span
@@ -771,6 +780,30 @@ export default function AdminDashboard() {
               )}
             </button>
           )}
+          {canUnapprove && (
+            <button
+              className={`app_btn app_btn_cancel${entityApproving === item.id ? " btn_loading" : ""}`}
+              style={{
+                height: 28,
+                padding: "0 10px",
+                fontSize: "0.72rem",
+                position: "relative",
+              }}
+              onClick={() => handleEntityUnapprove(item.id)}
+              disabled={!!entityApproving}
+            >
+              <span className="btn_text">
+                {drawer === "kiosks" ? "Deactivate" : "Unapprove"}
+              </span>
+              {entityApproving === item.id && (
+                <span
+                  className="btn_loader"
+                  style={{ width: 11, height: 11 }}
+                />
+              )}
+            </button>
+          )}
+
           {isUsersDrawer && item.passwordLockedUntil && (
             <button
               className="app_btn app_btn_cancel"
