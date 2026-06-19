@@ -502,7 +502,7 @@ export default function ShopOrderPage() {
                 whiteSpace: "nowrap",
               }}
             >
-              Track
+              -
             </span>
           </div>
           <div style={{ flex: 1 }} />

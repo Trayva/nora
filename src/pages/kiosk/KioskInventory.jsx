@@ -1424,6 +1424,354 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
   );
 }
 
+/* ── Item History Modal ─────────────────────────────────────── */
+function ItemHistoryModal({ item, kioskId, onClose }) {
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  useEffect(() => {
+    if (!item) return;
+    const fetchItemHistory = async () => {
+      setLoading(true);
+      try {
+        const type = item.type || "INGREDIENT";
+        let paramKey = "ingredientId";
+        if (type === "PREP_ITEM") paramKey = "prepItemId";
+        else if (type === "MACHINERY") paramKey = "machineryId";
+        else if (type === "MENU_ITEM") paramKey = "menuItemId";
+
+        const idVal = item[paramKey];
+        if (!idVal) {
+          toast.error("Could not determine item identifier");
+          setHistory([]);
+          return;
+        }
+
+        let url = `/kiosk/inventory/history?kioskId=${kioskId}&${paramKey}=${idVal}&limit=100`;
+        if (startDate) url += `&startDate=${startDate}`;
+        if (endDate) url += `&endDate=${endDate}`;
+
+        const res = await api.get(url);
+        setHistory(res.data.data?.items || res.data.data || []);
+      } catch (err) {
+        toast.error("Failed to load item history");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchItemHistory();
+  }, [item, kioskId, startDate, endDate]);
+
+  if (!item) return null;
+
+  const itemName =
+    item.ingredient?.name ||
+    item.prepItem?.name ||
+    item.machinery?.name ||
+    item.menuItem?.name ||
+    item.ingredientId ||
+    item.prepItemId ||
+    item.machineryId ||
+    item.menuItemId ||
+    "Item";
+
+  const itemImage =
+    item.ingredient?.image ||
+    item.prepItem?.image ||
+    item.machinery?.image ||
+    item.menuItem?.image ||
+    null;
+
+  const isMachinery = item.type === "MACHINERY";
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1600,
+        display: "flex",
+        alignItems: "stretch",
+        justifyContent: "flex-end",
+      }}
+    >
+      <div
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(0,0,0,0.55)",
+          backdropFilter: "blur(3px)",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          width: "min(560px, 100vw)",
+          background: "var(--bg-card)",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "-8px 0 40px rgba(0,0,0,0.25)",
+          height: "100vh",
+          overflow: "hidden",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            flexShrink: 0,
+            borderBottom: "1px solid var(--border)",
+            padding: "18px 22px",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          {itemImage ? (
+            <img
+              src={itemImage}
+              alt={itemName}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                objectFit: "cover",
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: isMachinery
+                  ? "rgba(203,108,220,0.08)"
+                  : "var(--bg-hover)",
+                border: `1px solid ${isMachinery ? "rgba(203,108,220,0.2)" : "var(--border)"}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              {isMachinery ? (
+                <MdBuild size={17} style={{ color: "var(--accent)" }} />
+              ) : (
+                <MdInventory2 size={17} style={{ color: "var(--text-muted)" }} />
+              )}
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: "0.95rem",
+                fontWeight: 900,
+                color: "var(--text-heading)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {itemName} History
+            </div>
+            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+              Stock ledger & transactions
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 7,
+              background: "var(--bg-hover)",
+              border: "1px solid var(--border)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--text-muted)",
+            }}
+          >
+            <MdClose size={14} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "16px 22px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 120 }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>From</span>
+              <input
+                type="date"
+                className="modal-input"
+                style={{ height: 34, padding: "0 8px", fontSize: "0.8rem", flex: 1, marginBottom: 0 }}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 120 }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>To</span>
+              <input
+                type="date"
+                className="modal-input"
+                style={{ height: 34, padding: "0 8px", fontSize: "0.8rem", flex: 1, marginBottom: 0 }}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            {(startDate || endDate) && (
+              <button
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                style={{
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "0 10px",
+                  height: 34,
+                  cursor: "pointer",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  color: "var(--text-muted)",
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {loading ? (
+            <div style={{ padding: "32px 0", textAlign: "center", color: "var(--text-muted)" }}>
+              Loading history...
+            </div>
+          ) : history.length === 0 ? (
+            <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
+              <MdHistory size={24} style={{ opacity: 0.3 }} />
+              <span>No history records found for this item</span>
+            </div>
+          ) : (
+            <div className="kiosk_tasks_list">
+              {history.map((entry, i) => {
+                const delta = entry.quantityChange ?? entry.delta ?? 0;
+                const isEntryMach = entry.type === "MACHINERY";
+                const entryUnit = isEntryMach
+                  ? "unit"
+                  : entry.ingredient?.unit || entry.prepItem?.unit || "units";
+                return (
+                  <div key={entry.id || i} className="kiosk_history_row">
+                    <div
+                      className="kiosk_task_icon"
+                      style={{
+                        background: isEntryMach ? "rgba(203,108,220,0.08)" : undefined,
+                        border: isEntryMach
+                          ? "1px solid rgba(203,108,220,0.2)"
+                          : undefined,
+                      }}
+                    >
+                      {isEntryMach ? (
+                        <MdBuild size={13} style={{ color: "var(--accent)" }} />
+                      ) : delta > 0 ? (
+                        <MdAdd size={13} style={{ color: "#22c55e" }} />
+                      ) : (
+                        <MdDelete size={13} style={{ color: "#ef4444" }} />
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="kiosk_task_name" style={{ textTransform: "capitalize" }}>
+                          {entry.action || (delta > 0 ? "Added" : "Removed")}
+                        </div>
+                        <div className="kiosk_task_meta">
+                          {entry.notes && <>{entry.notes}</>}
+                          {entry.user?.fullName && (
+                            <>{entry.notes ? " · " : ""}By {entry.user.fullName}</>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div
+                        style={{
+                          fontSize: "0.88rem",
+                          fontWeight: 800,
+                          color: delta > 0 ? "#22c55e" : "#ef4444",
+                        }}
+                      >
+                        {delta > 0 ? "+" : ""}
+                        {delta ?? entry.quantity} {entryUnit}
+                      </div>
+                      {entry.timestamp && (
+                        <div className="kiosk_operator_meta">
+                          {new Date(entry.timestamp).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            flexShrink: 0,
+            borderTop: "1px solid var(--border)",
+            padding: "14px 22px 20px",
+            display: "flex",
+            gap: 8,
+          }}
+        >
+          <button
+            className="app_btn app_btn_cancel"
+            style={{ flex: 1, height: 44 }}
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Inventory Item Row ─────────────────────────────────────── */
 const REASON_OPTIONS = [
   "Restock",
@@ -1434,7 +1782,7 @@ const REASON_OPTIONS = [
   "Other",
 ];
 
-function InventoryItemRow({ item, onRefresh }) {
+function InventoryItemRow({ item, onRefresh, onViewHistory }) {
   const [editing, setEditing] = useState(false);
   const [recordingUsage, setRecordingUsage] = useState(false);
   const [quantity, setQuantity] = useState("");
@@ -1556,83 +1904,97 @@ function InventoryItemRow({ item, onRefresh }) {
         style={{
           display: "flex",
           alignItems: "center",
+          justifyContent: "space-between",
           gap: 12,
           padding: "12px 14px",
+          flexWrap: "wrap",
         }}
       >
-        {itemImage ? (
-          <img
-            src={itemImage}
-            alt={itemName}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 9,
-              objectFit: "cover",
-              flexShrink: 0,
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 9,
-              background: isMachinery
-                ? "rgba(203,108,220,0.08)"
-                : "var(--bg-hover)",
-              border: `1px solid ${isMachinery ? "rgba(203,108,220,0.2)" : "var(--border)"}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            {isMachinery ? (
-              <MdBuild size={17} style={{ color: "var(--accent)" }} />
-            ) : (
-              <MdInventory2 size={17} style={{ color: "var(--text-muted)" }} />
-            )}
-          </div>
-        )}
-        <div className="kiosk_inventory_info">
-          <div className="kiosk_task_name">{itemName}</div>
-          <div className="kiosk_task_meta">
-            <span
-              className="kiosk_badge"
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flex: "1 1 200px",
+            minWidth: 0,
+          }}
+        >
+          {itemImage ? (
+            <img
+              src={itemImage}
+              alt={itemName}
               style={{
+                width: 40,
+                height: 40,
+                borderRadius: 9,
+                objectFit: "cover",
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 9,
                 background: isMachinery
-                  ? "rgba(203,108,220,0.1)"
+                  ? "rgba(203,108,220,0.08)"
                   : "var(--bg-hover)",
-                color: isMachinery ? "var(--accent)" : "var(--text-muted)",
                 border: `1px solid ${isMachinery ? "rgba(203,108,220,0.2)" : "var(--border)"}`,
-                fontSize: "0.62rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              {itemType.replace("_", " ")}
-            </span>
-            {isLow && (
+              {isMachinery ? (
+                <MdBuild size={17} style={{ color: "var(--accent)" }} />
+              ) : (
+                <MdInventory2 size={17} style={{ color: "var(--text-muted)" }} />
+              )}
+            </div>
+          )}
+          <div className="kiosk_inventory_info" style={{ flex: 1, minWidth: 0 }}>
+            <div className="kiosk_task_name" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{itemName}</div>
+            <div className="kiosk_task_meta">
               <span
+                className="kiosk_badge"
                 style={{
-                  color: "#ef4444",
-                  fontWeight: 700,
-                  fontSize: "0.65rem",
+                  background: isMachinery
+                    ? "rgba(203,108,220,0.1)"
+                    : "var(--bg-hover)",
+                  color: isMachinery ? "var(--accent)" : "var(--text-muted)",
+                  border: `1px solid ${isMachinery ? "rgba(203,108,220,0.2)" : "var(--border)"}`,
+                  fontSize: "0.62rem",
                 }}
               >
-                ⚠ LOW STOCK
+                {itemType.replace("_", " ")}
               </span>
-            )}
+              {isLow && (
+                <span
+                  style={{
+                    color: "#ef4444",
+                    fontWeight: 700,
+                    fontSize: "0.65rem",
+                  }}
+                >
+                  ⚠ LOW STOCK
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 10,
-            flexShrink: 0,
+            justifyContent: "flex-end",
+            gap: 12,
+            flex: "1 1 auto",
+            flexWrap: "wrap",
           }}
         >
-          <div style={{ textAlign: "right" }}>
+          <div style={{ textAlign: "right", marginRight: 4, minWidth: "60px" }}>
             <div
               style={{
                 fontSize: "0.95rem",
@@ -1659,33 +2021,42 @@ function InventoryItemRow({ item, onRefresh }) {
               </div>
             )}
           </div>
-          <button
-            className="kiosk_icon_action_btn"
-            title="Edit quantity / cost"
-            onClick={() => {
-              setEditing((v) => !v);
-              setRecordingUsage(false);
-            }}
-          >
-            <MdEdit size={13} />
-          </button>
-          <button
-            className="kiosk_icon_action_btn"
-            title="Record usage"
-            onClick={() => {
-              setRecordingUsage((v) => !v);
-              setEditing(false);
-            }}
-          >
-            <MdRemoveCircleOutline size={14} />
-          </button>
-          <button
-            className="kiosk_icon_action_btn kiosk_icon_danger"
-            onClick={handleDelete}
-            disabled={deleting}
-          >
-            <MdDelete size={13} />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <button
+              className="kiosk_icon_action_btn"
+              title="View history"
+              onClick={() => onViewHistory && onViewHistory(item)}
+            >
+              <MdHistory size={13} />
+            </button>
+            <button
+              className="kiosk_icon_action_btn"
+              title="Edit quantity / cost"
+              onClick={() => {
+                setEditing((v) => !v);
+                setRecordingUsage(false);
+              }}
+            >
+              <MdEdit size={13} />
+            </button>
+            <button
+              className="kiosk_icon_action_btn"
+              title="Record usage"
+              onClick={() => {
+                setRecordingUsage((v) => !v);
+                setEditing(false);
+              }}
+            >
+              <MdRemoveCircleOutline size={14} />
+            </button>
+            <button
+              className="kiosk_icon_action_btn kiosk_icon_danger"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              <MdDelete size={13} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2300,6 +2671,9 @@ export default function KioskInventory({ cart, isUtilities = false }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [reorderData, setReorderData] = useState(null);
+  const [historyItem, setHistoryItem] = useState(null);
+  const [historyStartDate, setHistoryStartDate] = useState("");
+  const [historyEndDate, setHistoryEndDate] = useState("");
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -2329,7 +2703,10 @@ export default function KioskInventory({ cart, isUtilities = false }) {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/kiosk/inventory/history?kioskId=${cart.id}`);
+      let url = `/kiosk/inventory/history?kioskId=${cart.id}`;
+      if (historyStartDate) url += `&startDate=${historyStartDate}`;
+      if (historyEndDate) url += `&endDate=${historyEndDate}`;
+      const res = await api.get(url);
       setHistory(res.data.data?.items || res.data.data || []);
     } catch {
       toast.error("Failed to load history");
@@ -2341,8 +2718,11 @@ export default function KioskInventory({ cart, isUtilities = false }) {
   useEffect(() => {
     if (view === "stock") fetchInventory();
     else if (view === "supply") fetchSupply();
-    else if (view === "history") fetchHistory();
   }, [view]);
+
+  useEffect(() => {
+    if (view === "history") fetchHistory();
+  }, [view, historyStartDate, historyEndDate]);
 
   const filteredInventory = inventory.filter((item) => {
     const isMach = item.type === "MACHINERY";
@@ -2494,6 +2874,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
                 key={item.id}
                 item={item}
                 onRefresh={fetchInventory}
+                onViewHistory={(itm) => setHistoryItem(itm)}
               />
             ))}
           </div>
@@ -2520,104 +2901,166 @@ export default function KioskInventory({ cart, isUtilities = false }) {
           </div>
         )
       ) : view === "history" ? (
-        filteredHistory.length === 0 ? (
-          <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
-            <MdHistory size={24} style={{ opacity: 0.3 }} />
-            <span>No history yet</span>
+        <div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 140 }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>From</span>
+              <input
+                type="date"
+                className="modal-input"
+                style={{ height: 34, padding: "0 8px", fontSize: "0.8rem", flex: 1, marginBottom: 0 }}
+                value={historyStartDate}
+                onChange={(e) => setHistoryStartDate(e.target.value)}
+              />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 140 }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>To</span>
+              <input
+                type="date"
+                className="modal-input"
+                style={{ height: 34, padding: "0 8px", fontSize: "0.8rem", flex: 1, marginBottom: 0 }}
+                value={historyEndDate}
+                onChange={(e) => setHistoryEndDate(e.target.value)}
+              />
+            </div>
+            {(historyStartDate || historyEndDate) && (
+              <button
+                onClick={() => {
+                  setHistoryStartDate("");
+                  setHistoryEndDate("");
+                }}
+                style={{
+                  background: "var(--bg-hover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "0 10px",
+                  height: 34,
+                  cursor: "pointer",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  color: "var(--text-muted)",
+                }}
+              >
+                Clear
+              </button>
+            )}
           </div>
-        ) : (
-          <div className="kiosk_tasks_list">
-            {filteredHistory.map((entry, i) => {
-              const delta = entry.quantityChange ?? entry.delta ?? 0;
-              // ── FIX: include prepItem and machinery in name resolution ──
-              const entryName =
-                entry.ingredient?.name ||
-                entry.prepItem?.name ||
-                entry.machinery?.name ||
-                entry.item?.name ||
-                "Item";
-              const entryImg =
-                entry.ingredient?.image ||
-                entry.prepItem?.image ||
-                entry.machinery?.image ||
-                null;
-              const isMach = entry.type === "MACHINERY";
-              return (
-                <div key={entry.id || i} className="kiosk_history_row">
-                  <div
-                    className="kiosk_task_icon"
-                    style={{
-                      background: isMach ? "rgba(203,108,220,0.08)" : undefined,
-                      border: isMach
-                        ? "1px solid rgba(203,108,220,0.2)"
-                        : undefined,
-                    }}
-                  >
-                    {isMach ? (
-                      <MdBuild size={13} style={{ color: "var(--accent)" }} />
-                    ) : delta > 0 ? (
-                      <MdAdd size={13} style={{ color: "#22c55e" }} />
-                    ) : (
-                      <MdDelete size={13} style={{ color: "#ef4444" }} />
-                    )}
-                  </div>
-                  <div
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    {entryImg && (
-                      <img
-                        src={entryImg}
-                        alt=""
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 6,
-                          objectFit: "cover",
-                          flexShrink: 0,
-                        }}
-                      />
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="kiosk_task_name">{entryName}</div>
-                      <div className="kiosk_task_meta">
-                        {entry.action || (delta > 0 ? "Added" : "Removed")}
-                        {entry.notes && <> · {entry.notes}</>}
-                        {entry.user?.fullName && <> · {entry.user.fullName}</>}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+
+          {filteredHistory.length === 0 ? (
+            <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
+              <MdHistory size={24} style={{ opacity: 0.3 }} />
+              <span>No history yet</span>
+            </div>
+          ) : (
+            <div className="kiosk_tasks_list">
+              {filteredHistory.map((entry, i) => {
+                const delta = entry.quantityChange ?? entry.delta ?? 0;
+                // ── FIX: include prepItem and machinery in name resolution ──
+                const entryName =
+                  entry.ingredient?.name ||
+                  entry.prepItem?.name ||
+                  entry.machinery?.name ||
+                  entry.item?.name ||
+                  "Item";
+                const entryImg =
+                  entry.ingredient?.image ||
+                  entry.prepItem?.image ||
+                  entry.machinery?.image ||
+                  null;
+                const isMach = entry.type === "MACHINERY";
+                return (
+                  <div key={entry.id || i} className="kiosk_history_row">
                     <div
+                      className="kiosk_task_icon"
                       style={{
-                        fontSize: "0.88rem",
-                        fontWeight: 800,
-                        color: delta > 0 ? "#22c55e" : "#ef4444",
+                        background: isMach ? "rgba(203,108,220,0.08)" : undefined,
+                        border: isMach
+                          ? "1px solid rgba(203,108,220,0.2)"
+                          : undefined,
                       }}
                     >
-                      {delta > 0 ? "+" : ""}
-                      {delta ?? entry.quantity}
+                      {isMach ? (
+                        <MdBuild size={13} style={{ color: "var(--accent)" }} />
+                      ) : delta > 0 ? (
+                        <MdAdd size={13} style={{ color: "#22c55e" }} />
+                      ) : (
+                        <MdDelete size={13} style={{ color: "#ef4444" }} />
+                      )}
                     </div>
-                    {entry.timestamp && (
-                      <div className="kiosk_operator_meta">
-                        {new Date(entry.timestamp).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                        })}
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      {entryImg && (
+                        <img
+                          src={entryImg}
+                          alt=""
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 6,
+                            objectFit: "cover",
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="kiosk_task_name">{entryName}</div>
+                        <div className="kiosk_task_meta">
+                          {entry.action || (delta > 0 ? "Added" : "Removed")}
+                          {entry.notes && <> · {entry.notes}</>}
+                          {entry.user?.fullName && <> · {entry.user.fullName}</>}
+                        </div>
                       </div>
-                    )}
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div
+                        style={{
+                          fontSize: "0.88rem",
+                          fontWeight: 800,
+                          color: delta > 0 ? "#22c55e" : "#ef4444",
+                        }}
+                      >
+                        {delta > 0 ? "+" : ""}
+                        {delta ?? entry.quantity}
+                      </div>
+                      {entry.timestamp && (
+                        <div className="kiosk_operator_meta">
+                          {new Date(entry.timestamp).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )
+                );
+              })}
+            </div>
+          )}
+        </div>
       ) : null}
+
+      {historyItem && (
+        <ItemHistoryModal
+          item={historyItem}
+          kioskId={cart.id}
+          onClose={() => setHistoryItem(null)}
+        />
+      )}
     </div>
   );
 }
