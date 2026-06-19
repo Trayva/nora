@@ -338,8 +338,8 @@ export default function AdminDashboard() {
         tickets: d?.tickets || 0,
         riders: d?.riders || 0,
       });
-    } catch {
-      /* silent */
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to load stats");
     } finally {
       setStatsLoading(false);
     }
@@ -353,7 +353,7 @@ export default function AdminDashboard() {
       const d = r.data.data;
       setApplications(Array.isArray(d) ? d : d?.items || []);
     } catch {
-      toast.error("Failed to load applications");
+      toast.error(error.response?.data?.message || "Failed to load applications");
     } finally {
       setAppsLoading(false);
     }

@@ -43,8 +43,8 @@ export default function KioskDrawer({ kioskId, onClose, onUpdate }) {
     try {
       const res = await api.get(`/kiosk/${kioskId}`);
       setCart(res.data.data);
-    } catch {
-      toast.error("Failed to load Kiosk details");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to load Kiosk details");
     } finally {
       setLoading(false);
     }

@@ -146,8 +146,8 @@ export default function AdminKiosks() {
       const list = Array.isArray(d) ? d : d?.kiosks || d?.items || [];
       setCarts(list);
       setTotal(d?.total || list.length);
-    } catch {
-      toast.error("Failed to load Kiosks");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to load Kiosks");
     } finally {
       setLoading(false);
     }

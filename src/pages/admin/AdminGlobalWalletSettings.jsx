@@ -26,8 +26,8 @@ export default function AdminGlobalWalletSettings() {
     try {
       const r = await api.get("/finance/wallet/global-settings");
       setSettings(r.data.data || []);
-    } catch (err) {
-      toast.error("Failed to load global wallet settings");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to load global wallet settings");
     } finally {
       setLoading(false);
     }
