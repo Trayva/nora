@@ -36,6 +36,7 @@ const ALL_ROLES = [
   "SUPPLIER",
   "AGGREGATOR",
   "ADMIN",
+  "STAFF"
 ];
 
 const ROLE_COLORS = {
@@ -464,6 +465,72 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
   const [govIdImageFile, setGovIdImageFile] = useState(null);
   const [govIdImagePreview, setGovIdImagePreview] = useState(null);
 
+  // Custom permissions
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
+  const [savingPermissions, setSavingPermissions] = useState(false);
+  const [permissionGroups, setPermissionGroups] = useState({});
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
+
+  useEffect(() => {
+    setLoadingPermissions(true);
+    api.get("/account/permissions")
+      .then((res) => {
+        setPermissionGroups(res.data.data || {});
+      })
+      .catch((err) => {
+        console.error("Failed to load permissions catalog", err);
+      })
+      .finally(() => {
+        setLoadingPermissions(false);
+      });
+  }, []);
+
+  const formatPermissionLabel = (value) => {
+    if (!value) return "";
+    return value
+      .split(/[._-]/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
+  const togglePermission = (permission) => {
+    setSelectedPermissions((prev) =>
+      prev.includes(permission)
+        ? prev.filter((p) => p !== permission)
+        : [...prev, permission]
+    );
+  };
+
+  const toggleGroupPermissions = (groupKeys) => {
+    const allSelected = groupKeys.every((key) => selectedPermissions.includes(key));
+    if (allSelected) {
+      setSelectedPermissions((prev) => prev.filter((p) => !groupKeys.includes(p)));
+    } else {
+      setSelectedPermissions((prev) => [
+        ...prev,
+        ...groupKeys.filter((key) => !prev.includes(key)),
+      ]);
+    }
+  };
+
+  const handleSavePermissions = async () => {
+    setSavingPermissions(true);
+    try {
+      const payload = new FormData();
+      payload.append("permissions", JSON.stringify(selectedPermissions));
+
+      const res = await api.put(`/account/${currentUser.id}`, payload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setCurrentUser(res.data.data);
+      toast.success("Direct permissions updated successfully");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update permissions");
+    } finally {
+      setSavingPermissions(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     try {
@@ -539,6 +606,7 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
     setBvnVerified(currentUser?.bvnVerified ?? false);
     setKycStatus(currentUser?.kycStatus || "PENDING");
     setRoles(currentUser?.roles?.map((r) => r.role || r) || []);
+    setSelectedPermissions(currentUser?.permissions || []);
   }, [currentUser]);
 
   useEffect(() => {
@@ -1501,6 +1569,140 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
           >
             <span className="btn_text">Save Roles</span>
             {savingRoles && (
+              <span className="btn_loader" style={{ width: 12, height: 12 }} />
+            )}
+          </button>
+        </Section>
+
+        {/* Direct Permissions editor */}
+        <Section icon={MdOutlineShield} title="Direct Permissions (Custom)" defaultOpen={false}>
+          {loadingPermissions ? (
+            <div
+              className="page_loader_spinner"
+              style={{ width: 20, height: 20, margin: "12px auto" }}
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 12 }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", lineHeight: "1.4" }}>
+                These permissions are granted directly to this user in addition to their role permissions.
+              </div>
+
+              {Object.entries(permissionGroups).map(([groupName, permsObj]) => {
+                const perms = Object.entries(permsObj).map(([key, val]) => ({
+                  label: formatPermissionLabel(val),
+                  value: val,
+                }));
+                const groupValues = perms.map((p) => p.value);
+                const allSelected = groupValues.every((val) => selectedPermissions.includes(val));
+
+                return (
+                  <div
+                    key={groupName}
+                    style={{
+                      background: "var(--bg-hover)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 10,
+                      padding: 12,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        borderBottom: "1px solid var(--border)",
+                        paddingBottom: 6,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 800,
+                          color: "var(--text-heading)",
+                          letterSpacing: "0.03em",
+                        }}
+                      >
+                        {groupName}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => toggleGroupPermissions(groupValues)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "var(--accent)",
+                          fontSize: "0.68rem",
+                          fontWeight: 700,
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        {allSelected ? "DESELECT ALL" : "SELECT ALL"}
+                      </button>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "8px 12px",
+                      }}
+                    >
+                      {perms.map((perm) => {
+                        const isChecked = selectedPermissions.includes(perm.value);
+                        return (
+                          <label
+                            key={perm.value}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              cursor: "pointer",
+                              fontSize: "0.72rem",
+                              color: isChecked ? "var(--text-body)" : "var(--text-muted)",
+                              fontWeight: isChecked ? 700 : 500,
+                              userSelect: "none",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => togglePermission(perm.value)}
+                              style={{
+                                accentColor: "var(--accent)",
+                                cursor: "pointer",
+                                width: 14,
+                                height: 14,
+                              }}
+                            />
+                            <span
+                              style={{
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {perm.label}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <button
+            className={`app_btn app_btn_confirm${savingPermissions ? " btn_loading" : ""}`}
+            style={{ height: 34, padding: "0 16px", position: "relative" }}
+            onClick={handleSavePermissions}
+            disabled={savingPermissions}
+          >
+            <span className="btn_text">Save Permissions</span>
+            {savingPermissions && (
               <span className="btn_loader" style={{ width: 12, height: 12 }} />
             )}
           </button>
