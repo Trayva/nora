@@ -25,8 +25,11 @@ import {
   PriceTag,
 } from "../../components/SupplierPicker";
 
-const SEARCH_INGREDIENT_URL = (q) =>
-  `/library/ingredient?returnPrep=true&search=${encodeURIComponent(q)}&limit=8`;
+const SEARCH_INGREDIENT_URL = (q, kioskId) => {
+  let url = `/library/ingredient?returnPrep=true&search=${encodeURIComponent(q)}&limit=8`;
+  if (kioskId) url += `&kioskId=${kioskId}`;
+  return url;
+};
 
 const SEARCH_MACHINERY_URL = (q) =>
   `/library/machinery?search=${encodeURIComponent(q)}&limit=8`;
@@ -365,12 +368,12 @@ function ItemSearchSelect({
   );
 }
 
-function IngredientSearchSelect({ value, onChange }) {
+function IngredientSearchSelect({ value, onChange, kioskId }) {
   return (
     <ItemSearchSelect
       value={value}
       onChange={onChange}
-      searchUrl={SEARCH_INGREDIENT_URL}
+      searchUrl={(q) => SEARCH_INGREDIENT_URL(q, kioskId)}
       parseResults={parseLibraryResults}
       placeholder="Search ingredient or prep item…"
     />
@@ -445,7 +448,7 @@ function AddInventoryForm({ kioskId, onAdded, isUtilities }) {
         {isUtilities ? (
           <MachinerySearchSelect value={selectedItem} onChange={handleSelect} />
         ) : (
-          <IngredientSearchSelect value={selectedItem} onChange={handleSelect} />
+          <IngredientSearchSelect value={selectedItem} onChange={handleSelect} kioskId={kioskId} />
         )}
         {selectedItem && (
           <div
@@ -846,24 +849,24 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
               {t.label}
               {((t.key === "ingredients" && activeIngCount > 0) ||
                 (t.key === "machinery" && activeMachCount > 0)) && (
-                <span
-                  style={{
-                    minWidth: 16,
-                    height: 16,
-                    borderRadius: 999,
-                    background: "var(--accent)",
-                    color: "#fff",
-                    fontSize: "0.58rem",
-                    fontWeight: 900,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "0 4px",
-                  }}
-                >
-                  {t.key === "ingredients" ? activeIngCount : activeMachCount}
-                </span>
-              )}
+                  <span
+                    style={{
+                      minWidth: 16,
+                      height: 16,
+                      borderRadius: 999,
+                      background: "var(--accent)",
+                      color: "#fff",
+                      fontSize: "0.58rem",
+                      fontWeight: 900,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "0 4px",
+                    }}
+                  >
+                    {t.key === "ingredients" ? activeIngCount : activeMachCount}
+                  </span>
+                )}
             </button>
           ))}
         </div>
@@ -3064,4 +3067,3 @@ export default function KioskInventory({ cart, isUtilities = false }) {
     </div>
   );
 }
-  
