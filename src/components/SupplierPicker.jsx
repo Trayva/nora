@@ -61,19 +61,26 @@ export function useMachinerySupplierPrices(supplierId, stateId) {
     if (!supplierId || key === prevKey.current) return;
     prevKey.current = key;
     setLoading(true);
-    let url = `/library/machinery/prices/supplier/${supplierId}`;
-    if (stateId) url += `?stateId=${stateId}`;
+    let url = `/library/machinery/prices/supplier/${supplierId}?limit=1000`;
+    if (stateId) url += `&stateId=${stateId}`;
     api.get(url)
       .then((r) => {
         const d = r.data?.data;
         const list = Array.isArray(d) ? d : d?.data || d?.items || [];
-        const map = new Map();
+        const temp = new Map();
         list.forEach((entry) => {
           const id = entry.machineryId || entry.machinery?.id;
           const p = entry.price ?? entry.pricePerUnit;
-          if (id != null && p != null) map.set(id, Number(p));
+          if (id != null && p != null) {
+            const existing = temp.get(id);
+            if (!existing || (entry.stateId && entry.stateId === stateId && existing.stateId !== stateId)) {
+              temp.set(id, { price: Number(p), stateId: entry.stateId });
+            }
+          }
         });
-        setPrices(map);
+        const finalMap = new Map();
+        temp.forEach((val, key) => finalMap.set(key, val.price));
+        setPrices(finalMap);
       })
       .catch(() => setPrices(new Map()))
       .finally(() => setLoading(false));

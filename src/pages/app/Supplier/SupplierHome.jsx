@@ -2689,7 +2689,8 @@ function IngredientPricesTab({ profile }) {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const LIMIT = 20;
+  // Get Realtime Prices by Change
+  const LIMIT = 20000;
   const [ingredient, setIngredient] = useState(null);
   const [ingSearch, setIngSearch] = useState("");
   const [ingResults, setIngResults] = useState([]);
