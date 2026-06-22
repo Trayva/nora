@@ -367,16 +367,25 @@ export function MenuDetailDrawer({
       if (exists) return prev.filter((m) => m.id !== ing.id);
       return [
         ...prev,
-        { id: ing.id, name: ing.name, image: ing.image, unit: ing.unit },
+        {
+          id: ing.id,
+          name: ing.name,
+          image: ing.image,
+          unit: ing.unit,
+          menuQty: ing.totalQuantity,
+        },
       ];
     });
   };
 
-  const toggleMachSelection = (mach) => {
+  const toggleMachSelection = (mach, menuQty = 1) => {
     setSelectedMachIds((prev) => {
       const exists = prev.find((m) => m.id === mach.id);
       if (exists) return prev.filter((m) => m.id !== mach.id);
-      return [...prev, { id: mach.id, name: mach.name, image: mach.image }];
+      return [
+        ...prev,
+        { id: mach.id, name: mach.name, image: mach.image, menuQty },
+      ];
     });
   };
 
@@ -2602,7 +2611,7 @@ export function MenuDetailDrawer({
                               )}
                               {/* Select for order button */}
                               {cart ? <button
-                                onClick={() => toggleMachSelection(mach)}
+                                onClick={() => toggleMachSelection(mach, m.quantity)}
                                 title={
                                   isSel ? "Remove from order" : "Add to order"
                                 }
@@ -2715,7 +2724,7 @@ export function MenuDetailDrawer({
                               )}
                               {cart ? (
                                 <button
-                                  onClick={() => toggleMachSelection(mach)}
+                                  onClick={() => toggleMachSelection(mach, c.quantity)}
                                   title={isSel ? "Remove from order" : "Add to order"}
                                   style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${isSel ? "var(--accent)" : "var(--border)"}`, background: isSel ? "var(--accent)" : "var(--bg-card)", color: isSel ? "#fff" : "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                                 >

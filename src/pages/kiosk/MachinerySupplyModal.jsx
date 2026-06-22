@@ -30,7 +30,9 @@ export default function MachinerySupplyModal({
   useEffect(() => {
     if (isOpen) {
       setQuantities(
-        Object.fromEntries((selectedMachItems || []).map((m) => [m.id, "1"])),
+        Object.fromEntries(
+          (selectedMachItems || []).map((m) => [m.id, String(m.menuQty || 1)]),
+        ),
       );
       setSupplierId("");
     }

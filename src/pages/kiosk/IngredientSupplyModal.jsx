@@ -22,7 +22,9 @@ export default function IngredientSupplyModal({
   useEffect(() => {
     if (isOpen) {
       setQuantities(
-        Object.fromEntries((selectedIngItems || []).map((m) => [m.id, "1"])),
+        Object.fromEntries(
+          (selectedIngItems || []).map((m) => [m.id, String(m.menuQty || 1)]),
+        ),
       );
       setUnits(
         Object.fromEntries(
