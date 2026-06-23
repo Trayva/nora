@@ -2075,7 +2075,9 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
             </div>
             {item.cost != null && !isMachinery && (
               <div className="kiosk_inventory_cost">
-                ₦{Number(item.cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}/unit
+                ₦{Number(item.cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}/{isMachinery
+                  ? "unit"
+                  : item.ingredient?.unit || item.prepItem?.unit || "units"}
               </div>
             )}
           </div>
