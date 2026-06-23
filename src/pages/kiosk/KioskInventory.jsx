@@ -397,12 +397,14 @@ function AddInventoryForm({ kioskId, onAdded, isUtilities }) {
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("g");
   const [totalCost, setTotalCost] = useState("");
+  const [lowStockLevel, setLowStockLevel] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSelect = (item) => {
     setSelectedItem(item);
     setQuantity("");
     setTotalCost("");
+    setLowStockLevel("");
     setUnit(getDefaultUnit(item?.unit));
   };
   const type = selectedItem?._type || (isUtilities ? "MACHINERY" : "INGREDIENT");
@@ -431,6 +433,9 @@ function AddInventoryForm({ kioskId, onAdded, isUtilities }) {
         [itemIdKey]: selectedItem.id,
         quantity: baseQty ?? Number(quantity),
         cost: unitCost ?? (totalCost ? Number(totalCost) : undefined),
+        lowStockLevel: lowStockLevel
+          ? (type === "MACHINERY" ? Number(lowStockLevel) : toBaseQuantity(lowStockLevel, unit))
+          : undefined,
       });
       toast.success(isUtilities ? "Utility added to kiosk" : "Item added to inventory");
       onAdded();
@@ -618,6 +623,35 @@ function AddInventoryForm({ kioskId, onAdded, isUtilities }) {
             {unit === "kg" ? "g" : unit === "L" ? "ml" : unit}
           </div>
         )}
+      </div>
+      <div className="form-field">
+        <label className="modal-label">Low Stock Alert Level — optional</label>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            className="modal-input"
+            style={{ flex: 1 }}
+            type="number"
+            placeholder="e.g. 1000"
+            value={lowStockLevel}
+            onChange={(e) => setLowStockLevel(e.target.value)}
+          />
+          <div
+            style={{
+              padding: "0 14px",
+              background: "var(--bg-hover)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              fontSize: "0.82rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: 54,
+              color: "var(--text-body)",
+            }}
+          >
+            {unit}
+          </div>
+        </div>
       </div>
       <button
         className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
@@ -1797,6 +1831,7 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
   const [usageReason, setUsageReason] = useState("Waste");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [lowStockLevel, setLowStockLevel] = useState("");
 
   const itemType = item.type || "INGREDIENT";
   const isMachinery = itemType === "MACHINERY";
@@ -1832,21 +1867,48 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
     : getUnitOptions(item.ingredient?.unit || item.prepItem?.unit);
 
   const handleUpdate = async () => {
-    if (!quantity || isNaN(quantity) || Number(quantity) <= 0)
+    const hasQtyInput = quantity.trim() !== "";
+    const targetLowStockLevel = lowStockLevel.trim() === ""
+      ? 0
+      : (isMachinery ? Number(lowStockLevel) : toBaseQuantity(lowStockLevel, unit));
+
+    const currentLowStockLevel = item.lowStockLevel || 0;
+    const hasLowStockChange = targetLowStockLevel !== currentLowStockLevel;
+
+    if (!hasQtyInput && !hasLowStockChange) {
+      return toast.error("No changes to save");
+    }
+
+    if (hasQtyInput && (isNaN(quantity) || Number(quantity) <= 0)) {
       return toast.error("Enter a valid quantity");
+    }
+
+    if (lowStockLevel.trim() !== "" && (isNaN(lowStockLevel) || Number(lowStockLevel) < 0)) {
+      return toast.error("Enter a valid low stock alert level (0 or greater)");
+    }
+
     setSaving(true);
     try {
-      await api.patch(`/kiosk/inventory/${item.id}`, {
-        quantity: isMachinery
-          ? Number(quantity)
-          : (baseQty ?? Number(quantity)),
-        cost: unitCost ?? (totalCost ? Number(totalCost) : undefined),
-      });
-      toast.success("Updated");
+      if (hasQtyInput) {
+        await api.patch(`/kiosk/inventory/${item.id}`, {
+          quantity: isMachinery
+            ? Number(quantity)
+            : (baseQty ?? Number(quantity)),
+          cost: unitCost ?? (totalCost ? Number(totalCost) : undefined),
+        });
+      }
+
+      if (hasLowStockChange) {
+        await api.patch(`/kiosk/inventory/${item.id}/low-stock-level`, {
+          lowStockLevel: targetLowStockLevel,
+        });
+      }
+
+      toast.success("Updated successfully");
       setEditing(false);
       onRefresh();
-    } catch {
-      toast.error("Failed to update");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -1891,34 +1953,27 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
     }
   };
 
-  const isLow = item.quantity < 5;
+  const isLow = item.lowStockLevel ? item.quantity <= item.lowStockLevel : item.quantity < 5;
 
   return (
-    <div
-      style={{
-        background: "var(--bg-card)",
-        border: `1px solid ${isLow ? "rgba(239,68,68,0.3)" : "var(--border)"}`,
-        borderRadius: 12,
-        overflow: "hidden",
-        marginBottom: 8,
-      }}
-    >
+    <div className={`kiosk_inventory_card ${isLow ? "low_stock" : ""}`}>
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 12,
-          padding: "12px 14px",
+          gap: 16,
+          padding: "16px 20px",
           flexWrap: "wrap",
         }}
       >
+        {/* Left Section: Image and Title */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
-            flex: "1 1 200px",
+            gap: 16,
+            flex: "1 1 240px",
             minWidth: 0,
           }}
         >
@@ -1927,19 +1982,21 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
               src={itemImage}
               alt={itemName}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 9,
+                width: 46,
+                height: 46,
+                borderRadius: 12,
                 objectFit: "cover",
                 flexShrink: 0,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                border: "1px solid var(--border)",
               }}
             />
           ) : (
             <div
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 9,
+                width: 46,
+                height: 46,
+                borderRadius: 12,
                 background: isMachinery
                   ? "rgba(203,108,220,0.08)"
                   : "var(--bg-hover)",
@@ -1951,14 +2008,16 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
               }}
             >
               {isMachinery ? (
-                <MdBuild size={17} style={{ color: "var(--accent)" }} />
+                <MdBuild size={18} style={{ color: "var(--accent)" }} />
               ) : (
-                <MdInventory2 size={17} style={{ color: "var(--text-muted)" }} />
+                <MdInventory2 size={18} style={{ color: "var(--text-muted)" }} />
               )}
             </div>
           )}
           <div className="kiosk_inventory_info" style={{ flex: 1, minWidth: 0 }}>
-            <div className="kiosk_task_name" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{itemName}</div>
+            <div className="kiosk_inventory_title" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>
+              {itemName}
+            </div>
             <div className="kiosk_task_meta">
               <span
                 className="kiosk_badge"
@@ -1969,123 +2028,128 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
                   color: isMachinery ? "var(--accent)" : "var(--text-muted)",
                   border: `1px solid ${isMachinery ? "rgba(203,108,220,0.2)" : "var(--border)"}`,
                   fontSize: "0.62rem",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  textTransform: "uppercase",
+                  fontWeight: "700",
                 }}
               >
                 {itemType.replace("_", " ")}
               </span>
+              {item.lowStockLevel > 0 && (
+                <span className="kiosk_min_stock_badge">
+                  Min: {item.lowStockLevel.toLocaleString()} {isMachinery ? "unit" : item.ingredient?.unit || item.prepItem?.unit || "units"}
+                </span>
+              )}
               {isLow && (
-                <span
-                  style={{
-                    color: "#ef4444",
-                    fontWeight: 700,
-                    fontSize: "0.65rem",
-                  }}
-                >
-                  ⚠ LOW STOCK
+                <span className="kiosk_low_stock_pill">
+                  ⚠ Low Stock
                 </span>
               )}
             </div>
           </div>
         </div>
+
+        {/* Right Section: Stats (Qty, Cost) and Actions */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "flex-end",
-            gap: 12,
+            gap: 20,
             flex: "1 1 auto",
             flexWrap: "wrap",
           }}
         >
-          <div style={{ textAlign: "right", marginRight: 4, minWidth: "60px" }}>
-            <div
-              style={{
-                fontSize: "0.95rem",
-                fontWeight: 800,
-                color: "var(--text-heading)",
-              }}
-            >
-              {item.quantity?.toLocaleString()}
-            </div>
-            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-              {isMachinery
-                ? "unit"
-                : item.ingredient?.unit || item.prepItem?.unit || "units"}
+          {/* Stats Block */}
+          <div style={{ textAlign: "right", minWidth: "100px" }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: 4 }}>
+              <span className="kiosk_inventory_qty_value">
+                {item.quantity?.toLocaleString()}
+              </span>
+              <span className="kiosk_inventory_qty_unit">
+                {isMachinery
+                  ? "unit"
+                  : item.ingredient?.unit || item.prepItem?.unit || "units"}
+              </span>
             </div>
             {item.cost != null && !isMachinery && (
-              <div
-                style={{
-                  fontSize: "0.7rem",
-                  color: "var(--text-muted)",
-                  fontWeight: 500,
-                }}
-              >
-                ₦{Number(item.cost).toFixed(4)}/unit
+              <div className="kiosk_inventory_cost">
+                ₦{Number(item.cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}/unit
               </div>
             )}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+
+          {/* Action Panel */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <button
-              className="kiosk_icon_action_btn"
+              className="kiosk_inventory_action_btn history"
               title="View history"
               onClick={() => onViewHistory && onViewHistory(item)}
             >
-              <MdHistory size={13} />
+              <MdHistory size={14} />
             </button>
             <button
-              className="kiosk_icon_action_btn"
-              title="Edit quantity / cost"
+              className="kiosk_inventory_action_btn edit"
+              title="Edit quantity / cost / low stock level"
               onClick={() => {
-                setEditing((v) => !v);
+                const isOpening = !editing;
+                setEditing(isOpening);
                 setRecordingUsage(false);
+                if (isOpening) {
+                  const itemUnit = item.ingredient?.unit || item.prepItem?.unit;
+                  if (itemUnit) {
+                    setUnit(getDefaultUnit(itemUnit));
+                  } else if (isMachinery) {
+                    setUnit("unit");
+                  }
+                  setLowStockLevel(item.lowStockLevel ? String(item.lowStockLevel) : "");
+                }
               }}
             >
-              <MdEdit size={13} />
+              <MdEdit size={14} />
             </button>
             <button
-              className="kiosk_icon_action_btn"
+              className="kiosk_inventory_action_btn usage"
               title="Record usage"
               onClick={() => {
                 setRecordingUsage((v) => !v);
                 setEditing(false);
               }}
             >
-              <MdRemoveCircleOutline size={14} />
+              <MdRemoveCircleOutline size={15} />
             </button>
             <button
-              className="kiosk_icon_action_btn kiosk_icon_danger"
+              className="kiosk_inventory_action_btn danger"
+              title="Remove item"
               onClick={handleDelete}
               disabled={deleting}
             >
-              <MdDelete size={13} />
+              <MdDelete size={14} />
             </button>
           </div>
         </div>
       </div>
 
       {editing && (
-        <div
-          style={{
-            padding: "0 14px 14px",
-            borderTop: "1px solid var(--border)",
-          }}
-        >
+        <div className="kiosk_inventory_edit_panel">
           <div
             style={{
-              paddingTop: 12,
-              paddingBottom: 8,
+              paddingBottom: 10,
               fontSize: "0.75rem",
-              fontWeight: 700,
-              color: "var(--text-muted)",
+              fontWeight: 800,
+              color: "var(--text-heading)",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
+              borderBottom: "1px solid var(--border)",
+              marginBottom: 14,
             }}
           >
-            Update Stock
+            Update Stock Details
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
             <div className="form-field" style={{ flex: 1, marginBottom: 0 }}>
-              <label className="modal-label">New Quantity *</label>
+              <label className="modal-label">New Quantity (Optional)</label>
               <input
                 className="modal-input"
                 type="number"
@@ -2094,7 +2158,7 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
                 onChange={(e) => setQuantity(e.target.value)}
               />
             </div>
-            <div className="form-field" style={{ width: 76, marginBottom: 0 }}>
+            <div className="form-field" style={{ width: 88, marginBottom: 0 }}>
               <label className="modal-label">Unit</label>
               {unitOpts.length > 1 ? (
                 <select
@@ -2117,6 +2181,7 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
                     justifyContent: "center",
                     color: "var(--text-muted)",
                     fontSize: "0.82rem",
+                    background: "var(--bg-card)",
                   }}
                 >
                   {unitOpts[0] || "unit"}
@@ -2129,16 +2194,19 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
               style={{
                 fontSize: "0.72rem",
                 color: "var(--accent)",
-                fontWeight: 600,
-                marginBottom: 10,
+                fontWeight: 700,
+                marginBottom: 12,
+                background: "rgba(203, 108, 220, 0.05)",
+                padding: "6px 10px",
+                borderRadius: "6px",
+                display: "inline-block",
               }}
             >
-              → {baseQty?.toLocaleString()} {unit === "kg" ? "g" : "ml"} sent to
-              server
+              → {baseQty?.toLocaleString()} {unit === "kg" ? "g" : "ml"} sent to server
             </div>
           )}
           {!isMachinery && (
-            <div className="form-field">
+            <div className="form-field" style={{ marginBottom: 12 }}>
               <label className="modal-label">Total Cost (NGN) — optional</label>
               <input
                 className="modal-input"
@@ -2152,17 +2220,50 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
                   style={{
                     fontSize: "0.72rem",
                     color: "var(--accent)",
-                    marginTop: 5,
-                    fontWeight: 600,
+                    marginTop: 6,
+                    fontWeight: 700,
+                    background: "rgba(203, 108, 220, 0.05)",
+                    padding: "6px 10px",
+                    borderRadius: "6px",
+                    display: "inline-block",
                   }}
                 >
-                  → ₦{unitCost.toFixed(4)} per{" "}
-                  {unit === "kg" ? "g" : unit === "L" ? "ml" : unit}
+                  → ₦{unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} per {unit === "kg" ? "g" : unit === "L" ? "ml" : unit}
                 </div>
               )}
             </div>
           )}
-          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <div className="form-field" style={{ marginBottom: 16 }}>
+            <label className="modal-label">Low Stock Alert Level — optional</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                className="modal-input"
+                style={{ flex: 1 }}
+                type="number"
+                placeholder="e.g. 1000"
+                value={lowStockLevel}
+                onChange={(e) => setLowStockLevel(e.target.value)}
+              />
+              <div
+                style={{
+                  padding: "0 14px",
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  fontSize: "0.82rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minWidth: 60,
+                  color: "var(--text-body)",
+                  fontWeight: "600",
+                }}
+              >
+                {unit}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
             <button
               className="app_btn app_btn_cancel"
               style={{ flex: 1, height: 38 }}
@@ -2189,26 +2290,22 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
       )}
 
       {recordingUsage && (
-        <div
-          style={{
-            padding: "0 14px 14px",
-            borderTop: "1px solid var(--border)",
-          }}
-        >
+        <div className="kiosk_inventory_edit_panel">
           <div
             style={{
-              paddingTop: 12,
-              paddingBottom: 8,
+              paddingBottom: 10,
               fontSize: "0.75rem",
-              fontWeight: 700,
-              color: "var(--text-muted)",
+              fontWeight: 800,
+              color: "var(--text-heading)",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
+              borderBottom: "1px solid var(--border)",
+              marginBottom: 14,
             }}
           >
-            Record Usage
+            Record Stock Usage
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
             <div className="form-field" style={{ flex: 1, marginBottom: 0 }}>
               <label className="modal-label">Quantity Used *</label>
               <input
@@ -2219,7 +2316,7 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
                 onChange={(e) => setUsageQty(e.target.value)}
               />
             </div>
-            <div className="form-field" style={{ width: 76, marginBottom: 0 }}>
+            <div className="form-field" style={{ width: 88, marginBottom: 0 }}>
               <label className="modal-label">Unit</label>
               {unitOpts.length > 1 ? (
                 <select
@@ -2242,6 +2339,7 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
                     justifyContent: "center",
                     color: "var(--text-muted)",
                     fontSize: "0.82rem",
+                    background: "var(--bg-card)",
                   }}
                 >
                   {unitOpts[0] || "unit"}
@@ -2254,18 +2352,21 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
               style={{
                 fontSize: "0.72rem",
                 color: "var(--accent)",
-                fontWeight: 600,
-                marginBottom: 10,
+                fontWeight: 700,
+                marginBottom: 12,
+                background: "rgba(203, 108, 220, 0.05)",
+                padding: "6px 10px",
+                borderRadius: "6px",
+                display: "inline-block",
               }}
             >
-              → {usageBaseQty?.toLocaleString()}{" "}
-              {usageUnit === "kg" ? "g" : "ml"} will be recorded
+              → {usageBaseQty?.toLocaleString()} {usageUnit === "kg" ? "g" : "ml"} will be recorded
             </div>
           )}
           <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}
           >
-            <div className="form-field">
+            <div className="form-field" style={{ marginBottom: 0 }}>
               <label className="modal-label">Reason *</label>
               <select
                 className="modal-input"
@@ -2279,7 +2380,7 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
                 ))}
               </select>
             </div>
-            <div className="form-field">
+            <div className="form-field" style={{ marginBottom: 0 }}>
               <label className="modal-label">Notes</label>
               <input
                 className="modal-input"
@@ -2289,7 +2390,7 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
               />
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
             <button
               className="app_btn app_btn_cancel"
               style={{ flex: 1, height: 38 }}
@@ -2747,7 +2848,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
     (sum, i) => sum + (i.cost || 0) * (i.quantity || 0),
     0,
   );
-  const lowStock = filteredInventory.filter((i) => i.quantity < 5).length;
+  const lowStock = filteredInventory.filter((i) => i.lowStockLevel ? i.quantity <= i.lowStockLevel : i.quantity < 5).length;
 
   return (
     <div className="kiosk_tab_content">

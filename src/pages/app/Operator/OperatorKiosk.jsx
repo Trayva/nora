@@ -582,7 +582,7 @@ export function InventoryTab({ kioskId }) {
             const name = item.ingredient?.name || item.prepItem?.name || "Item";
             const img = item.ingredient?.image || item.prepItem?.image || null;
             const isActive = usageItem?.id === item.id;
-            const isLow = item.quantity < 5;
+            const isLow = item.lowStockLevel ? item.quantity <= item.lowStockLevel : item.quantity < 5;
             return (
               <div
                 key={item.id}
@@ -638,6 +638,11 @@ export function InventoryTab({ kioskId }) {
                     <div className="kiosk_task_name">{name}</div>
                     <div className="kiosk_task_meta">
                       <span>{item.type?.replace("_", " ")}</span>
+                      {item.lowStockLevel > 0 && (
+                        <span>
+                          · Min: {item.lowStockLevel.toLocaleString()} {item.ingredient?.unit || item.prepItem?.unit || "units"}
+                        </span>
+                      )}
                       {isLow && (
                         <span style={{ color: "#ef4444", fontWeight: 700 }}>
                           · ⚠ LOW
