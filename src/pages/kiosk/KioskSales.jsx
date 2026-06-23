@@ -155,6 +155,18 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
+const getVarietyLabel = (item) => {
+  if (!item.variantId || !item.menuItem?.variants) return null;
+  const match = item.menuItem.variants.find((v) => v.id === item.variantId);
+  return match ? match.name : null;
+};
+
+const getExtrasLabel = (item) => {
+  if (!item.extras || item.extras.length === 0 || !item.menuItem?.extras) return null;
+  const matches = item.menuItem.extras.filter((e) => item.extras.includes(e.id));
+  return matches.length > 0 ? matches.map((e) => e.name).join(", ") : null;
+};
+
 function SaleRow({ sale }) {
   const [expanded, setExpanded] = useState(false);
   return (
@@ -208,6 +220,8 @@ function SaleRow({ sale }) {
             </span>
             <span className="contract_row_dot">·</span>
             <span>{sale.operator?.fullName || "Operator"}</span>
+            <span className="contract_row_dot">·</span>
+            <span>VAT: ₦{fmt(sale.vatAmount || 0)}</span>
             <span className="contract_row_dot">·</span>
             <span>{fmtDate(sale.createdAt)}</span>
           </div>
@@ -297,9 +311,26 @@ function SaleRow({ sale }) {
                   {item.menuItem?.name || "Item"}
                 </div>
                 <div
-                  style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}
+                  style={{
+                    fontSize: "0.68rem",
+                    color: "var(--text-muted)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    marginTop: 1,
+                  }}
                 >
-                  qty: {item.quantity}
+                  <div>qty: {item.quantity}</div>
+                  {getVarietyLabel(item) && (
+                    <div style={{ color: "var(--accent)", fontWeight: 600 }}>
+                      Variety: {getVarietyLabel(item)}
+                    </div>
+                  )}
+                  {getExtrasLabel(item) && (
+                    <div style={{ color: "var(--text-muted)" }}>
+                      Extras: {getExtrasLabel(item)}
+                    </div>
+                  )}
                 </div>
               </div>
               <div
@@ -1155,8 +1186,8 @@ export default function KioskSales({ cart }) {
             },
             { label: "Owner Profit", value: totals.ownerProfit, accent: false },
             {
-              label: "Total Expenses",
-              value: totals.totalExpenses,
+              label: "VAT",
+              value: totals.totalVat,
               accent: false,
             },
             { label: "Nora Profit", value: totals.noraProfit, accent: false },

@@ -164,6 +164,18 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
+const getVarietyLabel = (item) => {
+  if (!item.variantId || !item.menuItem?.variants) return null;
+  const match = item.menuItem.variants.find((v) => v.id === item.variantId);
+  return match ? match.name : null;
+};
+
+const getExtrasLabel = (item) => {
+  if (!item.extras || item.extras.length === 0 || !item.menuItem?.extras) return null;
+  const matches = item.menuItem.extras.filter((e) => item.extras.includes(e.id));
+  return matches.length > 0 ? matches.map((e) => e.name).join(", ") : null;
+};
+
 function SaleRow({ sale }) {
   const [expanded, setExpanded] = useState(false);
   return (
@@ -260,6 +272,8 @@ function SaleRow({ sale }) {
                 "Operator"}
             </span>
             <span>·</span>
+            <span>VAT: ₦{fmt(sale.vatAmount || 0)}</span>
+            <span>·</span>
             <span>{fmtDate(sale.createdAt)}</span>
           </div>
         </div>
@@ -348,9 +362,26 @@ function SaleRow({ sale }) {
                   {item.menuItem?.name || "Item"}
                 </div>
                 <div
-                  style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}
+                  style={{
+                    fontSize: "0.68rem",
+                    color: "var(--text-muted)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    marginTop: 1,
+                  }}
                 >
-                  qty: {item.quantity}
+                  <div>qty: {item.quantity}</div>
+                  {getVarietyLabel(item) && (
+                    <div style={{ color: "var(--accent)", fontWeight: 600 }}>
+                      Variety: {getVarietyLabel(item)}
+                    </div>
+                  )}
+                  {getExtrasLabel(item) && (
+                    <div style={{ color: "var(--text-muted)" }}>
+                      Extras: {getExtrasLabel(item)}
+                    </div>
+                  )}
                 </div>
               </div>
               <div
@@ -682,16 +713,20 @@ export default function AdminSalesAnalytics() {
         >
           {[
             { label: "Total Revenue", value: totals.totalSales, accent: true },
-            { label: "Total Profit", value: totals.totalProfit, accent: false },
             {
               label: "Cost of Sales",
               value: totals.totalCostOfSales,
               accent: false,
             },
+            {
+              label: "Vendor Profit",
+              value: totals.vendorProfit,
+              accent: false,
+            },
             { label: "Owner Profit", value: totals.ownerProfit, accent: false },
             {
-              label: "Total Expenses",
-              value: totals.totalExpenses,
+              label: "VAT",
+              value: totals.totalVat,
               accent: false,
             },
             { label: "Nora Profit", value: totals.noraProfit, accent: false },
