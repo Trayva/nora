@@ -27,18 +27,18 @@ const fmt = (n) =>
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "—";
 
 const fmtChartDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-      })
+      day: "2-digit",
+      month: "short",
+    })
     : "";
 
 const toISODate = (d) => d.toISOString().split("T")[0];
@@ -432,7 +432,7 @@ export default function AdminSalesAnalytics() {
         const list = Array.isArray(d) ? d : d?.items || d?.kiosks || [];
         setKiosks(list);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const applyPreset = (p) => {
@@ -719,7 +719,7 @@ export default function AdminSalesAnalytics() {
               accent: false,
             },
             {
-              label: "Vendor Profit",
+              label: "Brand Profit",
               value: totals.vendorProfit,
               accent: false,
             },

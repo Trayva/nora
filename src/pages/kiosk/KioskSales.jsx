@@ -1180,7 +1180,7 @@ export default function KioskSales({ cart }) {
               accent: false,
             },
             {
-              label: "Vendor Profit",
+              label: "Brand Profit",
               value: totals.vendorProfit,
               accent: false,
             },
