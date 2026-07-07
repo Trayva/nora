@@ -68,8 +68,14 @@ export default function KioskDrawer({ kioskId, onClose, onUpdate }) {
     <Drawer
       isOpen={!!kioskId}
       onClose={onClose}
-      title={cart ? cart.serialNumber : "Kiosk Details"}
-      description={cart ? cart.location?.name || "No location assigned" : ""}
+      title={cart ? cart.serialNumber : "Kitchen Details"}
+      description={
+        cart
+          ? `${cart.location?.name || "No location assigned"}${
+              cart.kitchenType ? ` · ${cart.kitchenType === "CLOUD" ? "Cloud Kitchen" : "Physical Kiosk"}` : ""
+            }`
+          : ""
+      }
       width={520}
     >
       {/* Sticky Tabs */}

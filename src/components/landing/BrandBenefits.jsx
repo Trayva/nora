@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import imgExterior from "../../assets/icart_kiosk_exterior.jpg";
 import imgInterior1 from "../../assets/icart_kiosk_interior_1.jpg";
 import imgInterior2 from "../../assets/icart_kiosk_interior_2.jpg";
+import imgCloudKitchen from "../../assets/cloud_kitchen.jpg";
 import {
   MdCheckCircle,
   MdOutlineStorefront,
   MdOutlineKitchen,
   MdOutlineMeetingRoom,
+  MdCloud
 } from "react-icons/md";
 
 const BENEFITS = [
@@ -18,6 +20,7 @@ const BENEFITS = [
 ];
 
 const TABS = [
+  { id: "cloud", label: "Cloud", img: imgCloudKitchen, icon: MdCloud, hasBg: true },
   { id: "exterior", label: "Exterior", img: imgExterior, icon: MdOutlineStorefront, hasBg: true },
   { id: "prep", label: "Kitchen", img: imgInterior1, icon: MdOutlineKitchen, hasBg: true },
   { id: "workspace", label: "Setup", img: imgInterior2, icon: MdOutlineMeetingRoom, hasBg: true },

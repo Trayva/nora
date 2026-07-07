@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import { MdEdit, MdDelete } from "react-icons/md";
+import {
+  MdEdit, MdDelete,
+  MdOutlineKitchen, MdCloud,
+} from "react-icons/md";
 import { LuPlus, LuTrash2 } from "react-icons/lu";
 import Drawer from "../../components/Drawer";
 import api from "../../api/axios";
@@ -29,6 +32,7 @@ const EMPTY_FORM = {
   country: "",
   currency: "",
   type: "FRANCHISE",
+  kitchenType: "KIOSK",
   terms: "",
   length: "",
   breadth: "",
@@ -69,6 +73,7 @@ export default function AdminContractSettings() {
       unit: i.kioskSize?.unit || "m",
       maxMenus: i.maxMenus ?? "",
       maxOperatorsAtATime: i.maxOperatorsAtATime ?? "",
+      kitchenType: i.kitchenType || "KIOSK",
       payments: i.payments || [{ ...EMPTY_PAYMENT }],
     });
     setEditing(i);
@@ -104,6 +109,7 @@ export default function AdminContractSettings() {
         country: form.country.trim(),
         currency: form.currency.trim(),
         type: form.type,
+        kitchenType: form.kitchenType || "KIOSK",
         length: Number(form.length),
         breadth: Number(form.breadth),
         unit: form.unit,
@@ -171,6 +177,17 @@ export default function AdminContractSettings() {
                   </div>
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                     <span className="admin_meta_chip">{item.currency}</span>
+                    {/* Kitchen Type chip */}
+                    <span className="admin_meta_chip" style={{
+                      background: item.kitchenType === "CLOUD" ? "rgba(99,102,241,0.1)" : "rgba(34,197,94,0.1)",
+                      color: item.kitchenType === "CLOUD" ? "#6366f1" : "#16a34a",
+                      border: `1px solid ${item.kitchenType === "CLOUD" ? "rgba(99,102,241,0.25)" : "rgba(34,197,94,0.25)"}`,
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                    }}>
+                      {item.kitchenType === "CLOUD"
+                        ? <><MdCloud size={11} /> Cloud</>
+                        : <><MdOutlineKitchen size={11} /> Kiosk</>}
+                    </span>
                     {item.durationDays && <span className="admin_meta_chip">{item.durationDays} days</span>}
                     {item.kioskSize && (
                       <span className="admin_meta_chip">
@@ -218,12 +235,48 @@ export default function AdminContractSettings() {
               <input className="modal-input" placeholder="e.g. NGN" value={form.currency} onChange={set("currency")} />
             </div>
             <div className="form-field">
-              <label className="modal-label">Type *</label>
+              <label className="modal-label">Contract Type *</label>
               <select className="modal-input" value={form.type} onChange={set("type")}>
                 <option value="FRANCHISE">FRANCHISE</option>
                 <option value="LEASE">LEASE</option>
                 <option value="PURCHASE">PURCHASE</option>
               </select>
+            </div>
+            {/* Kitchen Type segmented toggle */}
+            <div className="form-field">
+              <label className="modal-label">Kitchen Type *</label>
+              <div style={{ display: "flex", gap: 0, borderRadius: 10, overflow: "hidden", border: "1px solid var(--border)" }}>
+                {[
+                  { val: "KIOSK",  Icon: MdOutlineKitchen, label: "Kiosk", activeColor: "rgba(34,197,94,0.12)",  activeText: "#16a34a" },
+                  { val: "CLOUD",  Icon: MdCloud,          label: "Cloud", activeColor: "rgba(99,102,241,0.12)", activeText: "#6366f1" },
+                ].map(({ val, Icon, label, activeColor, activeText }) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setForm(p => ({ ...p, kitchenType: val }))}
+                    style={{
+                      flex: 1,
+                      padding: "8px 0",
+                      border: "none",
+                      borderRight: val === "KIOSK" ? "1px solid var(--border)" : "none",
+                      background: form.kitchenType === val ? activeColor : "var(--bg-hover)",
+                      color: form.kitchenType === val ? activeText : "var(--text-muted)",
+                      fontWeight: form.kitchenType === val ? 800 : 500,
+                      fontSize: "0.78rem",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      transition: "all 0.2s",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 5,
+                    }}
+                  >
+                    <Icon size={14} />
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
             {form.type === "LEASE" && (
               <div className="form-field">

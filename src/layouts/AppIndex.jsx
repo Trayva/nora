@@ -13,6 +13,7 @@ import nora_logo_dark from "../assets/nora_dark.png";
 import "./AppIndex.css";
 import NotificationBell from "../components/Notifications/NotificationBell";
 import SmartSupport from "../components/SmartSupport";
+import OnlineSupportWidget from "../components/OnlineSupportWidget";
 import { useAuth } from "../contexts/AuthContext";
 import { useAppState } from "../contexts/StateContext";
 import { getPrimaryRole } from "../utils/AuthHelpers";
@@ -33,7 +34,7 @@ function pathLabel(pathname) {
   const segments = pathname.replace(/^\/app\/?/, "").split("/").filter(Boolean);
   if (!segments.length) return { section: "Dashboard", sub: null };
   const labels = {
-    "kiosk-home": "Kiosks", finance: "Finance", business: "My Business",
+    "kiosk-home": "Kitchens", finance: "Finance", business: "My Business",
     supplier: "Supplier", operator: "Operator", aggregator: "Aggregator",
     admin: "Admin", settings: "Account", profile: "Profile",
   };
@@ -54,7 +55,7 @@ function greeting() {
 function getMobileTabs(role) {
   const base = [
     { id: "finance", label: "Finance", icon: MdOutlineBarChart, path: "/app/finance" },
-    { id: "kiosk", label: "Kiosks", icon: MdOutlineKitchen, path: "/app/kiosk-home" },
+    { id: "kiosk", label: "Kitchens", icon: MdOutlineKitchen, path: "/app/kiosk-home" },
     { id: "profile", label: "Profile", icon: MdOutlinePerson, path: "/app/profile" },
   ];
 
@@ -258,6 +259,9 @@ export default function AppIndex() {
 
       {/* AI Assistant FAB */}
       <SmartSupport />
+
+      {/* Online Support Widget FAB */}
+      {/* <OnlineSupportWidget /> */}
 
       {/* Walk-in tutorial overlay */}
       <WalkInTutorial

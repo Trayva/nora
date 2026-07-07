@@ -15,9 +15,13 @@ import {
   MdCircle,
   MdReceiptLong,
   MdCalendarToday,
+  MdOutlineKitchen,
+  MdCloud,
+  MdDelete,
 } from "react-icons/md";
 import { LuStore } from "react-icons/lu";
 import Drawer from "../../components/Drawer";
+import Modal from "../../components/Modal";
 import api from "../../api/axios";
 import { StatusBadge, getS } from "./adminUtils_";
 
@@ -241,10 +245,29 @@ function AppDetail({ app: initial, onClose, onApproved }) {
     }
   };
 
+  const [deleting, setDeleting] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/contract/application/${app.id}`);
+      toast.success("Contract application and invoices deleted successfully");
+      onApproved?.();
+      setShowConfirmDelete(false);
+      onClose();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const user = app.user || app.owner || app.applicant;
   const invoices = app.invoiceDetails || (app.invoice ? [app.invoice] : []);
   const carts = app.carts || [];
   const payments = app.payments || app.paymentSchedule || [];
+  const hasPaidInvoice = invoices.some((inv) => inv.status === "PAID");
 
   return (
     <Drawer isOpen onClose={onClose} title="Contract Application" width={520}>
@@ -274,11 +297,27 @@ function AppDetail({ app: initial, onClose, onApproved }) {
           {/* ── Meta grid ── */}
           <div className="contract_meta_grid" style={{ marginBottom: 20 }}>
             <div className="contract_meta_item">
-              <span className="contract_meta_label">Type</span>
+              <span className="contract_meta_label">Contract Type</span>
               <span className="contract_meta_value">{app.type || "—"}</span>
             </div>
             <div className="contract_meta_item">
-              <span className="contract_meta_label">Kiosks Ordered</span>
+              <span className="contract_meta_label">Kitchen Type</span>
+              <span className="contract_meta_value">
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  padding: "2px 8px", borderRadius: 20, fontSize: "0.72rem", fontWeight: 800,
+                  background: app.settings?.kitchenType === "CLOUD" ? "rgba(99,102,241,0.1)" : "rgba(34,197,94,0.1)",
+                  color: app.settings?.kitchenType === "CLOUD" ? "#6366f1" : "#16a34a",
+                  border: `1px solid ${app.settings?.kitchenType === "CLOUD" ? "rgba(99,102,241,0.3)" : "rgba(34,197,94,0.3)"}`,
+                }}>
+                  {app.settings?.kitchenType === "CLOUD"
+                    ? <><MdCloud size={12} /> Cloud</>
+                    : <><MdOutlineKitchen size={12} /> Kiosk</>}
+                </span>
+              </span>
+            </div>
+            <div className="contract_meta_item">
+              <span className="contract_meta_label">Kitchens Ordered</span>
               <span className="contract_meta_value">
                 {app.numberOfKiosks ?? "—"}
               </span>
@@ -294,7 +333,7 @@ function AppDetail({ app: initial, onClose, onApproved }) {
             )}
             {app.kioskSize && (
               <div className="contract_meta_item">
-                <span className="contract_meta_label">Kiosk Size</span>
+                <span className="contract_meta_label">Kitchen Size</span>
                 <span className="contract_meta_value">{app.kioskSize}</span>
               </div>
             )}
@@ -314,29 +353,68 @@ function AppDetail({ app: initial, onClose, onApproved }) {
             )}
           </div>
 
-          {/* ── Approve button (if SUBMITTED) ── */}
+          {/* ── Action Buttons (Approve / Delete) ── */}
           {app.status === "SUBMITTED" && (
-            <button
-              className={`app_btn app_btn_confirm${approving ? " btn_loading" : ""}`}
-              style={{
-                height: 36,
-                padding: "0 18px",
-                position: "relative",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                marginBottom: 20,
-              }}
-              onClick={handleApprove}
-              disabled={approving}
-            >
-              <span className="btn_text">
-                <MdCheck size={13} /> Approve Application
-              </span>
-              {approving && (
-                <span className="btn_loader" style={{ width: 12, height: 12 }} />
+            <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+              <button
+                className={`app_btn app_btn_confirm${approving ? " btn_loading" : ""}`}
+                style={{
+                  height: 36,
+                  padding: "0 18px",
+                  position: "relative",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  flex: 1,
+                  justifyContent: "center",
+                }}
+                onClick={handleApprove}
+                disabled={approving || deleting}
+              >
+                <span className="btn_text" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                  <MdCheck size={14} /> Approve Application
+                </span>
+                {approving && (
+                  <span className="btn_loader" style={{ width: 12, height: 12 }} />
+                )}
+              </button>
+
+              {!hasPaidInvoice && (
+                <button
+                  className={`app_btn${deleting ? " btn_loading" : ""}`}
+                  style={{
+                    height: 36,
+                    padding: "0 16px",
+                    position: "relative",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    background: "rgba(239,68,68,0.08)",
+                    color: "#ef4444",
+                    border: "1px solid rgba(239,68,68,0.2)",
+                    borderRadius: "8px",
+                    fontWeight: 700,
+                    fontSize: "0.82rem",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(239,68,68,0.14)";
+                    e.currentTarget.style.borderColor = "rgba(239,68,68,0.35)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(239,68,68,0.08)";
+                    e.currentTarget.style.borderColor = "rgba(239,68,68,0.2)";
+                  }}
+                  onClick={() => setShowConfirmDelete(true)}
+                  disabled={approving || deleting}
+                >
+                  <span className="btn_text" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <MdDelete size={15} /> Delete
+                  </span>
+                </button>
               )}
-            </button>
+            </div>
           )}
 
           {/* ── Applicant ── */}
@@ -404,6 +482,62 @@ function AppDetail({ app: initial, onClose, onApproved }) {
           ))}
         </>
       )}
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showConfirmDelete}
+        onClose={() => setShowConfirmDelete(false)}
+        title="Delete Contract Application"
+        description="This action cannot be undone."
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleDelete(); }}>
+          <div className="modal-body">
+            <p style={{ margin: "0 0 20px 0", fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+              Are you sure you want to delete this contract application? This will permanently delete the application and all of its associated pending invoices.
+            </p>
+          </div>
+          <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+            <button
+              type="button"
+              className="app_btn app_btn_cancel"
+              onClick={() => setShowConfirmDelete(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="app_btn"
+              style={{
+                background: "#ef4444",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                padding: "0 18px",
+                height: 36,
+                fontWeight: 700,
+                fontSize: "0.82rem",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <>
+                  <span className="btn_loader" style={{ width: 12, height: 12 }} />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <MdDelete size={14} />
+                  Yes, Delete Application
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </Drawer>
   );
 }

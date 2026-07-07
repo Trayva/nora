@@ -17,6 +17,8 @@ import {
   MdExpandMore,
   MdExpandLess,
   MdLocationOn,
+  MdOutlineKitchen,
+  MdCloud,
 } from "react-icons/md";
 import { LuStore } from "react-icons/lu"; // Changed icon to LuStore for Kiosk
 
@@ -152,9 +154,9 @@ export default function KioskHome() {
       {/* Page header */}
       <div className="kiosk_page_header">
         <div>
-          <h2 className="page_title_big m-0">Kiosk</h2>
+          <h2 className="page_title_big m-0">Kitchens</h2>
           <p className="welcome_message" style={{ marginBottom: 0 }}>
-            Purchase and manage your Kiosks
+            Purchase and manage your Kitchens
           </p>
         </div>
         <button
@@ -211,7 +213,7 @@ export default function KioskHome() {
             className="kiosk_section_label_row kiosk_section_label_row_clickable"
             onClick={() => setKiosksOpen((v) => !v)}
           >
-            <span className="kiosk_section_label">My Kiosks</span>
+            <span className="kiosk_section_label">My Kitchens</span>
             <span className="kiosk_section_count">{activeKiosks.length}</span>
             <span className="kiosk_section_chevron">
               {kiosksOpen ? (
@@ -229,9 +231,9 @@ export default function KioskHome() {
                 style={{ padding: "32px 0", marginBottom: 32 }}
               >
                 <LuStore size={32} style={{ opacity: 0.3 }} />
-                <p className="kiosk_empty_title">No Kiosks yet</p>
+                <p className="kiosk_empty_title">No Kitchens yet</p>
                 <p className="kiosk_empty_sub">
-                  Your purchased Kiosks will appear here.
+                  Your purchased Kitchens will appear here.
                 </p>
               </div>
             ) : (
@@ -239,7 +241,7 @@ export default function KioskHome() {
                 <div className="kiosk_summary_row">
                   <div className="kiosk_summary_chip">
                     <LuStore size={13} />
-                    {activeKiosks.length} Kiosk
+                    {activeKiosks.length} Kitchen
                     {activeKiosks.length !== 1 ? "s" : ""}
                   </div>
                   <div className="kiosk_summary_chip">
@@ -268,10 +270,32 @@ export default function KioskHome() {
                         <div className="kiosk_item_icon">
                           <LuStore size={17} />
                         </div>
-                        <StatusBadge
-                          status={kiosk.status}
-                          colors={kioskStatusColors}
-                        />
+                        <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                          {kiosk.kitchenType && (
+                            <span style={{
+                              fontSize: "0.6rem",
+                              fontWeight: 800,
+                              padding: "2px 7px",
+                              borderRadius: 20,
+                              background: kiosk.kitchenType === "CLOUD" ? "rgba(99,102,241,0.12)" : "rgba(34,197,94,0.1)",
+                              color: kiosk.kitchenType === "CLOUD" ? "#6366f1" : "#16a34a",
+                              border: `1px solid ${kiosk.kitchenType === "CLOUD" ? "rgba(99,102,241,0.3)" : "rgba(34,197,94,0.3)"}`,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 3,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.04em",
+                            }}>
+                              {kiosk.kitchenType === "CLOUD"
+                                ? <><MdCloud size={10} /> Cloud</>
+                                : <><MdOutlineKitchen size={10} /> Kiosk</>}
+                            </span>
+                          )}
+                          <StatusBadge
+                            status={kiosk.status}
+                            colors={kioskStatusColors}
+                          />
+                        </div>
                       </div>
 
                       <div className="kiosk_item_serial">
@@ -374,7 +398,7 @@ export default function KioskHome() {
                   className="kiosk_section_label"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  Deactivated Kiosks
+                  Deactivated Kitchens
                 </span>
                 <span className="kiosk_section_count">
                   {deactivatedKiosks.length}

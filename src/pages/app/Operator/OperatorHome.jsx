@@ -25,6 +25,7 @@ import {
   MdOutlineHistory,
 } from "react-icons/md";
 import { LuStore } from "react-icons/lu";
+import Modal from "../../../components/Modal";
 import OperatorKioskDrawer from "./OperatorKioskDrawer";
 
 /* ── Duration options ───────────────────────────────────────── */
@@ -268,7 +269,7 @@ function RenewModal({ offer, onClose, onDone }) {
 }
 
 /* ── Job Offer Card ──────────────────────────────────────────── */
-function JobOfferCard({ offer, onAction }) {
+function JobOfferCard({ offer, onAction, onTerminate }) {
   const [actioning, setActioning] = useState(null);
   const daysLeft = daysRemaining(offer.endDate);
   const sc = offerStatusColors[offer.status] || offerStatusColors.PENDING;
@@ -281,20 +282,6 @@ function JobOfferCard({ offer, onAction }) {
       onAction();
     } catch (err) {
       toast.error(err.response?.data?.message || "Action failed");
-    } finally {
-      setActioning(null);
-    }
-  };
-
-  const handleTerminate = async () => {
-    if (!window.confirm("Terminate this contract?")) return;
-    setActioning("TERMINATE");
-    try {
-      await api.patch(`/kiosk/operator/job-offers/${offer.id}/terminate`);
-      toast.success("Contract terminated.");
-      onAction();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Terminate failed");
     } finally {
       setActioning(null);
     }
@@ -391,11 +378,11 @@ function JobOfferCard({ offer, onAction }) {
         {(offer.status === "ACTIVE" || offer.status === "ACCEPTED") && (
           <button
             className="op-action-btn op-action-terminate"
-            onClick={handleTerminate}
+            onClick={() => onTerminate?.(offer)}
             disabled={!!actioning}
             style={{ width: "100%" }}
           >
-            {actioning === "TERMINATE" ? <span className="btn_loader" style={{ width: 13, height: 13 }} /> : <><MdClose size={13} /> Terminate Contract</>}
+            <MdClose size={13} /> Terminate Contract
           </button>
         )}
       </div>
@@ -413,6 +400,24 @@ export default function OperatorHome() {
   const [creatingProfile, setCreatingProfile] = useState(false);
   const [activeTab, setActiveTab] = useState("pending"); // pending | active | history
   const [isEditing, setIsEditing] = useState(false);
+
+  const [confirmTerminateOffer, setConfirmTerminateOffer] = useState(null);
+  const [terminating, setTerminating] = useState(false);
+
+  const handleTerminateContract = async () => {
+    if (!confirmTerminateOffer) return;
+    setTerminating(true);
+    try {
+      await api.patch(`/kiosk/operator/job-offers/${confirmTerminateOffer.id}/terminate`);
+      toast.success("Contract terminated.");
+      setConfirmTerminateOffer(null);
+      fetchAll();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Terminate failed");
+    } finally {
+      setTerminating(false);
+    }
+  };
 
   const fetchAll = async () => {
     try {
@@ -774,7 +779,12 @@ export default function OperatorHome() {
               </div>
             ) : (
               tabOffers.map((o) => (
-                <JobOfferCard key={o.id} offer={o} onAction={fetchAll} />
+                <JobOfferCard
+                  key={o.id}
+                  offer={o}
+                  onAction={fetchAll}
+                  onTerminate={(offer) => setConfirmTerminateOffer(offer)}
+                />
               ))
             )}
           </div>
@@ -786,6 +796,66 @@ export default function OperatorHome() {
         onClose={() => setOpenCartId(null)}
         onUpdate={fetchAll}
       />
+
+      {/* Terminate Confirmation Modal */}
+      <Modal
+        isOpen={!!confirmTerminateOffer}
+        onClose={() => setConfirmTerminateOffer(null)}
+        title="Terminate Contract"
+        description="This action cannot be undone."
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleTerminateContract(); }}>
+          <div className="modal-body">
+            <p style={{ margin: "0 0 20px 0", fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+              Are you sure you want to terminate this contract? This will immediately end the operator assignment for Kitchen {
+                confirmTerminateOffer?.kiosk?.serialNumber || 
+                (confirmTerminateOffer?.kioskId ? `#${confirmTerminateOffer.kioskId.slice(0, 8).toUpperCase()}` : "—")
+              }.
+            </p>
+          </div>
+          <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+            <button
+              type="button"
+              className="app_btn app_btn_cancel"
+              onClick={() => setConfirmTerminateOffer(null)}
+              disabled={terminating}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="app_btn"
+              style={{
+                background: "#ef4444",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                padding: "0 18px",
+                height: 36,
+                fontWeight: 700,
+                fontSize: "0.82rem",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+              disabled={terminating}
+            >
+              {terminating ? (
+                <>
+                  <span className="btn_loader" style={{ width: 12, height: 12 }} />
+                  Terminating...
+                </>
+              ) : (
+                <>
+                  <MdClose size={14} />
+                  Yes, Terminate Contract
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

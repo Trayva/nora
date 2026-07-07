@@ -8,6 +8,8 @@ import {
   MdExpandMore,
   MdExpandLess,
   MdOutlineStore,
+  MdOutlineKitchen,
+  MdCloud,
 } from "react-icons/md";
 import {
   AreaChart,
@@ -179,7 +181,7 @@ export default function AdminKiosks() {
     <>
       <div className="admin_section">
         <div className="admin_section_header">
-          <span className="admin_section_title">Kiosk Fleet</span>
+          <span className="admin_section_title">Kitchen Fleet</span>
           <span className="admin_section_count">{total}</span>
         </div>
 
@@ -232,7 +234,7 @@ export default function AdminKiosks() {
           <ItemListSkeleton />
         ) : carts.length === 0 ? (
           <div className="admin_empty">
-            <p style={{ margin: 0, fontSize: "0.82rem" }}>No Kiosks found.</p>
+            <p style={{ margin: 0, fontSize: "0.82rem" }}>No Kitchens found.</p>
           </div>
         ) : (
           <div className="admin_drawer_list">
@@ -277,6 +279,24 @@ export default function AdminKiosks() {
                       flexShrink: 0,
                     }}
                   >
+                    {c.kitchenType && (
+                      <span
+                        className="admin_meta_chip"
+                        style={{
+                          background: c.kitchenType === "CLOUD" ? "rgba(99,102,241,0.1)" : "rgba(34,197,94,0.1)",
+                          color: c.kitchenType === "CLOUD" ? "#6366f1" : "#16a34a",
+                          border: `1px solid ${c.kitchenType === "CLOUD" ? "rgba(99,102,241,0.25)" : "rgba(34,197,94,0.25)"}`,
+                          fontWeight: 700,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        {c.kitchenType === "CLOUD"
+                          ? <><MdCloud size={11} /> Cloud</>
+                          : <><MdOutlineKitchen size={11} /> Kiosk</>}
+                      </span>
+                    )}
                     <span
                       className="admin_status_badge"
                       style={{

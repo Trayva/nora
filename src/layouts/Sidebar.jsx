@@ -38,7 +38,7 @@ import { getPrimaryRole } from "../utils/AuthHelpers";
 const ALL_NAV_ITEMS = [
   { id: "admin", label: "Admin", icon: MdAdminPanelSettings, path: "/app/admin", forRoles: ["ADMIN"], tourId: "sidebar-nav-admin" },
   { id: "finance", label: "Finance", icon: RxBarChart, path: "/app/finance", forRoles: ["ALL"], tourId: "sidebar-nav-finance" },
-  { id: "kiosk", label: "Kiosks", icon: MdOutlineKitchen, path: "/app/kiosk-home", forRoles: ["ADMIN", "VENDOR", "SUPPLIER", "OPERATOR", "CUSTOMER"], tourId: "sidebar-nav-kiosk-home" },
+  { id: "kiosk", label: "Kitchens", icon: MdOutlineKitchen, path: "/app/kiosk-home", forRoles: ["ADMIN", "VENDOR", "SUPPLIER", "OPERATOR", "CUSTOMER"], tourId: "sidebar-nav-kiosk-home" },
   { id: "mybusiness", label: "My Business", icon: BsShop, path: "/app/business", forRoles: ["ADMIN", "VENDOR"], tourId: "sidebar-nav-business" },
   { id: "supplier", label: "Supplier", icon: PiTruck, path: "/app/supplier", forRoles: ["ADMIN", "SUPPLIER"], tourId: "sidebar-nav-supplier" },
   { id: "operator", label: "Operator", icon: MdOutlineBadge, path: "/app/operator", forRoles: ["ADMIN", "OPERATOR"], tourId: "sidebar-nav-operator" },

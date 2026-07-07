@@ -14,6 +14,8 @@ import {
   MdVerified,
   MdVideocam,
   MdClose,
+  MdOutlineKitchen,
+  MdCloud,
 } from "react-icons/md";
 import api from "../../api/axios";
 import Modal from "../../components/Modal";
@@ -945,6 +947,28 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
         <InfoRow label="Serial Number" value={cart.serialNumber} />
         <InfoRow label="Status" value={cart.status} />
         <InfoRow label="Owner" value={cart.owner?.fullName || "N/A"} />
+        <div className="kiosk_meta_row">
+          <span className="kiosk_meta_key">Kitchen Type</span>
+          <span className="kiosk_meta_val">
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "2px 9px",
+              borderRadius: 20,
+              fontSize: "0.72rem",
+              fontWeight: 800,
+              background: cart.kitchenType === "CLOUD" ? "rgba(99,102,241,0.1)" : "rgba(34,197,94,0.1)",
+              color: cart.kitchenType === "CLOUD" ? "#6366f1" : "#16a34a",
+              border: `1px solid ${cart.kitchenType === "CLOUD" ? "rgba(99,102,241,0.3)" : "rgba(34,197,94,0.3)"}`,
+              letterSpacing: "0.04em",
+            }}>
+              {cart.kitchenType === "CLOUD"
+                ? <><MdCloud size={12} /> Cloud Kitchen</>
+                : <><MdOutlineKitchen size={12} /> Physical Kiosk</>}
+            </span>
+          </span>
+        </div>
       </div>
 
       {/* ── Location ── */}
