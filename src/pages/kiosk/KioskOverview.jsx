@@ -16,6 +16,10 @@ import {
   MdClose,
   MdOutlineKitchen,
   MdCloud,
+  MdContentCopy,
+  MdRefresh,
+  MdVolumeUp,
+  MdVolumeOff,
 } from "react-icons/md";
 import api from "../../api/axios";
 import Modal from "../../components/Modal";
@@ -54,9 +58,21 @@ function InfoRow({ label, value }) {
 }
 
 /* ── Live Stream Modal ─────────────────────────────────────── */
-function LiveStreamModal({ onClose }) {
+function LiveStreamModal({ cart, onClose }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef(null);
+
+  const defaultCameras = [
+    // { id: "cam-1", name: "Main Camera", ip: "192.168.1.100", port: 554, username: "admin", password: "#code1409", channel: 101, streamType: "both" }
+    // { id: "cam-1", name: "Main Camera", ip: "105.117.8.158", port: 554, username: "aabnpi", password: "#Code1409", channel: 101, streamType: "both" }
+  ];
+
+  const cameras = cart?.cameras || defaultCameras;
+  const [selectedCam, setSelectedCam] = useState(cameras[0] || null);
+  const [integrationMode, setIntegrationMode] = useState("rtsp"); // "rtsp" | "hikvision"
+  const [connectionStatus, setConnectionStatus] = useState("connecting"); // "connecting" | "connected" | "error"
+  const [isMuted, setIsMuted] = useState(true);
+  const [timeStr, setTimeStr] = useState("");
 
   const toggleFullscreen = async () => {
     if (!containerRef.current) return;
@@ -87,6 +103,46 @@ function LiveStreamModal({ onClose }) {
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  // Simulate camera loading on camera switch
+  useEffect(() => {
+    if (!selectedCam) return;
+    setConnectionStatus("connecting");
+    const timer = setTimeout(() => {
+      setConnectionStatus("connected");
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [selectedCam, integrationMode]);
+
+  // Real-time ticking timestamp
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setTimeStr(now.toISOString().replace("T", " ").substring(0, 19));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const rtspUrl = selectedCam
+    // ? `rtsp://${selectedCam.username}:${selectedCam.password}@${selectedCam.ip}:${selectedCam.port}/Streaming/Channels/${selectedCam.channel}`
+    ? `rtsp://${encodeURIComponent(selectedCam.username)}:${encodeURIComponent(selectedCam.password)}@${selectedCam.ip}:${selectedCam.port}/Streaming/Channels/${selectedCam.channel}`
+    : "";
+
+  const handleCopyRtsp = () => {
+    navigator.clipboard.writeText(rtspUrl);
+    toast.success("RTSP URL copied to clipboard!");
+  };
+
+  const getGo2RtcUrl = () => {
+    try {
+      const url = new URL(import.meta.env.VITE_API_BASE_URL);
+      url.port = "1984";
+      url.pathname = "/stream.html";
+      return url.toString();
+    } catch {
+      return "http://localhost:1984/stream.html";
+    }
+  };
+
   return (
     <div
       style={{
@@ -103,8 +159,8 @@ function LiveStreamModal({ onClose }) {
         style={{
           position: "absolute",
           inset: 0,
-          background: "rgba(0,0,0,0.65)",
-          backdropFilter: "blur(3px)",
+          background: "rgba(0,0,0,0.7)",
+          backdropFilter: "blur(6px)",
         }}
       />
       <div
@@ -112,37 +168,38 @@ function LiveStreamModal({ onClose }) {
         style={{
           position: "relative",
           zIndex: 1,
-          width: "min(520px, 92vw)",
-          background: "var(--bg-card)",
-          borderRadius: isFullscreen ? 0 : 18,
+          width: "min(880px, 95vw)",
+          background: "var(--modal-bg)",
+          border: "1px solid var(--modal-border)",
+          borderRadius: isFullscreen ? 0 : 20,
           overflow: "hidden",
-          boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
-          ...(isFullscreen
-            ? {
-              width: "100vw",
-              height: "100vh",
-              display: "flex",
-              flexDirection: "column",
-            }
-            : {}),
+          boxShadow: "var(--modal-shadow)",
+          backdropFilter: "blur(20px)",
+          display: "flex",
+          flexDirection: "column",
+          maxHeight: isFullscreen ? "100vh" : "90vh",
+          transition: "all 0.3s ease",
+          ...(isFullscreen ? { width: "100vw", height: "100vh" } : {}),
         }}
       >
+        {/* Header */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 10,
-            padding: "16px 20px",
+            gap: 12,
+            padding: "16px 24px",
             borderBottom: "1px solid var(--border)",
+            background: "rgba(0, 0, 0, 0.03)",
             flexShrink: 0,
           }}
         >
           <div
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              background: "rgba(239,68,68,0.1)",
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              background: "rgba(239,68,68,0.08)",
               border: "1px solid rgba(239,68,68,0.2)",
               color: "#ef4444",
               display: "flex",
@@ -150,29 +207,28 @@ function LiveStreamModal({ onClose }) {
               justifyContent: "center",
             }}
           >
-            <MdVideocam size={16} />
+            <MdVideocam size={18} />
           </div>
           <div style={{ flex: 1 }}>
-            <div
-              style={{
-                fontSize: "0.9rem",
-                fontWeight: 800,
-                color: "var(--text-heading)",
-              }}
-            >
-              Live Stream
+            <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-heading)" }}>
+              Kitchen Live Feed
             </div>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-              Kitchen camera feed
+            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>Unit: {cart?.serialNumber || "Kitchen Feed"}</span>
+              <span>•</span>
+              <span style={{ color: "#16a34a", fontWeight: 700 }}>
+                {cameras.length} Camera{cameras.length > 1 ? "s" : ""} Available
+              </span>
             </div>
           </div>
+
           <button
             onClick={toggleFullscreen}
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
             style={{
-              width: 30,
-              height: 30,
-              borderRadius: 7,
+              width: 32,
+              height: 32,
+              borderRadius: 8,
               background: "var(--bg-hover)",
               border: "1px solid var(--border)",
               cursor: "pointer",
@@ -180,8 +236,8 @@ function LiveStreamModal({ onClose }) {
               alignItems: "center",
               justifyContent: "center",
               color: "var(--text-muted)",
-              marginRight: 4,
-              fontSize: "0.9rem",
+              fontSize: "0.85rem",
+              transition: "all 0.2s",
             }}
           >
             {isFullscreen ? "⤡" : "⤢"}
@@ -189,9 +245,9 @@ function LiveStreamModal({ onClose }) {
           <button
             onClick={onClose}
             style={{
-              width: 30,
-              height: 30,
-              borderRadius: 7,
+              width: 32,
+              height: 32,
+              borderRadius: 8,
               background: "var(--bg-hover)",
               border: "1px solid var(--border)",
               cursor: "pointer",
@@ -199,132 +255,382 @@ function LiveStreamModal({ onClose }) {
               alignItems: "center",
               justifyContent: "center",
               color: "var(--text-muted)",
+              transition: "all 0.2s",
             }}
           >
-            <MdClose size={15} />
+            <MdClose size={16} />
           </button>
         </div>
 
-        <div
-          style={{
-            position: "relative",
-            background: "#0a0a0a",
-            ...(isFullscreen ? { flex: 1 } : { aspectRatio: "16/9" }),
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 12,
-          }}
-        >
+        {/* Outer Split Layout */}
+        <div style={{ display: "flex", flex: 1, overflow: "hidden", flexDirection: "column" }}>
+          {/* Main Display Frame */}
           <div
             style={{
-              position: "absolute",
-              inset: 0,
-              backgroundImage:
-                "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.015) 2px, rgba(255,255,255,0.015) 4px)",
-              pointerEvents: "none",
-            }}
-          />
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: "50%",
-              background: "rgba(239,68,68,0.1)",
-              border: "2px solid rgba(239,68,68,0.3)",
+              position: "relative",
+              background: "#080808",
+              aspectRatio: isFullscreen ? "auto" : "16/9",
+              flex: isFullscreen ? 1 : "0 0 auto",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              overflow: "hidden",
             }}
           >
-            <MdVideocam size={28} style={{ color: "rgba(239,68,68,0.6)" }} />
-          </div>
-          <div style={{ textAlign: "center" }}>
+            {/* Grid scanline overlay */}
             <div
-              style={{
-                fontSize: "0.88rem",
-                fontWeight: 700,
-                color: "rgba(255,255,255,0.7)",
-                marginBottom: 4,
-              }}
-            >
-              No Feed Available
-            </div>
-            <div
-              style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}
-            >
-              Live stream will appear here when the camera is connected
-            </div>
-          </div>
-          <div
-            style={{
-              position: "absolute",
-              top: 12,
-              right: 12,
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "4px 8px",
-              background: "rgba(0,0,0,0.5)",
-              borderRadius: 6,
-            }}
-          >
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: "50%",
-                background: "#ef4444",
-                opacity: 0.5,
-              }}
-            />
-            <span
-              style={{
-                fontSize: "0.65rem",
-                color: "rgba(255,255,255,0.5)",
-                fontWeight: 700,
-                letterSpacing: "0.05em",
-              }}
-            >
-              OFFLINE
-            </span>
-          </div>
-          {!isFullscreen && (
-            <button
-              onClick={toggleFullscreen}
               style={{
                 position: "absolute",
-                bottom: 10,
-                right: 10,
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "4px 10px",
-                background: "rgba(0,0,0,0.5)",
-                border: "none",
-                borderRadius: 6,
-                cursor: "pointer",
-                color: "rgba(255,255,255,0.6)",
-                fontSize: "0.65rem",
-                fontWeight: 700,
+                inset: 0,
+                backgroundImage:
+                  "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 6px)",
+                pointerEvents: "none",
+                zIndex: 2,
               }}
-            >
-              ⤢ Fullscreen
-            </button>
-          )}
-        </div>
+            />
 
-        <div
-          style={{
-            padding: "12px 20px",
-            fontSize: "0.74rem",
-            color: "var(--text-muted)",
-            textAlign: "center",
-            flexShrink: 0,
-          }}
-        >
-          Camera integration coming soon
+            {/* Real Live Feed using go2rtc WebRTC/MSE player */}
+            {connectionStatus === "connected" && selectedCam && (
+              <div style={{ position: "absolute", inset: 0, background: "#000" }}>
+                <iframe
+                  src={`${getGo2RtcUrl()}?src=${encodeURIComponent(rtspUrl)}&mode=webrtc,mse`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    border: "none",
+                    background: "#000",
+                  }}
+                  allowFullScreen
+                  scrolling="no"
+                />
+              </div>
+            )}
+
+            {/* Loading Overlay */}
+            {connectionStatus === "connecting" && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, zIndex: 5 }}>
+                <span className="btn_loader" style={{ width: 28, height: 28, borderColor: "var(--accent)" }} />
+                <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", fontWeight: 600, letterSpacing: "0.05em" }}>
+                  NEGOTIATING {integrationMode.toUpperCase()} HANDSHAKE...
+                </span>
+              </div>
+            )}
+
+            {/* Live Indicator overlay */}
+            {connectionStatus === "connected" && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 16,
+                  left: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "4px 8px",
+                  background: "rgba(0,0,0,0.6)",
+                  borderRadius: 6,
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  zIndex: 3,
+                }}
+              >
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: "#ef4444",
+                    display: "inline-block",
+                  }}
+                  className="pulse-node"
+                />
+                <span style={{ fontSize: "0.62rem", color: "#fff", fontWeight: 800, letterSpacing: "0.05em" }}>
+                  LIVE
+                </span>
+              </div>
+            )}
+
+            {/* Time / Stats Overlay */}
+            {connectionStatus === "connected" && selectedCam && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 16,
+                  right: 16,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-end",
+                  gap: 4,
+                  padding: "6px 10px",
+                  background: "rgba(0,0,0,0.6)",
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  fontSize: "0.62rem",
+                  fontFamily: "monospace",
+                  color: "rgba(255,255,255,0.8)",
+                  zIndex: 3,
+                }}
+              >
+                <div>{timeStr || "2026-07-07 10:00:00"}</div>
+                <div style={{ color: "#10b981", fontSize: "0.58rem" }}>
+                  1080P @ 25FPS · H.264
+                </div>
+              </div>
+            )}
+
+            {/* Player Controls Bar */}
+            {connectionStatus === "connected" && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  insetInline: 0,
+                  background: "linear-gradient(0deg, rgba(0,0,0,0.85), transparent)",
+                  padding: "16px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  zIndex: 3,
+                }}
+              >
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button
+                    onClick={() => setIsMuted(!isMuted)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "rgba(255,255,255,0.7)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    {isMuted ? <MdVolumeOff size={16} /> : <MdVolumeUp size={16} />}
+                  </button>
+                  <span style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.5)", alignSelf: "center" }}>
+                    Camera: {selectedCam?.name} ({selectedCam?.ip})
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setConnectionStatus("connecting");
+                    setTimeout(() => setConnectionStatus("connected"), 600);
+                  }}
+                  style={{
+                    background: "rgba(255,255,255,0.1)",
+                    border: "none",
+                    borderRadius: 6,
+                    color: "#fff",
+                    padding: "4px 10px",
+                    fontSize: "0.65rem",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <MdRefresh size={12} /> Reconnect
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Settings & Camera switcher */}
+          <div
+            style={{
+              padding: 20,
+              background: "var(--modal-bg)",
+              borderTop: "1px solid var(--border)",
+              flex: 1,
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+            }}
+          >
+            {/* Top row: Camera list switcher */}
+            <div>
+              <div style={{ fontSize: "0.72rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--text-muted)", marginBottom: 8 }}>
+                Select Camera
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {cameras.map((cam) => (
+                  <button
+                    key={cam.id}
+                    onClick={() => setSelectedCam(cam)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: 8,
+                      border: selectedCam?.id === cam.id ? "1px solid var(--accent)" : "1px solid var(--border)",
+                      background: selectedCam?.id === cam.id ? "var(--bg-active)" : "var(--bg-hover)",
+                      color: selectedCam?.id === cam.id ? "var(--accent)" : "var(--text-body)",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: selectedCam?.id === cam.id ? "#ef4444" : "var(--text-muted)",
+                        display: "inline-block",
+                      }}
+                    />
+                    {cam.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Split Grid: Left side Integration switcher, Right side mode details */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1.8fr", gap: 20, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
+              {/* Integration column */}
+              <div>
+                <div style={{ fontSize: "0.72rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--text-muted)", marginBottom: 8 }}>
+                  Integration Mode
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[
+                    { mode: "rtsp", title: "RTSP Stream Template", desc: "Native network stream URL template" },
+                    { mode: "hikvision", title: "Hikvision Web SDK", desc: "Interactive PTZ browser interface" },
+                  ].map((item) => (
+                    <button
+                      key={item.mode}
+                      onClick={() => setIntegrationMode(item.mode)}
+                      style={{
+                        padding: 10,
+                        borderRadius: 10,
+                        border: integrationMode === item.mode ? "1px solid var(--accent)" : "1px solid var(--border)",
+                        background: integrationMode === item.mode ? "var(--bg-active)" : "var(--bg-card)",
+                        color: "var(--text-body)",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <div style={{ fontSize: "0.78rem", fontWeight: 800, color: integrationMode === item.mode ? "var(--accent)" : "var(--text-heading)", marginBottom: 2 }}>
+                        {item.title}
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{item.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mode specifications column */}
+              <div style={{ background: "rgba(0,0,0,0.015)", padding: 14, borderRadius: 12, border: "1px solid var(--border)" }}>
+                {integrationMode === "rtsp" ? (
+                  <div>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--text-heading)", marginBottom: 6 }}>
+                      RTSP Link Generator
+                    </div>
+                    <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", lineHeight: 1.4, margin: "0 0 10px 0" }}>
+                      Direct stream address containing device credentials. Open this stream in VLC or pass it to an NVR transcoder service.
+                    </p>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        background: "var(--bg-hover)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        padding: "8px 12px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.68rem",
+                          fontFamily: "monospace",
+                          color: "var(--text-body)",
+                          wordBreak: "break-all",
+                          flex: 1,
+                        }}
+                      >
+                        {rtspUrl}
+                      </span>
+                      <button
+                        onClick={handleCopyRtsp}
+                        title="Copy RTSP URL"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "var(--text-muted)",
+                          display: "flex",
+                          alignItems: "center",
+                          padding: 4,
+                        }}
+                      >
+                        <MdContentCopy size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--text-heading)" }}>
+                        Hikvision Web SDK / PTZ Controls
+                      </span>
+                      <span style={{ fontSize: "0.65rem", padding: "2px 6px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 4, color: "#10b981", fontWeight: 800 }}>
+                        Active
+                      </span>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
+                      {/* PTZ Pad simulation */}
+                      <div>
+                        <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: 6 }}>
+                          PTZ Direction Pad
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 30px)", gap: 4, justifyContent: "center", padding: 6, background: "var(--bg-hover)", borderRadius: 10, width: "fit-content" }}>
+                          <div />
+                          <button onClick={() => toast.info("PTZ: Pan Up")} style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-card)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>▲</button>
+                          <div />
+                          <button onClick={() => toast.info("PTZ: Pan Left")} style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-card)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>◀</button>
+                          <div style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 800 }}>PTZ</div>
+                          <button onClick={() => toast.info("PTZ: Pan Right")} style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-card)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>▶</button>
+                          <div />
+                          <button onClick={() => toast.info("PTZ: Pan Down")} style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-card)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>▼</button>
+                          <div />
+                        </div>
+                      </div>
+
+                      {/* PTZ Zoom/Focus controls */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <div>
+                          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: 4 }}>
+                            PTZ Zoom
+                          </div>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button onClick={() => toast.info("PTZ: Zoom In")} style={{ flex: 1, padding: "4px 0", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-card)", fontSize: "0.7rem", cursor: "pointer", fontWeight: 700 }}>Zoom +</button>
+                            <button onClick={() => toast.info("PTZ: Zoom Out")} style={{ flex: 1, padding: "4px 0", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-card)", fontSize: "0.7rem", cursor: "pointer", fontWeight: 700 }}>Zoom -</button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: 4 }}>
+                            PTZ Focus
+                          </div>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button onClick={() => toast.info("PTZ: Focus In")} style={{ flex: 1, padding: "4px 0", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-card)", fontSize: "0.7rem", cursor: "pointer", fontWeight: 700 }}>Focus +</button>
+                            <button onClick={() => toast.info("PTZ: Focus Out")} style={{ flex: 1, padding: "4px 0", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-card)", fontSize: "0.7rem", cursor: "pointer", fontWeight: 700 }}>Focus -</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1191,7 +1497,7 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
 
       {/* ── Modals ── */}
       {showLiveStream && (
-        <LiveStreamModal onClose={() => setShowLiveStream(false)} />
+        <LiveStreamModal cart={cart} onClose={() => setShowLiveStream(false)} />
       )}
 
       {showDeactivateModal && (

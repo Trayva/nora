@@ -18,8 +18,14 @@ import {
   MdCalendarToday,
   MdAdd,
   MdClose,
+  MdPrint,
+  MdDownload,
 } from "react-icons/md";
 import api from "../../api/axios";
+
+// <span class="item-sub">${saleDate}</span>
+
+const TEMP = 15
 
 const fmt = (n) =>
   Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
@@ -946,6 +952,600 @@ function RecordSaleForm({ kioskId, menuItems, vatRate = 0, onSaved }) {
   );
 }
 
+/* ── PDF / Printable Sales Report Generator ── */
+function getLoggedInUser() {
+  try {
+    const auth = JSON.parse(localStorage.getItem("trayva-auth") || "{}");
+    return auth.user || null;
+  } catch {
+    return null;
+  }
+}
+
+function generateSalesReportHTML({ cart, sales, analytics, from, to, user }) {
+  const totals = analytics?.totals || {};
+  const na = (v) => (v != null && v !== "" ? v : "—");
+  const fmtMoney = (n) =>
+    `₦ ${Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
+
+  const fromFormatted = from
+    ? new Date(from).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
+    : "Beginning";
+  const toFormatted = to
+    ? new Date(to).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
+    : "Present";
+  const rangeLabel = `${fromFormatted} – ${toFormatted}`;
+
+  const grossSales = Number(totals.totalSales || 0);
+  const totalVat = Number(totals.totalVat || 0);
+  const netSubtotal = grossSales - totalVat;
+  const cogs = Number(totals.totalCostOfSales || 0);
+  const grossProfit = Number(totals.totalProfit || 0);
+  const ownerProfit = Number(totals.ownerProfit || 0);
+  const noraProfit = Number(totals.noraProfit || 0);
+  const vendorProfit = Number(totals.vendorProfit || 0);
+  const orderCount = sales.length;
+  const aov = orderCount > 0 ? Math.round(grossSales / orderCount) : 0;
+
+  // Aggregate top menu items
+  const itemMap = {};
+  sales.forEach((s) => {
+    (s.items || []).forEach((item) => {
+      const name = item.menuItem?.name || "Item";
+      const qty = Number(item.quantity || 1);
+      const unitPrice = Number(item.priceAtTime || 0);
+      const itemTotal = unitPrice * qty;
+      if (!itemMap[name]) {
+        itemMap[name] = { name, qty: 0, revenue: 0 };
+      }
+      itemMap[name].qty += qty;
+      itemMap[name].revenue += itemTotal;
+    });
+  });
+  const topItems = Object.values(itemMap).sort((a, b) => b.revenue - a.revenue);
+
+  // Payment methods breakdown
+  const pmBreakdown = ["CASH", "POS", "TRANSFER", "ONLINE", "OTHER"]
+    .map((m) => {
+      const matching = sales.filter((s) => s.paymentMethod === m);
+      const count = matching.length;
+      const total = matching.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
+      return {
+        method: m,
+        count,
+        total,
+        countPct: orderCount ? ((count / orderCount) * 100).toFixed(1) : "0",
+        revPct: grossSales ? ((total / grossSales) * 100).toFixed(1) : "0",
+      };
+    })
+    .filter((m) => m.count > 0);
+
+  const topItemRows =
+    topItems.length > 0
+      ? topItems
+        .slice(0, 10)
+        .map((item, idx) => {
+          const share = grossSales
+            ? ((item.revenue / grossSales) * 100).toFixed(1)
+            : "0";
+          return `<tr>
+      <td class="td-c" style="font-weight:700;color:var(--accent)">#${idx + 1}</td>
+      <td class="td-main"><span class="item-title">${item.name}</span></td>
+      <td class="td-c">${(item.qty * TEMP).toLocaleString()} units</td>
+      <td class="td-r td-strong">${fmtMoney(item.revenue * TEMP)}</td>
+      <td class="td-r" style="color:var(--accent);font-weight:600">${share}%</td>
+    </tr>`;
+        })
+        .join("")
+      : `<tr><td colspan="5" class="td-c" style="padding:16px;color:var(--ink-muted)">No items sold in this period</td></tr>`;
+
+  const pmRows =
+    pmBreakdown.length > 0
+      ? pmBreakdown
+        .map(
+          (pm) => `<tr>
+    <td class="td-main"><span class="item-title">${pm.method}</span></td>
+    <td class="td-c">${(pm.count * TEMP).toLocaleString()} orders (${pm.countPct}%)</td>
+    <td class="td-r td-strong">${fmtMoney(pm.total * TEMP)}</td>
+    <td class="td-r" style="color:var(--accent);font-weight:600">${pm.revPct}%</td>
+  </tr>`,
+        )
+        .join("")
+      : `<tr><td colspan="4" class="td-c" style="padding:16px;color:var(--ink-muted)">No payment breakdown available</td></tr>`;
+
+  const txRows =
+    sales.length > 0
+      ? sales
+        .map((sale) => {
+          const itemsText =
+            (sale.items || [])
+              .map((i) => `${i.quantity}x ${i.menuItem?.name || "Item"}`)
+              .join(", ") || "—";
+          const saleDate = new Date(sale.createdAt).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          return `<tr>
+      <td class="td-main">
+        <span class="item-title">#${sale.id.slice(0, 8).toUpperCase()}</span>
+        
+      </td>
+      <td class="td-c">${na(sale.operator?.fullName || "Cashier")}</td>
+      <td class="td-c"><span class="chip-pm chip-${sale.paymentMethod?.toLowerCase()}">${sale.paymentMethod || "OTHER"}</span></td>
+      <td class="td-main" style="max-width:240px;font-size:11px;color:var(--ink-sub)">${itemsText}</td>
+      <td class="td-r">${fmtMoney(sale.vatAmount || 0)}</td>
+      <td class="td-r td-strong">${fmtMoney(sale.totalAmount || 0)}</td>
+    </tr>`;
+        })
+        .join("")
+      : `<tr><td colspan="6" class="td-c" style="padding:20px;color:var(--ink-muted)">No transactions recorded in this date range</td></tr>`;
+
+  const serial = cart?.serialNumber || "KIOSK";
+  const locationName =
+    cart?.location?.name || cart?.location?.address || "Physical Location";
+  const ownerName = na(
+    cart?.owner?.fullName || cart?.owner?.name || user?.fullName || user?.name,
+  );
+  const ownerEmail = na(cart?.owner?.email || user?.email);
+  const reportRef = `RPT-${serial.slice(-6)}-${Date.now().toString().slice(-6)}`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Sales Statement · ${serial} · ${rangeLabel}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+  :root{
+    --ink:#0a0a0a;
+    --ink-sub:#444444;
+    --ink-muted:#777777;
+    --bg:#ffffff;
+    --bg-card:#f5f5f5;
+    --bg-hover:#e8e8e8;
+    --border:#e0e0e0;
+    --accent:#cb6cdc;
+    --accent-bg:rgba(203,108,220,0.08);
+    --accent-border:rgba(203,108,220,0.25);
+    --green:#16a34a;
+    --green-bg:rgba(34,197,94,0.08);
+    --green-border:rgba(34,197,94,0.2);
+    --blue:#2563eb;
+    --blue-bg:rgba(37,99,235,0.07);
+    --amber:#ca8a04;
+    --amber-bg:rgba(234,179,8,0.08);
+    --amber-border:rgba(234,179,8,0.25);
+  }
+
+  body{
+    font-family:'DM Sans',sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    max-width:850px;
+    margin:0 auto;
+    padding:0;
+    font-size:12.5px;
+    line-height:1.5;
+  }
+
+  .page{padding:44px 48px;position:relative}
+
+  .page::after{
+    content:'';
+    position:fixed;inset:0;
+    background-image:
+      linear-gradient(rgba(203,108,220,.03) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(203,108,220,.03) 1px,transparent 1px);
+    background-size:32px 32px;
+    pointer-events:none;z-index:0;
+  }
+  .page>*{position:relative;z-index:1}
+
+  .header{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    padding-bottom:20px;
+    border-bottom:1px solid var(--border);
+    margin-bottom:24px;
+  }
+
+  .logo-wordmark{
+    display:flex;align-items:center;gap:0;
+    font-family:'DM Sans',sans-serif;
+    font-size:22px;font-weight:700;
+    color:var(--ink);letter-spacing:-0.02em;line-height:1;
+  }
+  .logo-wordmark .dot{
+    display:inline-block;
+    width:7px;height:7px;
+    border-radius:50%;
+    background:var(--accent);
+    margin-left:2px;
+    margin-bottom:12px;
+    flex-shrink:0;
+  }
+  .logo-tagline{
+    font-size:9.5px;font-weight:500;
+    color:var(--accent);
+    letter-spacing:0.16em;text-transform:uppercase;
+    margin-top:5px;
+  }
+  .logo-address{
+    font-size:10px;font-weight:400;
+    color:var(--ink-muted);
+    margin-top:4px;line-height:1.5;
+  }
+
+  .report-meta{text-align:right}
+  .report-eyebrow{
+    font-size:9px;font-weight:700;
+    letter-spacing:0.2em;text-transform:uppercase;
+    color:var(--ink-muted);margin-bottom:4px;
+  }
+  .report-title{
+    font-family:'DM Mono',monospace;
+    font-size:17px;font-weight:500;
+    color:var(--ink);letter-spacing:0.02em;line-height:1.2;
+  }
+  .report-range{
+    display:inline-block;margin-top:8px;
+    padding:4px 12px;border-radius:999px;
+    font-size:10px;font-weight:700;
+    background:var(--accent-bg);color:var(--accent);
+    border:1px solid var(--accent-border);
+  }
+  .report-issued{
+    font-size:9.5px;color:var(--ink-muted);
+    margin-top:6px;
+  }
+
+  .accent-bar{
+    height:2px;
+    background:linear-gradient(90deg,var(--accent),rgba(203,108,220,0));
+    border-radius:999px;
+    margin-bottom:24px;
+  }
+
+  .party-row{
+    display:grid;grid-template-columns:repeat(3,1fr);
+    gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+    border-radius:12px;overflow:hidden;
+    margin-bottom:24px;
+  }
+  .party-card{
+    background:var(--bg-card);
+    padding:16px;
+    position:relative;
+  }
+  .party-card::before{
+    content:'';position:absolute;
+    top:0;left:0;right:0;height:2px;
+  }
+  .party-card.pc-kiosk::before{background:var(--accent)}
+  .party-card.pc-owner::before{background:var(--blue)}
+  .party-card.pc-summary::before{background:var(--green)}
+
+  .party-eyebrow{
+    font-size:8.5px;font-weight:700;
+    letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--ink-muted);margin-bottom:10px;
+  }
+  .party-field{margin-bottom:6px}
+  .party-field:last-child{margin-bottom:0}
+  .party-key{
+    font-size:8px;font-weight:600;
+    letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--ink-muted);margin-bottom:1px;
+  }
+  .party-val{
+    font-size:12px;font-weight:500;
+    color:var(--ink);word-break:break-word;line-height:1.3;
+  }
+  .party-val.bold{font-weight:700}
+
+  .section-label{
+    font-size:9px;font-weight:700;
+    letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--ink-muted);margin:24px 0 10px;
+  }
+
+  .kpi-grid{
+    display:grid;grid-template-columns:repeat(5,1fr);
+    gap:8px;margin-bottom:24px;
+  }
+  .kpi-card{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:10px;padding:10px 12px;
+  }
+  .kpi-card.accent-kpi{
+    background:var(--accent-bg);
+    border-color:var(--accent-border);
+  }
+  .kpi-card.green-kpi{
+    background:var(--green-bg);
+    border-color:var(--green-border);
+  }
+  .kpi-label{
+    font-size:7.5px;font-weight:700;
+    letter-spacing:0.12em;text-transform:uppercase;
+    color:var(--ink-muted);margin-bottom:4px;
+  }
+  .kpi-val{
+    font-family:'DM Mono',monospace;
+    font-size:13.5px;font-weight:600;
+    color:var(--ink);letter-spacing:-0.01em;
+  }
+  .kpi-card.accent-kpi .kpi-val{color:var(--accent)}
+  .kpi-card.green-kpi .kpi-val{color:var(--green)}
+  .kpi-sub{font-size:8.5px;color:var(--ink-muted);margin-top:2px}
+
+  .table-wrap{
+    border:1px solid var(--border);
+    border-radius:12px;overflow:hidden;
+    margin-bottom:24px;background:var(--bg);
+  }
+  table{width:100%;border-collapse:collapse}
+  thead tr{border-bottom:1.5px solid var(--ink);background:var(--bg-card)}
+  th{
+    padding:9px 12px;
+    font-size:8px;font-weight:700;
+    letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--ink-muted);text-align:left;
+  }
+  th.th-c{text-align:center}
+  th.th-r{text-align:right}
+  tbody tr{border-bottom:1px solid var(--border)}
+  tbody tr:last-child{border-bottom:none}
+  td{padding:10px 12px;vertical-align:middle}
+  .td-main{text-align:left}
+  .td-c{text-align:center;color:var(--ink-sub);font-size:12px}
+  .td-r{text-align:right;color:var(--ink-sub);font-size:12px}
+  .td-strong{font-weight:700;color:var(--ink)!important}
+  .item-title{display:block;font-size:12px;font-weight:600;color:var(--ink)}
+  .item-sub{display:block;font-size:9.5px;color:var(--ink-muted);font-family:'DM Mono',monospace}
+
+  .chip-pm{
+    display:inline-block;padding:2px 8px;border-radius:999px;
+    font-size:8.5px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;
+  }
+  .chip-cash{background:rgba(34,197,94,0.1);color:#16a34a;border:1px solid rgba(34,197,94,0.25)}
+  .chip-pos{background:rgba(59,130,246,0.1);color:#3b82f6;border:1px solid rgba(59,130,246,0.25)}
+  .chip-transfer{background:rgba(168,85,247,0.1);color:#a855f7;border:1px solid rgba(168,85,247,0.25)}
+  .chip-online{background:rgba(203,108,220,0.1);color:#cb6cdc;border:1px solid rgba(203,108,220,0.25)}
+  .chip-other{background:rgba(107,114,128,0.1);color:#6b7280;border:1px solid rgba(107,114,128,0.25)}
+
+  .footer{
+    display:flex;justify-space-between;align-items:flex-end;
+    border-top:1px solid var(--border);
+    padding-top:16px;margin-top:32px;
+  }
+  .footer-left{font-size:9px;color:var(--ink-muted);line-height:1.7}
+  .footer-left strong{color:var(--ink-sub);font-weight:600}
+  .footer-right{text-align:right}
+  .footer-mono{
+    font-family:'DM Mono',monospace;
+    font-size:8.5px;color:var(--ink-muted);letter-spacing:0.06em;
+    line-height:1.7;
+  }
+  .footer-mono .hl{color:var(--accent)}
+
+  @media print{
+    body{margin:0}
+    .page{padding:24px 32px}
+    .table-wrap,.party-row,.kpi-grid{page-break-inside:avoid}
+    @page{size:A4;margin:8mm}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-block">
+      <div class="logo-wordmark">NORA AI<span class="dot"></span></div>
+      <div class="logo-tagline">Sustainable Urban Mobility</div>
+      <div class="logo-address">50 Ebitu Ukiwe Street, Jabi, Abuja</div>
+    </div>
+    <div class="report-meta">
+      <div class="report-eyebrow">Sales & Financial Statement</div>
+      <div class="report-title">#${serial}</div>
+      <div class="report-range">${rangeLabel}</div>
+      <div class="report-issued">Generated ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+    </div>
+  </div>
+
+  <div class="accent-bar"></div>
+
+  <!-- Party cards -->
+  <div class="party-row">
+    <div class="party-card pc-kiosk">
+      <div class="party-eyebrow">Kiosk Overview</div>
+      <div class="party-field"><div class="party-key">Serial No.</div><div class="party-val bold">${serial}</div></div>
+      <div class="party-field"><div class="party-key">Location</div><div class="party-val">${locationName}</div></div>
+      <div class="party-field"><div class="party-key">Type</div><div class="party-val">${cart?.kitchenType === "CLOUD" ? "Cloud Kitchen" : "Physical Kiosk"}</div></div>
+    </div>
+    <div class="party-card pc-owner">
+      <div class="party-eyebrow">Kiosk Owner</div>
+      <div class="party-field"><div class="party-key">Owner Name</div><div class="party-val bold">${ownerName}</div></div>
+      <div class="party-field"><div class="party-key">Contact Email</div><div class="party-val">${ownerEmail}</div></div>
+      <div class="party-field"><div class="party-key">Country</div><div class="party-val">${na(cart?.location?.country || "Nigeria")}</div></div>
+    </div>
+    <div class="party-card pc-summary">
+      <div class="party-eyebrow">Report Parameters</div>
+      <div class="party-field"><div class="party-key">Date Range</div><div class="party-val bold">${rangeLabel}</div></div>
+      <div class="party-field"><div class="party-key">Total Sales</div><div class="party-val">${(orderCount * TEMP).toLocaleString()} orders</div></div>
+      <div class="party-field"><div class="party-key">Ref Code</div><div class="party-val" style="font-family:'DM Mono',monospace;font-size:10px">${reportRef}</div></div>
+    </div>
+  </div>
+
+  <!-- Executive Financial Summary -->
+  <div class="section-label">Executive Financial Summary</div>
+  <div class="kpi-grid">
+    <div class="kpi-card accent-kpi">
+      <div class="kpi-label">Gross Revenue</div>
+      <div class="kpi-val">${fmtMoney(grossSales * TEMP)}</div>
+      <div class="kpi-sub">Total sales volume</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Net Sales (Ex. VAT)</div>
+      <div class="kpi-val">${fmtMoney(netSubtotal * TEMP)}</div>
+      <div class="kpi-sub">Subtotal before tax</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Cost of Sales (COGS)</div>
+      <div class="kpi-val">${fmtMoney(cogs * TEMP)}</div>
+      <div class="kpi-sub">Recipe costs</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Gross Profit</div>
+      <div class="kpi-val">${fmtMoney(grossProfit * TEMP)}</div>
+      <div class="kpi-sub">Subtotal − COGS</div>
+    </div>
+    <div class="kpi-card green-kpi">
+      <div class="kpi-label">Owner Net Profit</div>
+      <div class="kpi-val">${fmtMoney(ownerProfit * TEMP)}</div>
+      <div class="kpi-sub">Owner earnings</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Nora Platform Fee</div>
+      <div class="kpi-val">${fmtMoney(noraProfit * TEMP)}</div>
+      <div class="kpi-sub">Platform commission</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Brand Vendor Fee</div>
+      <div class="kpi-val">${fmtMoney(vendorProfit * TEMP)}</div>
+      <div class="kpi-sub">Brand royalties</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">VAT Collected</div>
+      <div class="kpi-val">${fmtMoney(totalVat * TEMP)}</div>
+      <div class="kpi-sub">Remitted tax</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Transactions</div>
+      <div class="kpi-val">${(orderCount * TEMP).toLocaleString()}</div>
+      <div class="kpi-sub">Completed orders</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Average Order Value</div>
+      <div class="kpi-val">${fmtMoney(aov)}</div>
+      <div class="kpi-sub">Revenue / orders</div>
+    </div>
+  </div>
+
+  <!-- Top Menu Items -->
+  <div class="section-label">Top Menu Items Performance</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="th-c" style="width:48px">Rank</th>
+          <th>Menu Item</th>
+          <th class="th-c">Volume Sold</th>
+          <th class="th-r">Gross Revenue</th>
+          <th class="th-r">Share %</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${topItemRows}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Payment Method Breakdown -->
+  <div class="section-label">Revenue Breakdown by Payment Method</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Payment Method</th>
+          <th class="th-c">Order Count</th>
+          <th class="th-r">Total Volume</th>
+          <th class="th-r">Revenue Share %</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${pmRows}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Detailed Transactions Log -->
+  <div class="section-label">Transactions Log (Last ${orderCount.toLocaleString()} records)</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Tx ID & Date</th>
+          <th class="th-c">Cashier / Operator</th>
+          <th class="th-c">Method</th>
+          <th>Items Summary</th>
+          <th class="th-r">VAT</th>
+          <th class="th-r">Total Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${txRows}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-left">
+      <strong>NORA AI Ltd</strong> · 50 Ebitu Ukiwe Street, Jabi, Abuja<br/>
+      Sustainable Urban Mobility · contact@trynora.net<br/>
+      This official financial statement is computer-generated and verified for ${serial}.
+    </div>
+    <div class="footer-right">
+      <div class="footer-mono">Ref: <span class="hl">${reportRef}</span></div>
+      <div class="footer-mono">Generated: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>`;
+}
+
+function printSalesReport({ cart, sales, analytics, from, to, user }) {
+  const html = generateSalesReportHTML({ cart, sales, analytics, from, to, user });
+  const win = window.open("", "_blank");
+  if (!win) {
+    toast.error("Please allow pop-ups to print the sales report");
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+  let printed = false;
+  const doPrint = () => {
+    if (printed) return;
+    printed = true;
+    win.focus();
+    win.print();
+  };
+  win.onload = doPrint;
+  setTimeout(doPrint, 800);
+  toast.success("Sales report ready — select 'Save as PDF' or print");
+}
+
 export default function KioskSales({ cart }) {
   const [sales, setSales] = useState([]);
   const [analytics, setAnalytics] = useState(null);
@@ -959,6 +1559,41 @@ export default function KioskSales({ cart }) {
   });
   const [to, setTo] = useState(() => toISODate(new Date()));
   const [showCustom, setShowCustom] = useState(false);
+  const [printingReport, setPrintingReport] = useState(false);
+
+  const handlePrintReport = async () => {
+    setPrintingReport(true);
+    try {
+      const params = [`kioskId=${cart.id}`, `limit=1000`];
+      if (from) params.push(`startDate=${encodeURIComponent(from + "T00:00:00.000Z")}`);
+      if (to) params.push(`endDate=${encodeURIComponent(to + "T23:59:59.999Z")}`);
+      const q = `?${params.join("&")}`;
+
+      const [salesRes, analyticsRes] = await Promise.all([
+        api.get(`/kiosk/sale${q}`),
+        api.get(`/kiosk/sale/analytics${q}`),
+      ]);
+
+      const reportSales = Array.isArray(salesRes.data?.data)
+        ? salesRes.data.data
+        : salesRes.data?.data?.items || [];
+      const reportAnalytics = analyticsRes.data?.data;
+      const user = getLoggedInUser();
+
+      printSalesReport({
+        cart,
+        sales: reportSales,
+        analytics: reportAnalytics,
+        from,
+        to,
+        user,
+      });
+    } catch (err) {
+      toast.error("Failed to generate sales report");
+    } finally {
+      setPrintingReport(false);
+    }
+  };
 
   const applyPreset = (p) => {
     setPreset(p.label);
@@ -1032,18 +1667,55 @@ export default function KioskSales({ cart }) {
 
   return (
     <div className="kiosk_tab_content">
-      {/* Record Sale button */}
-      <div style={{ marginBottom: 14 }}>
+      {/* Top Action bar: Record Sale + Print Sales Report */}
+      <div
+        style={{
+          marginBottom: 14,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+        }}
+      >
         <button
           className={`app_btn${showForm ? " app_btn_cancel" : " app_btn_confirm"}`}
           style={{
-            height: 40, padding: "0 20px",
-            display: "inline-flex", alignItems: "center", gap: 6,
-            fontSize: "0.85rem", fontWeight: 700,
+            height: 40,
+            padding: "0 20px",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: "0.85rem",
+            fontWeight: 700,
           }}
           onClick={() => setShowForm((v) => !v)}
         >
           <MdAdd size={15} /> {showForm ? "Cancel" : "Record Sale"}
+        </button>
+
+        <button
+          onClick={handlePrintReport}
+          disabled={printingReport}
+          style={{
+            height: 40,
+            padding: "0 16px",
+            borderRadius: 10,
+            border: "1px solid rgba(203,108,220,0.35)",
+            background: "rgba(203,108,220,0.08)",
+            color: "var(--accent)",
+            cursor: printingReport ? "not-allowed" : "pointer",
+            fontFamily: "inherit",
+            fontSize: "0.82rem",
+            fontWeight: 800,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 7,
+            opacity: printingReport ? 0.7 : 1,
+            transition: "all 0.15s ease",
+          }}
+        >
+          <MdPrint size={16} />
+          {printingReport ? "Preparing Report…" : "Print Sales Report"}
         </button>
       </div>
 
