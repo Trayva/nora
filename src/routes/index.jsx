@@ -190,6 +190,7 @@ import UserTickets from "../pages/app/support/UserTickets";
 import TicketDetail from "../pages/app/support/TicketDetail";
 import AdminTickets from "../pages/admin/Support/AdminTickets";
 import AdminTicketDetail from "../pages/admin/Support/AdminTicketDetail";
+import AdminInventory from "../pages/admin/inventory/AdminInventory";
 
 import { PageSkeleton } from "../components/SkeletonTemplates";
 
@@ -319,7 +320,8 @@ export default function Routes() {
       children: [
         { index: true, element: <AdminDashboard /> },
         { path: "support", element: <AdminTickets /> },
-        { path: "support/:id", element: <AdminTicketDetail /> }
+        { path: "support/:id", element: <AdminTicketDetail /> },
+        { path: "inventory", element: <AdminInventory /> },
       ]
     },
 

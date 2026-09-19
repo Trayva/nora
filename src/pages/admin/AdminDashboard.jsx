@@ -17,7 +17,9 @@ import {
   MdOutlineFastfood,
   MdOutlineReceiptLong,
   MdSupportAgent,
+  MdOutlineInventory2,
 } from "react-icons/md";
+
 import { LuPlus } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import Drawer from "../../components/Drawer";
@@ -1302,6 +1304,7 @@ export default function AdminDashboard() {
           <span className="admin_section_title">Tools</span>
         </div>
         <div className="admin_two_col" style={{ marginBottom: 16 }}>
+          {/* Invoice Generator */}
           <div
             className="admin_stat_card"
             style={{
@@ -1364,8 +1367,75 @@ export default function AdminDashboard() {
               <MdArrowForward size={16} style={{ color: "var(--accent)" }} />
             </div>
           </div>
+
+          {/* Inventory Management */}
+          <div
+            className="admin_stat_card"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 16,
+              cursor: "pointer",
+              padding: "18px 20px",
+            }}
+            onClick={() => navigate("/app/admin/inventory")}
+          >
+            <div
+              className="admin_stat_icon"
+              style={{
+                color: "#10b981",
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                flexShrink: 0,
+                background: "rgba(16,185,129,0.1)",
+                border: "1px solid rgba(16,185,129,0.2)",
+              }}
+            >
+              <MdOutlineInventory2 size={22} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: "0.9rem",
+                  fontWeight: 800,
+                  color: "var(--text-heading)",
+                  marginBottom: 3,
+                }}
+              >
+                Inventory Management
+              </div>
+              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                Track stock across stores, warehouses &amp; factories — locations, categories, items, history
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  padding: "3px 10px",
+                  borderRadius: 999,
+                  background: "rgba(16,185,129,0.08)",
+                  color: "#10b981",
+                  border: "1px solid rgba(16,185,129,0.2)",
+                }}
+              >
+                Open
+              </span>
+              <MdArrowForward size={16} style={{ color: "#10b981" }} />
+            </div>
+          </div>
         </div>
       </div>
+
 
       <AdminInvoiceGenerator
         isOpen={invoiceGeneratorOpen}
