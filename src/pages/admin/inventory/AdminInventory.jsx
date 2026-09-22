@@ -710,6 +710,9 @@ function ItemsTab({ locations, categories }) {
   const handleSave = async () => {
     if (!form.name.trim()) return toast.error("Name is required");
     if (!form.locationId) return toast.error("Please select a location");
+    if (form.quantity !== "" && Number(form.quantity) < 0) return toast.error("Quantity cannot be negative");
+    if (form.lowStockLevel !== "" && Number(form.lowStockLevel) < 0) return toast.error("Low stock threshold cannot be negative");
+    if (form.costPerUnit !== "" && Number(form.costPerUnit) < 0) return toast.error("Cost per unit cannot be negative");
     setSaving(true);
     try {
       const fd = new FormData();
@@ -756,7 +759,16 @@ function ItemsTab({ locations, categories }) {
   };
 
   const handleMovement = async () => {
-    if (!movForm.quantityChange || Number(movForm.quantityChange) <= 0) return toast.error("Quantity must be a positive number");
+    const qty = Number(movForm.quantityChange);
+    if (movForm.action === "ADJUST") {
+      if (movForm.quantityChange === "" || isNaN(qty) || qty < 0) {
+        return toast.error("Adjusted quantity cannot be negative");
+      }
+    } else {
+      if (!movForm.quantityChange || isNaN(qty) || qty <= 0) {
+        return toast.error("Quantity must be greater than 0");
+      }
+    }
     setSavingMov(true);
     try {
       await api.post(`/physical-inventory/item/${movItem.id}/movement`, movForm);
@@ -820,7 +832,7 @@ function ItemsTab({ locations, categories }) {
               <thead>
                 <tr>
                   <th>Item</th>
-                  <th>SKU</th>
+                  {/* <th>SKU</th> */}
                   <th>Location</th>
                   <th>Category</th>
                   <th>Condition</th>
@@ -854,7 +866,7 @@ function ItemsTab({ locations, categories }) {
                           </div>
                         </div>
                       </td>
-                      <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "var(--text-muted)" }}>{item.sku}</td>
+                      {/* <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "var(--text-muted)" }}>{item.sku}</td> */}
                       <td>
                         {item.location && <LocationTypeChip type={item.location.type} />}
                         {item.location && <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>{item.location.name}</div>}
@@ -1063,7 +1075,7 @@ function ItemsTab({ locations, categories }) {
               <label className="modal-label">
                 {movForm.action === "ADJUST" ? "New Quantity *" : "Quantity *"}
               </label>
-              <input className="modal-input" type="number" min="0.01" step="any" placeholder="Enter quantity" value={movForm.quantityChange} onChange={(e) => setMovForm((p) => ({ ...p, quantityChange: e.target.value }))} />
+              <input className="modal-input" type="number" min={movForm.action === "ADJUST" ? "0" : "0.01"} step="any" placeholder={movForm.action === "ADJUST" ? "0" : "Enter quantity"} value={movForm.quantityChange} onChange={(e) => setMovForm((p) => ({ ...p, quantityChange: e.target.value }))} />
             </div>
             {movForm.action === "TRANSFER" && (
               <div className="form-field" style={{ marginBottom: 0, gridColumn: "1 / -1" }}>
