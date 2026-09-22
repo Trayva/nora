@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -12,6 +12,8 @@ import {
   MdDelete,
   MdClose,
   MdSearch,
+  MdUpload,
+  MdOutlineImage,
   MdOutlineTrendingUp,
   MdOutlineTrendingDown,
   MdOutlineSwapHoriz,
@@ -605,6 +607,10 @@ function ItemsTab({ locations, categories }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", sku: "", description: "", quantity: "", unit: "pcs", costPerUnit: "", lowStockLevel: "", locationId: "", categoryId: "", notes: "" });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
+  const fileInputRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -644,6 +650,10 @@ function ItemsTab({ locations, categories }) {
   const openCreate = () => {
     setEditing(null);
     setForm({ name: "", sku: "", description: "", quantity: "", unit: "pcs", costPerUnit: "", lowStockLevel: "", locationId: "", categoryId: "", notes: "" });
+    setImageFile(null);
+    setImagePreview(null);
+    setImageRemoved(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setModalOpen(true);
   };
 
@@ -654,6 +664,10 @@ function ItemsTab({ locations, categories }) {
       quantity: String(item.quantity), unit: item.unit, costPerUnit: item.costPerUnit != null ? String(item.costPerUnit) : "",
       lowStockLevel: String(item.lowStockLevel), locationId: item.locationId, categoryId: item.categoryId || "", notes: item.notes || "",
     });
+    setImageFile(null);
+    setImagePreview(item.image || null);
+    setImageRemoved(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setModalOpen(true);
   };
 
@@ -662,11 +676,29 @@ function ItemsTab({ locations, categories }) {
     if (!form.locationId) return toast.error("Please select a location");
     setSaving(true);
     try {
+      const fd = new FormData();
+      fd.append("name", form.name.trim());
+      if (form.sku.trim()) fd.append("sku", form.sku.trim());
+      if (form.description.trim()) fd.append("description", form.description.trim());
+      if (form.quantity !== "") fd.append("quantity", form.quantity);
+      if (form.unit) fd.append("unit", form.unit);
+      if (form.costPerUnit !== "") fd.append("costPerUnit", form.costPerUnit);
+      if (form.lowStockLevel !== "") fd.append("lowStockLevel", form.lowStockLevel);
+      if (form.locationId) fd.append("locationId", form.locationId);
+      if (form.categoryId) fd.append("categoryId", form.categoryId);
+      if (form.notes.trim()) fd.append("notes", form.notes.trim());
+
+      if (imageFile) {
+        fd.append("image", imageFile);
+      } else if (imageRemoved) {
+        fd.append("image", "");
+      }
+
       if (editing) {
-        await api.patch(`/physical-inventory/item/${editing.id}`, form);
+        await api.patch(`/physical-inventory/item/${editing.id}`, fd);
         toast.success("Item updated");
       } else {
-        await api.post("/physical-inventory/item", form);
+        await api.post("/physical-inventory/item", fd);
         toast.success("Item created");
       }
       setModalOpen(false);
@@ -762,8 +794,23 @@ function ItemsTab({ locations, categories }) {
                   return (
                     <tr key={item.id}>
                       <td>
-                        <div className="inv_table_name">{item.name}</div>
-                        {item.description && <div className="inv_table_sub">{item.description.slice(0, 50)}{item.description.length > 50 ? "…" : ""}</div>}
+                        <div className="inv_item_cell">
+                          {item.image ? (
+                            <img src={item.image} alt="" className="inv_item_thumb" />
+                          ) : (
+                            <div className="inv_item_thumb_placeholder">
+                              {item.category ? (
+                                <CatIconRenderer iconKey={item.category.icon} size={18} style={{ color: item.category.color }} />
+                              ) : (
+                                <MdOutlineInventory2 size={18} />
+                              )}
+                            </div>
+                          )}
+                          <div>
+                            <div className="inv_table_name">{item.name}</div>
+                            {item.description && <div className="inv_table_sub">{item.description.slice(0, 50)}{item.description.length > 50 ? "…" : ""}</div>}
+                          </div>
+                        </div>
                       </td>
                       <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "var(--text-muted)" }}>{item.sku}</td>
                       <td>
@@ -823,6 +870,61 @@ function ItemsTab({ locations, categories }) {
       {/* Create/Edit Item Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Item" : "New Inventory Item"} description="Track stock for a physical item at a location.">
         <div className="modal-body">
+          {/* Image Upload Area */}
+          <div className="form-field">
+            <label className="modal-label">Item Image</label>
+            <div
+              className="inv_upload_zone"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {imagePreview ? (
+                <img src={imagePreview} alt="Preview" className="inv_upload_preview" />
+              ) : (
+                <div className="inv_upload_icon_box">
+                  <MdUpload size={20} />
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "0.8rem", fontWeight: 600, color: imagePreview ? "var(--text-body)" : "var(--text-muted)" }}>
+                  {imageFile ? imageFile.name : imagePreview ? "Image uploaded · click to change" : "Click to upload an item image"}
+                </div>
+                <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
+                  JPG, PNG, WEBP up to 5MB
+                </div>
+              </div>
+              {imagePreview && (
+                <button
+                  type="button"
+                  className="biz_icon_btn biz_icon_btn_danger"
+                  title="Remove image"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setImageFile(null);
+                    setImagePreview(null);
+                    setImageRemoved(true);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                >
+                  <MdClose size={14} />
+                </button>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  setImageFile(f);
+                  setImagePreview(URL.createObjectURL(f));
+                  setImageRemoved(false);
+                }
+              }}
+            />
+          </div>
+
           <div className="inv_form_grid" style={{ marginBottom: 12 }}>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <label className="modal-label">Name *</label>
@@ -1065,8 +1167,19 @@ function HistoryTab({ locations }) {
                     <tr key={mv.id}>
                       <td><ActionBadge action={mv.action} /></td>
                       <td>
-                        <div className="inv_table_name">{mv.item?.name}</div>
-                        <div className="inv_table_sub" style={{ fontFamily: "monospace" }}>{mv.item?.sku}</div>
+                        <div className="inv_history_item_cell">
+                          {mv.item?.image ? (
+                            <img src={mv.item.image} alt="" className="inv_history_thumb" />
+                          ) : (
+                            <div className="inv_history_thumb_placeholder">
+                              <MdOutlineInventory2 size={14} />
+                            </div>
+                          )}
+                          <div>
+                            <div className="inv_table_name">{mv.item?.name}</div>
+                            <div className="inv_table_sub" style={{ fontFamily: "monospace" }}>{mv.item?.sku}</div>
+                          </div>
+                        </div>
                       </td>
                       <td>
                         {mv.item?.location && <LocationTypeChip type={mv.item.location.type} />}

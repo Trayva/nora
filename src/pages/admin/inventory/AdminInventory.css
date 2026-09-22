@@ -495,6 +495,104 @@
 .inv_status_active   { color: #16a34a; font-size: 0.7rem; font-weight: 700; }
 .inv_status_inactive { color: #9ca3af; font-size: 0.7rem; font-weight: 700; }
 
+/* ── Item Thumbnails & Image upload ────────────────────────── */
+.inv_item_cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inv_item_thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+}
+
+.inv_item_thumb_placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.inv_history_item_cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.inv_history_thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+}
+
+.inv_history_thumb_placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.inv_upload_zone {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-hover);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.inv_upload_zone:hover {
+  border-color: rgba(203, 108, 220, 0.5);
+  background: var(--bg-active);
+}
+
+.inv_upload_preview {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.inv_upload_icon_box {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: var(--bg-active);
+  border: 1px solid rgba(203, 108, 220, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
 /* ── Mobile ─────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .inv_page { padding: 16px; }
