@@ -116,6 +116,39 @@ function CatIconRenderer({ iconKey, size = 16, style }) {
   return <Icon size={size} style={style} />;
 }
 
+// ─── Item Conditions ─────────────────────────────────────────────────────────
+
+export const ITEM_CONDITIONS = [
+  { key: "NEW", label: "New / Raw", color: "#3b82f6", bg: "rgba(59,130,246,0.1)", desc: "Brand new part or raw material" },
+  { key: "COMPLETED", label: "Completed", color: "#10b981", bg: "rgba(16,185,129,0.1)", desc: "Finished assembly ready for deployment" },
+  { key: "INCOMPLETE", label: "Incomplete", color: "#f59e0b", bg: "rgba(245,158,11,0.1)", desc: "Work in progress / pending parts" },
+  { key: "USED", label: "Used", color: "#64748b", bg: "rgba(100,116,139,0.1)", desc: "Previously used functional item" },
+  { key: "REFURBISHED", label: "Refurbished", color: "#8b5cf6", bg: "rgba(139,92,246,0.1)", desc: "Repaired and certified working" },
+  { key: "FAULTY", label: "Faulty", color: "#f97316", bg: "rgba(249,115,22,0.1)", desc: "Defective / needs inspection or repair" },
+  { key: "NOT_WORKING", label: "Not Working", color: "#ef4444", bg: "rgba(239,68,68,0.1)", desc: "Non-functional / broken" },
+  { key: "SCRAP", label: "Scrap", color: "#9ca3af", bg: "rgba(156,163,175,0.1)", desc: "Beyond repair / salvage only" },
+];
+
+const ITEM_COND_MAP = Object.fromEntries(ITEM_CONDITIONS.map((c) => [c.key, c]));
+
+function ConditionBadge({ condition }) {
+  const meta = ITEM_COND_MAP[condition] || ITEM_COND_MAP.NEW;
+  return (
+    <span
+      className={`inv_cond_badge inv_cond_${(condition || "new").toLowerCase()}`}
+      style={{
+        background: meta.bg,
+        color: meta.color,
+        borderColor: `${meta.color}33`,
+      }}
+      title={meta.desc}
+    >
+      <span className="inv_cond_dot" style={{ background: meta.color }} />
+      {meta.label}
+    </span>
+  );
+}
+
 // ─── Movement action icon ─────────────────────────────────────────────────────
 
 const actionIcon = (action) => {
@@ -602,11 +635,12 @@ function ItemsTab({ locations, categories }) {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
+  const [filterCondition, setFilterCondition] = useState("");
   const [filterLowStock, setFilterLowStock] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", sku: "", description: "", quantity: "", unit: "pcs", costPerUnit: "", lowStockLevel: "", locationId: "", categoryId: "", notes: "" });
+  const [form, setForm] = useState({ name: "", sku: "", description: "", condition: "NEW", quantity: "", unit: "pcs", costPerUnit: "", lowStockLevel: "", locationId: "", categoryId: "", notes: "" });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageRemoved, setImageRemoved] = useState(false);
@@ -634,6 +668,7 @@ function ItemsTab({ locations, categories }) {
           search: debouncedSearch || undefined,
           locationId: filterLocation || undefined,
           categoryId: filterCategory || undefined,
+          condition: filterCondition || undefined,
           lowStockOnly: filterLowStock || undefined,
         },
       });
@@ -643,13 +678,13 @@ function ItemsTab({ locations, categories }) {
       setTotalPages(d.totalPages || 1);
     } catch { toast.error("Failed to load items"); }
     finally { setLoading(false); }
-  }, [page, debouncedSearch, filterLocation, filterCategory, filterLowStock]);
+  }, [page, debouncedSearch, filterLocation, filterCategory, filterCondition, filterLowStock]);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: "", sku: "", description: "", quantity: "", unit: "pcs", costPerUnit: "", lowStockLevel: "", locationId: "", categoryId: "", notes: "" });
+    setForm({ name: "", sku: "", description: "", condition: "NEW", quantity: "", unit: "pcs", costPerUnit: "", lowStockLevel: "", locationId: "", categoryId: "", notes: "" });
     setImageFile(null);
     setImagePreview(null);
     setImageRemoved(false);
@@ -661,6 +696,7 @@ function ItemsTab({ locations, categories }) {
     setEditing(item);
     setForm({
       name: item.name, sku: item.sku, description: item.description || "",
+      condition: item.condition || "NEW",
       quantity: String(item.quantity), unit: item.unit, costPerUnit: item.costPerUnit != null ? String(item.costPerUnit) : "",
       lowStockLevel: String(item.lowStockLevel), locationId: item.locationId, categoryId: item.categoryId || "", notes: item.notes || "",
     });
@@ -680,6 +716,7 @@ function ItemsTab({ locations, categories }) {
       fd.append("name", form.name.trim());
       if (form.sku.trim()) fd.append("sku", form.sku.trim());
       if (form.description.trim()) fd.append("description", form.description.trim());
+      if (form.condition) fd.append("condition", form.condition);
       if (form.quantity !== "") fd.append("quantity", form.quantity);
       if (form.unit) fd.append("unit", form.unit);
       if (form.costPerUnit !== "") fd.append("costPerUnit", form.costPerUnit);
@@ -750,6 +787,10 @@ function ItemsTab({ locations, categories }) {
           <option value="">All Categories</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        <select className="inv_select" value={filterCondition} onChange={(e) => { setFilterCondition(e.target.value); setPage(1); }}>
+          <option value="">All Conditions</option>
+          {ITEM_CONDITIONS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+        </select>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", color: "var(--text-body)", whiteSpace: "nowrap", cursor: "pointer" }}>
           <input type="checkbox" checked={filterLowStock} onChange={(e) => { setFilterLowStock(e.target.checked); setPage(1); }} />
           Low stock only
@@ -765,8 +806,8 @@ function ItemsTab({ locations, categories }) {
         <div className="inv_empty">
           <div className="inv_empty_icon"><MdOutlineInventory2 size={44} /></div>
           <h3>No items found</h3>
-          <p>{search || filterLocation || filterCategory || filterLowStock ? "Try adjusting your filters." : "Add your first inventory item."}</p>
-          {!search && !filterLocation && !filterCategory && !filterLowStock && (
+          <p>{search || filterLocation || filterCategory || filterCondition || filterLowStock ? "Try adjusting your filters." : "Add your first inventory item."}</p>
+          {!search && !filterLocation && !filterCategory && !filterCondition && !filterLowStock && (
             <button className="app_btn app_btn_confirm" style={{ height: 36, padding: "0 16px", fontSize: "0.8rem", marginTop: 8, display: "flex", alignItems: "center", gap: 6 }} onClick={openCreate}>
               <LuPlus size={13} /> Add Item
             </button>
@@ -782,6 +823,7 @@ function ItemsTab({ locations, categories }) {
                   <th>SKU</th>
                   <th>Location</th>
                   <th>Category</th>
+                  <th>Condition</th>
                   <th>Qty</th>
                   <th>Unit Cost</th>
                   <th>Updated</th>
@@ -825,6 +867,9 @@ function ItemsTab({ locations, categories }) {
                             {item.category.name}
                           </span>
                         )}
+                      </td>
+                      <td>
+                        <ConditionBadge condition={item.condition} />
                       </td>
                       <td>
                         <span className={`inv_qty ${isLow ? "low" : "ok"}`}>
@@ -949,6 +994,14 @@ function ItemsTab({ locations, categories }) {
               <select className="modal-input" value={form.categoryId} onChange={(e) => setForm((p) => ({ ...p, categoryId: e.target.value }))}>
                 <option value="">No category</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <label className="modal-label">Condition *</label>
+              <select className="modal-input" value={form.condition} onChange={(e) => setForm((p) => ({ ...p, condition: e.target.value }))}>
+                {ITEM_CONDITIONS.map((c) => (
+                  <option key={c.key} value={c.key}>{c.label} — {c.desc}</option>
+                ))}
               </select>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
@@ -1177,7 +1230,10 @@ function HistoryTab({ locations }) {
                           )}
                           <div>
                             <div className="inv_table_name">{mv.item?.name}</div>
-                            <div className="inv_table_sub" style={{ fontFamily: "monospace" }}>{mv.item?.sku}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                              <span className="inv_table_sub" style={{ fontFamily: "monospace" }}>{mv.item?.sku}</span>
+                              {mv.item?.condition && <ConditionBadge condition={mv.item.condition} />}
+                            </div>
                           </div>
                         </div>
                       </td>
