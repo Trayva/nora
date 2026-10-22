@@ -25,6 +25,7 @@ const EMPTY_PAYMENT = {
   intervalInDays: "",
   target: "franchisee",
   isPercentage: false,
+  optional: false,
 };
 const EMPTY_FORM = {
   country: "",
@@ -478,6 +479,7 @@ export default function AdminVendorApplicationSettings() {
           refundable: Boolean(p.refundable),
           recurring: Boolean(p.recurring),
           isPercentage: Boolean(p.isPercentage),
+          optional: Boolean(p.optional),
           target: p.target || "franchisee",
           ...(p.intervalInDays && { intervalInDays: Number(p.intervalInDays) }),
         })),
@@ -735,9 +737,9 @@ export default function AdminVendorApplicationSettings() {
                       <span
                         key={i}
                         className="admin_meta_chip"
-                        style={{ color: "var(--accent)" }}
+                        style={{ color: p.optional ? "#ca8a04" : "var(--accent)" }}
                       >
-                        {p.title}: {p.isPercentage ? `${p.amount}%` : `${item.currency} ${Number(p.amount).toLocaleString()}`} ({p.target === "franchisor" ? "Franchisor" : "Franchisee"})
+                        {p.title}{p.optional ? " [Optional]" : ""}: {p.isPercentage ? `${p.amount}%` : `${item.currency} ${Number(p.amount).toLocaleString()}`} ({p.target === "franchisor" ? "Franchisor" : "Franchisee"})
                       </span>
                     ))}
                   </div>
@@ -939,9 +941,10 @@ export default function AdminVendorApplicationSettings() {
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {[
-                    { k: "refundable", l: "Refundable" },
-                    { k: "recurring", l: "Recurring" },
-                  ].map(({ k, l }) => (
+                    { k: "refundable", l: "Refundable", activeColor: "#16a34a" },
+                    { k: "recurring", l: "Recurring", activeColor: "#16a34a" },
+                    { k: "optional", l: "Optional (Applicant can toggle)", activeColor: "#ca8a04" },
+                  ].map(({ k, l, activeColor }) => (
                     <button
                       key={k}
                       type="button"
@@ -952,11 +955,11 @@ export default function AdminVendorApplicationSettings() {
                         gap: 5,
                         padding: "4px 11px",
                         borderRadius: 8,
-                        border: `1px solid ${p[k] ? "rgba(34,197,94,0.35)" : "var(--border)"}`,
+                        border: `1px solid ${p[k] ? `${activeColor}55` : "var(--border)"}`,
                         background: p[k]
-                          ? "rgba(34,197,94,0.08)"
+                          ? `${activeColor}15`
                           : "var(--bg-hover)",
-                        color: p[k] ? "#16a34a" : "var(--text-muted)",
+                        color: p[k] ? activeColor : "var(--text-muted)",
                         fontSize: "0.73rem",
                         fontWeight: 700,
                         cursor: "pointer",
@@ -968,7 +971,7 @@ export default function AdminVendorApplicationSettings() {
                           width: 7,
                           height: 7,
                           borderRadius: "50%",
-                          background: p[k] ? "#16a34a" : "var(--border)",
+                          background: p[k] ? activeColor : "var(--border)",
                         }}
                       />
                       {l}

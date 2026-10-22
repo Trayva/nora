@@ -5,6 +5,11 @@ import api from "../../api/axios";
 import MapPicker from "./MapPicker";
 
 const LOCATION_TYPES = ["ACTIVE", "POTENTIAL", "INACTIVE", "RESTRICTED"];
+const OUTLET_TYPES = [
+  { value: "KIOSK", label: "Physical Kiosk" },
+  { value: "CLOUD_KITCHEN", label: "Cloud Kitchen" },
+  { value: "CLOUD_STORAGE", label: "Cloud Storage" },
+];
 const BLANK_LOCATION = {
   name: "",
   address: "",
@@ -15,6 +20,7 @@ const BLANK_LOCATION = {
   latitude: "",
   longitude: "",
   locationIdType: "ACTIVE",
+  outletType: "KIOSK",
   notes: "",
 };
 
@@ -172,6 +178,7 @@ export default function LocationForm({ kioskId, onSaved, onCancel }) {
         latitude: Number(form.latitude),
         longitude: Number(form.longitude),
         locationIdType: form.locationIdType,
+        outletType: form.outletType || "KIOSK",
         notes: form.notes.trim() || undefined,
       });
       const locationId = locRes.data.data?.id;
@@ -414,10 +421,24 @@ export default function LocationForm({ kioskId, onSaved, onCancel }) {
           </select>
         </div>
         <div className="form-field">
+          <label className="modal-label">Outlet Type *</label>
+          <select
+            className="modal-input"
+            value={form.outletType}
+            onChange={(e) => set("outletType", e.target.value)}
+          >
+            {OUTLET_TYPES.map((ot) => (
+              <option key={ot.value} value={ot.value}>
+                {ot.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-field" style={{ gridColumn: "1 / -1" }}>
           <label className="modal-label">Notes</label>
           <input
             className="modal-input"
-            placeholder="Optional"
+            placeholder="Optional notes or landmarks"
             value={form.notes}
             onChange={(e) => set("notes", e.target.value)}
           />

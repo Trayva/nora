@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import { LuPlus, LuTrash2 } from "react-icons/lu";
+import { LuPlus, LuTrash2, LuStore, LuCloud, LuMapPin } from "react-icons/lu";
+import api from "../../../api/axios";
 import { updateBusiness } from "../../../api/vendor";
 
 const EMPTY_PAYMENT = {
@@ -18,8 +19,20 @@ export default function SettingsTab({ vendor, onUpdate }) {
     maxSlots: 0,
     isPublic: true,
   });
+  const [outletSupport, setOutletSupport] = useState(["KIOSK"]);
+  const [supportedStates, setSupportedStates] = useState([]);
+  const [availableStates, setAvailableStates] = useState([]);
+  const [loadingStates, setLoadingStates] = useState(true);
   const [payments, setPayments] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    api
+      .get("/config/state")
+      .then((res) => setAvailableStates(res.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoadingStates(false));
+  }, []);
 
   useEffect(() => {
     if (vendor) {
@@ -28,9 +41,38 @@ export default function SettingsTab({ vendor, onUpdate }) {
         maxSlots: vendor.maxSlots ?? 0,
         isPublic: vendor.isPublic ?? true,
       });
+      setOutletSupport(vendor.outletSupport && vendor.outletSupport.length > 0 ? vendor.outletSupport : ["KIOSK"]);
+      setSupportedStates(Array.isArray(vendor.supportedStates) ? vendor.supportedStates : []);
       setPayments(vendor.franchisePayments || []);
     }
   }, [vendor]);
+
+  const toggleOutletSupport = (type) => {
+    setOutletSupport((prev) => {
+      if (prev.includes(type)) {
+        if (prev.length === 1) {
+          toast.warning("At least one outlet type must be supported.");
+          return prev;
+        }
+        return prev.filter((t) => t !== type);
+      }
+      return [...prev, type];
+    });
+  };
+
+  const toggleSupportedState = (stateId) => {
+    setSupportedStates((prev) =>
+      prev.includes(stateId) ? prev.filter((id) => id !== stateId) : [...prev, stateId]
+    );
+  };
+
+  const selectAllStates = () => {
+    setSupportedStates(availableStates.map((s) => s.id));
+  };
+
+  const clearAllStates = () => {
+    setSupportedStates([]);
+  };
 
   const addPayment = () => {
     setPayments((prev) => [...prev, { ...EMPTY_PAYMENT }]);
@@ -71,6 +113,8 @@ export default function SettingsTab({ vendor, onUpdate }) {
       fd.append("slotRadius", String(form.slotRadius));
       fd.append("maxSlots", String(form.maxSlots));
       fd.append("isPublic", String(form.isPublic));
+      fd.append("outletSupport", JSON.stringify(outletSupport));
+      fd.append("supportedStates", JSON.stringify(supportedStates));
       fd.append("franchisePayments", JSON.stringify(payments.map(p => ({
         ...p,
         amount: parseFloat(p.amount),
@@ -152,6 +196,190 @@ export default function SettingsTab({ vendor, onUpdate }) {
               Private (Hidden)
             </button>
           </div>
+        </div>
+
+        {/* Supported Outlet Types */}
+        <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: 20 }}>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-heading)", margin: "0 0 8px" }}>
+            Supported Outlet Types
+          </h3>
+          <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: "0 0 16px" }}>
+            Select the types of physical and virtual outlets your brand operates or supports for franchise.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+            {[
+              { id: "KIOSK", label: "Physical Kiosk", desc: "Modular food cart / stand", icon: LuStore },
+              { id: "CLOUD_KITCHEN", label: "Cloud Kitchen", desc: "Ghost / delivery-only kitchen", icon: LuCloud },
+            ].map((type) => {
+              const isSelected = outletSupport.includes(type.id);
+              const Icon = type.icon;
+              return (
+                <div
+                  key={type.id}
+                  onClick={() => toggleOutletSupport(type.id)}
+                  style={{
+                    background: isSelected ? "rgba(203,108,220,0.08)" : "var(--bg-hover)",
+                    border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                    borderRadius: 12,
+                    padding: "14px 16px",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 8,
+                        background: isSelected ? "rgba(203,108,220,0.15)" : "var(--bg-card)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: isSelected ? "var(--accent)" : "var(--text-muted)",
+                      }}
+                    >
+                      <Icon size={18} />
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => { }} // handled by div onClick
+                      style={{ cursor: "pointer", accentColor: "var(--accent)" }}
+                    />
+                  </div>
+                  <span style={{ fontSize: "0.86rem", fontWeight: 700, color: "var(--text-heading)", marginTop: 6 }}>
+                    {type.label}
+                  </span>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.3 }}>
+                    {type.desc}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Supported States / Operating Regions */}
+        <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
+            <div>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-heading)", margin: "0 0 4px" }}>
+                Supported States / Operating Regions
+              </h3>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
+                Specify which states your brand allows franchise outlets to be deployed in.
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                onClick={selectAllStates}
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 600,
+                  padding: "4px 8px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-hover)",
+                  color: "var(--text-primary)",
+                  cursor: "pointer",
+                }}
+              >
+                Select All
+              </button>
+              <button
+                type="button"
+                onClick={clearAllStates}
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 600,
+                  padding: "4px 8px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-hover)",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                }}
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          {supportedStates.length === 0 && (
+            <div style={{
+              padding: "8px 12px",
+              borderRadius: 8,
+              background: "rgba(234,179,8,0.08)",
+              border: "1px solid rgba(234,179,8,0.25)",
+              color: "#eab308",
+              fontSize: "0.75rem",
+              marginBottom: 12,
+            }}>
+              No states currently selected. Select at least one state to allow franchisees to select your brand in their location.
+            </div>
+          )}
+
+          {loadingStates ? (
+            <div style={{ padding: "16px 0", textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+              Loading states...
+            </div>
+          ) : availableStates.length === 0 ? (
+            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+              No states configured in system.
+            </div>
+          ) : (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(135px, 1fr))",
+              gap: 8,
+              maxHeight: 220,
+              overflowY: "auto",
+              paddingRight: 4,
+            }}>
+              {availableStates.map((st) => {
+                const isChecked = supportedStates.includes(st.id);
+                return (
+                  <label
+                    key={st.id}
+                    onClick={() => toggleSupportedState(st.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      background: isChecked ? "rgba(203,108,220,0.08)" : "var(--bg-hover)",
+                      border: `1px solid ${isChecked ? "var(--accent)" : "var(--border)"}`,
+                      cursor: "pointer",
+                      userSelect: "none",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => {}}
+                      style={{ accentColor: "var(--accent)", cursor: "pointer", margin: 0 }}
+                    />
+                    <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <span style={{
+                        fontSize: "0.78rem",
+                        fontWeight: isChecked ? 700 : 500,
+                        color: isChecked ? "var(--text-heading)" : "var(--text-primary)",
+                      }}>
+                        {st.name}
+                      </span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Franchise Payments */}

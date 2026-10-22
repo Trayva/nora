@@ -159,16 +159,33 @@ export default function KioskHome() {
             Purchase and manage your Kitchens
           </p>
         </div>
-        <button
-          className="kiosk_buy_btn"
-          onClick={() => navigate("/app/purchase-kiosk")}
-          aria-label="Purchase Kiosk"
-        >
-          <span className="kiosk_buy_icon">
-            <MdAdd size={16} />
-          </span>
-          {/* <span className="kiosk_buy_text">Purchase Kiosk</span> */}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            className="app_btn app_btn_confirm"
+            style={{
+              height: 38,
+              padding: "0 16px",
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+            onClick={() => navigate("/app/purchase-kiosk?tab=franchise")}
+          >
+            <MdAdd size={16} /> Buy Franchise
+          </button>
+          <button
+            className="kiosk_buy_btn"
+            onClick={() => navigate("/app/purchase-kiosk?tab=hardware")}
+            title="Purchase Hardware Kiosk"
+            aria-label="Purchase Hardware Kiosk"
+          >
+            <span className="kiosk_buy_icon">
+              <MdOutlineKitchen size={16} />
+            </span>
+          </button>
+        </div>
       </div>
 
       {loading ? (
