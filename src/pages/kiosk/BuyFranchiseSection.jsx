@@ -14,6 +14,9 @@ import {
   MdArrowForward,
   MdInfoOutline,
   MdCheck,
+  MdImage,
+  MdZoomIn,
+  MdClose,
 } from "react-icons/md";
 import { LuStore, LuCloud } from "react-icons/lu";
 
@@ -27,6 +30,21 @@ const parseBills = (bills) => {
       return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
+    }
+  }
+  return [];
+};
+
+// Safe helper to parse images
+const parseImages = (images) => {
+  if (!images) return [];
+  if (Array.isArray(images)) return images.filter(Boolean);
+  if (typeof images === "string") {
+    try {
+      const parsed = JSON.parse(images);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [images];
+    } catch {
+      return [images];
     }
   }
   return [];
@@ -64,6 +82,7 @@ export default function BuyFranchiseSection() {
   const [cloudLocations, setCloudLocations] = useState([]);
   const [loadingCloudLocations, setLoadingCloudLocations] = useState(false);
   const [selectedCloudLocation, setSelectedCloudLocation] = useState(null);
+  const [previewModalImage, setPreviewModalImage] = useState(null);
 
   // Step 2: Brands & Menus
   const [brands, setBrands] = useState([]);
@@ -902,6 +921,7 @@ export default function BuyFranchiseSection() {
                       const isSelected = selectedCloudLocation?.id === loc.id;
                       const bills = parseBills(loc.bills);
                       const billsSum = bills.reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
+                      const locImages = parseImages(loc.images);
 
                       return (
                         <div
@@ -962,6 +982,110 @@ export default function BuyFranchiseSection() {
                               )}
                             </div>
                           </div>
+
+                          {/* Cloud Kitchen Facility Images (Displayed for Cloud Kitchen List Only) */}
+                          {locImages.length > 0 && (
+                            <div style={{ marginTop: 2, marginBottom: 2 }}>
+                              <div
+                                style={{
+                                  position: "relative",
+                                  height: 140,
+                                  borderRadius: 10,
+                                  overflow: "hidden",
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg-hover)",
+                                  cursor: "pointer",
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewModalImage(locImages[0]);
+                                }}
+                                title="Click to view full photo"
+                              >
+                                <img
+                                  src={locImages[0]}
+                                  alt={loc.name}
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                    transition: "transform 0.3s ease",
+                                  }}
+                                  onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
+                                  onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1.0)")}
+                                />
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    top: 8,
+                                    right: 8,
+                                    background: "rgba(0,0,0,0.68)",
+                                    backdropFilter: "blur(4px)",
+                                    color: "#fff",
+                                    fontSize: "0.68rem",
+                                    fontWeight: 700,
+                                    padding: "3px 8px",
+                                    borderRadius: 12,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                >
+                                  <MdImage size={13} />
+                                  <span>{locImages.length} {locImages.length === 1 ? "Photo" : "Photos"}</span>
+                                </div>
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    bottom: 8,
+                                    left: 8,
+                                    background: "rgba(0,0,0,0.6)",
+                                    backdropFilter: "blur(4px)",
+                                    color: "#fff",
+                                    fontSize: "0.68rem",
+                                    padding: "2px 8px",
+                                    borderRadius: 6,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                >
+                                  <MdZoomIn size={14} /> Tap to expand
+                                </div>
+                              </div>
+
+                              {locImages.length > 1 && (
+                                <div style={{ display: "flex", gap: 8, marginTop: 8, overflowX: "auto", paddingBottom: 4 }}>
+                                  {locImages.map((imgUrl, imgIdx) => (
+                                    <div
+                                      key={imgIdx}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPreviewModalImage(imgUrl);
+                                      }}
+                                      style={{
+                                        width: 52,
+                                        height: 44,
+                                        borderRadius: 6,
+                                        overflow: "hidden",
+                                        border: "1px solid var(--border)",
+                                        cursor: "pointer",
+                                        flexShrink: 0,
+                                        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                                      }}
+                                      title={`View photo ${imgIdx + 1}`}
+                                    >
+                                      <img
+                                        src={imgUrl}
+                                        alt=""
+                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           {loc.notes && (
                             <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", background: "var(--bg-hover)", padding: "5px 10px", borderRadius: 6 }}>
@@ -1277,6 +1401,27 @@ export default function BuyFranchiseSection() {
                   <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: "4px 0 0" }}>
                     {locationForm.address}, {locationForm.city}, {locationForm.stateName} ({locationForm.country})
                   </p>
+                  {locationForm.outletType === "CLOUD_KITCHEN" && parseImages(selectedCloudLocation?.images).length > 0 && (
+                    <div style={{ marginTop: 12, display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+                      {parseImages(selectedCloudLocation.images).map((imgUrl, i) => (
+                        <img
+                          key={i}
+                          src={imgUrl}
+                          alt="Facility photo"
+                          onClick={() => setPreviewModalImage(imgUrl)}
+                          title="Click to view photo"
+                          style={{
+                            width: 68,
+                            height: 48,
+                            borderRadius: 6,
+                            objectFit: "cover",
+                            border: "1px solid var(--border)",
+                            cursor: "pointer",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1729,6 +1874,69 @@ export default function BuyFranchiseSection() {
           submitting={submitting}
           onSubmit={handleSignSubmit}
         />
+      )}
+
+      {/* Lightbox Preview Modal for Cloud Kitchen Images */}
+      {previewModalImage && (
+        <div
+          onClick={() => setPreviewModalImage(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.85)",
+            backdropFilter: "blur(6px)",
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "relative",
+              maxWidth: "92vw",
+              maxHeight: "90vh",
+              background: "#000",
+              borderRadius: 14,
+              overflow: "hidden",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
+            }}
+          >
+            <button
+              onClick={() => setPreviewModalImage(null)}
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                background: "rgba(0,0,0,0.65)",
+                border: "none",
+                color: "#fff",
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                zIndex: 10,
+              }}
+            >
+              <MdClose size={22} />
+            </button>
+            <img
+              src={previewModalImage}
+              alt="Cloud Kitchen Facility Preview"
+              style={{
+                display: "block",
+                maxWidth: "100%",
+                maxHeight: "85vh",
+                objectFit: "contain",
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

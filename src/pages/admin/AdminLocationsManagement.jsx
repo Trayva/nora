@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import {
   MdEdit,
@@ -6,8 +6,11 @@ import {
   MdClose,
   MdLocationOn,
   MdStorefront,
+  MdImage,
+  MdZoomIn,
+  MdCloudUpload,
 } from "react-icons/md";
-import { LuPlus, LuTrash2, LuStore, LuCloud } from "react-icons/lu";
+import { LuPlus, LuTrash2, LuStore, LuCloud, LuImage } from "react-icons/lu";
 import api from "../../api/axios";
 
 const EMPTY_BILL = {
@@ -32,6 +35,7 @@ const BLANK_LOCATION_FORM = {
   longitude: "",
   notes: "",
   bills: [],
+  images: [], // existing uploaded URLs
 };
 
 export default function AdminLocationsManagement({ states = [] }) {
@@ -50,6 +54,12 @@ export default function AdminLocationsManagement({ states = [] }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
   const [form, setForm] = useState(BLANK_LOCATION_FORM);
+  const [newImageFiles, setNewImageFiles] = useState([]);
+  const [newImagePreviews, setNewImagePreviews] = useState([]);
+  const fileInputRef = useRef(null);
+
+  // Lightbox Preview Modal
+  const [previewModalImage, setPreviewModalImage] = useState(null);
 
   const fetchLocations = async () => {
     setLoading(true);
@@ -57,7 +67,8 @@ export default function AdminLocationsManagement({ states = [] }) {
       const res = await api.get("/kiosk/location", {
         params: { limit: 100 },
       });
-      const list = res.data.data?.items || (Array.isArray(res.data.data) ? res.data.data : []);
+      const d = res.data?.data;
+      const list = Array.isArray(d) ? d : d?.locations || d?.items || [];
       setLocations(list);
     } catch {
       toast.error("Failed to load locations");
@@ -70,19 +81,32 @@ export default function AdminLocationsManagement({ states = [] }) {
     fetchLocations();
   }, []);
 
+  // Clean up object URLs on unmount or file change
+  useEffect(() => {
+    return () => {
+      newImagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [newImagePreviews]);
+
   const openCreateForm = () => {
     setEditingLocation(null);
+    setNewImageFiles([]);
+    setNewImagePreviews([]);
     setForm({
       ...BLANK_LOCATION_FORM,
       stateId: states[0]?.id || "",
       country: states[0]?.country || "Nigeria",
       bills: [{ ...EMPTY_BILL }],
+      images: [],
     });
     setIsFormOpen(true);
   };
 
   const openEditForm = (loc) => {
     setEditingLocation(loc);
+    setNewImageFiles([]);
+    setNewImagePreviews([]);
+
     let parsedBills = [];
     if (loc.bills) {
       if (typeof loc.bills === "string") {
@@ -95,6 +119,21 @@ export default function AdminLocationsManagement({ states = [] }) {
         parsedBills = loc.bills;
       }
     }
+
+    let parsedImages = [];
+    if (loc.images) {
+      if (Array.isArray(loc.images)) {
+        parsedImages = loc.images;
+      } else if (typeof loc.images === "string") {
+        try {
+          const p = JSON.parse(loc.images);
+          parsedImages = Array.isArray(p) ? p : [loc.images];
+        } catch {
+          parsedImages = loc.images.split(",").map((s) => s.trim()).filter(Boolean);
+        }
+      }
+    }
+
     setForm({
       name: loc.name || "",
       outletType: loc.outletType || "CLOUD_KITCHEN",
@@ -104,10 +143,11 @@ export default function AdminLocationsManagement({ states = [] }) {
       lga: loc.lga || "",
       country: loc.country || "Nigeria",
       locationIdType: loc.locationIdType || "ACTIVE",
-      latitude: loc.latitude != null ? String(loc.latitude) : "",
-      longitude: loc.longitude != null ? String(loc.longitude) : "",
+      latitude: loc.latitude != null ? Number(loc.latitude) : 0,
+      longitude: loc.longitude != null ? Number(loc.longitude) : 0,
       notes: loc.notes || "",
       bills: parsedBills.length > 0 ? parsedBills : [{ ...EMPTY_BILL }],
+      images: parsedImages,
     });
     setIsFormOpen(true);
   };
@@ -115,7 +155,35 @@ export default function AdminLocationsManagement({ states = [] }) {
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingLocation(null);
+    setNewImageFiles([]);
+    setNewImagePreviews([]);
     setForm(BLANK_LOCATION_FORM);
+  };
+
+  // Image Selection Handlers
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    setNewImageFiles((prev) => [...prev, ...files]);
+    const previews = files.map((f) => URL.createObjectURL(f));
+    setNewImagePreviews((prev) => [...prev, ...previews]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeExistingImage = (imgUrl) => {
+    setForm((prev) => ({
+      ...prev,
+      images: (prev.images || []).filter((url) => url !== imgUrl),
+    }));
+  };
+
+  const removeNewFile = (index) => {
+    setNewImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setNewImagePreviews((prev) => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   // Bill Helpers
@@ -164,26 +232,36 @@ export default function AdminLocationsManagement({ states = [] }) {
 
     setSaving(true);
     try {
-      const payload = {
-        name: form.name.trim(),
-        outletType: form.outletType,
-        stateId: form.stateId,
-        address: form.address.trim(),
-        city: form.city.trim(),
-        lga: form.lga.trim(),
-        country: form.country.trim() || "Nigeria",
-        locationIdType: form.locationIdType,
-        latitude: form.latitude !== "" ? Number(form.latitude) : 0,
-        longitude: form.longitude !== "" ? Number(form.longitude) : 0,
-        notes: form.notes?.trim() || undefined,
-        bills: cleanedBills,
-      };
+      const fd = new FormData();
+      fd.append("name", form.name.trim());
+      fd.append("outletType", form.outletType);
+      fd.append("stateId", form.stateId);
+      fd.append("address", form.address.trim());
+      fd.append("city", form.city.trim());
+      fd.append("lga", form.lga.trim());
+      fd.append("country", form.country.trim() || "Nigeria");
+      fd.append("locationIdType", form.locationIdType);
+      fd.append("latitude", form.latitude !== "" ? Number(form.latitude) : 0);
+      fd.append("longitude", form.longitude !== "" ? Number(form.longitude) : 0);
+      if (form.notes) fd.append("notes", form.notes.trim());
+
+      fd.append("bills", JSON.stringify(cleanedBills));
+      fd.append("images", JSON.stringify(form.images || []));
+
+      // Append new image files
+      newImageFiles.forEach((file) => {
+        fd.append("images", file);
+      });
 
       if (editingLocation) {
-        await api.patch(`/kiosk/location/${editingLocation.id}`, payload);
+        await api.patch(`/kiosk/location/${editingLocation.id}`, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
         toast.success("Location updated successfully");
       } else {
-        await api.post("/kiosk/location", payload);
+        await api.post("/kiosk/location", fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
         toast.success("Location created successfully");
       }
 
@@ -382,7 +460,7 @@ export default function AdminLocationsManagement({ states = [] }) {
               />
             </div>
 
-            <div className="admin_form_grid" style={{ marginBottom: 12 }}>
+            <div className="admin_form_grid" style={{ marginBottom: 14 }}>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <label className="modal-label">Latitude</label>
                 <input
@@ -414,6 +492,163 @@ export default function AdminLocationsManagement({ states = [] }) {
                   onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
                 />
               </div>
+            </div>
+
+            {/* ── LOCATION IMAGES UPLOAD & MANAGEMENT ── */}
+            <div style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 12, padding: 14, marginBottom: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div>
+                  <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--text-heading)", display: "block" }}>
+                    Location Images &amp; Facility Photos
+                  </span>
+                  <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                    Upload photographs of the kitchen workstations, prep bays, and exterior to showcase to prospective franchisees.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="biz_icon_btn"
+                  style={{ width: "auto", height: 28, padding: "0 10px", fontSize: "0.72rem", gap: 5 }}
+                >
+                  <MdCloudUpload size={16} />
+                  <span>Upload Images</span>
+                </button>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={handleFileSelect}
+              />
+
+              {/* Existing Images Gallery */}
+              {form.images && form.images.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                    Current Photos ({form.images.length})
+                  </span>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {form.images.map((url, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          width: 72,
+                          height: 72,
+                          borderRadius: 8,
+                          position: "relative",
+                          overflow: "hidden",
+                          border: "1px solid var(--border)",
+                          boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
+                        }}
+                      >
+                        <img
+                          src={url}
+                          alt={`Location ${idx + 1}`}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", cursor: "pointer" }}
+                          onClick={() => setPreviewModalImage(url)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeExistingImage(url)}
+                          title="Remove image"
+                          style={{
+                            position: "absolute",
+                            top: 2,
+                            right: 2,
+                            background: "rgba(0,0,0,0.65)",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "50%",
+                            width: 18,
+                            height: 18,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <MdClose size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Newly Selected Images (Ready to Upload) */}
+              {newImagePreviews.length > 0 && (
+                <div>
+                  <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                    New Photos to Upload ({newImagePreviews.length})
+                  </span>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {newImagePreviews.map((url, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          width: 72,
+                          height: 72,
+                          borderRadius: 8,
+                          position: "relative",
+                          overflow: "hidden",
+                          border: "2px dashed var(--accent)",
+                        }}
+                      >
+                        <img
+                          src={url}
+                          alt="New upload"
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeNewFile(idx)}
+                          title="Cancel upload"
+                          style={{
+                            position: "absolute",
+                            top: 2,
+                            right: 2,
+                            background: "rgba(239,68,68,0.85)",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "50%",
+                            width: 18,
+                            height: 18,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <MdClose size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(!form.images || form.images.length === 0) && newImagePreviews.length === 0 && (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    padding: "16px",
+                    textAlign: "center",
+                    border: "1.5px dashed var(--border)",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    background: "var(--bg-card)",
+                  }}
+                >
+                  <LuImage size={24} style={{ color: "var(--text-muted)", marginBottom: 4 }} />
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block" }}>
+                    No photos added yet. Click to select location photographs.
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* ── LOCATION BILLS / PAYMENT SCHEDULE ── */}
@@ -454,53 +689,49 @@ export default function AdminLocationsManagement({ states = [] }) {
                         padding: 12,
                       }}
                     >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "var(--accent)" }}>
-                          Bill #{idx + 1}
-                        </span>
-                        <button
-                          type="button"
-                          className="biz_icon_btn biz_icon_btn_danger"
-                          style={{ width: 22, height: 22 }}
-                          onClick={() => removeBill(idx)}
-                        >
-                          <LuTrash2 size={11} />
-                        </button>
-                      </div>
-
-                      <div className="admin_form_grid" style={{ marginBottom: 8 }}>
-                        <div className="form-field" style={{ marginBottom: 0 }}>
-                          <label className="modal-label">Bill Title *</label>
+                      <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 8 }}>
+                        <div style={{ flex: "1 1 180px" }}>
                           <input
                             className="modal-input"
-                            placeholder="e.g. Monthly Space Rent"
+                            placeholder="Bill Title (e.g. Facility Rent)"
                             value={b.title}
                             onChange={(e) => updateBill(idx, "title", e.target.value)}
+                            style={{ marginBottom: 0, height: 32, fontSize: "0.78rem" }}
                           />
                         </div>
-                        <div className="form-field" style={{ marginBottom: 0 }}>
-                          <label className="modal-label">Amount *</label>
+                        <div style={{ width: 130 }}>
                           <input
                             className="modal-input"
                             type="number"
                             min="0"
-                            placeholder="e.g. 150000"
+                            placeholder="Amount (NGN)"
                             value={b.amount}
                             onChange={(e) => updateBill(idx, "amount", e.target.value)}
+                            style={{ marginBottom: 0, height: 32, fontSize: "0.78rem" }}
                           />
                         </div>
-                        <div className="form-field" style={{ marginBottom: 0 }}>
-                          <label className="modal-label">Description</label>
-                          <input
-                            className="modal-input"
-                            placeholder="Includes power & security"
-                            value={b.description}
-                            onChange={(e) => updateBill(idx, "description", e.target.value)}
-                          />
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeBill(idx)}
+                          className="biz_icon_btn"
+                          title="Remove bill"
+                          style={{ height: 32, width: 32, color: "#ef4444" }}
+                        >
+                          <LuTrash2 size={14} />
+                        </button>
                       </div>
 
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      <div style={{ marginBottom: 8 }}>
+                        <input
+                          className="modal-input"
+                          placeholder="Optional bill description..."
+                          value={b.description || ""}
+                          onChange={(e) => updateBill(idx, "description", e.target.value)}
+                          style={{ marginBottom: 0, height: 28, fontSize: "0.72rem" }}
+                        />
+                      </div>
+
+                      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
                         <button
                           type="button"
                           onClick={() => updateBill(idx, "refundable", !b.refundable)}
@@ -620,6 +851,12 @@ export default function AdminLocationsManagement({ states = [] }) {
             const totalBills = bills.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
             const isCloud = loc.outletType === "CLOUD_KITCHEN";
 
+            const locImages = Array.isArray(loc.images)
+              ? loc.images
+              : typeof loc.images === "string"
+                ? (() => { try { return JSON.parse(loc.images); } catch { return []; } })()
+                : [];
+
             return (
               <div
                 key={loc.id}
@@ -633,25 +870,67 @@ export default function AdminLocationsManagement({ states = [] }) {
                   marginBottom: 8,
                 }}
               >
-                <div
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 10,
-                    background: isCloud ? "rgba(99,102,241,0.12)" : "rgba(34,197,94,0.12)",
-                    border: `1px solid ${isCloud ? "rgba(99,102,241,0.25)" : "rgba(34,197,94,0.25)"}`,
-                    color: isCloud ? "#6366f1" : "#16a34a",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    marginTop: 2,
-                  }}
-                >
-                  {isCloud ? <LuCloud size={18} /> : <LuStore size={18} />}
-                </div>
+                {/* Thumbnail Icon or First Image */}
+                {locImages.length > 0 ? (
+                  <div
+                    onClick={() => setPreviewModalImage(locImages[0])}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 10,
+                      overflow: "hidden",
+                      flexShrink: 0,
+                      cursor: "pointer",
+                      border: "1px solid var(--border)",
+                      position: "relative",
+                      marginTop: 2,
+                    }}
+                    title="Click to view image"
+                  >
+                    <img
+                      src={locImages[0]}
+                      alt={loc.name}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                    {locImages.length > 1 && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          bottom: 0,
+                          right: 0,
+                          background: "rgba(0,0,0,0.7)",
+                          color: "#fff",
+                          fontSize: "0.58rem",
+                          fontWeight: 700,
+                          padding: "1px 3px",
+                          borderTopLeftRadius: 4,
+                        }}
+                      >
+                        +{locImages.length - 1}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 10,
+                      background: isCloud ? "rgba(99,102,241,0.12)" : "rgba(34,197,94,0.12)",
+                      border: `1px solid ${isCloud ? "rgba(99,102,241,0.25)" : "rgba(34,197,94,0.25)"}`,
+                      color: isCloud ? "#6366f1" : "#16a34a",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      marginTop: 2,
+                    }}
+                  >
+                    {isCloud ? <LuCloud size={18} /> : <LuStore size={18} />}
+                  </div>
+                )}
 
-                <div className="admin_drawer_info" style={{ flex: 1, minWidth: 0 }}>
+                <div className="admin_drawer_info" style={{ flex: 1, minWidth: 0, marginLeft: 10 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 3 }}>
                     <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "var(--text-heading)" }}>
                       {loc.name}
@@ -682,6 +961,26 @@ export default function AdminLocationsManagement({ states = [] }) {
                     >
                       {loc.locationIdType}
                     </span>
+                    {locImages.length > 0 && (
+                      <span
+                        onClick={() => setPreviewModalImage(locImages[0])}
+                        style={{
+                          fontSize: "0.66rem",
+                          fontWeight: 700,
+                          padding: "1px 6px",
+                          borderRadius: 4,
+                          background: "rgba(59,130,246,0.1)",
+                          color: "#3b82f6",
+                          border: "1px solid rgba(59,130,246,0.25)",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 3,
+                        }}
+                      >
+                        <MdImage size={11} /> {locImages.length} photo{locImages.length > 1 ? "s" : ""}
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginBottom: 4 }}>
@@ -701,37 +1000,35 @@ export default function AdminLocationsManagement({ states = [] }) {
                         border: "1px solid var(--border)",
                       }}
                     >
-                      {bills.length} Bill{bills.length !== 1 ? "s" : ""}
-                      {totalBills > 0 && ` (${loc.state.currency} ${totalBills.toLocaleString()})`}
+                      Total Bills: {loc.state?.currency || "NGN"} {totalBills.toLocaleString()}
                     </span>
 
                     {bills.slice(0, 3).map((b, i) => (
                       <span
                         key={i}
                         style={{
-                          fontSize: "0.68rem",
-                          color: "var(--text-body)",
-                          background: "var(--bg-card)",
+                          fontSize: "0.66rem",
+                          color: "var(--text-muted)",
+                          background: "var(--bg-hover)",
                           padding: "2px 6px",
                           borderRadius: 4,
                           border: "1px solid var(--border)",
                         }}
                       >
-                        {b.title}: {loc.state.currency} {Number(b.amount || 0).toLocaleString()}
-                        {b.recurring ? " (rec)" : ""}
+                        {b.title}: {loc.state?.currency || "NGN"} {parseFloat(b.amount || 0).toLocaleString()}
                       </span>
                     ))}
                     {bills.length > 3 && (
-                      <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                      <span style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>
                         +{bills.length - 3} more
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                {/* Edit & Delete Actions */}
+                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                   <button
-                    type="button"
                     className="biz_icon_btn"
                     title="Edit Location"
                     onClick={() => openEditForm(loc)}
@@ -739,11 +1036,10 @@ export default function AdminLocationsManagement({ states = [] }) {
                     <MdEdit size={14} />
                   </button>
                   <button
-                    type="button"
-                    className="biz_icon_btn biz_icon_btn_danger"
+                    className="biz_icon_btn"
                     title="Delete Location"
+                    style={{ color: "#ef4444" }}
                     onClick={() => setConfirmDelete(loc)}
-                    disabled={deletingId === loc.id}
                   >
                     <MdDelete size={14} />
                   </button>
@@ -754,15 +1050,77 @@ export default function AdminLocationsManagement({ states = [] }) {
         </div>
       )}
 
+      {/* Lightbox Image Preview Modal */}
+      {previewModalImage && (
+        <div
+          onClick={() => setPreviewModalImage(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(0,0,0,0.75)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "relative",
+              maxWidth: "90vw",
+              maxHeight: "85vh",
+              borderRadius: 12,
+              overflow: "hidden",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+              background: "#000",
+            }}
+          >
+            <button
+              onClick={() => setPreviewModalImage(null)}
+              style={{
+                position: "absolute",
+                top: 10,
+                right: 10,
+                background: "rgba(0,0,0,0.7)",
+                color: "#fff",
+                border: "none",
+                borderRadius: "50%",
+                width: 32,
+                height: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                zIndex: 10,
+              }}
+            >
+              <MdClose size={18} />
+            </button>
+            <img
+              src={previewModalImage}
+              alt="Location preview"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "85vh",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {confirmDelete && (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            backdropFilter: "blur(4px)",
-            zIndex: 9999,
+            zIndex: 1500,
+            background: "rgba(0,0,0,0.5)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -773,31 +1131,30 @@ export default function AdminLocationsManagement({ states = [] }) {
             style={{
               background: "var(--bg-card)",
               border: "1px solid var(--border)",
-              borderRadius: 16,
+              borderRadius: 14,
               padding: 24,
               maxWidth: 420,
               width: "100%",
             }}
           >
-            <h4 style={{ fontSize: "1rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 8px" }}>
+            <h4 style={{ margin: "0 0 8px", fontSize: "1rem", fontWeight: 800, color: "var(--text-heading)" }}>
               Delete Location?
             </h4>
-            <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", margin: "0 0 20px" }}>
-              Are you sure you want to delete <strong>{confirmDelete.name}</strong>? This cannot be undone.
+            <p style={{ margin: "0 0 20px", fontSize: "0.82rem", color: "var(--text-muted)", lineHeight: 1.4 }}>
+              Are you sure you want to delete <strong>{confirmDelete.name}</strong>? Any associated kiosks or franchise listings may be impacted.
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
               <button
                 type="button"
                 className="app_btn app_btn_cancel"
-                style={{ height: 34 }}
                 onClick={() => setConfirmDelete(null)}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="app_btn app_btn_confirm"
-                style={{ height: 34, background: "#ef4444", borderColor: "#ef4444" }}
+                className="app_btn"
+                style={{ background: "#ef4444", color: "#fff" }}
                 disabled={deletingId === confirmDelete.id}
                 onClick={() => handleDelete(confirmDelete.id)}
               >
