@@ -161,21 +161,14 @@ export default function KioskHome() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
-            className="app_btn app_btn_confirm"
-            style={{
-              height: 38,
-              padding: "0 16px",
-              fontSize: "0.82rem",
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
+            className="kiosk_franchise_add_btn"
             onClick={() => navigate("/app/purchase-kiosk?tab=franchise")}
+            title="Buy Franchise"
+            aria-label="Buy Franchise"
           >
-            <MdAdd size={16} /> Buy Franchise
+            <MdAdd size={22} />
           </button>
-          <button
+          {/* <button
             className="kiosk_buy_btn"
             onClick={() => navigate("/app/purchase-kiosk?tab=hardware")}
             title="Purchase Hardware Kiosk"
@@ -184,7 +177,7 @@ export default function KioskHome() {
             <span className="kiosk_buy_icon">
               <MdOutlineKitchen size={16} />
             </span>
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -321,9 +314,8 @@ export default function KioskHome() {
 
                       <div className="kiosk_item_indicators">
                         <span
-                          className={`kiosk_indicator ${
-                            kiosk.isOnline ? "kiosk_ind_on" : "kiosk_ind_off"
-                          }`}
+                          className={`kiosk_indicator ${kiosk.isOnline ? "kiosk_ind_on" : "kiosk_ind_off"
+                            }`}
                         >
                           {kiosk.isOnline ? (
                             <MdWifi size={12} />
@@ -333,11 +325,10 @@ export default function KioskHome() {
                           {kiosk.isOnline ? "Online" : "Offline"}
                         </span>
                         <span
-                          className={`kiosk_indicator ${
-                            kiosk.isLocked
+                          className={`kiosk_indicator ${kiosk.isLocked
                               ? "kiosk_ind_locked"
                               : "kiosk_ind_unlocked"
-                          }`}
+                            }`}
                         >
                           {kiosk.isLocked ? (
                             <MdLock size={11} />

@@ -39,6 +39,7 @@ import AdminKiosks from "./AdminKiosks";
 import AdminInvoiceGenerator from "./AdminInvoiceGenerator";
 import AdminGlobalWalletSettings from "./AdminGlobalWalletSettings";
 import AdminVatSettings from "./AdminVatSettings";
+import AdminLocationsManagement from "./AdminLocationsManagement";
 
 import {
   DashboardSkeleton,
@@ -148,6 +149,7 @@ export default function AdminDashboard() {
 
   // Entity drawers
   const [drawer, setDrawer] = useState(null); // "users"|"vendors"|"operators"|"suppliers"|"kiosks"|"locations"
+  const [locationSubTab, setLocationSubTab] = useState("states"); // "states" | "outlets"
   const [drawerItems, setDrawerItems] = useState([]);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [entityApproving, setEntityApproving] = useState(null);
@@ -1460,10 +1462,37 @@ export default function AdminDashboard() {
           setShowLocationForm(false);
           setEditingState(null);
         }}
-        title={cfg.title || ""}
-        description={cfg.description || ""}
-        width={500}
+        title={drawer === "locations" ? (locationSubTab === "outlets" ? "Locations & Outlets" : "States & Regions") : (cfg.title || "")}
+        description={drawer === "locations" ? (locationSubTab === "outlets" ? "Manage physical locations, cloud kitchens, and their bills schedule" : (cfg.description || "")) : (cfg.description || "")}
+        width={drawer === "locations" && locationSubTab === "outlets" ? 720 : 500}
       >
+        {drawer === "locations" && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
+            <button
+              type="button"
+              className={`app_btn ${locationSubTab === "states" ? "app_btn_confirm" : "app_btn_cancel"}`}
+              style={{ height: 32, fontSize: "0.8rem", borderRadius: 20, display: "inline-flex", alignItems: "center", gap: 6 }}
+              onClick={() => setLocationSubTab("states")}
+            >
+              <MdOutlineLocationOn size={15} />
+              States & Regions
+            </button>
+            <button
+              type="button"
+              className={`app_btn ${locationSubTab === "outlets" ? "app_btn_confirm" : "app_btn_cancel"}`}
+              style={{ height: 32, fontSize: "0.8rem", borderRadius: 20, display: "inline-flex", alignItems: "center", gap: 6 }}
+              onClick={() => setLocationSubTab("outlets")}
+            >
+              <MdOutlineStore size={15} />
+              Outlets & Locations
+            </button>
+          </div>
+        )}
+
+        {drawer === "locations" && locationSubTab === "outlets" ? (
+          <AdminLocationsManagement states={drawerItems} />
+        ) : (
+          <>
         {drawer && (
           <div style={{ marginBottom: 16 }}>
             <input
@@ -1944,6 +1973,8 @@ export default function AdminDashboard() {
               Next
             </button>
           </div>
+        )}
+          </>
         )}
       </Drawer>
 

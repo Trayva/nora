@@ -13,8 +13,24 @@ import {
   MdArrowBack,
   MdArrowForward,
   MdInfoOutline,
+  MdCheck,
 } from "react-icons/md";
 import { LuStore, LuCloud } from "react-icons/lu";
+
+// Safe helper to parse bills from JSON string or array
+const parseBills = (bills) => {
+  if (!bills) return [];
+  if (Array.isArray(bills)) return bills;
+  if (typeof bills === "string") {
+    try {
+      const parsed = JSON.parse(bills);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
 
 export default function BuyFranchiseSection() {
   const navigate = useNavigate();
@@ -23,7 +39,7 @@ export default function BuyFranchiseSection() {
   // Steps: 1 = Location & Outlet Type, 2 = Select Brand, 3 = Review & Submit
   const [step, setStep] = useState(1);
 
-  // Step 1: Location Form State
+  // Step 1: Location Form State (for Kiosk)
   const [locationForm, setLocationForm] = useState({
     name: "",
     address: "",
@@ -43,6 +59,12 @@ export default function BuyFranchiseSection() {
   const [detectingGPS, setDetectingGPS] = useState(false);
   const [showMap, setShowMap] = useState(false);
 
+  // Cloud Kitchen Specific State
+  const [cloudStateId, setCloudStateId] = useState("");
+  const [cloudLocations, setCloudLocations] = useState([]);
+  const [loadingCloudLocations, setLoadingCloudLocations] = useState(false);
+  const [selectedCloudLocation, setSelectedCloudLocation] = useState(null);
+
   // Step 2: Brands & Menus
   const [brands, setBrands] = useState([]);
   const [loadingBrands, setLoadingBrands] = useState(false);
@@ -50,36 +72,90 @@ export default function BuyFranchiseSection() {
   const [brandMenuItems, setBrandMenuItems] = useState([]);
   const [loadingMenu, setLoadingMenu] = useState(false);
 
-  // Slots & Fees
+  // Slots & Country Settings
   const [availableSlots, setAvailableSlots] = useState(null);
   const [checkingSlots, setCheckingSlots] = useState(false);
   const [countrySettings, setCountrySettings] = useState(null);
   const [loadingSettings, setLoadingSettings] = useState(false);
-  const [selectedOptionalPayments, setSelectedOptionalPayments] = useState([]);
+
+  // Payment Selection States:
+  // For Kiosk: selectedKioskChoice allows choosing ONLY 1 optional payment that has "kiosk" in title
+  const [selectedKioskChoice, setSelectedKioskChoice] = useState(null);
+  // Other non-kiosk, non-cloud optional payments can be checked/unchecked
+  const [selectedOtherOptional, setSelectedOtherOptional] = useState([]);
 
   // Step 3 & 4: E-Sign & Submitting
   const [showSignDrawer, setShowSignDrawer] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Load States
+  // Load States on mount
   useEffect(() => {
     api
       .get("/config/state")
       .then((res) => {
         const stateList = res.data.data || [];
         setStates(stateList);
-        if (stateList.length > 0 && !locationForm.stateId) {
-          setLocationForm((prev) => ({
-            ...prev,
-            stateId: stateList[0].id,
-            stateName: stateList[0].name,
-            country: stateList[0].country || "Nigeria",
-          }));
+        if (stateList.length > 0) {
+          const firstState = stateList[0];
+          setCloudStateId(firstState.id);
+          if (!locationForm.stateId) {
+            setLocationForm((prev) => ({
+              ...prev,
+              stateId: firstState.id,
+              stateName: firstState.name,
+              country: firstState.country || "Nigeria",
+            }));
+          }
         }
       })
       .catch(() => toast.error("Failed to load states"))
       .finally(() => setStatesLoading(false));
   }, []);
+
+  // Fetch Cloud Kitchen Locations when cloudStateId changes or when switching to CLOUD_KITCHEN
+  const fetchCloudLocations = async (stateId) => {
+    if (!stateId) return;
+    setLoadingCloudLocations(true);
+    try {
+      const res = await api.get("/kiosk/location", {
+        params: {
+          outletType: "CLOUD_KITCHEN",
+          stateId: stateId,
+        },
+      });
+      const list = res.data.data?.locations || (Array.isArray(res.data.data) ? res.data.data : []);
+      setCloudLocations(list);
+      // Auto-select first if none selected or previous is not in current list
+      setSelectedCloudLocation((prev) => {
+        if (prev && list.some((l) => l.id === prev.id)) {
+          return prev;
+        }
+        return list.length > 0 ? list[0] : null;
+      });
+    } catch {
+      toast.error("Failed to load cloud kitchen locations");
+      setCloudLocations([]);
+      setSelectedCloudLocation(null);
+    } finally {
+      setLoadingCloudLocations(false);
+    }
+  };
+
+  const handleCloudStateChange = (stateId) => {
+    setCloudStateId(stateId);
+    fetchCloudLocations(stateId);
+  };
+
+  const handleOutletTypeSelect = (type) => {
+    setLocationForm((prev) => ({ ...prev, outletType: type }));
+    if (type === "CLOUD_KITCHEN") {
+      const targetStateId = cloudStateId || locationForm.stateId || (states[0]?.id || "");
+      if (targetStateId) {
+        setCloudStateId(targetStateId);
+        fetchCloudLocations(targetStateId);
+      }
+    }
+  };
 
   // Fetch Brands when moving to Step 2
   const loadBrands = async () => {
@@ -109,7 +185,7 @@ export default function BuyFranchiseSection() {
     }));
   };
 
-  // GPS Auto-detection
+  // GPS Auto-detection for physical kiosk
   const detectGPS = () => {
     if (!navigator.geolocation) return toast.error("Geolocation not supported");
     setDetectingGPS(true);
@@ -143,7 +219,7 @@ export default function BuyFranchiseSection() {
         }
         setDetectingGPS(false);
       },
-      (err) => {
+      () => {
         setDetectingGPS(false);
         toast.error("Failed to detect location coordinates");
       },
@@ -159,8 +235,8 @@ export default function BuyFranchiseSection() {
     }));
   };
 
-  // Step 1 Validation -> Proceed to Brand Selection
-  const handleProceedToBrands = (e) => {
+  // Step 1 Validation -> Proceed to Brand Selection (KIOSK)
+  const handleProceedKioskLocation = (e) => {
     e.preventDefault();
     if (!locationForm.name.trim()) return toast.error("Location name is required");
     if (!locationForm.address.trim()) return toast.error("Street address is required");
@@ -168,6 +244,33 @@ export default function BuyFranchiseSection() {
     if (!locationForm.lga.trim()) return toast.error("LGA is required");
     if (!locationForm.stateId) return toast.error("Please select a state");
 
+    setSelectedCloudLocation(null);
+    loadBrands();
+    setStep(2);
+  };
+
+  // Step 1 Validation -> Proceed to Brand Selection (CLOUD KITCHEN)
+  const handleProceedCloudKitchen = (e) => {
+    e?.preventDefault();
+    if (!selectedCloudLocation) {
+      return toast.error("Please choose a cloud kitchen location to proceed");
+    }
+    const loc = selectedCloudLocation;
+    const s = states.find((item) => item.id === loc.stateId);
+    setLocationForm((prev) => ({
+      ...prev,
+      name: loc.name,
+      address: loc.address,
+      city: loc.city,
+      lga: loc.lga,
+      stateId: loc.stateId,
+      stateName: loc.state?.name || s?.name || prev.stateName,
+      country: loc.country || "Nigeria",
+      latitude: loc.latitude != null ? String(loc.latitude) : "",
+      longitude: loc.longitude != null ? String(loc.longitude) : "",
+      outletType: "CLOUD_KITCHEN",
+      notes: loc.notes || "",
+    }));
     loadBrands();
     setStep(2);
   };
@@ -190,15 +293,19 @@ export default function BuyFranchiseSection() {
     }
 
     // Check slot availability at this location
-    if (locationForm.latitude && locationForm.longitude && locationForm.stateId) {
+    const checkLat = locationForm.latitude || selectedCloudLocation?.latitude;
+    const checkLng = locationForm.longitude || selectedCloudLocation?.longitude;
+    const checkStateId = locationForm.stateId || selectedCloudLocation?.stateId;
+
+    if (checkLat && checkLng && checkStateId) {
       setCheckingSlots(true);
       try {
         const res = await api.get("/kiosk/available-slots", {
           params: {
             vendorId: brand.id,
-            lat: locationForm.latitude,
-            lng: locationForm.longitude,
-            stateId: locationForm.stateId,
+            lat: checkLat,
+            lng: checkLng,
+            stateId: checkStateId,
           },
         });
         setAvailableSlots(res.data.data?.availableSlots ?? null);
@@ -210,13 +317,27 @@ export default function BuyFranchiseSection() {
     }
 
     // Load country settings for legal terms & fees
-    const country = locationForm.country || "Nigeria";
+    const country = locationForm.country || selectedCloudLocation?.country || selectedCloudLocation?.state?.country;
     setLoadingSettings(true);
     try {
       const res = await api.get(`/kioskVendorApplication/settings/country/${encodeURIComponent(country)}`);
-      setCountrySettings(res.data.data);
-      // Initialize optional payments
-      setSelectedOptionalPayments([]);
+      const sData = res.data.data;
+      setCountrySettings(sData);
+
+      // Initialize optional payments based on outlet type:
+      const payments = Array.isArray(sData?.payments) ? sData.payments : [];
+      if (locationForm.outletType === "KIOSK") {
+        // Find optional payments that have "kiosk" in title -> auto-select first one or null
+        const kioskOpt = payments.filter(
+          (p) => Boolean(p.optional || p.isOptional) && /kiosk/i.test(p.title || "")
+        );
+        setSelectedKioskChoice(kioskOpt.length > 0 ? kioskOpt[0].title : null);
+        setSelectedOtherOptional([]);
+      } else {
+        // CLOUD_KITCHEN: kiosk optional is null, cloud optional will be automatically appended as mandatory
+        setSelectedKioskChoice(null);
+        setSelectedOtherOptional([]);
+      }
     } catch {
       setCountrySettings(null);
     } finally {
@@ -224,39 +345,132 @@ export default function BuyFranchiseSection() {
     }
   };
 
-  const toggleOptionalPayment = (title) => {
-    setSelectedOptionalPayments((prev) =>
+  // Toggle other optional payments
+  const toggleOtherOptional = (title) => {
+    setSelectedOtherOptional((prev) =>
       prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
     );
   };
 
-  // Fee Calculations
+  // ── Fee Calculations & Payment Partitioning ────────────────
   const vendorPayments = Array.isArray(selectedBrand?.franchisePayments) ? selectedBrand.franchisePayments : [];
   const totalVendorPayments = vendorPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-  const globalPayments = Array.isArray(countrySettings?.payments) ? countrySettings.payments : [];
+  const rawGlobalPayments = Array.isArray(countrySettings?.payments) ? countrySettings.payments : [];
   const currency = countrySettings?.currency || "NGN";
 
-  const computedGlobalFee = globalPayments.reduce((sum, p) => {
+  // Filter global payments based on user requirement:
+  // KIOSK: filter and remove all optional payments with "cloud" in their title
+  // CLOUD_KITCHEN: filter and remove all payments that have "kiosk" in the title
+  const filteredGlobalPayments = rawGlobalPayments.filter((p) => {
+    const title = p.title || "";
     const isOptional = Boolean(p.optional || p.isOptional);
-    if (isOptional && !selectedOptionalPayments.includes(p.title)) {
-      return sum;
+    if (locationForm.outletType === "KIOSK") {
+      if (isOptional && /cloud/i.test(title)) return false;
+      return true;
+    } else {
+      // CLOUD_KITCHEN: remove all payments with "kiosk" in title
+      if (/kiosk/i.test(title)) return false;
+      return true;
     }
-    const isPercentage = Boolean(p.isPercentage);
-    const amt = parseFloat(p.amount) || 0;
-    return sum + (isPercentage ? totalVendorPayments * (amt / 100) : amt);
+  });
+
+  // Categorize for UI and calculations:
+  const mandatoryGlobalItems = filteredGlobalPayments.filter((p) => !Boolean(p.optional || p.isOptional));
+
+  // If KIOSK: filter all optional payments with "kiosk" in title -> allow them to choose ONLY 1
+  const kioskOptionalItems = locationForm.outletType === "KIOSK"
+    ? filteredGlobalPayments.filter((p) => Boolean(p.optional || p.isOptional) && /kiosk/i.test(p.title))
+    : [];
+
+  // If CLOUD_KITCHEN: append all other optional payments with "cloud" in their title as mandatory (no checkbox)
+  const cloudFixedItems = locationForm.outletType === "CLOUD_KITCHEN"
+    ? filteredGlobalPayments.filter((p) => Boolean(p.optional || p.isOptional) && /cloud/i.test(p.title))
+    : [];
+  console.log(cloudFixedItems)
+  // Other optional items (checkboxes)
+  const otherOptionalItems = filteredGlobalPayments.filter((p) => {
+    const isOptional = Boolean(p.optional || p.isOptional);
+    if (!isOptional) return false;
+    const title = p.title || "";
+    if (locationForm.outletType === "KIOSK") {
+      return !/kiosk/i.test(title) && !/cloud/i.test(title);
+    } else {
+      return !/cloud/i.test(title) && !/kiosk/i.test(title);
+    }
+  });
+
+  // Location Bills (for Cloud Kitchen)
+  const selectedLocationBills = locationForm.outletType === "CLOUD_KITCHEN" && selectedCloudLocation
+    ? parseBills(selectedCloudLocation.bills)
+    : [];
+  const totalLocationBills = selectedLocationBills.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
+
+  // Compute Platform/Global Fees
+  const computedGlobalFee = filteredGlobalPayments.reduce((sum, p) => {
+    const isOptional = Boolean(p.optional || p.isOptional);
+    const title = p.title || "";
+    const isPct = Boolean(p.isPercentage);
+    const amt = isPct
+      ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
+      : parseFloat(p.amount) || 0;
+
+    if (locationForm.outletType === "KIOSK") {
+      if (isOptional) {
+        if (/kiosk/i.test(title)) {
+          if (selectedKioskChoice !== title) return sum;
+        } else {
+          if (!selectedOtherOptional.includes(title)) return sum;
+        }
+      }
+    } else {
+      // CLOUD_KITCHEN
+      if (isOptional) {
+        if (/cloud/i.test(title)) {
+          // Mandatory for cloud kitchen! Always include.
+        } else {
+          if (!selectedOtherOptional.includes(title)) return sum;
+        }
+      }
+    }
+    return sum + amt;
   }, 0);
 
-  const totalFranchiseCost = totalVendorPayments + computedGlobalFee;
+  // Total Due: Brand Fees + Global Setup & Licensing + Location Facility Bills
+  const totalFranchiseCost = totalVendorPayments + computedGlobalFee + totalLocationBills;
 
-  // Submit Franchise Purchase with locationData
+  // Submit Franchise Purchase
   const handleSignSubmit = async ({ signatureName, terms, isSigned }) => {
     if (!selectedBrand) return;
     setSubmitting(true);
     try {
       const menuIds = brandMenuItems.map((m) => m.id);
 
-      await api.post("/kiosk/buy-franchise", {
-        locationData: {
+      // Determine selected optional payments to pass to invoice
+      let finalOptionalPayments = [];
+      if (locationForm.outletType === "KIOSK") {
+        finalOptionalPayments = [...selectedOtherOptional];
+        if (selectedKioskChoice) finalOptionalPayments.push(selectedKioskChoice);
+      } else {
+        // CLOUD_KITCHEN: include all cloud optional payments (mandatory when choosing cloud kitchen) + checked add-ons
+        const cloudOptionalTitles = filteredGlobalPayments
+          .filter((p) => Boolean(p.optional || p.isOptional) && /cloud/i.test(p.title))
+          .map((p) => p.title);
+        finalOptionalPayments = Array.from(new Set([...cloudOptionalTitles, ...selectedOtherOptional]));
+      }
+
+      const payload = {
+        brandId: selectedBrand.id,
+        menuIds,
+        selectedOptionalPayments: finalOptionalPayments,
+        signatureName,
+        terms,
+        isSigned,
+      };
+
+      if (locationForm.outletType === "CLOUD_KITCHEN" && selectedCloudLocation?.id) {
+        payload.locationId = selectedCloudLocation.id;
+      } else {
+        payload.locationData = {
           name: locationForm.name.trim(),
           address: locationForm.address.trim(),
           city: locationForm.city.trim(),
@@ -265,16 +479,12 @@ export default function BuyFranchiseSection() {
           stateId: locationForm.stateId,
           latitude: locationForm.latitude ? Number(locationForm.latitude) : 0,
           longitude: locationForm.longitude ? Number(locationForm.longitude) : 0,
-          outletType: locationForm.outletType,
+          outletType: "KIOSK",
           notes: locationForm.notes.trim() || undefined,
-        },
-        brandId: selectedBrand.id,
-        menuIds,
-        selectedOptionalPayments,
-        signatureName,
-        terms,
-        isSigned,
-      });
+        };
+      }
+
+      await api.post("/kiosk/buy-franchise", payload);
 
       toast.success("Franchise purchase initiated! Please complete your invoice payment to deploy your Kitchen.");
       setShowSignDrawer(false);
@@ -317,15 +527,17 @@ export default function BuyFranchiseSection() {
           }}
         >
           <span>1. Location &amp; Outlet Type</span>
-          {locationForm.name && <MdCheckCircle size={15} color={step === 1 ? "#fff" : "var(--accent)"} />}
+          {(locationForm.name || selectedCloudLocation) && (
+            <MdCheckCircle size={15} color={step === 1 ? "#fff" : "var(--accent)"} />
+          )}
         </button>
 
         <span style={{ color: "var(--border)", fontWeight: 700 }}>→</span>
 
         <button
           type="button"
-          disabled={!locationForm.name}
-          onClick={() => locationForm.name && setStep(2)}
+          disabled={!locationForm.name && !selectedCloudLocation}
+          onClick={() => (locationForm.name || selectedCloudLocation) && setStep(2)}
           style={{
             background: step === 2 ? "var(--accent)" : "var(--bg-card)",
             color: step === 2 ? "#fff" : "var(--text-muted)",
@@ -334,8 +546,8 @@ export default function BuyFranchiseSection() {
             padding: "8px 18px",
             fontSize: "0.82rem",
             fontWeight: 700,
-            cursor: locationForm.name ? "pointer" : "not-allowed",
-            opacity: locationForm.name ? 1 : 0.6,
+            cursor: (locationForm.name || selectedCloudLocation) ? "pointer" : "not-allowed",
+            opacity: (locationForm.name || selectedCloudLocation) ? 1 : 0.6,
             display: "flex",
             alignItems: "center",
             gap: 6,
@@ -367,36 +579,36 @@ export default function BuyFranchiseSection() {
         </button>
       </div>
 
-      {/* ── STEP 1: INPUT LOCATION DETAILS & OUTLET TYPE ─── */}
+      {/* ── STEP 1: SELECT OUTLET TYPE & LOCATION DETAILS ── */}
       {step === 1 && (
-        <form onSubmit={handleProceedToBrands} style={{ maxWidth: 680, margin: "0 auto" }}>
+        <div style={{ maxWidth: 740, margin: "0 auto" }}>
           <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: 24 }}>
             <div style={{ marginBottom: 20 }}>
-              <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 6px" }}>
-                1. Specify Location Details
+              <h3 style={{ fontSize: "1.18rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 6px" }}>
+                1. Select Outlet Type &amp; Location
               </h3>
               <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", margin: 0 }}>
-                Enter the target location address where your new franchise outlet will be installed.
+                Choose whether you want to deploy a customized physical kiosk cart or join a certified commercial cloud kitchen hub.
               </p>
             </div>
 
             {/* Outlet Type Selector */}
-            <div style={{ marginBottom: 22 }}>
+            <div style={{ marginBottom: 24 }}>
               <label className="modal-label" style={{ fontSize: "0.82rem", fontWeight: 700, marginBottom: 8 }}>
-                Select Outlet Type *
+                Outlet Type *
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 {[
                   {
                     id: "KIOSK",
                     label: "Physical Kiosk",
-                    desc: "Modular walk-up food cart / stand",
+                    desc: "Deploy a walk-up street cart or mall food stand",
                     icon: LuStore,
                   },
                   {
                     id: "CLOUD_KITCHEN",
                     label: "Cloud Kitchen",
-                    desc: "Delivery & virtual takeaway kitchen",
+                    desc: "Operate inside a shared commercial kitchen facility",
                     icon: LuCloud,
                   },
                 ].map((type) => {
@@ -405,12 +617,12 @@ export default function BuyFranchiseSection() {
                   return (
                     <div
                       key={type.id}
-                      onClick={() => handleLocationChange("outletType", type.id)}
+                      onClick={() => handleOutletTypeSelect(type.id)}
                       style={{
                         background: isSelected ? "rgba(203,108,220,0.08)" : "var(--bg-hover)",
-                        border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                        border: `2px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
                         borderRadius: 12,
-                        padding: "14px",
+                        padding: "16px",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
@@ -420,10 +632,10 @@ export default function BuyFranchiseSection() {
                     >
                       <div
                         style={{
-                          width: 38,
-                          height: 38,
-                          borderRadius: 8,
-                          background: isSelected ? "rgba(203,108,220,0.18)" : "var(--bg-card)",
+                          width: 42,
+                          height: 42,
+                          borderRadius: 10,
+                          background: isSelected ? "rgba(203,108,220,0.2)" : "var(--bg-card)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -431,13 +643,13 @@ export default function BuyFranchiseSection() {
                           flexShrink: 0,
                         }}
                       >
-                        <Icon size={20} />
+                        <Icon size={22} />
                       </div>
                       <div>
-                        <span style={{ fontSize: "0.86rem", fontWeight: 800, color: "var(--text-heading)", display: "block" }}>
+                        <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "var(--text-heading)", display: "block" }}>
                           {type.label}
                         </span>
-                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.2 }}>
+                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.25 }}>
                           {type.desc}
                         </span>
                       </div>
@@ -447,176 +659,389 @@ export default function BuyFranchiseSection() {
               </div>
             </div>
 
-            {/* Address fields */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div className="form-field" style={{ marginBottom: 0 }}>
-                <label className="modal-label">Location Name *</label>
-                <input
-                  className="modal-input"
-                  placeholder="e.g. Wuse II Plaza Stand"
-                  value={locationForm.name}
-                  onChange={(e) => handleLocationChange("name", e.target.value)}
-                  required
-                />
-              </div>
+            {/* ── KIOSK: LOCATION FORM DETAILS ── */}
+            {locationForm.outletType === "KIOSK" ? (
+              <form onSubmit={handleProceedKioskLocation}>
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: 20 }}>
+                  <div style={{ marginBottom: 14 }}>
+                    <h4 style={{ fontSize: "0.92rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 2px" }}>
+                      Kiosk Installation Address
+                    </h4>
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                      Provide exact location details where your physical kiosk cart will operate.
+                    </span>
+                  </div>
 
-              <div className="form-field" style={{ marginBottom: 0 }}>
-                <label className="modal-label">Street Address *</label>
-                <input
-                  className="modal-input"
-                  placeholder="Street / Building name"
-                  value={locationForm.address}
-                  onChange={(e) => handleLocationChange("address", e.target.value)}
-                  required
-                />
-              </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">Location Name *</label>
+                      <input
+                        className="modal-input"
+                        placeholder="e.g. Wuse II Plaza Stand"
+                        value={locationForm.name}
+                        onChange={(e) => handleLocationChange("name", e.target.value)}
+                        required
+                      />
+                    </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div className="form-field" style={{ marginBottom: 0 }}>
-                  <label className="modal-label">City *</label>
-                  <input
-                    className="modal-input"
-                    placeholder="e.g. Abuja"
-                    value={locationForm.city}
-                    onChange={(e) => handleLocationChange("city", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-field" style={{ marginBottom: 0 }}>
-                  <label className="modal-label">LGA *</label>
-                  <input
-                    className="modal-input"
-                    placeholder="e.g. Municipal"
-                    value={locationForm.lga}
-                    onChange={(e) => handleLocationChange("lga", e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">Street Address *</label>
+                      <input
+                        className="modal-input"
+                        placeholder="Street / Building name"
+                        value={locationForm.address}
+                        onChange={(e) => handleLocationChange("address", e.target.value)}
+                        required
+                      />
+                    </div>
 
-              <div className="form-field" style={{ marginBottom: 0 }}>
-                <label className="modal-label">State *</label>
-                <select
-                  className="modal-input"
-                  value={locationForm.stateId}
-                  onChange={(e) => handleStateSelect(e.target.value)}
-                  disabled={statesLoading}
-                  required
-                >
-                  {states.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code}) — {s.country}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div className="form-field" style={{ marginBottom: 0 }}>
+                        <label className="modal-label">City *</label>
+                        <input
+                          className="modal-input"
+                          placeholder="e.g. Abuja"
+                          value={locationForm.city}
+                          onChange={(e) => handleLocationChange("city", e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="form-field" style={{ marginBottom: 0 }}>
+                        <label className="modal-label">LGA *</label>
+                        <input
+                          className="modal-input"
+                          placeholder="e.g. Municipal"
+                          value={locationForm.lga}
+                          onChange={(e) => handleLocationChange("lga", e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
 
-              {/* Coordinates & Map Picker */}
-              <div style={{ marginTop: 4 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <label className="modal-label" style={{ margin: 0 }}>
-                    Coordinates (for slot reservation)
-                  </label>
-                  <div style={{ display: "flex", gap: 6 }}>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">State *</label>
+                      <select
+                        className="modal-input"
+                        value={locationForm.stateId}
+                        onChange={(e) => handleStateSelect(e.target.value)}
+                        disabled={statesLoading}
+                        required
+                      >
+                        {states.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} ({s.code || s.country})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Coordinates & Map Picker */}
+                    <div style={{ marginTop: 4 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                        <label className="modal-label" style={{ margin: 0 }}>
+                          Coordinates (for slot reservation &amp; radius verification)
+                        </label>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={detectGPS}
+                            disabled={detectingGPS}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 5,
+                              height: 28,
+                              padding: "0 10px",
+                              borderRadius: 7,
+                              border: "1px solid rgba(59,130,246,0.3)",
+                              background: "rgba(59,130,246,0.06)",
+                              color: "#3b82f6",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            <MdLocationOn size={13} /> {detectingGPS ? "Detecting..." : "Detect GPS"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowMap(!showMap)}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 5,
+                              height: 28,
+                              padding: "0 10px",
+                              borderRadius: 7,
+                              border: `1px solid ${showMap ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                              background: showMap ? "var(--bg-active)" : "var(--bg-hover)",
+                              color: showMap ? "var(--accent)" : "var(--text-muted)",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            <MdLocationOn size={13} /> {showMap ? "Hide Map" : "Pick on Map"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {showMap && (
+                        <div style={{ marginBottom: 12 }}>
+                          <MapPicker
+                            lat={locationForm.latitude}
+                            lng={locationForm.longitude}
+                            onPick={handleMapPick}
+                          />
+                        </div>
+                      )}
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                        <input
+                          className="modal-input"
+                          type="number"
+                          step="any"
+                          placeholder="Latitude (e.g. 9.0765)"
+                          value={locationForm.latitude}
+                          onChange={(e) => handleLocationChange("latitude", e.target.value)}
+                          style={{ marginBottom: 0 }}
+                        />
+                        <input
+                          className="modal-input"
+                          type="number"
+                          step="any"
+                          placeholder="Longitude (e.g. 7.3986)"
+                          value={locationForm.longitude}
+                          onChange={(e) => handleLocationChange("longitude", e.target.value)}
+                          style={{ marginBottom: 0 }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">Notes / Nearby Landmarks</label>
+                      <input
+                        className="modal-input"
+                        placeholder="Optional landmarks"
+                        value={locationForm.notes}
+                        onChange={(e) => handleLocationChange("notes", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 24 }}>
                     <button
-                      type="button"
-                      onClick={detectGPS}
-                      disabled={detectingGPS}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 5,
-                        height: 28,
-                        padding: "0 10px",
-                        borderRadius: 7,
-                        border: "1px solid rgba(59,130,246,0.3)",
-                        background: "rgba(59,130,246,0.06)",
-                        color: "#3b82f6",
-                        fontSize: "0.72rem",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                      }}
+                      type="submit"
+                      className="app_btn app_btn_confirm"
+                      style={{ width: "100%", height: 44, fontSize: "0.88rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                     >
-                      <MdLocationOn size={13} /> {detectingGPS ? "Detecting..." : "Detect GPS"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowMap(!showMap)}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 5,
-                        height: 28,
-                        padding: "0 10px",
-                        borderRadius: 7,
-                        border: `1px solid ${showMap ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
-                        background: showMap ? "var(--bg-active)" : "var(--bg-hover)",
-                        color: showMap ? "var(--accent)" : "var(--text-muted)",
-                        fontSize: "0.72rem",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                      }}
-                    >
-                      🗺 {showMap ? "Hide Map" : "Pick on Map"}
+                      <span>Select Franchise Brand</span>
+                      <MdArrowForward size={18} />
                     </button>
                   </div>
                 </div>
+              </form>
+            ) : (
+              /* ── CLOUD KITCHEN: SELECT STATE & CHOOSE FROM EXISTING HUB LOCATIONS ── */
+              <div style={{ borderTop: "1px solid var(--border)", paddingTop: 20 }}>
+                <div style={{ marginBottom: 16 }}>
+                  <h4 style={{ fontSize: "0.92rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 4px" }}>
+                    Select Certified Cloud Kitchen Facility
+                  </h4>
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                    Choose a state and select an available commercial kitchen hub. Each facility lists its facility expenses and bills schedule.
+                  </span>
+                </div>
 
-                {showMap && (
-                  <div style={{ marginBottom: 12 }}>
-                    <MapPicker
-                      lat={locationForm.latitude}
-                      lng={locationForm.longitude}
-                      onPick={handleMapPick}
-                    />
+                <div className="form-field" style={{ marginBottom: 18 }}>
+                  <label className="modal-label">Select State / Region *</label>
+                  <select
+                    className="modal-input"
+                    value={cloudStateId}
+                    onChange={(e) => handleCloudStateChange(e.target.value)}
+                    disabled={statesLoading}
+                  >
+                    {states.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.code || s.country})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {loadingCloudLocations ? (
+                  <div className="page_loader" style={{ padding: "30px 0" }}>
+                    <div className="page_loader_spinner" />
+                  </div>
+                ) : cloudLocations.length === 0 ? (
+                  <div
+                    style={{
+                      padding: "36px 20px",
+                      textAlign: "center",
+                      background: "var(--bg-hover)",
+                      borderRadius: 12,
+                      border: "1px dashed var(--border)",
+                      marginBottom: 20,
+                    }}
+                  >
+                    <LuCloud size={36} style={{ color: "var(--text-muted)", opacity: 0.5, marginBottom: 8 }} />
+                    <h5 style={{ fontSize: "0.95rem", fontWeight: 700, margin: "0 0 4px", color: "var(--text-heading)" }}>
+                      No Cloud Kitchens in this State
+                    </h5>
+                    <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>
+                      No operational cloud kitchen hubs are registered for this state yet. Please select another state or switch to Physical Kiosk.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 24 }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)" }}>
+                      Available Facilities ({cloudLocations.length}) — Click to choose 1:
+                    </div>
+
+                    {cloudLocations.map((loc) => {
+                      const isSelected = selectedCloudLocation?.id === loc.id;
+                      const bills = parseBills(loc.bills);
+                      const billsSum = bills.reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
+
+                      return (
+                        <div
+                          key={loc.id}
+                          onClick={() => setSelectedCloudLocation(loc)}
+                          style={{
+                            background: isSelected ? "rgba(99,102,241,0.06)" : "var(--bg-card)",
+                            border: `2px solid ${isSelected ? "#6366f1" : "var(--border)"}`,
+                            borderRadius: 14,
+                            padding: "16px 18px",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 12,
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                              <div
+                                style={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: 10,
+                                  background: isSelected ? "rgba(99,102,241,0.18)" : "var(--bg-hover)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  color: isSelected ? "#6366f1" : "var(--text-muted)",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <LuCloud size={22} />
+                              </div>
+                              <div>
+                                <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 2px" }}>
+                                  {loc.name}
+                                </h4>
+                                <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                                  {loc.address}, {loc.city} ({loc.lga})
+                                </span>
+                              </div>
+                            </div>
+                            <div
+                              style={{
+                                width: 22,
+                                height: 22,
+                                borderRadius: "50%",
+                                border: `2px solid ${isSelected ? "#6366f1" : "var(--border)"}`,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {isSelected && (
+                                <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#6366f1" }} />
+                              )}
+                            </div>
+                          </div>
+
+                          {loc.notes && (
+                            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", background: "var(--bg-hover)", padding: "5px 10px", borderRadius: 6 }}>
+                              {loc.notes}
+                            </div>
+                          )}
+
+                          {/* Display Bills alongside location */}
+                          <div style={{ borderTop: "1px dashed var(--border)", paddingTop: 10 }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                              <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                                Facility Bills &amp; Expenses Schedule
+                              </span>
+                              <span style={{ fontSize: "0.78rem", fontWeight: 800, color: isSelected ? "#6366f1" : "var(--text-heading)" }}>
+                                Total: NGN {billsSum.toLocaleString()}
+                              </span>
+                            </div>
+
+                            {bills.length === 0 ? (
+                              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontStyle: "italic" }}>
+                                No specific facility bills listed for this hub
+                              </div>
+                            ) : (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                {bills.map((bill, bIdx) => (
+                                  <div
+                                    key={bIdx}
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      fontSize: "0.75rem",
+                                      background: "var(--bg-hover)",
+                                      padding: "6px 10px",
+                                      borderRadius: 6,
+                                    }}
+                                  >
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                      <span style={{ color: "var(--text-body)", fontWeight: 600 }}>{bill.title}</span>
+                                      {bill.recurring && (
+                                        <span style={{ fontSize: "0.62rem", color: "#6366f1", background: "rgba(99,102,241,0.12)", padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>
+                                          {bill.intervalInDays ? `${bill.intervalInDays}d` : "Recurring"}
+                                        </span>
+                                      )}
+                                      {bill.refundable && (
+                                        <span style={{ fontSize: "0.62rem", color: "#16a34a", background: "rgba(22,163,74,0.12)", padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>
+                                          Refundable
+                                        </span>
+                                      )}
+                                    </div>
+                                    <strong style={{ color: "var(--text-heading)" }}>
+                                      NGN {(parseFloat(bill.amount) || 0).toLocaleString()}
+                                    </strong>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <input
-                    className="modal-input"
-                    type="number"
-                    step="any"
-                    placeholder="Latitude (e.g. 9.0765)"
-                    value={locationForm.latitude}
-                    onChange={(e) => handleLocationChange("latitude", e.target.value)}
-                    style={{ marginBottom: 0 }}
-                  />
-                  <input
-                    className="modal-input"
-                    type="number"
-                    step="any"
-                    placeholder="Longitude (e.g. 7.3986)"
-                    value={locationForm.longitude}
-                    onChange={(e) => handleLocationChange("longitude", e.target.value)}
-                    style={{ marginBottom: 0 }}
-                  />
+                <div>
+                  <button
+                    type="button"
+                    onClick={handleProceedCloudKitchen}
+                    disabled={!selectedCloudLocation}
+                    className="app_btn app_btn_confirm"
+                    style={{ width: "100%", height: 44, fontSize: "0.88rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: selectedCloudLocation ? 1 : 0.6 }}
+                  >
+                    <span>Select Franchise Brand</span>
+                    <MdArrowForward size={18} />
+                  </button>
                 </div>
               </div>
-
-              <div className="form-field" style={{ marginBottom: 0 }}>
-                <label className="modal-label">Notes / Nearby Landmarks</label>
-                <input
-                  className="modal-input"
-                  placeholder="Optional landmarks"
-                  value={locationForm.notes}
-                  onChange={(e) => handleLocationChange("notes", e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div style={{ marginTop: 24 }}>
-              <button
-                type="submit"
-                className="app_btn app_btn_confirm"
-                style={{ width: "100%", height: 44, fontSize: "0.88rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-              >
-                <span>Select Franchise Brand</span>
-                <MdArrowForward size={18} />
-              </button>
-            </div>
+            )}
           </div>
-        </form>
+        </div>
       )}
 
       {/* ── STEP 2: SELECT BRAND ─────────────────────────── */}
@@ -628,7 +1053,7 @@ export default function BuyFranchiseSection() {
                 2. Choose Brand for {locationForm.outletType === "CLOUD_KITCHEN" ? "Cloud Kitchen" : "Physical Kiosk"}
               </h3>
               <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", margin: 0 }}>
-                Location: <strong>{locationForm.name}</strong> ({locationForm.city}, {locationForm.stateName})
+                Selected Facility: <strong>{locationForm.name}</strong> ({locationForm.city}, {locationForm.stateName})
               </p>
             </div>
             <button
@@ -754,59 +1179,37 @@ export default function BuyFranchiseSection() {
                               fontWeight: 700,
                               padding: "2px 7px",
                               borderRadius: 5,
-                              background: "rgba(239,68,68,0.1)",
+                              background: "rgba(239, 68, 68, 0.1)",
                               color: "#ef4444",
-                              border: "1px solid rgba(239,68,68,0.25)",
+                              border: "1px solid rgba(239, 68, 68, 0.25)",
                             }}
                           >
-                            Not in {locationForm.stateName || "State"}
-                          </span>
-                        )}
-
-                        {!supportsCurrentOutlet && (
-                          <span
-                            style={{
-                              fontSize: "0.68rem",
-                              fontWeight: 700,
-                              padding: "2px 7px",
-                              borderRadius: 5,
-                              background: "rgba(239,68,68,0.1)",
-                              color: "#ef4444",
-                              border: "1px solid rgba(239,68,68,0.25)",
-                            }}
-                          >
-                            No {locationForm.outletType === "CLOUD_KITCHEN" ? "Kitchen" : "Kiosk"}
+                            Unavailable in {locationForm.stateName || "State"}
                           </span>
                         )}
                       </div>
 
-                      {/* Slot Conflict Note */}
-                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", background: "var(--bg-hover)", padding: "6px 8px", borderRadius: 6, marginBottom: 14 }}>
-                        {brand.slotRadius || 30} km slot radius protection
-                      </div>
+                      <p style={{ fontSize: "0.78rem", color: "var(--text-body)", lineHeight: 1.4, margin: "0 0 14px" }}>
+                        {brand.branding?.description || "High-growth fast-casual franchise concept with proven unit economics."}
+                      </p>
                     </div>
 
-                    <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
-                        <span style={{ fontSize: "0.66rem", color: "var(--text-muted)", display: "block" }}>
-                          Franchise Fee
+                        <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block" }}>
+                          Franchise License Fee
                         </span>
-                        <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "var(--text-heading)" }}>
-                          {brandFeeTotal > 0 ? `₦${brandFeeTotal.toLocaleString()}` : "Standard Terms"}
-                        </span>
+                        <strong style={{ fontSize: "0.95rem", color: "var(--text-heading)" }}>
+                          NGN {brandFeeTotal.toLocaleString()}
+                        </strong>
                       </div>
                       <button
                         type="button"
-                        className={`app_btn ${isEligible ? "app_btn_confirm" : "app_btn_cancel"}`}
-                        style={{
-                          height: 32,
-                          fontSize: "0.75rem",
-                          padding: "0 12px",
-                          opacity: isEligible ? 1 : 0.6,
-                          cursor: isEligible ? "pointer" : "not-allowed",
-                        }}
+                        disabled={!isEligible}
+                        className="app_btn app_btn_confirm"
+                        style={{ height: 32, fontSize: "0.75rem", padding: "0 14px", fontWeight: 700 }}
                       >
-                        {isEligible ? "Select & Review →" : "Unavailable"}
+                        Select Brand →
                       </button>
                     </div>
                   </div>
@@ -817,16 +1220,15 @@ export default function BuyFranchiseSection() {
         </div>
       )}
 
-      {/* ── STEP 3: REVIEW & E-SIGN ──────────────────────── */}
+      {/* ── STEP 3: REVIEW FEES, LOCATION BILLS & E-SIGN ───── */}
       {step === 3 && selectedBrand && (
-        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 24, alignItems: "start" }}>
-          {/* Details Column */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 390px", gap: 24, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            {/* Location & Outlet Card */}
+            {/* Location Card */}
             <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: 20 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                 <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>
-                  1. Outlet &amp; Location Summary
+                  1. Outlet Details
                 </span>
                 <button
                   type="button"
@@ -844,8 +1246,8 @@ export default function BuyFranchiseSection() {
                     width: 40,
                     height: 40,
                     borderRadius: 10,
-                    background: "rgba(203,108,220,0.12)",
-                    color: "var(--accent)",
+                    background: locationForm.outletType === "CLOUD_KITCHEN" ? "rgba(99,102,241,0.12)" : "rgba(203,108,220,0.12)",
+                    color: locationForm.outletType === "CLOUD_KITCHEN" ? "#6366f1" : "var(--accent)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -869,7 +1271,7 @@ export default function BuyFranchiseSection() {
                         color: locationForm.outletType === "CLOUD_KITCHEN" ? "#6366f1" : "#16a34a",
                       }}
                     >
-                      {locationForm.outletType === "CLOUD_KITCHEN" ? "Cloud Kitchen" : "Physical Kiosk"}
+                      {locationForm.outletType === "CLOUD_KITCHEN" ? "Commercial Cloud Kitchen Hub" : "Physical Kiosk Stand"}
                     </span>
                   </div>
                   <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: "4px 0 0" }}>
@@ -890,10 +1292,10 @@ export default function BuyFranchiseSection() {
                       ? "rgba(239,68,68,0.1)"
                       : "rgba(34,197,94,0.1)",
                   border: `1px solid ${checkingSlots
-                      ? "var(--border)"
-                      : availableSlots !== null && availableSlots <= 0
-                        ? "rgba(239,68,68,0.3)"
-                        : "rgba(34,197,94,0.3)"
+                    ? "var(--border)"
+                    : availableSlots !== null && availableSlots <= 0
+                      ? "rgba(239,68,68,0.3)"
+                      : "rgba(34,197,94,0.3)"
                     }`,
                   display: "flex",
                   alignItems: "center",
@@ -1014,96 +1416,264 @@ export default function BuyFranchiseSection() {
               </h3>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-              <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
-                Brand Fees
-              </span>
-              {vendorPayments.length === 0 ? (
-                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontStyle: "italic" }}>
-                  No custom brand fees configured.
-                </div>
-              ) : (
-                vendorPayments.map((p, idx) => (
-                  <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem" }}>
-                    <span style={{ color: "var(--text-body)" }}>{p.title}</span>
-                    <strong style={{ color: "var(--text-heading)" }}>
-                      {currency} {(parseFloat(p.amount) || 0).toLocaleString()}
-                    </strong>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+              {/* Section 1: Brand Fees */}
+              <div>
+                <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                  Brand License Fees
+                </span>
+                {vendorPayments.length === 0 ? (
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontStyle: "italic" }}>
+                    No custom brand fees configured.
                   </div>
-                ))
+                ) : (
+                  vendorPayments.map((p, idx) => (
+                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", marginBottom: 4 }}>
+                      <span style={{ color: "var(--text-body)" }}>{p.title}</span>
+                      <strong style={{ color: "var(--text-heading)" }}>
+                        {currency} {(parseFloat(p.amount) || 0).toLocaleString()}
+                      </strong>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Section 2: Location Bills (for Cloud Kitchen) */}
+              {locationForm.outletType === "CLOUD_KITCHEN" && (
+                <>
+                  <div style={{ height: 1, background: "var(--border)", margin: "2px 0" }} />
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                        Location Facility Bills
+                      </span>
+                      {selectedCloudLocation && (
+                        <span style={{ fontSize: "0.68rem", color: "#6366f1", fontWeight: 700 }}>
+                          {selectedCloudLocation.name}
+                        </span>
+                      )}
+                    </div>
+
+                    {selectedLocationBills.length === 0 ? (
+                      <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", fontStyle: "italic" }}>
+                        No recurring facility bills configured for this location.
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {selectedLocationBills.map((bill, idx) => (
+                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "0.82rem" }}>
+                            <div>
+                              <span style={{ color: "var(--text-body)", display: "block", fontWeight: 600 }}>{bill.title}</span>
+                              <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+                                {bill.recurring && (
+                                  <span style={{ fontSize: "0.62rem", color: "#6366f1", background: "rgba(99,102,241,0.1)", padding: "1px 5px", borderRadius: 4 }}>
+                                    {bill.intervalInDays ? `Every ${bill.intervalInDays}d` : "Recurring"}
+                                  </span>
+                                )}
+                                {bill.refundable && (
+                                  <span style={{ fontSize: "0.62rem", color: "#16a34a", background: "rgba(22,163,74,0.1)", padding: "1px 5px", borderRadius: 4 }}>
+                                    Refundable Deposit
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <strong style={{ color: "var(--text-heading)", marginLeft: 8 }}>
+                              {currency} {(parseFloat(bill.amount) || 0).toLocaleString()}
+                            </strong>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
 
-              {globalPayments.length > 0 && (
+              {/* Section 3: Platform Setup & Licensing */}
+              {filteredGlobalPayments.length > 0 && (
                 <>
-                  <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
-                  <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
-                    Platform Setup &amp; Licensing
-                  </span>
-                  {globalPayments.map((p, idx) => {
-                    const isPct = Boolean(p.isPercentage);
-                    const amt = isPct
-                      ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
-                      : parseFloat(p.amount) || 0;
-                    const isOptional = Boolean(p.optional || p.isOptional);
-                    const isChecked = selectedOptionalPayments.includes(p.title);
+                  <div style={{ height: 1, background: "var(--border)", margin: "2px 0" }} />
+                  <div>
+                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                      Platform Setup &amp; Licensing
+                    </span>
 
-                    if (isOptional) {
+                    {/* Non-optional Platform Payments */}
+                    {mandatoryGlobalItems.map((p, idx) => {
+                      const isPct = Boolean(p.isPercentage);
+                      const amt = isPct
+                        ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
+                        : parseFloat(p.amount) || 0;
                       return (
-                        <label
-                          key={idx}
-                          onClick={() => toggleOptionalPayment(p.title)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            fontSize: "0.82rem",
-                            padding: "7px 10px",
-                            borderRadius: 8,
-                            background: isChecked ? "rgba(203,108,220,0.08)" : "var(--bg-hover)",
-                            border: `1px solid ${isChecked ? "var(--accent)" : "var(--border)"}`,
-                            cursor: "pointer",
-                            userSelect: "none",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {}}
-                              style={{ accentColor: "var(--accent)", cursor: "pointer", margin: 0 }}
-                            />
-                            <div>
-                              <span style={{ color: "var(--text-heading)", fontWeight: 600, display: "block" }}>
-                                {p.title} {isPct ? `(${p.amount}%)` : ""}
-                              </span>
-                              <span style={{ fontSize: "0.68rem", color: isChecked ? "var(--accent)" : "var(--text-muted)" }}>
-                                Optional add-on {p.description ? `• ${p.description}` : ""}
-                              </span>
-                            </div>
-                          </div>
-                          <strong style={{ color: isChecked ? "var(--text-heading)" : "var(--text-muted)" }}>
+                        <div key={`mand-${idx}`} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", marginBottom: 4 }}>
+                          <span style={{ color: "var(--text-body)" }}>
+                            {p.title} {isPct ? `(${p.amount}%)` : ""}
+                          </span>
+                          <strong style={{ color: "var(--text-heading)" }}>
                             {currency} {amt.toLocaleString()}
                           </strong>
-                        </label>
+                        </div>
                       );
-                    }
+                    })}
 
-                    return (
-                      <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem" }}>
-                        <span style={{ color: "var(--text-body)" }}>
-                          {p.title} {isPct ? `(${p.amount}%)` : ""}
-                        </span>
-                        <strong style={{ color: "var(--text-heading)" }}>
-                          {currency} {amt.toLocaleString()}
-                        </strong>
+                    {/* Cloud Kitchen Fixed Payments (appended without checkbox) */}
+                    {locationForm.outletType === "CLOUD_KITCHEN" && cloudFixedItems.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+                        {cloudFixedItems.map((p, idx) => {
+                          const isPct = Boolean(p.isPercentage);
+                          const amt = isPct
+                            ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
+                            : parseFloat(p.amount) || 0;
+                          return (
+                            <div
+                              key={`cloud-fix-${idx}`}
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                fontSize: "0.82rem",
+                                padding: "8px 10px",
+                                borderRadius: 8,
+                                background: "rgba(99,102,241,0.06)",
+                                border: "1px solid rgba(99,102,241,0.2)",
+                              }}
+                            >
+                              <div>
+                                <span style={{ color: "var(--text-heading)", fontWeight: 700, display: "block" }}>
+                                  {p.title} {isPct ? `(${p.amount}%)` : ""}
+                                </span>
+                                <span style={{ fontSize: "0.68rem", color: "#6366f1" }}>
+                                  Mandatory cloud kitchen licensing {p.description ? `• ${p.description}` : ""}
+                                </span>
+                              </div>
+                              <strong style={{ color: "var(--text-heading)" }}>
+                                {currency} {amt.toLocaleString()}
+                              </strong>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    )}
+
+                    {/* Kiosk Package Choice (Allow choosing ONLY 1) */}
+                    {locationForm.outletType === "KIOSK" && kioskOptionalItems.length > 0 && (
+                      <div style={{ marginTop: 8 }}>
+                        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
+                          Kiosk Tier Package (Choose 1):
+                        </span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {kioskOptionalItems.map((p, idx) => {
+                            const isPct = Boolean(p.isPercentage);
+                            const amt = isPct
+                              ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
+                              : parseFloat(p.amount) || 0;
+                            const isChecked = selectedKioskChoice === p.title;
+                            return (
+                              <label
+                                key={`kiosk-opt-${idx}`}
+                                onClick={() => setSelectedKioskChoice((prev) => (prev === p.title ? null : p.title))}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  fontSize: "0.82rem",
+                                  padding: "8px 10px",
+                                  borderRadius: 8,
+                                  background: isChecked ? "rgba(203,108,220,0.08)" : "var(--bg-hover)",
+                                  border: `1.5px solid ${isChecked ? "var(--accent)" : "var(--border)"}`,
+                                  cursor: "pointer",
+                                  userSelect: "none",
+                                  transition: "all 0.15s ease",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <input
+                                    type="radio"
+                                    name="kioskChoice"
+                                    checked={isChecked}
+                                    onChange={() => { }}
+                                    style={{ accentColor: "var(--accent)", cursor: "pointer", margin: 0 }}
+                                  />
+                                  <div>
+                                    <span style={{ color: "var(--text-heading)", fontWeight: 600, display: "block" }}>
+                                      {p.title} {isPct ? `(${p.amount}%)` : ""}
+                                    </span>
+                                    <span style={{ fontSize: "0.68rem", color: isChecked ? "var(--accent)" : "var(--text-muted)" }}>
+                                      {p.description || "Kiosk specification tier"}
+                                    </span>
+                                  </div>
+                                </div>
+                                <strong style={{ color: isChecked ? "var(--text-heading)" : "var(--text-muted)" }}>
+                                  {currency} {amt.toLocaleString()}
+                                </strong>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional Optional Add-ons (Checkboxes) */}
+                    {otherOptionalItems.length > 0 && (
+                      <div style={{ marginTop: 8 }}>
+                        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
+                          Optional Add-ons:
+                        </span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {otherOptionalItems.map((p, idx) => {
+                            const isPct = Boolean(p.isPercentage);
+                            const amt = isPct
+                              ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
+                              : parseFloat(p.amount) || 0;
+                            const isChecked = selectedOtherOptional.includes(p.title);
+                            return (
+                              <label
+                                key={`other-opt-${idx}`}
+                                onClick={() => toggleOtherOptional(p.title)}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  fontSize: "0.82rem",
+                                  padding: "8px 10px",
+                                  borderRadius: 8,
+                                  background: isChecked ? "rgba(203,108,220,0.08)" : "var(--bg-hover)",
+                                  border: `1px solid ${isChecked ? "var(--accent)" : "var(--border)"}`,
+                                  cursor: "pointer",
+                                  userSelect: "none",
+                                  transition: "all 0.15s ease",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => { }}
+                                    style={{ accentColor: "var(--accent)", cursor: "pointer", margin: 0 }}
+                                  />
+                                  <div>
+                                    <span style={{ color: "var(--text-heading)", fontWeight: 600, display: "block" }}>
+                                      {p.title} {isPct ? `(${p.amount}%)` : ""}
+                                    </span>
+                                    <span style={{ fontSize: "0.68rem", color: isChecked ? "var(--accent)" : "var(--text-muted)" }}>
+                                      {p.description || "Optional add-on service"}
+                                    </span>
+                                  </div>
+                                </div>
+                                <strong style={{ color: isChecked ? "var(--text-heading)" : "var(--text-muted)" }}>
+                                  {currency} {amt.toLocaleString()}
+                                </strong>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
             </div>
 
+            {/* Total Due */}
             <div
               style={{
                 paddingTop: 16,
@@ -1117,13 +1687,13 @@ export default function BuyFranchiseSection() {
               <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-heading)" }}>
                 Total Due
               </span>
-              <span style={{ fontSize: "1.4rem", fontWeight: 900, color: "var(--accent)" }}>
+              <span style={{ fontSize: "1.35rem", fontWeight: 900, color: "var(--accent)" }}>
                 {currency} {totalFranchiseCost.toLocaleString()}
               </span>
             </div>
 
             <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.4, marginBottom: 20 }}>
-              An invoice will be generated. Once paid, your location and kitchen will be created automatically.
+              An invoice will be generated. Once paid, your location bills and franchise deployment will be activated.
             </p>
 
             <button
@@ -1153,7 +1723,7 @@ export default function BuyFranchiseSection() {
             brand_name: selectedBrand?.businessName || "Nora Brand Partner",
             purchase_price: totalFranchiseCost.toLocaleString(),
             currency: currency,
-            outlet_type: locationForm.outletType === "CLOUD_KITCHEN" ? "Cloud Kitchen" : "Modular QSR Kiosk",
+            outlet_type: locationForm.outletType === "CLOUD_KITCHEN" ? "Commercial Cloud Kitchen" : "Modular Physical Kiosk",
             location_address: `${locationForm.name} - ${locationForm.address}, ${locationForm.city}`,
           }}
           submitting={submitting}
