@@ -976,7 +976,7 @@ export default function BuyFranchiseSection() {
                                 Facility Bills &amp; Expenses Schedule
                               </span>
                               <span style={{ fontSize: "0.78rem", fontWeight: 800, color: isSelected ? "#6366f1" : "var(--text-heading)" }}>
-                                Total: NGN {billsSum.toLocaleString()}
+                                Total: {loc.state.currency} {billsSum.toLocaleString()}
                               </span>
                             </div>
 
@@ -1013,7 +1013,7 @@ export default function BuyFranchiseSection() {
                                       )}
                                     </div>
                                     <strong style={{ color: "var(--text-heading)" }}>
-                                      NGN {(parseFloat(bill.amount) || 0).toLocaleString()}
+                                      {loc.state.currency} {(parseFloat(bill.amount) || 0).toLocaleString()}
                                     </strong>
                                   </div>
                                 ))}
