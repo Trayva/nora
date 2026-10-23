@@ -356,7 +356,7 @@ export default function BuyFranchiseSection() {
   const vendorPayments = Array.isArray(selectedBrand?.franchisePayments) ? selectedBrand.franchisePayments : [];
   const totalVendorPayments = vendorPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const rawGlobalPayments = Array.isArray(countrySettings?.payments) ? countrySettings.payments : [];
-  const currency = countrySettings?.currency || "NGN";
+  const currency = countrySettings?.currency;
 
   // Filter global payments based on user requirement:
   // KIOSK: filter and remove all optional payments with "cloud" in their title
