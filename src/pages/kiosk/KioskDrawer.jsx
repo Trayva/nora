@@ -72,7 +72,13 @@ export default function KioskDrawer({ kioskId, onClose, onUpdate }) {
       description={
         cart
           ? `${cart.location?.name || "No location assigned"}${
-              cart.kitchenType ? ` · ${cart.kitchenType === "CLOUD" ? "Cloud Kitchen" : "Physical Kiosk"}` : ""
+              (cart.kitchenType || cart.outletType)
+                ? ` · ${(cart.kitchenType === "CLOUD" || cart.outletType === "CLOUD_KITCHEN" || cart.outletType === "CLOUD")
+                    ? "Cloud Kitchen"
+                    : (cart.kitchenType === "STORE_FRONT" || cart.outletType === "STORE_FRONT")
+                      ? "Store Front"
+                      : "Physical Kiosk"}`
+                : ""
             }`
           : ""
       }

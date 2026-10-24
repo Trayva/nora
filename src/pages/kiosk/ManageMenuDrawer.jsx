@@ -22,6 +22,8 @@ export default function ManageMenuDrawer({ cart, onClose, onRefresh }) {
   const [menuPage, setMenuPage] = useState(1);
   const [pendingAdd, setPendingAdd] = useState([]);
   const [markupValues, setMarkupValues] = useState({});
+  const [savingMarkupId, setSavingMarkupId] = useState(null);
+  const [savingAllMarkups, setSavingAllMarkups] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(null);
   const [removing, setRemoving] = useState(false);
@@ -55,6 +57,16 @@ export default function ManageMenuDrawer({ cart, onClose, onRefresh }) {
       .finally(() => setMenuLoading(false));
   }, [assignedVendor, cart.menuItems]);
 
+  // Sync markup values whenever cartMenuItems changes
+  useEffect(() => {
+    const initial = {};
+    (cartMenuItems || []).forEach((item) => {
+      const id = item.id || item.menuItemId;
+      initial[id] = item.markup !== undefined ? String(item.markup) : "0";
+    });
+    setMarkupValues((prev) => ({ ...initial, ...prev }));
+  }, [cartMenuItems]);
+
   const isPending = (id) => pendingAdd.some((p) => p.id === id);
   const isAdded = (id) =>
     cartMenuItems.some((m) => m.id === id || m.menuItemId === id);
@@ -75,6 +87,54 @@ export default function ManageMenuDrawer({ cart, onClose, onRefresh }) {
     setMarkupValues((p) => ({ ...p, [item.id]: p[item.id] ?? "0" }));
   };
 
+  const handleMarkupChange = (id, val) => {
+    setMarkupValues((prev) => ({ ...prev, [id]: val }));
+  };
+
+  const handleSaveItemMarkup = async (menuItemId) => {
+    const markupVal = parseFloat(markupValues[menuItemId]) || 0;
+    setSavingMarkupId(menuItemId);
+    try {
+      await api.patch(`/vendor/menu/kiosk/${cart.id}/markup`, {
+        menuItemId,
+        markup: markupVal,
+      });
+      toast.success("Markup updated successfully");
+      const refreshed = await api.get(`/kiosk/${cart.id}`);
+      setCartMenuItems(refreshed.data.data?.menuItems || []);
+      onRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update markup");
+    } finally {
+      setSavingMarkupId(null);
+    }
+  };
+
+  const handleSaveAllMarkups = async () => {
+    if (!cartMenuItems.length) return;
+    setSavingAllMarkups(true);
+    try {
+      const itemsPayload = cartMenuItems.map((item) => {
+        const id = item.id || item.menuItemId;
+        return {
+          id,
+          markup: parseFloat(markupValues[id]) || 0,
+        };
+      });
+      await api.patch(`/vendor/menu/kiosk/${cart.id}/markup`, {
+        menuItems: itemsPayload,
+      });
+      toast.success("All markups updated successfully");
+      const refreshed = await api.get(`/kiosk/${cart.id}`);
+      setCartMenuItems(refreshed.data.data?.menuItems || []);
+      onRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update markups");
+    } finally {
+      setSavingAllMarkups(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!pendingAdd.length) return;
     setSaving(true);
@@ -82,13 +142,13 @@ export default function ManageMenuDrawer({ cart, onClose, onRefresh }) {
       await api.post(`/kiosk/${cart.id}/menu-items`, {
         items: pendingAdd.map((p) => ({
           id: p.id,
+          markup: parseFloat(markupValues[p.id]) || 0,
         })),
       });
       toast.success(
         `${pendingAdd.length} item${pendingAdd.length !== 1 ? "s" : ""} added`,
       );
       setPendingAdd([]);
-      setMarkupValues({});
       const refreshed = await api.get(`/kiosk/${cart.id}`);
       setCartMenuItems(refreshed.data.data?.menuItems || []);
       onRefresh();
@@ -232,180 +292,287 @@ export default function ManageMenuDrawer({ cart, onClose, onRefresh }) {
             <div style={{ marginBottom: 20 }}>
               <div
                 style={{
-                  fontSize: "0.62rem",
-                  fontWeight: 900,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "var(--text-muted)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                   marginBottom: 10,
                 }}
               >
-                Active Items
+                <div
+                  style={{
+                    fontSize: "0.62rem",
+                    fontWeight: 900,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  Active Items ({cartMenuItems.length})
+                </div>
+                {cartMenuItems.length > 1 && (
+                  <button
+                    type="button"
+                    disabled={savingAllMarkups}
+                    onClick={handleSaveAllMarkups}
+                    style={{
+                      height: 24,
+                      padding: "0 10px",
+                      borderRadius: 6,
+                      border: "1px solid rgba(203,108,220,0.35)",
+                      background: "rgba(203,108,220,0.1)",
+                      color: "var(--accent)",
+                      fontSize: "0.68rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {savingAllMarkups ? "Saving All..." : "Save All Markups"}
+                  </button>
+                )}
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {cartMenuItems.map((item) => {
+                  const itemId = item.id || item.menuItemId;
                   const name = item.name || item.menuItem?.name || "Item";
                   const img = item.image || item.menuItem?.image;
-                  const price =
+                  const basePrice =
                     item.sellingPrice || item.menuItem?.sellingPrice || 0;
                   const ticketTime =
                     item.ticketTime || item.menuItem?.ticketTime || 0;
+                  const currentMarkup = parseFloat(markupValues[itemId] ?? item.markup ?? 0);
+                  const calculatedSelling = basePrice + Math.round((basePrice * currentMarkup) / 100);
+
                   return (
                     <div
-                      key={item.id}
-                      onClick={() => {
-                        const id = item.menuItemId || item.id;
-                        const n = item.name || item.menuItem?.name || "Item";
-                        setManageDetailId(id);
-                        setManageDetailName(n);
-                      }}
+                      key={itemId}
                       style={{
                         display: "flex",
-                        alignItems: "center",
-                        gap: 10,
+                        flexDirection: "column",
+                        gap: 8,
                         padding: "10px 13px",
                         background: "var(--bg-hover)",
                         border: "1px solid var(--border)",
-                        borderRadius: 11,
-                        cursor: "pointer",
+                        borderRadius: 12,
+                        transition: "all 0.15s ease",
                       }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.borderColor =
-                          "rgba(203,108,220,0.3)")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.borderColor = "var(--border)")
-                      }
                     >
-                      {img ? (
-                        <img
-                          src={img}
-                          alt=""
+                      {/* Top Row: Image, Name, Base Price, Remove */}
+                      <div
+                        onClick={() => {
+                          setManageDetailId(itemId);
+                          setManageDetailName(name);
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {img ? (
+                          <img
+                            src={img}
+                            alt=""
+                            style={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: 8,
+                              objectFit: "cover",
+                              flexShrink: 0,
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: 8,
+                              background: "var(--bg-card)",
+                              border: "1px solid var(--border)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <MdRestaurantMenu
+                              size={15}
+                              style={{ color: "var(--text-muted)" }}
+                            />
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: "0.84rem",
+                              fontWeight: 800,
+                              color: "var(--text-body)",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {name}
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              marginTop: 2,
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: "0.68rem",
+                                color: "var(--text-muted)",
+                                fontWeight: 600,
+                              }}
+                            >
+                              Base: ₦{fmt(basePrice)}
+                            </span>
+                            {ticketTime > 0 && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 3,
+                                  fontSize: "0.64rem",
+                                  fontWeight: 700,
+                                  color: "var(--text-muted)",
+                                  padding: "1px 5px",
+                                  borderRadius: 4,
+                                  background: "var(--bg-card)",
+                                  border: "1px solid var(--border)",
+                                }}
+                              >
+                                <MdAccessTime size={10} />
+                                {ticketTime}min
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <MdOpenInNew
+                          size={13}
                           style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 8,
-                            objectFit: "cover",
+                            color: "var(--text-muted)",
+                            opacity: 0.5,
                             flexShrink: 0,
                           }}
                         />
-                      ) : (
-                        <div
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmRemove(item);
+                          }}
+                          title="Remove from kiosk"
                           style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 8,
-                            background: "var(--bg-card)",
-                            border: "1px solid var(--border)",
+                            width: 28,
+                            height: 28,
+                            borderRadius: 7,
+                            background: "rgba(239,68,68,0.06)",
+                            border: "1px solid rgba(239,68,68,0.2)",
+                            color: "#ef4444",
+                            cursor: "pointer",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             flexShrink: 0,
                           }}
                         >
-                          <MdRestaurantMenu
-                            size={14}
-                            style={{ color: "var(--text-muted)" }}
-                          />
-                        </div>
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: "0.84rem",
-                            fontWeight: 700,
-                            color: "var(--text-body)",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {name}
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            marginTop: 2,
-                          }}
-                        >
-                          {price > 0 && (
-                            <div
-                              style={{
-                                fontSize: "0.68rem",
-                                color: "var(--text-muted)",
-                              }}
-                            >
-                              ₦{fmt(price)}
-                            </div>
-                          )}
-                          {/* Ticket time badge */}
-                          {ticketTime > 0 && (
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 3,
-                                fontSize: "0.64rem",
-                                fontWeight: 700,
-                                color: "var(--text-muted)",
-                                padding: "1px 5px",
-                                borderRadius: 4,
-                                background: "var(--bg-card)",
-                                border: "1px solid var(--border)",
-                              }}
-                            >
-                              <MdAccessTime size={10} />
-                              {ticketTime}min
-                            </div>
-                          )}
-                        </div>
+                          <MdClose size={13} />
+                        </button>
                       </div>
-                      {/* Clickable indicator */}
-                      <MdOpenInNew
-                        size={13}
+
+                      {/* Bottom Row: Inline Markup Editor & Calculated Selling Price */}
+                      <div
+                        onClick={(e) => e.stopPropagation()}
                         style={{
-                          color: "var(--text-muted)",
-                          opacity: 0.5,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontSize: "0.6rem",
-                          fontWeight: 800,
-                          padding: "2px 7px",
-                          borderRadius: 999,
-                          background: "rgba(34,197,94,0.1)",
-                          color: "#16a34a",
-                          border: "1px solid rgba(34,197,94,0.25)",
-                          flexShrink: 0,
-                        }}
-                      >
-                        Active
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmRemove(item);
-                        }}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 7,
-                          background: "rgba(239,68,68,0.06)",
-                          border: "1px solid rgba(239,68,68,0.2)",
-                          color: "#ef4444",
-                          cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
+                          justifyContent: "space-between",
+                          paddingTop: 8,
+                          borderTop: "1px dashed var(--border)",
+                          gap: 10,
                         }}
                       >
-                        <MdClose size={13} />
-                      </button>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              fontWeight: 700,
+                              color: "var(--text-muted)",
+                            }}
+                          >
+                            Kiosk Markup:
+                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                            <input
+                              type="number"
+                              min="0"
+                              max="500"
+                              step="1"
+                              value={markupValues[itemId] ?? "0"}
+                              onChange={(e) => handleMarkupChange(itemId, e.target.value)}
+                              style={{
+                                width: 56,
+                                height: 26,
+                                padding: "2px 6px",
+                                fontSize: "0.76rem",
+                                fontWeight: 800,
+                                textAlign: "center",
+                                borderRadius: 6,
+                                border: "1px solid var(--border)",
+                                background: "var(--bg-card)",
+                                color: "var(--text-heading)",
+                              }}
+                            />
+                            <span
+                              style={{
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                color: "var(--text-muted)",
+                              }}
+                            >
+                              %
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={savingMarkupId === itemId}
+                            onClick={() => handleSaveItemMarkup(itemId)}
+                            style={{
+                              height: 26,
+                              padding: "0 8px",
+                              borderRadius: 6,
+                              border: "1px solid rgba(203,108,220,0.3)",
+                              background: "var(--bg-active)",
+                              color: "var(--accent)",
+                              fontSize: "0.68rem",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {savingMarkupId === itemId ? "Saving..." : "Save"}
+                          </button>
+                        </div>
+
+                        {/* Calculated Live Price */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                            Selling:
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.8rem",
+                              fontWeight: 800,
+                              color: "#16a34a",
+                            }}
+                          >
+                            ₦{fmt(calculatedSelling)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}

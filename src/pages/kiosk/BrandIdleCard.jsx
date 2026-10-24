@@ -386,6 +386,20 @@ export default function BrandIdleCard({
                           ₦{fmt(price)}
                         </div>
                       )}
+                      {item.markup > 0 && (
+                        <span
+                          style={{
+                            fontSize: "0.58rem",
+                            fontWeight: 800,
+                            color: "#16a34a",
+                            background: "rgba(22,163,74,0.1)",
+                            padding: "1px 4px",
+                            borderRadius: 4,
+                          }}
+                        >
+                          +{item.markup}%
+                        </span>
+                      )}
                       {ticketTime > 0 && (
                         <div
                           style={{

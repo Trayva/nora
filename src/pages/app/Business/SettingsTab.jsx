@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { LuPlus, LuTrash2, LuStore, LuCloud, LuMapPin } from "react-icons/lu";
+import { MdStorefront } from "react-icons/md";
 import api from "../../../api/axios";
 import { updateBusiness } from "../../../api/vendor";
 
@@ -210,6 +211,7 @@ export default function SettingsTab({ vendor, onUpdate }) {
             {[
               { id: "KIOSK", label: "Physical Kiosk", desc: "Modular food cart / stand", icon: LuStore },
               { id: "CLOUD_KITCHEN", label: "Cloud Kitchen", desc: "Ghost / delivery-only kitchen", icon: LuCloud },
+              { id: "STORE_FRONT", label: "Store Front", desc: "Prime street retail / dine-in", icon: MdStorefront },
             ].map((type) => {
               const isSelected = outletSupport.includes(type.id);
               const Icon = type.icon;

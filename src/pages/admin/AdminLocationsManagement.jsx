@@ -336,6 +336,7 @@ export default function AdminLocationsManagement({ states = [] }) {
         >
           <option value="">All Outlets</option>
           <option value="CLOUD_KITCHEN">Cloud Kitchens</option>
+          <option value="STORE_FRONT">Store Fronts</option>
           <option value="KIOSK">Physical Kiosks</option>
         </select>
 
@@ -387,6 +388,7 @@ export default function AdminLocationsManagement({ states = [] }) {
                   onChange={(e) => setForm((p) => ({ ...p, outletType: e.target.value }))}
                 >
                   <option value="CLOUD_KITCHEN">Cloud Kitchen (Ghost / Shared)</option>
+                  <option value="STORE_FRONT">Store Front (Retail / Dine-in / Walk-up)</option>
                   <option value="KIOSK">Physical Kiosk / Stand</option>
                   <option value="CLOUD_STORAGE">Cloud Storage / Prep Facility</option>
                 </select>
@@ -850,6 +852,7 @@ export default function AdminLocationsManagement({ states = [] }) {
                 : [];
             const totalBills = bills.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
             const isCloud = loc.outletType === "CLOUD_KITCHEN";
+            const isStoreFront = loc.outletType === "STORE_FRONT";
 
             const locImages = Array.isArray(loc.images)
               ? loc.images
@@ -916,9 +919,19 @@ export default function AdminLocationsManagement({ states = [] }) {
                       width: 40,
                       height: 40,
                       borderRadius: 10,
-                      background: isCloud ? "rgba(99,102,241,0.12)" : "rgba(34,197,94,0.12)",
-                      border: `1px solid ${isCloud ? "rgba(99,102,241,0.25)" : "rgba(34,197,94,0.25)"}`,
-                      color: isCloud ? "#6366f1" : "#16a34a",
+                      background: isCloud
+                        ? "rgba(99,102,241,0.12)"
+                        : isStoreFront
+                          ? "rgba(245,158,11,0.12)"
+                          : "rgba(34,197,94,0.12)",
+                      border: `1px solid ${
+                        isCloud
+                          ? "rgba(99,102,241,0.25)"
+                          : isStoreFront
+                            ? "rgba(245,158,11,0.3)"
+                            : "rgba(34,197,94,0.25)"
+                      }`,
+                      color: isCloud ? "#6366f1" : isStoreFront ? "#d97706" : "#16a34a",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -926,7 +939,13 @@ export default function AdminLocationsManagement({ states = [] }) {
                       marginTop: 2,
                     }}
                   >
-                    {isCloud ? <LuCloud size={18} /> : <LuStore size={18} />}
+                    {isCloud ? (
+                      <LuCloud size={18} />
+                    ) : isStoreFront ? (
+                      <MdStorefront size={18} />
+                    ) : (
+                      <LuStore size={18} />
+                    )}
                   </div>
                 )}
 
@@ -941,12 +960,22 @@ export default function AdminLocationsManagement({ states = [] }) {
                         fontWeight: 700,
                         padding: "1px 6px",
                         borderRadius: 4,
-                        background: isCloud ? "rgba(99,102,241,0.1)" : "rgba(34,197,94,0.1)",
-                        color: isCloud ? "#6366f1" : "#16a34a",
-                        border: `1px solid ${isCloud ? "rgba(99,102,241,0.25)" : "rgba(34,197,94,0.25)"}`,
+                        background: isCloud
+                          ? "rgba(99,102,241,0.1)"
+                          : isStoreFront
+                            ? "rgba(245,158,11,0.12)"
+                            : "rgba(34,197,94,0.1)",
+                        color: isCloud ? "#6366f1" : isStoreFront ? "#d97706" : "#16a34a",
+                        border: `1px solid ${
+                          isCloud
+                            ? "rgba(99,102,241,0.25)"
+                            : isStoreFront
+                              ? "rgba(245,158,11,0.3)"
+                              : "rgba(34,197,94,0.25)"
+                        }`,
                       }}
                     >
-                      {isCloud ? "Cloud Kitchen" : "Physical Kiosk"}
+                      {isCloud ? "Cloud Kitchen" : isStoreFront ? "Store Front" : "Physical Kiosk"}
                     </span>
                     <span
                       style={{

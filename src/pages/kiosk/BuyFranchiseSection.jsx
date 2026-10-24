@@ -131,14 +131,14 @@ export default function BuyFranchiseSection() {
       .finally(() => setStatesLoading(false));
   }, []);
 
-  // Fetch Cloud Kitchen Locations when cloudStateId changes or when switching to CLOUD_KITCHEN
-  const fetchCloudLocations = async (stateId) => {
-    if (!stateId) return;
+  // Fetch Locations (for CLOUD_KITCHEN and STORE_FRONT) when stateId or outletType changes
+  const fetchHubLocations = async (outletType, stateId) => {
+    if (!stateId || !outletType) return;
     setLoadingCloudLocations(true);
     try {
       const res = await api.get("/kiosk/location", {
         params: {
-          outletType: "CLOUD_KITCHEN",
+          outletType: outletType,
           stateId: stateId,
         },
       });
@@ -152,7 +152,7 @@ export default function BuyFranchiseSection() {
         return list.length > 0 ? list[0] : null;
       });
     } catch {
-      toast.error("Failed to load cloud kitchen locations");
+      toast.error(`Failed to load ${outletType === "STORE_FRONT" ? "store front" : "cloud kitchen"} locations`);
       setCloudLocations([]);
       setSelectedCloudLocation(null);
     } finally {
@@ -162,16 +162,16 @@ export default function BuyFranchiseSection() {
 
   const handleCloudStateChange = (stateId) => {
     setCloudStateId(stateId);
-    fetchCloudLocations(stateId);
+    fetchHubLocations(locationForm.outletType, stateId);
   };
 
   const handleOutletTypeSelect = (type) => {
     setLocationForm((prev) => ({ ...prev, outletType: type }));
-    if (type === "CLOUD_KITCHEN") {
+    if (type === "CLOUD_KITCHEN" || type === "STORE_FRONT") {
       const targetStateId = cloudStateId || locationForm.stateId || (states[0]?.id || "");
       if (targetStateId) {
         setCloudStateId(targetStateId);
-        fetchCloudLocations(targetStateId);
+        fetchHubLocations(type, targetStateId);
       }
     }
   };
@@ -268,11 +268,11 @@ export default function BuyFranchiseSection() {
     setStep(2);
   };
 
-  // Step 1 Validation -> Proceed to Brand Selection (CLOUD KITCHEN)
+  // Step 1 Validation -> Proceed to Brand Selection (CLOUD KITCHEN or STORE FRONT)
   const handleProceedCloudKitchen = (e) => {
     e?.preventDefault();
     if (!selectedCloudLocation) {
-      return toast.error("Please choose a cloud kitchen location to proceed");
+      return toast.error(`Please choose a ${locationForm.outletType === "STORE_FRONT" ? "store front" : "cloud kitchen"} location to proceed`);
     }
     const loc = selectedCloudLocation;
     const s = states.find((item) => item.id === loc.stateId);
@@ -287,7 +287,7 @@ export default function BuyFranchiseSection() {
       country: loc.country || "Nigeria",
       latitude: loc.latitude != null ? String(loc.latitude) : "",
       longitude: loc.longitude != null ? String(loc.longitude) : "",
-      outletType: "CLOUD_KITCHEN",
+      outletType: prev.outletType,
       notes: loc.notes || "",
     }));
     loadBrands();
@@ -418,10 +418,11 @@ export default function BuyFranchiseSection() {
     }
   });
 
-  // Location Bills (for Cloud Kitchen)
-  const selectedLocationBills = locationForm.outletType === "CLOUD_KITCHEN" && selectedCloudLocation
-    ? parseBills(selectedCloudLocation.bills)
-    : [];
+  // Location Bills (for Cloud Kitchen and Store Front)
+  const selectedLocationBills =
+    (locationForm.outletType === "CLOUD_KITCHEN" || locationForm.outletType === "STORE_FRONT") && selectedCloudLocation
+      ? parseBills(selectedCloudLocation.bills)
+      : [];
   const totalLocationBills = selectedLocationBills.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
 
   // Compute Platform/Global Fees
@@ -470,7 +471,7 @@ export default function BuyFranchiseSection() {
         finalOptionalPayments = [...selectedOtherOptional];
         if (selectedKioskChoice) finalOptionalPayments.push(selectedKioskChoice);
       } else {
-        // CLOUD_KITCHEN: include all cloud optional payments (mandatory when choosing cloud kitchen) + checked add-ons
+        // CLOUD_KITCHEN & STORE_FRONT: include all cloud optional payments + checked add-ons
         const cloudOptionalTitles = filteredGlobalPayments
           .filter((p) => Boolean(p.optional || p.isOptional) && /cloud/i.test(p.title))
           .map((p) => p.title);
@@ -486,7 +487,7 @@ export default function BuyFranchiseSection() {
         isSigned,
       };
 
-      if (locationForm.outletType === "CLOUD_KITCHEN" && selectedCloudLocation?.id) {
+      if ((locationForm.outletType === "CLOUD_KITCHEN" || locationForm.outletType === "STORE_FRONT") && selectedCloudLocation?.id) {
         payload.locationId = selectedCloudLocation.id;
       } else {
         payload.locationData = {
@@ -498,7 +499,7 @@ export default function BuyFranchiseSection() {
           stateId: locationForm.stateId,
           latitude: locationForm.latitude ? Number(locationForm.latitude) : 0,
           longitude: locationForm.longitude ? Number(locationForm.longitude) : 0,
-          outletType: "KIOSK",
+          outletType: locationForm.outletType,
           notes: locationForm.notes.trim() || undefined,
         };
       }
@@ -616,7 +617,7 @@ export default function BuyFranchiseSection() {
               <label className="modal-label" style={{ fontSize: "0.82rem", fontWeight: 700, marginBottom: 8 }}>
                 Outlet Type *
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 14 }}>
                 {[
                   {
                     id: "KIOSK",
@@ -629,6 +630,12 @@ export default function BuyFranchiseSection() {
                     label: "Cloud Kitchen",
                     desc: "Operate inside a shared commercial kitchen facility",
                     icon: LuCloud,
+                  },
+                  {
+                    id: "STORE_FRONT",
+                    label: "Store Front",
+                    desc: "Operate in a prime dedicated retail storefront location",
+                    icon: MdStorefront,
                   },
                 ].map((type) => {
                   const isSelected = locationForm.outletType === type.id;
@@ -861,14 +868,16 @@ export default function BuyFranchiseSection() {
                 </div>
               </form>
             ) : (
-              /* ── CLOUD KITCHEN: SELECT STATE & CHOOSE FROM EXISTING HUB LOCATIONS ── */
+              /* ── CLOUD KITCHEN / STORE FRONT: SELECT STATE & CHOOSE FROM EXISTING HUB LOCATIONS ── */
               <div style={{ borderTop: "1px solid var(--border)", paddingTop: 20 }}>
                 <div style={{ marginBottom: 16 }}>
                   <h4 style={{ fontSize: "0.92rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 4px" }}>
-                    Select Certified Cloud Kitchen Facility
+                    Select Certified {locationForm.outletType === "STORE_FRONT" ? "Store Front Retail Location" : "Cloud Kitchen Facility"}
                   </h4>
                   <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                    Choose a state and select an available commercial kitchen hub. Each facility lists its facility expenses and bills schedule.
+                    {locationForm.outletType === "STORE_FRONT"
+                      ? "Choose a state and select an available retail storefront location. Each facility lists its facility expenses and bills schedule."
+                      : "Choose a state and select an available commercial kitchen hub. Each facility lists its facility expenses and bills schedule."}
                   </span>
                 </div>
 
@@ -903,12 +912,16 @@ export default function BuyFranchiseSection() {
                       marginBottom: 20,
                     }}
                   >
-                    <LuCloud size={36} style={{ color: "var(--text-muted)", opacity: 0.5, marginBottom: 8 }} />
+                    {locationForm.outletType === "STORE_FRONT" ? (
+                      <MdStorefront size={36} style={{ color: "var(--text-muted)", opacity: 0.5, marginBottom: 8 }} />
+                    ) : (
+                      <LuCloud size={36} style={{ color: "var(--text-muted)", opacity: 0.5, marginBottom: 8 }} />
+                    )}
                     <h5 style={{ fontSize: "0.95rem", fontWeight: 700, margin: "0 0 4px", color: "var(--text-heading)" }}>
-                      No Cloud Kitchens in this State
+                      No {locationForm.outletType === "STORE_FRONT" ? "Store Fronts" : "Cloud Kitchens"} in this State
                     </h5>
                     <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>
-                      No operational cloud kitchen hubs are registered for this state yet. Please select another state or switch to Physical Kiosk.
+                      No operational {locationForm.outletType === "STORE_FRONT" ? "retail storefronts" : "cloud kitchen hubs"} are registered for this state yet. Please select another state or switch to Physical Kiosk.
                     </p>
                   </div>
                 ) : (
@@ -954,7 +967,7 @@ export default function BuyFranchiseSection() {
                                   flexShrink: 0,
                                 }}
                               >
-                                <LuCloud size={22} />
+                                {locationForm.outletType === "STORE_FRONT" ? <MdStorefront size={22} /> : <LuCloud size={22} />}
                               </div>
                               <div>
                                 <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 2px" }}>
@@ -1106,7 +1119,7 @@ export default function BuyFranchiseSection() {
 
                             {bills.length === 0 ? (
                               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontStyle: "italic" }}>
-                                No specific facility bills listed for this hub
+                                No specific facility bills listed for this {locationForm.outletType === "STORE_FRONT" ? "store front" : "hub"}
                               </div>
                             ) : (
                               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -1218,7 +1231,13 @@ export default function BuyFranchiseSection() {
                     key={brand.id}
                     onClick={() => {
                       if (!supportsCurrentOutlet) {
-                        return toast.error(`${brand.businessName} does not support ${locationForm.outletType === "CLOUD_KITCHEN" ? "Cloud Kitchens" : "Physical Kiosks"}.`);
+                        const otLabel =
+                          locationForm.outletType === "CLOUD_KITCHEN"
+                            ? "Cloud Kitchens"
+                            : locationForm.outletType === "STORE_FRONT"
+                              ? "Store Fronts"
+                              : "Physical Kiosks";
+                        return toast.error(`${brand.businessName} does not support ${otLabel}.`);
                       }
                       if (!supportsCurrentState) {
                         return toast.error(`${brand.businessName} does not operate in ${locationForm.stateName || "the selected state"}.`);
@@ -1287,12 +1306,28 @@ export default function BuyFranchiseSection() {
                               fontWeight: 700,
                               padding: "2px 7px",
                               borderRadius: 5,
-                              background: ot === "KIOSK" ? "rgba(34,197,94,0.1)" : "rgba(99,102,241,0.1)",
-                              color: ot === "KIOSK" ? "#16a34a" : "#6366f1",
-                              border: `1px solid ${ot === "KIOSK" ? "rgba(34,197,94,0.25)" : "rgba(99,102,241,0.25)"}`,
+                              background:
+                                ot === "KIOSK"
+                                  ? "rgba(34,197,94,0.1)"
+                                  : ot === "STORE_FRONT"
+                                    ? "rgba(245,158,11,0.12)"
+                                    : "rgba(99,102,241,0.1)",
+                              color:
+                                ot === "KIOSK"
+                                  ? "#16a34a"
+                                  : ot === "STORE_FRONT"
+                                    ? "#d97706"
+                                    : "#6366f1",
+                              border: `1px solid ${
+                                ot === "KIOSK"
+                                  ? "rgba(34,197,94,0.25)"
+                                  : ot === "STORE_FRONT"
+                                    ? "rgba(245,158,11,0.3)"
+                                    : "rgba(99,102,241,0.25)"
+                              }`,
                             }}
                           >
-                            {ot === "KIOSK" ? "Physical Kiosk" : "Cloud Kitchen"}
+                            {ot === "KIOSK" ? "Physical Kiosk" : ot === "STORE_FRONT" ? "Store Front" : "Cloud Kitchen"}
                           </span>
                         ))}
 
@@ -1391,17 +1426,31 @@ export default function BuyFranchiseSection() {
                         fontWeight: 700,
                         padding: "2px 7px",
                         borderRadius: 5,
-                        background: locationForm.outletType === "CLOUD_KITCHEN" ? "rgba(99,102,241,0.1)" : "rgba(34,197,94,0.1)",
-                        color: locationForm.outletType === "CLOUD_KITCHEN" ? "#6366f1" : "#16a34a",
+                        background:
+                          locationForm.outletType === "CLOUD_KITCHEN"
+                            ? "rgba(99,102,241,0.1)"
+                            : locationForm.outletType === "STORE_FRONT"
+                              ? "rgba(245,158,11,0.12)"
+                              : "rgba(34,197,94,0.1)",
+                        color:
+                          locationForm.outletType === "CLOUD_KITCHEN"
+                            ? "#6366f1"
+                            : locationForm.outletType === "STORE_FRONT"
+                              ? "#d97706"
+                              : "#16a34a",
                       }}
                     >
-                      {locationForm.outletType === "CLOUD_KITCHEN" ? "Commercial Cloud Kitchen Hub" : "Physical Kiosk Stand"}
+                      {locationForm.outletType === "CLOUD_KITCHEN"
+                        ? "Commercial Cloud Kitchen Hub"
+                        : locationForm.outletType === "STORE_FRONT"
+                          ? "Prime Retail Store Front"
+                          : "Physical Kiosk Stand"}
                     </span>
                   </div>
                   <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: "4px 0 0" }}>
                     {locationForm.address}, {locationForm.city}, {locationForm.stateName} ({locationForm.country})
                   </p>
-                  {locationForm.outletType === "CLOUD_KITCHEN" && parseImages(selectedCloudLocation?.images).length > 0 && (
+                  {(locationForm.outletType === "CLOUD_KITCHEN" || locationForm.outletType === "STORE_FRONT") && parseImages(selectedCloudLocation?.images).length > 0 && (
                     <div style={{ marginTop: 12, display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
                       {parseImages(selectedCloudLocation.images).map((imgUrl, i) => (
                         <img
@@ -1583,8 +1632,8 @@ export default function BuyFranchiseSection() {
                 )}
               </div>
 
-              {/* Section 2: Location Bills (for Cloud Kitchen) */}
-              {locationForm.outletType === "CLOUD_KITCHEN" && (
+              {/* Section 2: Location Bills (for Cloud Kitchen and Store Front) */}
+              {(locationForm.outletType === "CLOUD_KITCHEN" || locationForm.outletType === "STORE_FRONT") && (
                 <>
                   <div style={{ height: 1, background: "var(--border)", margin: "2px 0" }} />
                   <div>
@@ -1593,7 +1642,13 @@ export default function BuyFranchiseSection() {
                         Location Facility Bills
                       </span>
                       {selectedCloudLocation && (
-                        <span style={{ fontSize: "0.68rem", color: "#6366f1", fontWeight: 700 }}>
+                        <span
+                          style={{
+                            fontSize: "0.68rem",
+                            color: locationForm.outletType === "STORE_FRONT" ? "#d97706" : "#6366f1",
+                            fontWeight: 700,
+                          }}
+                        >
                           {selectedCloudLocation.name}
                         </span>
                       )}
@@ -1660,8 +1715,8 @@ export default function BuyFranchiseSection() {
                       );
                     })}
 
-                    {/* Cloud Kitchen Fixed Payments (appended without checkbox) */}
-                    {locationForm.outletType === "CLOUD_KITCHEN" && cloudFixedItems.length > 0 && (
+                    {/* Fixed Payments (Cloud Kitchen & Store Front) */}
+                    {(locationForm.outletType === "CLOUD_KITCHEN" || locationForm.outletType === "STORE_FRONT") && cloudFixedItems.length > 0 && (
                       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
                         {cloudFixedItems.map((p, idx) => {
                           const isPct = Boolean(p.isPercentage);
@@ -1868,7 +1923,12 @@ export default function BuyFranchiseSection() {
             brand_name: selectedBrand?.businessName || "Nora Brand Partner",
             purchase_price: totalFranchiseCost.toLocaleString(),
             currency: currency,
-            outlet_type: locationForm.outletType === "CLOUD_KITCHEN" ? "Commercial Cloud Kitchen" : "Modular Physical Kiosk",
+            outlet_type:
+              locationForm.outletType === "CLOUD_KITCHEN"
+                ? "Commercial Cloud Kitchen"
+                : locationForm.outletType === "STORE_FRONT"
+                  ? "Retail Store Front"
+                  : "Modular Physical Kiosk",
             location_address: `${locationForm.name} - ${locationForm.address}, ${locationForm.city}`,
           }}
           submitting={submitting}
