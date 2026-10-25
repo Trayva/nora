@@ -8,7 +8,6 @@ import MapPicker from "./MapPicker";
 import {
   MdStorefront,
   MdLocationOn,
-  MdCheckCircle,
   MdOutlineReceiptLong,
   MdArrowBack,
   MdArrowForward,
@@ -516,95 +515,103 @@ export default function BuyFranchiseSection() {
     }
   };
 
+  const hasLocation = Boolean(locationForm.name || selectedCloudLocation);
+  const stepperItems = [
+    { n: 1, label: "Location", full: "Location & Outlet Type", enabled: true, done: hasLocation },
+    { n: 2, label: "Brand", full: "Select Brand", enabled: hasLocation, done: Boolean(selectedBrand) },
+    { n: 3, label: "Review", full: "Review & Sign", enabled: Boolean(selectedBrand), done: false },
+  ];
+
   return (
-    <div style={{ maxWidth: 1040, margin: "0 auto", padding: "10px 0 40px" }}>
+    <div className="bf-root">
+      <style>{`
+        .bf-root { max-width: 1040px; margin: 0 auto; padding: 10px 0 40px; box-sizing: border-box; overflow-x: hidden; }
+        .bf-root *, .bf-root *::before, .bf-root *::after { box-sizing: border-box; }
+
+        /* Stepper */
+        .bf-stepper { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 28px; }
+        .bf-step { display: flex; align-items: center; gap: 8px; background: var(--bg-card); color: var(--text-muted);
+          border: 1px solid var(--border); border-radius: 999px; padding: 6px 16px 6px 6px; font-size: 0.82rem; font-weight: 700;
+          cursor: pointer; transition: all .15s ease; white-space: nowrap; }
+        .bf-step:disabled { cursor: not-allowed; opacity: .55; }
+        .bf-step.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .bf-step-num { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+          background: var(--bg-hover); color: var(--text-muted); font-size: .75rem; flex-shrink: 0; }
+        .bf-step.active .bf-step-num { background: rgba(255,255,255,.25); color: #fff; }
+        .bf-step.done:not(.active) .bf-step-num { background: rgba(203,108,220,.15); color: var(--accent); }
+        .bf-step-short { display: none; }
+        .bf-step-sep { color: var(--border); font-weight: 700; }
+
+        /* Form inputs: 16px avoids iOS zoom-on-focus */
+        .bf-root .modal-input { max-width: 100%; }
+
+        @media (max-width: 900px) {
+          .bf-checkout-grid { grid-template-columns: 1fr !important; }
+          .bf-sticky { position: static !important; }
+        }
+
+        @media (max-width: 640px) {
+          .bf-root { padding: 0 0 28px; }
+          .bf-stepper { gap: 6px; margin-bottom: 18px; justify-content: space-between; }
+          .bf-step-sep { display: none; }
+          .bf-step { flex: 0 0 auto; padding: 5px 10px 5px 5px; font-size: .76rem; }
+          .bf-step.active { flex: 1 1 auto; justify-content: center; }
+          .bf-step:not(.active) .bf-step-label { display: none; }
+          .bf-step:not(.active) { padding: 5px; }
+          .bf-step-full { display: none; }
+          .bf-step-short { display: inline; }
+          .bf-card { padding: 16px !important; border-radius: 14px !important; }
+          .bf-root .modal-input { font-size: 16px !important; min-height: 44px; }
+          .bf-root .app_btn { min-height: 44px; }
+          .bf-title { font-size: 1.05rem !important; }
+          .bf-head-row { flex-direction: column; align-items: stretch !important; gap: 10px !important; }
+          .bf-head-row > .app_btn { align-self: flex-start; }
+          .bf-coord-head { flex-direction: column; align-items: stretch !important; gap: 8px; }
+          .bf-coord-actions { width: 100%; }
+          .bf-coord-actions > button { flex: 1; height: 38px !important; justify-content: center; font-size: .76rem !important; }
+          .bf-brand-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .bf-bill-row { flex-wrap: wrap; gap: 4px; }
+          .bf-loc-hero { height: 170px !important; }
+          .bf-lightbox { padding: 12px !important; }
+          .bf-sheet-cta { position: sticky; bottom: 0; z-index: 5; }
+        }
+
+        @media (max-width: 380px) {
+          .bf-two-col { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+
       {/* ── Flow Progress Indicator ─────────────────────── */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 12,
-          marginBottom: 32,
-          flexWrap: "wrap",
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setStep(1)}
-          style={{
-            background: step === 1 ? "var(--accent)" : "var(--bg-card)",
-            color: step === 1 ? "#fff" : "var(--text-muted)",
-            border: "1px solid var(--border)",
-            borderRadius: 24,
-            padding: "8px 18px",
-            fontSize: "0.82rem",
-            fontWeight: 700,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <span>1. Location &amp; Outlet Type</span>
-          {(locationForm.name || selectedCloudLocation) && (
-            <MdCheckCircle size={15} color={step === 1 ? "#fff" : "var(--accent)"} />
-          )}
-        </button>
-
-        <span style={{ color: "var(--border)", fontWeight: 700 }}>→</span>
-
-        <button
-          type="button"
-          disabled={!locationForm.name && !selectedCloudLocation}
-          onClick={() => (locationForm.name || selectedCloudLocation) && setStep(2)}
-          style={{
-            background: step === 2 ? "var(--accent)" : "var(--bg-card)",
-            color: step === 2 ? "#fff" : "var(--text-muted)",
-            border: "1px solid var(--border)",
-            borderRadius: 24,
-            padding: "8px 18px",
-            fontSize: "0.82rem",
-            fontWeight: 700,
-            cursor: (locationForm.name || selectedCloudLocation) ? "pointer" : "not-allowed",
-            opacity: (locationForm.name || selectedCloudLocation) ? 1 : 0.6,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <span>2. Select Brand</span>
-          {selectedBrand && <MdCheckCircle size={15} color={step === 2 ? "#fff" : "var(--accent)"} />}
-        </button>
-
-        <span style={{ color: "var(--border)", fontWeight: 700 }}>→</span>
-
-        <button
-          type="button"
-          disabled={!selectedBrand}
-          onClick={() => selectedBrand && setStep(3)}
-          style={{
-            background: step === 3 ? "var(--accent)" : "var(--bg-card)",
-            color: step === 3 ? "#fff" : "var(--text-muted)",
-            border: "1px solid var(--border)",
-            borderRadius: 24,
-            padding: "8px 18px",
-            fontSize: "0.82rem",
-            fontWeight: 700,
-            cursor: selectedBrand ? "pointer" : "not-allowed",
-            opacity: selectedBrand ? 1 : 0.6,
-          }}
-        >
-          <span>3. Review &amp; Sign</span>
-        </button>
+      <div className="bf-stepper" role="tablist" aria-label="Franchise purchase steps">
+        {stepperItems.map((s, i) => (
+          <span key={s.n} style={{ display: "contents" }}>
+            {i > 0 && <span className="bf-step-sep">→</span>}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={step === s.n}
+              disabled={!s.enabled}
+              onClick={() => s.enabled && setStep(s.n)}
+              className={`bf-step${step === s.n ? " active" : ""}${s.done ? " done" : ""}`}
+            >
+              <span className="bf-step-num">
+                {s.done && step !== s.n ? <MdCheck size={14} /> : s.n}
+              </span>
+              <span className="bf-step-label">
+                <span className="bf-step-full">{s.full}</span>
+                <span className="bf-step-short">{s.label}</span>
+              </span>
+            </button>
+          </span>
+        ))}
       </div>
 
       {/* ── STEP 1: SELECT OUTLET TYPE & LOCATION DETAILS ── */}
       {step === 1 && (
         <div style={{ maxWidth: 740, margin: "0 auto" }}>
-          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: 24 }}>
+          <div className="bf-card" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: 24 }}>
             <div style={{ marginBottom: 20 }}>
-              <h3 style={{ fontSize: "1.18rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 6px" }}>
+              <h3 className="bf-title" style={{ fontSize: "1.18rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 6px" }}>
                 1. Select Outlet Type &amp; Location
               </h3>
               <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", margin: 0 }}>
@@ -617,7 +624,7 @@ export default function BuyFranchiseSection() {
               <label className="modal-label" style={{ fontSize: "0.82rem", fontWeight: 700, marginBottom: 8 }}>
                 Outlet Type *
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 210px), 1fr))", gap: 14 }}>
                 {[
                   {
                     id: "KIOSK",
@@ -721,7 +728,7 @@ export default function BuyFranchiseSection() {
                       />
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div className="bf-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                       <div className="form-field" style={{ marginBottom: 0 }}>
                         <label className="modal-label">City *</label>
                         <input
@@ -763,11 +770,11 @@ export default function BuyFranchiseSection() {
 
                     {/* Coordinates & Map Picker */}
                     <div style={{ marginTop: 4 }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <div className="bf-coord-head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
                         <label className="modal-label" style={{ margin: 0 }}>
                           Coordinates (for slot reservation &amp; radius verification)
                         </label>
-                        <div style={{ display: "flex", gap: 6 }}>
+                        <div className="bf-coord-actions" style={{ display: "flex", gap: 6 }}>
                           <button
                             type="button"
                             onClick={detectGPS}
@@ -822,7 +829,7 @@ export default function BuyFranchiseSection() {
                         </div>
                       )}
 
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <div className="bf-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                         <input
                           className="modal-input"
                           type="number"
@@ -1000,6 +1007,7 @@ export default function BuyFranchiseSection() {
                           {locImages.length > 0 && (
                             <div style={{ marginTop: 2, marginBottom: 2 }}>
                               <div
+                                className="bf-loc-hero"
                                 style={{
                                   position: "relative",
                                   height: 140,
@@ -1125,6 +1133,7 @@ export default function BuyFranchiseSection() {
                               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                 {bills.map((bill, bIdx) => (
                                   <div
+                                    className="bf-bill-row"
                                     key={bIdx}
                                     style={{
                                       display: "flex",
@@ -1184,9 +1193,9 @@ export default function BuyFranchiseSection() {
       {/* ── STEP 2: SELECT BRAND ─────────────────────────── */}
       {step === 2 && (
         <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div className="bf-head-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, gap: 12 }}>
             <div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 4px" }}>
+              <h3 className="bf-title" style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 4px" }}>
                 2. Choose Brand for {locationForm.outletType === "CLOUD_KITCHEN" ? "Cloud Kitchen" : "Physical Kiosk"}
               </h3>
               <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", margin: 0 }}>
@@ -1213,7 +1222,7 @@ export default function BuyFranchiseSection() {
               <p className="kiosk_empty_title">No Public Brands Available</p>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 18 }}>
+            <div className="bf-brand-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 290px), 1fr))", gap: 18 }}>
               {brands.map((brand) => {
                 const isSelected = selectedBrand?.id === brand.id;
                 const outlets = Array.isArray(brand.outletSupport) && brand.outletSupport.length > 0
@@ -1381,10 +1390,10 @@ export default function BuyFranchiseSection() {
 
       {/* ── STEP 3: REVIEW FEES, LOCATION BILLS & E-SIGN ───── */}
       {step === 3 && selectedBrand && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 390px", gap: 24, alignItems: "start" }}>
+        <div className="bf-checkout-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 390px", gap: 24, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {/* Location Card */}
-            <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: 20 }}>
+            <div className="bf-card" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: 20 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                 <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>
                   1. Outlet Details
@@ -1513,7 +1522,7 @@ export default function BuyFranchiseSection() {
             </div>
 
             {/* Brand & Menu Items Card */}
-            <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: 20 }}>
+            <div className="bf-card" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: 20 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                 <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>
                   2. Selected Brand &amp; Recipes
@@ -1594,6 +1603,7 @@ export default function BuyFranchiseSection() {
 
           {/* Checkout & E-Sign Sidebar */}
           <div
+            className="bf-card bf-sticky"
             style={{
               background: "var(--bg-card)",
               border: "1px solid var(--border)",
@@ -1939,6 +1949,7 @@ export default function BuyFranchiseSection() {
       {/* Lightbox Preview Modal for Cloud Kitchen Images */}
       {previewModalImage && (
         <div
+          className="bf-lightbox"
           onClick={() => setPreviewModalImage(null)}
           style={{
             position: "fixed",

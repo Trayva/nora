@@ -41,14 +41,14 @@ export default function VendorMenuSection({ cart, onUpdate, onRefresh }) {
       {/* Section title with plus icon */}
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
         <span>Brands</span>
-        <button
+        {/* <button
           className="kiosk_icon_action_btn"
           style={{ marginLeft: "auto" }}
           title="Change / Add Brand"
           onClick={() => setShowBrandDrawer(true)}
         >
           <MdAdd size={15} />
-        </button>
+        </button> */}
       </div>
 
       <BrandIdleCard

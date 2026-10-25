@@ -178,7 +178,7 @@ export default function BrandIdleCard({
             )}
           </div>
           {/* Change brand → just a plus/edit icon, no text */}
-          <button
+          {/* <button
             onClick={onChangeBrand}
             title="Change Brand"
             style={{
@@ -215,7 +215,7 @@ export default function BrandIdleCard({
             }}
           >
             <MdClose size={15} />
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -299,8 +299,8 @@ export default function BrandIdleCard({
                     position: "relative",
                   }}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.borderColor =
-                      "rgba(203,108,220,0.4)")
+                  (e.currentTarget.style.borderColor =
+                    "rgba(203,108,220,0.4)")
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.borderColor = "var(--border)")

@@ -1368,7 +1368,9 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
                   className="kiosk_operator_avatar"
                   style={{ flexShrink: 0 }}
                 >
-                  {name[0].toUpperCase()}
+                  {op.user.image ? <img src={op.user.image} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} /> :
+                    name[0].toUpperCase()
+                  }
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
