@@ -1134,7 +1134,7 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
                     updated[index].amount = e.target.value;
                     setBills(updated);
                   }}
-                  placeholder="₦ Amount"
+                  placeholder="Amount"
                   style={{ flex: 1, marginBottom: 0 }}
                 />
                 <button
@@ -1227,7 +1227,7 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
               <div key={idx} className="kiosk_meta_row" style={{ paddingLeft: 12 }}>
                 <span className="kiosk_meta_key" style={{ fontWeight: 500, color: "var(--text-muted)" }}>↳ {b.name}</span>
                 <span className="kiosk_meta_val" style={{ fontWeight: 500 }}>
-                  {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(b.amount || 0)}
+                  {new Intl.NumberFormat("en-NG", { style: "currency", currency: cart.location?.state?.currency, maximumFractionDigits: 0 }).format(b.amount || 0)}
                 </span>
               </div>
             ))
@@ -1239,7 +1239,7 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
           <div className="kiosk_meta_row" style={{ borderTop: "1px dashed var(--border)", paddingTop: 8, marginTop: 4 }}>
             <span className="kiosk_meta_key" style={{ fontWeight: 800, color: "var(--text-heading)" }}>Operational Cost / Order</span>
             <span className="kiosk_meta_val" style={{ fontWeight: 800, color: "var(--accent)" }}>
-              {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(cart.operationalCost || 0)}
+              {new Intl.NumberFormat("en-NG", { style: "currency", currency: cart.location?.state?.currency }).format(cart.operationalCost || 0)}
             </span>
           </div>
         </div>
@@ -1247,14 +1247,14 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
 
       {/* ── Kitchen Info ── */}
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
-        Kitchen Info
+        Outlet Info
       </div>
       <div className="kiosk_item_meta" style={{ marginBottom: 0 }}>
         <InfoRow label="Serial Number" value={cart.serialNumber} />
         <InfoRow label="Status" value={cart.status} />
         <InfoRow label="Owner" value={cart.owner?.fullName || "N/A"} />
         <div className="kiosk_meta_row">
-          <span className="kiosk_meta_key">Kitchen Type</span>
+          <span className="kiosk_meta_key">Outlet Type</span>
           <span className="kiosk_meta_val">
             <span style={{
               display: "inline-flex",

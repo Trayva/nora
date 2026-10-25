@@ -223,7 +223,7 @@ export default function KioskHome() {
             className="kiosk_section_label_row kiosk_section_label_row_clickable"
             onClick={() => setKiosksOpen((v) => !v)}
           >
-            <span className="kiosk_section_label">My Kitchens</span>
+            <span className="kiosk_section_label">My Outlets</span>
             <span className="kiosk_section_count">{activeKiosks.length}</span>
             <span className="kiosk_section_chevron">
               {kiosksOpen ? (
@@ -241,9 +241,9 @@ export default function KioskHome() {
                 style={{ padding: "32px 0", marginBottom: 32 }}
               >
                 <LuStore size={32} style={{ opacity: 0.3 }} />
-                <p className="kiosk_empty_title">No Kitchens yet</p>
+                <p className="kiosk_empty_title">No Outlets yet</p>
                 <p className="kiosk_empty_sub">
-                  Your purchased Kitchens will appear here.
+                  Your purchased Outlets will appear here.
                 </p>
               </div>
             ) : (
@@ -406,7 +406,7 @@ export default function KioskHome() {
                   className="kiosk_section_label"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  Deactivated Kitchens
+                  Deactivated Outlets
                 </span>
                 <span className="kiosk_section_count">
                   {deactivatedKiosks.length}

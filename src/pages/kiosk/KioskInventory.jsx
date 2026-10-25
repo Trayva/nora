@@ -392,7 +392,7 @@ function MachinerySearchSelect({ value, onChange }) {
 }
 
 /* ── Add Inventory Form ─────────────────────────────────────── */
-function AddInventoryForm({ kioskId, onAdded, isUtilities }) {
+function AddInventoryForm({ kioskId, onAdded, cart, isUtilities }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("g");
@@ -602,7 +602,7 @@ function AddInventoryForm({ kioskId, onAdded, isUtilities }) {
         )}
       </div>
       <div className="form-field">
-        <label className="modal-label">Total Cost (NGN) — optional</label>
+        <label className="modal-label">Total Cost ({cart.location?.state?.currency}) — optional</label>
         <input
           className="modal-input"
           type="number"
@@ -619,7 +619,7 @@ function AddInventoryForm({ kioskId, onAdded, isUtilities }) {
               fontWeight: 600,
             }}
           >
-            → ₦{unitCost.toFixed(4)} per{" "}
+            → {cart?.location?.state?.currency} {unitCost.toFixed(4)} per{" "}
             {unit === "kg" ? "g" : unit === "L" ? "ml" : unit}
           </div>
         )}
@@ -1819,7 +1819,7 @@ const REASON_OPTIONS = [
   "Other",
 ];
 
-function InventoryItemRow({ item, onRefresh, onViewHistory }) {
+function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
   const [editing, setEditing] = useState(false);
   const [recordingUsage, setRecordingUsage] = useState(false);
   const [quantity, setQuantity] = useState("");
@@ -2075,7 +2075,7 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
             </div>
             {item.cost != null && !isMachinery && (
               <div className="kiosk_inventory_cost">
-                ₦{Number(item.cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}/{isMachinery
+                {cart?.location?.state?.currency} {Number(item.cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}/{isMachinery
                   ? "unit"
                   : item.ingredient?.unit || item.prepItem?.unit || "units"}
               </div>
@@ -2209,7 +2209,7 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
           )}
           {!isMachinery && (
             <div className="form-field" style={{ marginBottom: 12 }}>
-              <label className="modal-label">Total Cost (NGN) — optional</label>
+              <label className="modal-label">Total Cost ({cart.location?.state?.currency}) — optional</label>
               <input
                 className="modal-input"
                 type="number"
@@ -2230,7 +2230,7 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
                     display: "inline-block",
                   }}
                 >
-                  → ₦{unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} per {unit === "kg" ? "g" : unit === "L" ? "ml" : unit}
+                  → {cart?.location?.state?.currency} {unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} per {unit === "kg" ? "g" : unit === "L" ? "ml" : unit}
                 </div>
               )}
             </div>
@@ -2422,7 +2422,7 @@ function InventoryItemRow({ item, onRefresh, onViewHistory }) {
 }
 
 /* ── Supply Request Row ─────────────────────────────────────── */
-function SupplyRequestRow({ req, onRefresh, onReorder }) {
+function SupplyRequestRow({ cart, req, onRefresh, onReorder }) {
   const [expanded, setExpanded] = useState(false);
   const [receiving, setReceiving] = useState(false);
   const fmt = (n) =>
@@ -2511,7 +2511,7 @@ function SupplyRequestRow({ req, onRefresh, onReorder }) {
               {req.totalAmount > 0 && (
                 <>
                   <span className="contract_row_dot">·</span>
-                  <span>₦{fmt(req.totalAmount)}</span>
+                  <span>{cart?.location?.state?.currency} {fmt(req.totalAmount)}</span>
                 </>
               )}
               {req.isRepeating && (
@@ -2710,7 +2710,7 @@ function SupplyRequestRow({ req, onRefresh, onReorder }) {
                     flexShrink: 0,
                   }}
                 >
-                  ₦{fmt(it.priceAtTime)}/{it.isMach ? "unit" : it.unit}
+                  {cart?.location?.state?.currency} {fmt(it.priceAtTime)}/{it.isMach ? "unit" : it.unit}
                 </div>
               )}
             </div>
@@ -2740,7 +2740,7 @@ function SupplyRequestRow({ req, onRefresh, onReorder }) {
                   >
                     {req.invoice.status}
                   </span>
-                  ₦{fmt(req.invoice.total)}
+                  {cart?.location?.state?.currency} {fmt(req.invoice.total)}
                 </span>
               </div>
             )}
@@ -2874,7 +2874,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
           )}
           {totalValue > 0 && (
             <div className="kiosk_summary_chip">
-              ₦{totalValue.toLocaleString()}
+              {cart?.location?.state?.currency} {totalValue.toLocaleString()}
             </div>
           )}
         </div>
@@ -2944,6 +2944,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
         </div>
       ) : view === "addItem" ? (
         <AddInventoryForm
+          cart={cart}
           kioskId={cart.id}
           isUtilities={isUtilities}
           onAdded={() => {
@@ -2978,6 +2979,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
             {filteredInventory.map((item) => (
               <InventoryItemRow
                 key={item.id}
+                cart={cart}
                 item={item}
                 onRefresh={fetchInventory}
                 onViewHistory={(itm) => setHistoryItem(itm)}
@@ -2995,6 +2997,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
           <div className="kiosk_tasks_list">
             {filteredSupplyRequests.map((req) => (
               <SupplyRequestRow
+                cart={cart}
                 key={req.id}
                 req={req}
                 onRefresh={fetchSupply}

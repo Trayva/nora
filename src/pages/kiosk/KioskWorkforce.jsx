@@ -110,7 +110,7 @@ function OperatorCard({ op, isSelected, onSelect }) {
 }
 
 /* ── Hire Form ─────────────────────────────────────────────── */
-function HireForm({ kioskId, onHired }) {
+function HireForm({ kioskId, cart, onHired }) {
   const [hireable, setHireable] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
   const [search, setSearch] = useState("");
@@ -284,7 +284,7 @@ function HireForm({ kioskId, onHired }) {
       </div>
 
       <div className="form-field">
-        <label className="modal-label">Proposed Salary (NGN)</label>
+        <label className="modal-label">Proposed Salary ({cart.location?.state?.currency})</label>
         <input
           className="modal-input"
           type="number"
@@ -369,10 +369,10 @@ function JobOfferCard({ offer, onRefresh }) {
   const formatDate = (d) =>
     d
       ? new Date(d).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
       : "—";
 
   const operatorName =
@@ -737,6 +737,7 @@ export default function KioskWorkforce({ cart, onRefresh: parentRefresh }) {
 
       {view === "hire" ? (
         <HireForm
+          cart={cart}
           kioskId={cart.id}
           onHired={() => {
             setView("offers");

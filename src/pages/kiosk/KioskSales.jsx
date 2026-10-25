@@ -153,7 +153,7 @@ function ChartTooltip({ active, payload, label }) {
               paddingLeft: 12,
             }}
           >
-            ₦{fmt(p.value)}
+            {fmt(p.value)}
           </span>
         </div>
       ))}
@@ -227,7 +227,7 @@ function SaleRow({ sale }) {
             <span className="contract_row_dot">·</span>
             <span>{sale.operator?.fullName || "Operator"}</span>
             <span className="contract_row_dot">·</span>
-            <span>VAT: ₦{fmt(sale.vatAmount || 0)}</span>
+            <span>VAT: {fmt(sale.vatAmount || 0)}</span>
             <span className="contract_row_dot">·</span>
             <span>{fmtDate(sale.createdAt)}</span>
           </div>
@@ -240,7 +240,7 @@ function SaleRow({ sale }) {
               color: "var(--text-heading)",
             }}
           >
-            ₦{fmt(sale.totalAmount)}
+            {fmt(sale.totalAmount)}
           </div>
         </div>
         {expanded ? (
@@ -347,7 +347,7 @@ function SaleRow({ sale }) {
                   flexShrink: 0,
                 }}
               >
-                ₦{fmt(item.priceAtTime)}
+                {fmt(item.priceAtTime)}
               </div>
             </div>
           ))}
@@ -492,7 +492,7 @@ function ItemCustomiser({ item, kioskId, onConfirm, onClose }) {
                 {fetchingPrice ? (
                   <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Calculating…</span>
                 ) : price > 0 ? (
-                  `₦${fmtLocal(price)}`
+                  `${fmtLocal(price)}`
                 ) : (
                   "Price TBD"
                 )}
@@ -599,7 +599,7 @@ function ItemCustomiser({ item, kioskId, onConfirm, onClose }) {
             >
               <MdAdd size={17} /> Add to Order{" "}
               {!fetchingPrice && totalPrice > 0 && (
-                <span style={{ opacity: 0.85 }}>₦{fmtLocal(totalPrice)}</span>
+                <span style={{ opacity: 0.85 }}>{fmtLocal(totalPrice)}</span>
               )}
             </button>
           </div>
@@ -786,7 +786,7 @@ function RecordSaleForm({ kioskId, menuItems, vatRate = 0, onSaved }) {
                       color: inCart > 0 ? "var(--accent)" : "var(--text-muted)",
                     }}
                   >
-                    {price > 0 ? `₦${Number(price).toLocaleString("en-NG", { maximumFractionDigits: 0 })}` : "—"}
+                    {price > 0 ? `${Number(price).toLocaleString("en-NG", { maximumFractionDigits: 0 })}` : "—"}
                   </div>
                   {inCart > 0 && (
                     <div
@@ -874,7 +874,7 @@ function RecordSaleForm({ kioskId, menuItems, vatRate = 0, onSaved }) {
                     flexShrink: 0, minWidth: 56, textAlign: "right",
                   }}
                 >
-                  {entry.unitPrice > 0 ? `₦${fmtLocal(entry.unitPrice * entry.qty)}` : "—"}
+                  {entry.unitPrice > 0 ? `${fmtLocal(entry.unitPrice * entry.qty)}` : "—"}
                 </div>
                 <button
                   onClick={() => removeFromCart(key)}
@@ -896,11 +896,11 @@ function RecordSaleForm({ kioskId, menuItems, vatRate = 0, onSaved }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "var(--text-muted)" }}>
                   <span>Subtotal:</span>
-                  <span style={{ fontWeight: 700 }}>₦{fmtLocal(cartTotal)}</span>
+                  <span style={{ fontWeight: 700 }}>{fmtLocal(cartTotal)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "var(--text-muted)" }}>
                   <span>VAT ({vatRate}%):</span>
-                  <span style={{ fontWeight: 700 }}>₦{fmtLocal(cartTotal * (vatRate / 100))}</span>
+                  <span style={{ fontWeight: 700 }}>{fmtLocal(cartTotal * (vatRate / 100))}</span>
                 </div>
                 <div
                   style={{
@@ -910,13 +910,13 @@ function RecordSaleForm({ kioskId, menuItems, vatRate = 0, onSaved }) {
                   }}
                 >
                   <span style={{ fontWeight: 800, color: "var(--text-heading)" }}>Total:</span>
-                  <span style={{ fontWeight: 900, color: "var(--accent)" }}>₦{fmtLocal(cartTotal + cartTotal * (vatRate / 100))}</span>
+                  <span style={{ fontWeight: 900, color: "var(--accent)" }}>{fmtLocal(cartTotal + cartTotal * (vatRate / 100))}</span>
                 </div>
               </div>
             ) : (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "0.66rem", color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Total</span>
-                <span style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--accent)" }}>₦{fmtLocal(cartTotal)}</span>
+                <span style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--accent)" }}>{fmtLocal(cartTotal)}</span>
               </div>
             )}
           </div>
@@ -966,7 +966,7 @@ function generateSalesReportHTML({ cart, sales, analytics, from, to, user }) {
   const totals = analytics?.totals || {};
   const na = (v) => (v != null && v !== "" ? v : "—");
   const fmtMoney = (n) =>
-    `₦ ${Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
+    ` ${Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
 
   const fromFormatted = from
     ? new Date(from).toLocaleDateString("en-GB", {
@@ -1892,7 +1892,7 @@ export default function KioskSales({ cart }) {
                   color: s.accent ? "var(--accent)" : "var(--text-heading)",
                 }}
               >
-                ₦{fmt(s.value)}
+                {fmt(s.value)}
               </div>
             </div>
           ))}
@@ -2014,7 +2014,7 @@ export default function KioskSales({ cart }) {
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v) =>
-                  `₦${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
+                  `${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
                 }
                 width={42}
               />
@@ -2103,7 +2103,7 @@ export default function KioskSales({ cart }) {
                       marginTop: 1,
                     }}
                   >
-                    ₦{fmt(total)}
+                    {fmt(total)}
                   </div>
                 </div>
               );
