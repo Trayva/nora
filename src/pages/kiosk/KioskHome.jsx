@@ -154,9 +154,9 @@ export default function KioskHome() {
       {/* Page header */}
       <div className="kiosk_page_header">
         <div>
-          <h2 className="page_title_big m-0">Kitchens</h2>
+          <h2 className="page_title_big m-0">Outlets</h2>
           <p className="welcome_message" style={{ marginBottom: 0 }}>
-            Purchase and manage your Kitchens
+            Purchase and manage your franchise
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -326,8 +326,8 @@ export default function KioskHome() {
                         </span>
                         <span
                           className={`kiosk_indicator ${kiosk.isLocked
-                              ? "kiosk_ind_locked"
-                              : "kiosk_ind_unlocked"
+                            ? "kiosk_ind_locked"
+                            : "kiosk_ind_unlocked"
                             }`}
                         >
                           {kiosk.isLocked ? (
