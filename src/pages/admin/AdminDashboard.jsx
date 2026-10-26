@@ -40,6 +40,7 @@ import AdminInvoiceGenerator from "./AdminInvoiceGenerator";
 import AdminGlobalWalletSettings from "./AdminGlobalWalletSettings";
 import AdminVatSettings from "./AdminVatSettings";
 import AdminLocationsManagement from "./AdminLocationsManagement";
+import AdminVendorStateRequests from "./AdminVendorStateRequests";
 
 import {
   DashboardSkeleton,
@@ -144,6 +145,7 @@ export default function AdminDashboard() {
   const [usersOpen, setUsersOpen] = useState(false);
   const [kiosksOpen, setKiosksOpen] = useState(false);
   const [invoiceGeneratorOpen, setInvoiceGeneratorOpen] = useState(false);
+  const [stateRequestsOpen, setStateRequestsOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
 
@@ -1435,6 +1437,43 @@ export default function AdminDashboard() {
               <MdArrowForward size={16} style={{ color: "#10b981" }} />
             </div>
           </div>
+
+          {/* Vendor State Requests */}
+          <div
+            className="admin_stat_card"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 16,
+              cursor: "pointer",
+              padding: "18px 20px",
+            }}
+            onClick={() => setStateRequestsOpen(true)}
+          >
+            <div
+              className="admin_stat_icon"
+              style={{
+                color: "#f59e0b",
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                flexShrink: 0,
+                background: "rgba(245,158,11,0.1)",
+                border: "1px solid rgba(245,158,11,0.2)",
+              }}
+            >
+              <MdOutlineLocationOn size={22} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "var(--text-heading)", marginBottom: 3 }}>
+                Vendor State Requests
+              </div>
+              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                Review brands' requests to operate in new states
+              </div>
+            </div>
+            <MdArrowForward size={16} style={{ color: "#f59e0b" }} />
+          </div>
         </div>
       </div>
 
@@ -1442,6 +1481,11 @@ export default function AdminDashboard() {
       <AdminInvoiceGenerator
         isOpen={invoiceGeneratorOpen}
         onClose={() => setInvoiceGeneratorOpen(false)}
+      />
+
+      <AdminVendorStateRequests
+        open={stateRequestsOpen}
+        onClose={() => setStateRequestsOpen(false)}
       />
 
       {/* Applications drawer */}

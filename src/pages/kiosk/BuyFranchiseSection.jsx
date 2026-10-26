@@ -18,6 +18,7 @@ import {
   MdClose,
 } from "react-icons/md";
 import { LuStore, LuCloud } from "react-icons/lu";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 
 // Safe helper to parse bills from JSON string or array
 const parseBills = (bills) => {
@@ -52,6 +53,7 @@ const parseImages = (images) => {
 export default function BuyFranchiseSection() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { format: fmt, isConverted } = useCurrencyDisplay();
 
   // Steps: 1 = Location & Outlet Type, 2 = Select Brand, 3 = Review & Submit
   const [step, setStep] = useState(1);
@@ -1121,7 +1123,7 @@ export default function BuyFranchiseSection() {
                                 Facility Bills &amp; Expenses Schedule
                               </span>
                               <span style={{ fontSize: "0.78rem", fontWeight: 800, color: isSelected ? "#6366f1" : "var(--text-heading)" }}>
-                                Total: {loc.state.currency} {billsSum.toLocaleString()}
+                                Total: {fmt(billsSum, loc.state.currency)}
                               </span>
                             </div>
 
@@ -1159,7 +1161,7 @@ export default function BuyFranchiseSection() {
                                       )}
                                     </div>
                                     <strong style={{ color: "var(--text-heading)" }}>
-                                      {loc.state.currency} {(parseFloat(bill.amount) || 0).toLocaleString()}
+                                      {fmt(parseFloat(bill.amount) || 0, loc.state.currency)}
                                     </strong>
                                   </div>
                                 ))}
@@ -1368,7 +1370,7 @@ export default function BuyFranchiseSection() {
                           Franchise License Fee
                         </span>
                         <strong style={{ fontSize: "0.95rem", color: "var(--text-heading)" }}>
-                          NGN {brandFeeTotal.toLocaleString()}
+                          {fmt(brandFeeTotal, "NGN")}
                         </strong>
                       </div>
                       <button
@@ -1635,7 +1637,7 @@ export default function BuyFranchiseSection() {
                     <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", marginBottom: 4 }}>
                       <span style={{ color: "var(--text-body)" }}>{p.title}</span>
                       <strong style={{ color: "var(--text-heading)" }}>
-                        {currency} {(parseFloat(p.amount) || 0).toLocaleString()}
+                        {fmt(parseFloat(p.amount) || 0, currency)}
                       </strong>
                     </div>
                   ))
@@ -1688,7 +1690,7 @@ export default function BuyFranchiseSection() {
                               </div>
                             </div>
                             <strong style={{ color: "var(--text-heading)", marginLeft: 8 }}>
-                              {currency} {(parseFloat(bill.amount) || 0).toLocaleString()}
+                              {fmt(parseFloat(bill.amount) || 0, currency)}
                             </strong>
                           </div>
                         ))}
@@ -1719,7 +1721,7 @@ export default function BuyFranchiseSection() {
                             {p.title} {isPct ? `(${p.amount}%)` : ""}
                           </span>
                           <strong style={{ color: "var(--text-heading)" }}>
-                            {currency} {amt.toLocaleString()}
+                            {fmt(amt, currency)}
                           </strong>
                         </div>
                       );
@@ -1756,7 +1758,7 @@ export default function BuyFranchiseSection() {
                                 </span>
                               </div>
                               <strong style={{ color: "var(--text-heading)" }}>
-                                {currency} {amt.toLocaleString()}
+                                {fmt(amt, currency)}
                               </strong>
                             </div>
                           );
@@ -1813,7 +1815,7 @@ export default function BuyFranchiseSection() {
                                   </div>
                                 </div>
                                 <strong style={{ color: isChecked ? "var(--text-heading)" : "var(--text-muted)" }}>
-                                  {currency} {amt.toLocaleString()}
+                                  {fmt(amt, currency)}
                                 </strong>
                               </label>
                             );
@@ -1870,7 +1872,7 @@ export default function BuyFranchiseSection() {
                                   </div>
                                 </div>
                                 <strong style={{ color: isChecked ? "var(--text-heading)" : "var(--text-muted)" }}>
-                                  {currency} {amt.toLocaleString()}
+                                  {fmt(amt, currency)}
                                 </strong>
                               </label>
                             );
@@ -1898,9 +1900,14 @@ export default function BuyFranchiseSection() {
                 Total Due
               </span>
               <span style={{ fontSize: "1.35rem", fontWeight: 900, color: "var(--accent)" }}>
-                {currency} {totalFranchiseCost.toLocaleString()}
+                {fmt(totalFranchiseCost, currency)}
               </span>
             </div>
+            {isConverted(currency) && (
+              <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "right", marginTop: -12, marginBottom: 16 }}>
+                Billed in {currency} {totalFranchiseCost.toLocaleString()}. Converted amounts are estimates based on the selected state's currency.
+              </p>
+            )}
 
             <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.4, marginBottom: 20 }}>
               An invoice will be generated. Once paid, your location bills and franchise deployment will be activated.

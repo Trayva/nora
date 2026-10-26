@@ -22,6 +22,7 @@ export default function SettingsTab({ vendor, onUpdate }) {
   });
   const [outletSupport, setOutletSupport] = useState(["KIOSK"]);
   const [supportedStates, setSupportedStates] = useState([]);
+  const [pendingStates, setPendingStates] = useState([]);
   const [availableStates, setAvailableStates] = useState([]);
   const [loadingStates, setLoadingStates] = useState(true);
   const [payments, setPayments] = useState([]);
@@ -44,6 +45,7 @@ export default function SettingsTab({ vendor, onUpdate }) {
       });
       setOutletSupport(vendor.outletSupport && vendor.outletSupport.length > 0 ? vendor.outletSupport : ["KIOSK"]);
       setSupportedStates(Array.isArray(vendor.supportedStates) ? vendor.supportedStates : []);
+      setPendingStates(Array.isArray(vendor.pendingStateRequests) ? vendor.pendingStateRequests : []);
       setPayments(vendor.franchisePayments || []);
     }
   }, [vendor]);
@@ -62,18 +64,22 @@ export default function SettingsTab({ vendor, onUpdate }) {
   };
 
   const toggleSupportedState = (stateId) => {
+    if (pendingStates.includes(stateId)) return;
     setSupportedStates((prev) =>
       prev.includes(stateId) ? prev.filter((id) => id !== stateId) : [...prev, stateId]
     );
   };
 
   const selectAllStates = () => {
-    setSupportedStates(availableStates.map((s) => s.id));
+    setSupportedStates(availableStates.filter((s) => !pendingStates.includes(s.id)).map((s) => s.id));
   };
 
   const clearAllStates = () => {
     setSupportedStates([]);
   };
+
+  const approvedStates = Array.isArray(vendor?.supportedStates) ? vendor.supportedStates : [];
+  const newStateCount = supportedStates.filter((id) => !approvedStates.includes(id)).length;
 
   const addPayment = () => {
     setPayments((prev) => [...prev, { ...EMPTY_PAYMENT }]);
@@ -123,7 +129,11 @@ export default function SettingsTab({ vendor, onUpdate }) {
       }))));
 
       await updateBusiness(fd);
-      toast.success("Settings updated successfully!");
+      toast.success(
+        newStateCount > 0
+          ? `Settings saved. ${newStateCount} new state request(s) sent for admin approval.`
+          : "Settings updated successfully!"
+      );
       onUpdate?.();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to save settings");
@@ -273,7 +283,7 @@ export default function SettingsTab({ vendor, onUpdate }) {
                 Supported States / Operating Regions
               </h3>
               <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
-                Specify which states your brand allows franchise outlets to be deployed in.
+                Approved states are active. Newly selected states are sent as a request and only added once an admin approves.
               </p>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -322,7 +332,21 @@ export default function SettingsTab({ vendor, onUpdate }) {
               fontSize: "0.75rem",
               marginBottom: 12,
             }}>
-              No states currently selected. Select at least one state to allow franchisees to select your brand in their location.
+              No states currently approved. Select a state and save to request approval from an admin.
+            </div>
+          )}
+
+          {newStateCount > 0 && (
+            <div style={{
+              padding: "8px 12px",
+              borderRadius: 8,
+              background: "rgba(203,108,220,0.08)",
+              border: "1px solid rgba(203,108,220,0.25)",
+              color: "var(--accent)",
+              fontSize: "0.75rem",
+              marginBottom: 12,
+            }}>
+              {newStateCount} new state(s) will be submitted for admin approval when you save.
             </div>
           )}
 
@@ -344,20 +368,22 @@ export default function SettingsTab({ vendor, onUpdate }) {
               paddingRight: 4,
             }}>
               {availableStates.map((st) => {
-                const isChecked = supportedStates.includes(st.id);
+                const isPending = pendingStates.includes(st.id);
+                const isChecked = supportedStates.includes(st.id) || isPending;
                 return (
                   <label
                     key={st.id}
                     onClick={() => toggleSupportedState(st.id)}
+                    title={isPending ? "Awaiting admin approval" : undefined}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       gap: 8,
                       padding: "8px 10px",
                       borderRadius: 8,
-                      background: isChecked ? "rgba(203,108,220,0.08)" : "var(--bg-hover)",
-                      border: `1px solid ${isChecked ? "var(--accent)" : "var(--border)"}`,
-                      cursor: "pointer",
+                      background: isPending ? "rgba(234,179,8,0.08)" : isChecked ? "rgba(203,108,220,0.08)" : "var(--bg-hover)",
+                      border: `1px solid ${isPending ? "rgba(234,179,8,0.35)" : isChecked ? "var(--accent)" : "var(--border)"}`,
+                      cursor: isPending ? "not-allowed" : "pointer",
                       userSelect: "none",
                       transition: "all 0.15s ease",
                     }}
@@ -365,8 +391,9 @@ export default function SettingsTab({ vendor, onUpdate }) {
                     <input
                       type="checkbox"
                       checked={isChecked}
+                      disabled={isPending}
                       onChange={() => {}}
-                      style={{ accentColor: "var(--accent)", cursor: "pointer", margin: 0 }}
+                      style={{ accentColor: "var(--accent)", cursor: "inherit", margin: 0 }}
                     />
                     <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       <span style={{
@@ -376,6 +403,11 @@ export default function SettingsTab({ vendor, onUpdate }) {
                       }}>
                         {st.name}
                       </span>
+                      {isPending && (
+                        <span style={{ display: "block", fontSize: "0.62rem", fontWeight: 700, color: "#ca8a04" }}>
+                          Pending approval
+                        </span>
+                      )}
                     </div>
                   </label>
                 );

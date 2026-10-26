@@ -6,6 +6,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import ESignDrawer from "../../components/ESignDrawer";
 import BuyFranchiseSection from "./BuyFranchiseSection";
 import { MdStorefront, MdOutlineKitchen } from "react-icons/md";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 
 function PurchaseKiosk() {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ function PurchaseKiosk() {
   const selectedId = searchParams.get("selection");
   const scrollRef = useRef({});
   const { user } = useAuth();
+  const { format: fmt, isConverted, displayCurrency } = useCurrencyDisplay();
 
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "franchise");
   const [numberOfKiosks, setNumberOfKiosks] = useState(1);
@@ -192,7 +194,9 @@ function PurchaseKiosk() {
                         <h3 className="kiosk_card_title">{setting.title?.toUpperCase()}</h3>
                         <span className="kiosk_card_location">{setting.country}</span>
                       </div>
-                      <span className="kiosk_card_currency">{setting.currency}</span>
+                      <span className="kiosk_card_currency">
+                        {isConverted(setting.currency) ? displayCurrency : setting.currency}
+                      </span>
                     </div>
 
                     {/* Duration — only for LEASE types */}
@@ -226,7 +230,7 @@ function PurchaseKiosk() {
                           </div>
                           <div className="kiosk_payment_right">
                             <span className="kiosk_payment_amount">
-                              {setting.currency} {(payment.amount * numberOfKiosks).toLocaleString()}
+                              {fmt(payment.amount * numberOfKiosks, setting.currency)}
                             </span>
                             <div className="kiosk_payment_badges">
                               {payment.recurring && <span className="kiosk_badge kiosk_badge_recurring">Recurring</span>}
@@ -250,8 +254,13 @@ function PurchaseKiosk() {
                     {/* Total */}
                     <div className="kiosk_card_total">
                       <span className="kiosk_total_label">Total for {numberOfKiosks} Kiosk{numberOfKiosks > 1 ? "s" : ""}</span>
-                      <span className="kiosk_total_amount">{setting.currency} {totalAmount.toLocaleString()}</span>
+                      <span className="kiosk_total_amount">{fmt(totalAmount, setting.currency)}</span>
                     </div>
+                    {isConverted(setting.currency) && (
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "right", marginTop: 4 }}>
+                        Billed in {setting.currency} {totalAmount.toLocaleString()}. Converted amount is an estimate.
+                      </div>
+                    )}
 
                     {/* CTA */}
                     <button
