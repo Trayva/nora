@@ -1227,12 +1227,12 @@ export default function BuyFranchiseSection() {
             <div className="bf-brand-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 290px), 1fr))", gap: 18 }}>
               {brands.map((brand) => {
                 const isSelected = selectedBrand?.id === brand.id;
-                const outlets = Array.isArray(brand.outletSupport) && brand.outletSupport.length > 0
+                const outlets = Array.isArray(brand.outletSupport)
                   ? brand.outletSupport
                   : ["KIOSK"];
                 const supportsCurrentOutlet = outlets.includes(locationForm.outletType);
                 const supportedStates = Array.isArray(brand.supportedStates) ? brand.supportedStates : [];
-                const supportsCurrentState = supportedStates.length === 0 || (locationForm.stateId && supportedStates.includes(locationForm.stateId));
+                const supportsCurrentState = (locationForm.stateId && supportedStates.includes(locationForm.stateId));
                 const isEligible = supportsCurrentOutlet && supportsCurrentState;
                 const payments = Array.isArray(brand.franchisePayments) ? brand.franchisePayments : [];
                 const brandFeeTotal = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
@@ -1329,13 +1329,12 @@ export default function BuyFranchiseSection() {
                                   : ot === "STORE_FRONT"
                                     ? "#d97706"
                                     : "#6366f1",
-                              border: `1px solid ${
-                                ot === "KIOSK"
-                                  ? "rgba(34,197,94,0.25)"
-                                  : ot === "STORE_FRONT"
-                                    ? "rgba(245,158,11,0.3)"
-                                    : "rgba(99,102,241,0.25)"
-                              }`,
+                              border: `1px solid ${ot === "KIOSK"
+                                ? "rgba(34,197,94,0.25)"
+                                : ot === "STORE_FRONT"
+                                  ? "rgba(245,158,11,0.3)"
+                                  : "rgba(99,102,241,0.25)"
+                                }`,
                             }}
                           >
                             {ot === "KIOSK" ? "Physical Kiosk" : ot === "STORE_FRONT" ? "Store Front" : "Cloud Kitchen"}
