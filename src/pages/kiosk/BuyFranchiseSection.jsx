@@ -7,6 +7,8 @@ import ESignDrawer from "../../components/ESignDrawer";
 import RoyaltyBadge from "./franchise/RoyaltyBadge";
 import BrandMenuSelector from "./franchise/BrandMenuSelector";
 import FranchiseMenuDrawer from "./franchise/FranchiseMenuDrawer";
+import ProfitProjectionDrawer from "./franchise/ProfitProjectionDrawer";
+import useFranchisePlan from "./franchise/useFranchisePlan";
 import MapPicker from "./MapPicker";
 import {
   MdStorefront,
@@ -19,6 +21,7 @@ import {
   MdImage,
   MdZoomIn,
   MdClose,
+  MdTrendingUp,
 } from "react-icons/md";
 import { LuStore, LuCloud } from "react-icons/lu";
 import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
@@ -452,6 +455,10 @@ export default function BuyFranchiseSection() {
       ? parseBills(selectedCloudLocation.bills)
       : [];
   const totalLocationBills = selectedLocationBills.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
+
+  // Shared pricing plan (margins, extra costs, operational bills, daily target)
+  const plan = useFranchisePlan(selectedLocationBills);
+  const [showProjection, setShowProjection] = useState(false);
 
   // Compute Platform/Global Fees
   const computedGlobalFee = filteredGlobalPayments.reduce((sum, p) => {
@@ -1617,13 +1624,35 @@ export default function BuyFranchiseSection() {
                 />
               )}
 
+              {selectedMenuIds.length > 0 && (
+                <button
+                  type="button"
+                  className="app_btn"
+                  onClick={() => setShowProjection(true)}
+                  style={{ marginTop: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                >
+                  <MdTrendingUp size={18} /> Project Profit for {selectedMenuIds.length} Menu{selectedMenuIds.length === 1 ? "" : "s"}
+                </button>
+              )}
+
               <FranchiseMenuDrawer
                 menu={activeMenu}
                 stateId={locationForm.stateId || selectedCloudLocation?.stateId}
                 currency={currency}
                 fmt={fmt}
-                locationBills={selectedLocationBills}
+                plan={plan}
                 onClose={() => setActiveMenu(null)}
+              />
+
+              <ProfitProjectionDrawer
+                isOpen={showProjection}
+                onClose={() => setShowProjection(false)}
+                menus={brandMenuItems.filter((m) => selectedMenuIds.includes(m.id))}
+                stateId={locationForm.stateId || selectedCloudLocation?.stateId}
+                currency={currency}
+                fmt={fmt}
+                plan={plan}
+                royaltyPercent={royaltyPercent}
               />
             </div>
           </div>

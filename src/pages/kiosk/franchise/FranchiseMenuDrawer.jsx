@@ -8,36 +8,15 @@ import { ExtraCostsSection, OperationalCostSection } from "./CostSections";
 const num = (v) => parseFloat(v) || 0;
 
 // Drawer showing basic menu details and the average cost (per variant + base) in the chosen state.
-export default function FranchiseMenuDrawer({ menu, stateId, currency, fmt, locationBills = [], onClose }) {
+export default function FranchiseMenuDrawer({ menu, stateId, currency, fmt, plan, onClose }) {
   const [details, setDetails] = useState(null);
   const [costs, setCosts] = useState([]); // [{ key, label, cost, error }]
   const [loading, setLoading] = useState(false);
-  const [margin, setMargin] = useState(30);
-  const [extraCosts, setExtraCosts] = useState([]);
-  const [bills, setBills] = useState([]);
-  const [dailyTarget, setDailyTarget] = useState(50);
-
-  // Prefill monthly bills from the chosen location (editable)
-  const billsKey = JSON.stringify(locationBills);
-  useEffect(() => {
-    setBills(locationBills.map((b, i) => ({ id: `loc-${i}`, name: b.name || b.title || "", amount: b.amount ?? "" })));
-  }, [billsKey]);
-
-  const monthlyBills = bills.reduce((s, b) => s + num(b.amount), 0);
-  const monthlyOrders = num(dailyTarget) * 30;
-  const operationalPerOrder = monthlyOrders > 0 ? monthlyBills / monthlyOrders : 0;
-
-  // p = cost + (margin/100) * cost, where cost includes extra costs + operational cost
-  const priceFor = (ingredientCost) => {
-    let before = ingredientCost + operationalPerOrder;
-    let after = 0;
-    extraCosts.forEach((ac) => {
-      const val = ac.type === "percentage" ? (num(ac.amount) / 100) * ingredientCost : num(ac.amount);
-      if (ac.target === "price") after += val;
-      else before += val;
-    });
-    return { totalCost: before + after, price: before + (margin / 100) * before + after };
-  };
+  const {
+    extraCosts, setExtraCosts, bills, setBills, dailyTarget, setDailyTarget,
+    operationalPerOrder, getMargin, setMargin, priceFor,
+  } = plan;
+  const margin = menu ? getMargin(menu.id) : 0;
 
   useEffect(() => {
     if (!menu) {
@@ -129,7 +108,7 @@ export default function FranchiseMenuDrawer({ menu, stateId, currency, fmt, loca
             </span>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <MarginSlider value={margin} onChange={setMargin} />
+              <MarginSlider value={margin} onChange={(v) => setMargin(menu.id, v)} />
               <ExtraCostsSection items={extraCosts} onChange={setExtraCosts} />
               <OperationalCostSection
                 bills={bills}
@@ -151,7 +130,7 @@ export default function FranchiseMenuDrawer({ menu, stateId, currency, fmt, loca
                   <div style={{ padding: 14, fontSize: "0.8rem", color: "var(--text-muted)" }}>Calculating costs…</div>
                 ) : (
                   costs.map((c) => {
-                    const p = c.cost != null ? priceFor(c.cost) : null;
+                    const p = c.cost != null ? priceFor(c.cost, margin) : null;
                     return (
                       <div key={c.key} style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 8, padding: "10px 14px", fontSize: "0.84rem", borderTop: "1px solid var(--border)", alignItems: "center" }}>
                         <span style={{ color: "var(--text-body)" }}>
