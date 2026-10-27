@@ -108,11 +108,8 @@ export default function BuyFranchiseSection() {
   const [countrySettings, setCountrySettings] = useState(null);
   const [loadingSettings, setLoadingSettings] = useState(false);
 
-  // Payment Selection States:
-  // For Kiosk: selectedKioskChoice allows choosing ONLY 1 optional payment that has "kiosk" in title
-  const [selectedKioskChoice, setSelectedKioskChoice] = useState(null);
-  // Other non-kiosk, non-cloud optional payments can be checked/unchecked
-  const [selectedOtherOptional, setSelectedOtherOptional] = useState([]);
+  // Optional Payments selected by applicant (titles)
+  const [selectedOptionalPayments, setSelectedOptionalPayments] = useState([]);
 
   // Step 3 & 4: E-Sign & Submitting
   const [showSignDrawer, setShowSignDrawer] = useState(false);
@@ -370,24 +367,12 @@ export default function BuyFranchiseSection() {
     const country = locationForm.country || selectedCloudLocation?.country || selectedCloudLocation?.state?.country;
     setLoadingSettings(true);
     try {
-      const res = await api.get(`/kioskVendorApplication/settings/country/${encodeURIComponent(country)}`);
+      const res = await api.get(`/kioskVendorApplication/settings/country/${encodeURIComponent(country)}`, {
+        params: { outletType: locationForm.outletType },
+      });
       const sData = res.data.data;
       setCountrySettings(sData);
-
-      // Initialize optional payments based on outlet type:
-      const payments = Array.isArray(sData?.payments) ? sData.payments : [];
-      if (locationForm.outletType === "KIOSK") {
-        // Find optional payments that have "kiosk" in title -> auto-select first one or null
-        const kioskOpt = payments.filter(
-          (p) => Boolean(p.optional || p.isOptional) && /kiosk/i.test(p.title || "")
-        );
-        setSelectedKioskChoice(kioskOpt.length > 0 ? kioskOpt[0].title : null);
-        setSelectedOtherOptional([]);
-      } else {
-        // CLOUD_KITCHEN: kiosk optional is null, cloud optional will be automatically appended as mandatory
-        setSelectedKioskChoice(null);
-        setSelectedOtherOptional([]);
-      }
+      setSelectedOptionalPayments([]);
     } catch {
       setCountrySettings(null);
     } finally {
@@ -395,9 +380,9 @@ export default function BuyFranchiseSection() {
     }
   };
 
-  // Toggle other optional payments
-  const toggleOtherOptional = (title) => {
-    setSelectedOtherOptional((prev) =>
+  // Toggle optional payments
+  const toggleOptionalPayment = (title) => {
+    setSelectedOptionalPayments((prev) =>
       prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
     );
   };
@@ -408,46 +393,15 @@ export default function BuyFranchiseSection() {
   const rawGlobalPayments = Array.isArray(countrySettings?.payments) ? countrySettings.payments : [];
   const currency = countrySettings?.currency;
 
-  // Filter global payments based on user requirement:
-  // KIOSK: filter and remove all optional payments with "cloud" in their title
-  // CLOUD_KITCHEN: filter and remove all payments that have "kiosk" in the title
+  // Filter global payments targeted to this outletType ("ALL" applies to every outlet)
   const filteredGlobalPayments = rawGlobalPayments.filter((p) => {
-    const title = p.title || "";
-    const isOptional = Boolean(p.optional || p.isOptional);
-    if (locationForm.outletType === "KIOSK") {
-      if (isOptional && /cloud/i.test(title)) return false;
-      return true;
-    } else {
-      // CLOUD_KITCHEN: remove all payments with "kiosk" in title
-      if (/kiosk/i.test(title)) return false;
-      return true;
-    }
+    const paymentOutlet = String(p.outletType || "ALL").toUpperCase();
+    return paymentOutlet === "ALL" || paymentOutlet === locationForm.outletType;
   });
 
   // Categorize for UI and calculations:
   const mandatoryGlobalItems = filteredGlobalPayments.filter((p) => !Boolean(p.optional || p.isOptional));
-
-  // If KIOSK: filter all optional payments with "kiosk" in title -> allow them to choose ONLY 1
-  const kioskOptionalItems = locationForm.outletType === "KIOSK"
-    ? filteredGlobalPayments.filter((p) => Boolean(p.optional || p.isOptional) && /kiosk/i.test(p.title))
-    : [];
-
-  // If CLOUD_KITCHEN: append all other optional payments with "cloud" in their title as mandatory (no checkbox)
-  const cloudFixedItems = locationForm.outletType === "CLOUD_KITCHEN"
-    ? filteredGlobalPayments.filter((p) => Boolean(p.optional || p.isOptional) && /cloud/i.test(p.title))
-    : [];
-  console.log(cloudFixedItems)
-  // Other optional items (checkboxes)
-  const otherOptionalItems = filteredGlobalPayments.filter((p) => {
-    const isOptional = Boolean(p.optional || p.isOptional);
-    if (!isOptional) return false;
-    const title = p.title || "";
-    if (locationForm.outletType === "KIOSK") {
-      return !/kiosk/i.test(title) && !/cloud/i.test(title);
-    } else {
-      return !/cloud/i.test(title) && !/kiosk/i.test(title);
-    }
-  });
+  const optionalGlobalItems = filteredGlobalPayments.filter((p) => Boolean(p.optional || p.isOptional));
 
   // Location Bills (for Cloud Kitchen and Store Front)
   const selectedLocationBills =
@@ -455,10 +409,6 @@ export default function BuyFranchiseSection() {
       ? parseBills(selectedCloudLocation.bills)
       : [];
   const totalLocationBills = selectedLocationBills.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
-
-  // Shared pricing plan (margins, extra costs, operational bills, daily target)
-  const plan = useFranchisePlan(selectedLocationBills);
-  const [showProjection, setShowProjection] = useState(false);
 
   // Compute Platform/Global Fees
   const computedGlobalFee = filteredGlobalPayments.reduce((sum, p) => {
@@ -469,29 +419,51 @@ export default function BuyFranchiseSection() {
       ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
       : parseFloat(p.amount) || 0;
 
-    if (locationForm.outletType === "KIOSK") {
-      if (isOptional) {
-        if (/kiosk/i.test(title)) {
-          if (selectedKioskChoice !== title) return sum;
-        } else {
-          if (!selectedOtherOptional.includes(title)) return sum;
-        }
-      }
-    } else {
-      // CLOUD_KITCHEN
-      if (isOptional) {
-        if (/cloud/i.test(title)) {
-          // Mandatory for cloud kitchen! Always include.
-        } else {
-          if (!selectedOtherOptional.includes(title)) return sum;
-        }
-      }
+    if (isOptional && !selectedOptionalPayments.includes(title)) {
+      return sum;
     }
     return sum + amt;
   }, 0);
 
   // Total Due: Brand Fees + Global Setup & Licensing + Location Facility Bills
   const totalFranchiseCost = totalVendorPayments + computedGlobalFee + totalLocationBills;
+
+  // Combined operational monthly bills (for Profit Projection & Costing):
+  // 1. Facility/location bills (excluding refundable one-off deposits)
+  const locationRecurringBills = selectedLocationBills
+    .filter((b) => !b.refundable)
+    .map((b, idx) => ({
+      id: `loc-${idx}-${b.title || b.name || "bill"}`,
+      name: b.title || b.name || "Location Facility Bill",
+      amount: parseFloat(b.amount) || 0,
+    }));
+
+  // 2. Global platform payments targeted to this outletType that recur every 30 days
+  // (mandatory payments + currently selected optional payments)
+  const globalRecurringBills = filteredGlobalPayments
+    .filter((p) => {
+      const isOptional = Boolean(p.optional || p.isOptional);
+      if (isOptional && !selectedOptionalPayments.includes(p.title)) return false;
+      const is30Day = !p.intervalInDays || Number(p.intervalInDays) === 30;
+      return Boolean(p.recurring) && is30Day;
+    })
+    .map((p, idx) => {
+      const isPct = Boolean(p.isPercentage);
+      const amt = isPct
+        ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
+        : parseFloat(p.amount) || 0;
+      return {
+        id: `global-rec-${idx}-${p.title}`,
+        name: `${p.title} (Monthly Fee)`,
+        amount: amt,
+      };
+    });
+
+  const combinedOperationalBills = [...locationRecurringBills, ...globalRecurringBills];
+
+  // Shared pricing plan (margins, extra costs, operational bills, daily target)
+  const plan = useFranchisePlan(combinedOperationalBills);
+  const [showProjection, setShowProjection] = useState(false);
 
   // Submit Franchise Purchase
   const handleSignSubmit = async ({ signatureName, terms, isSigned }) => {
@@ -501,23 +473,10 @@ export default function BuyFranchiseSection() {
     try {
       const menuIds = selectedMenuIds;
 
-      // Determine selected optional payments to pass to invoice
-      let finalOptionalPayments = [];
-      if (locationForm.outletType === "KIOSK") {
-        finalOptionalPayments = [...selectedOtherOptional];
-        if (selectedKioskChoice) finalOptionalPayments.push(selectedKioskChoice);
-      } else {
-        // CLOUD_KITCHEN & STORE_FRONT: include all cloud optional payments + checked add-ons
-        const cloudOptionalTitles = filteredGlobalPayments
-          .filter((p) => Boolean(p.optional || p.isOptional) && /cloud/i.test(p.title))
-          .map((p) => p.title);
-        finalOptionalPayments = Array.from(new Set([...cloudOptionalTitles, ...selectedOtherOptional]));
-      }
-
       const payload = {
         brandId: selectedBrand.id,
         menuIds,
-        selectedOptionalPayments: finalOptionalPayments,
+        selectedOptionalPayments,
         signatureName,
         terms,
         isSigned,
@@ -1770,131 +1729,48 @@ export default function BuyFranchiseSection() {
                         ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
                         : parseFloat(p.amount) || 0;
                       return (
-                        <div key={`mand-${idx}`} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", marginBottom: 4 }}>
-                          <span style={{ color: "var(--text-body)" }}>
-                            {p.title} {isPct ? `(${p.amount}%)` : ""}
-                          </span>
-                          <strong style={{ color: "var(--text-heading)" }}>
+                        <div key={`mand-${idx}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "0.82rem", marginBottom: 6 }}>
+                          <div>
+                            <span style={{ color: "var(--text-body)", display: "block" }}>
+                              {p.title} {isPct ? `(${p.amount}%)` : ""}
+                            </span>
+                            <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+                              {p.recurring && (
+                                <span style={{ fontSize: "0.62rem", color: "#6366f1", background: "rgba(99,102,241,0.1)", padding: "1px 5px", borderRadius: 4 }}>
+                                  {p.intervalInDays ? `Every ${p.intervalInDays}d` : "Recurring"}
+                                </span>
+                              )}
+                              {p.refundable && (
+                                <span style={{ fontSize: "0.62rem", color: "#16a34a", background: "rgba(22,163,74,0.1)", padding: "1px 5px", borderRadius: 4 }}>
+                                  Refundable Deposit
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <strong style={{ color: "var(--text-heading)", marginLeft: 8 }}>
                             {fmt(amt, currency)}
                           </strong>
                         </div>
                       );
                     })}
 
-                    {/* Fixed Payments (Cloud Kitchen & Store Front) */}
-                    {(locationForm.outletType === "CLOUD_KITCHEN" || locationForm.outletType === "STORE_FRONT") && cloudFixedItems.length > 0 && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
-                        {cloudFixedItems.map((p, idx) => {
-                          const isPct = Boolean(p.isPercentage);
-                          const amt = isPct
-                            ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
-                            : parseFloat(p.amount) || 0;
-                          return (
-                            <div
-                              key={`cloud-fix-${idx}`}
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                fontSize: "0.82rem",
-                                padding: "8px 10px",
-                                borderRadius: 8,
-                                background: "rgba(99,102,241,0.06)",
-                                border: "1px solid rgba(99,102,241,0.2)",
-                              }}
-                            >
-                              <div>
-                                <span style={{ color: "var(--text-heading)", fontWeight: 700, display: "block" }}>
-                                  {p.title} {isPct ? `(${p.amount}%)` : ""}
-                                </span>
-                                <span style={{ fontSize: "0.68rem", color: "#6366f1" }}>
-                                  Mandatory cloud kitchen licensing {p.description ? `• ${p.description}` : ""}
-                                </span>
-                              </div>
-                              <strong style={{ color: "var(--text-heading)" }}>
-                                {fmt(amt, currency)}
-                              </strong>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Kiosk Package Choice (Allow choosing ONLY 1) */}
-                    {locationForm.outletType === "KIOSK" && kioskOptionalItems.length > 0 && (
-                      <div style={{ marginTop: 8 }}>
+                    {/*  & Services (Checkboxes) */}
+                    {optionalGlobalItems.length > 0 && (
+                      <div style={{ marginTop: 10 }}>
                         <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
-                          Kiosk Tier Package (Choose 1):
+                          :
                         </span>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {kioskOptionalItems.map((p, idx) => {
+                          {optionalGlobalItems.map((p, idx) => {
                             const isPct = Boolean(p.isPercentage);
                             const amt = isPct
                               ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
                               : parseFloat(p.amount) || 0;
-                            const isChecked = selectedKioskChoice === p.title;
+                            const isChecked = selectedOptionalPayments.includes(p.title);
                             return (
                               <label
-                                key={`kiosk-opt-${idx}`}
-                                onClick={() => setSelectedKioskChoice((prev) => (prev === p.title ? null : p.title))}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  fontSize: "0.82rem",
-                                  padding: "8px 10px",
-                                  borderRadius: 8,
-                                  background: isChecked ? "rgba(203,108,220,0.08)" : "var(--bg-hover)",
-                                  border: `1.5px solid ${isChecked ? "var(--accent)" : "var(--border)"}`,
-                                  cursor: "pointer",
-                                  userSelect: "none",
-                                  transition: "all 0.15s ease",
-                                }}
-                              >
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                  <input
-                                    type="radio"
-                                    name="kioskChoice"
-                                    checked={isChecked}
-                                    onChange={() => { }}
-                                    style={{ accentColor: "var(--accent)", cursor: "pointer", margin: 0 }}
-                                  />
-                                  <div>
-                                    <span style={{ color: "var(--text-heading)", fontWeight: 600, display: "block" }}>
-                                      {p.title} {isPct ? `(${p.amount}%)` : ""}
-                                    </span>
-                                    <span style={{ fontSize: "0.68rem", color: isChecked ? "var(--accent)" : "var(--text-muted)" }}>
-                                      {p.description || "Kiosk specification tier"}
-                                    </span>
-                                  </div>
-                                </div>
-                                <strong style={{ color: isChecked ? "var(--text-heading)" : "var(--text-muted)" }}>
-                                  {fmt(amt, currency)}
-                                </strong>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Additional Optional Add-ons (Checkboxes) */}
-                    {otherOptionalItems.length > 0 && (
-                      <div style={{ marginTop: 8 }}>
-                        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
-                          Optional Add-ons:
-                        </span>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {otherOptionalItems.map((p, idx) => {
-                            const isPct = Boolean(p.isPercentage);
-                            const amt = isPct
-                              ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
-                              : parseFloat(p.amount) || 0;
-                            const isChecked = selectedOtherOptional.includes(p.title);
-                            return (
-                              <label
-                                key={`other-opt-${idx}`}
-                                onClick={() => toggleOtherOptional(p.title)}
+                                key={`opt-${idx}`}
+                                onClick={() => toggleOptionalPayment(p.title)}
                                 style={{
                                   display: "flex",
                                   alignItems: "center",
@@ -1920,9 +1796,16 @@ export default function BuyFranchiseSection() {
                                     <span style={{ color: "var(--text-heading)", fontWeight: 600, display: "block" }}>
                                       {p.title} {isPct ? `(${p.amount}%)` : ""}
                                     </span>
-                                    <span style={{ fontSize: "0.68rem", color: isChecked ? "var(--accent)" : "var(--text-muted)" }}>
-                                      {p.description || "Optional add-on service"}
-                                    </span>
+                                    <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 2 }}>
+                                      {p.recurring && (
+                                        <span style={{ fontSize: "0.62rem", color: "#6366f1", background: "rgba(99,102,241,0.1)", padding: "1px 5px", borderRadius: 4 }}>
+                                          {p.intervalInDays ? `Every ${p.intervalInDays}d` : "Recurring"}
+                                        </span>
+                                      )}
+                                      <span style={{ fontSize: "0.68rem", color: isChecked ? "var(--accent)" : "var(--text-muted)" }}>
+                                        {p.description || "Optional add-on service"}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
                                 <strong style={{ color: isChecked ? "var(--text-heading)" : "var(--text-muted)" }}>

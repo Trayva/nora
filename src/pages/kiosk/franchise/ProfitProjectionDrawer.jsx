@@ -135,7 +135,7 @@ export default function ProfitProjectionDrawer({ isOpen, onClose, menus, stateId
           <span style={label}>Monthly breakdown</span>
           <div style={{ marginTop: 6 }}>
             <BreakRow k="Sales income" v={fmt(revenue, currency)} bold />
-            <BreakRow k="Product costs (API + extra costs)" v={fmt(productCostMonthly, currency)} sign="− " color="#ef4444" />
+            <BreakRow k="Product costs" v={fmt(productCostMonthly, currency)} sign="− " color="#ef4444" />
             <BreakRow k={`Operational costs (${fmt(monthlyBills, currency)} bills)`} v={fmt(operationalMonthly, currency)} sign="− " color="#ef4444" />
             <BreakRow k={`Brand royalty (${num(royaltyPercent)}%)`} v={fmt(royaltyMonthly, currency)} sign="− " color="#ef4444" />
             <div style={{ borderTop: "1px solid var(--border)", marginTop: 6, paddingTop: 6 }}>

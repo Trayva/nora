@@ -25,6 +25,7 @@ const EMPTY_PAYMENT = {
   intervalInDays: "",
   target: "franchisee",
   isPercentage: false,
+  outletType: "ALL",
   optional: false,
 };
 const EMPTY_FORM = {
@@ -481,6 +482,7 @@ export default function AdminVendorApplicationSettings() {
           isPercentage: Boolean(p.isPercentage),
           optional: Boolean(p.optional),
           target: p.target || "franchisee",
+          outletType: p.outletType || "ALL",
           ...(p.intervalInDays && { intervalInDays: Number(p.intervalInDays) }),
         })),
       };
@@ -739,7 +741,7 @@ export default function AdminVendorApplicationSettings() {
                         className="admin_meta_chip"
                         style={{ color: p.optional ? "#ca8a04" : "var(--accent)" }}
                       >
-                        {p.title}{p.optional ? " [Optional]" : ""}: {p.isPercentage ? `${p.amount}%` : `${item.currency} ${Number(p.amount).toLocaleString()}`} ({p.target === "franchisor" ? "Franchisor" : "Franchisee"})
+                        {p.title}{p.optional ? " [Optional]" : ""}: {p.isPercentage ? `${p.amount}%` : `${item.currency} ${Number(p.amount).toLocaleString()}`} ({p.target === "franchisor" ? "Franchisor" : "Franchisee"}{p.outletType && p.outletType !== "ALL" ? ` · ${p.outletType.replace("_", " ")}` : ""})
                       </span>
                     ))}
                   </div>
@@ -925,6 +927,19 @@ export default function AdminVendorApplicationSettings() {
                     >
                       <option value="franchisee">Franchisee (Applicant)</option>
                       <option value="franchisor">Franchisor (Brand)</option>
+                    </select>
+                  </div>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label className="modal-label">Outlet Type</label>
+                    <select
+                      className="modal-input"
+                      value={p.outletType || "ALL"}
+                      onChange={(e) => updatePayment(i, "outletType", e.target.value)}
+                    >
+                      <option value="ALL">All outlet types</option>
+                      <option value="KIOSK">Physical Kiosk</option>
+                      <option value="CLOUD_KITCHEN">Cloud Kitchen</option>
+                      <option value="STORE_FRONT">Store Front</option>
                     </select>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>

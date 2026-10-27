@@ -12,10 +12,16 @@ export default function useFranchisePlan(locationBills = []) {
   const [bills, setBills] = useState([]);
   const [dailyTarget, setDailyTarget] = useState(50);
 
-  // Prefill monthly bills from the chosen location (editable)
+  // Prefill monthly bills from location & recurring payments (editable)
   const billsKey = JSON.stringify(locationBills);
   useEffect(() => {
-    setBills(locationBills.map((b, i) => ({ id: `loc-${i}`, name: b.name || b.title || "", amount: b.amount ?? "" })));
+    setBills(
+      locationBills.map((b, i) => ({
+        id: b.id || `bill-${i}`,
+        name: b.name || b.title || "",
+        amount: b.amount ?? "",
+      }))
+    );
   }, [billsKey]);
 
   const monthlyBills = bills.reduce((s, b) => s + num(b.amount), 0);
