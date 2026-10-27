@@ -4,6 +4,9 @@ import { toast } from "react-toastify";
 import api from "../../api/axios";
 import { useAuth } from "../../contexts/AuthContext";
 import ESignDrawer from "../../components/ESignDrawer";
+import RoyaltyBadge from "./franchise/RoyaltyBadge";
+import BrandMenuSelector from "./franchise/BrandMenuSelector";
+import FranchiseMenuDrawer from "./franchise/FranchiseMenuDrawer";
 import MapPicker from "./MapPicker";
 import {
   MdStorefront,
@@ -91,6 +94,10 @@ export default function BuyFranchiseSection() {
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [brandMenuItems, setBrandMenuItems] = useState([]);
   const [loadingMenu, setLoadingMenu] = useState(false);
+  const [selectedMenuIds, setSelectedMenuIds] = useState([]);
+  const [activeMenu, setActiveMenu] = useState(null);
+  const [royaltyPercent, setRoyaltyPercent] = useState(null);
+  const [loadingRoyalty, setLoadingRoyalty] = useState(false);
 
   // Slots & Country Settings
   const [availableSlots, setAvailableSlots] = useState(null);
@@ -306,10 +313,30 @@ export default function BuyFranchiseSection() {
       });
       const items = res.data.data?.items || (Array.isArray(res.data.data) ? res.data.data : []);
       setBrandMenuItems(items);
+      setSelectedMenuIds(items.map((m) => m.id)); // all selected by default
     } catch {
       setBrandMenuItems([]);
+      setSelectedMenuIds([]);
     } finally {
       setLoadingMenu(false);
+    }
+
+    // Royalty (sales formula vendor share): brand-specific first, else country default
+    const formulaCountry = locationForm.country || selectedCloudLocation?.country || selectedCloudLocation?.state?.country;
+    setLoadingRoyalty(true);
+    setRoyaltyPercent(null);
+    try {
+      let res = await api.get("/kiosk/sales-formula", { params: { country: formulaCountry, vendorId: brand.id } });
+      let list = Array.isArray(res.data.data) ? res.data.data : [];
+      if (list.length === 0) {
+        res = await api.get("/kiosk/sales-formula", { params: { country: formulaCountry } });
+        list = (Array.isArray(res.data.data) ? res.data.data : []).filter((f) => !f.vendorId);
+      }
+      setRoyaltyPercent(list.length > 0 ? list[0].vendorPercent : null);
+    } catch {
+      setRoyaltyPercent(null);
+    } finally {
+      setLoadingRoyalty(false);
     }
 
     // Check slot availability at this location
@@ -462,9 +489,10 @@ export default function BuyFranchiseSection() {
   // Submit Franchise Purchase
   const handleSignSubmit = async ({ signatureName, terms, isSigned }) => {
     if (!selectedBrand) return;
+    if (selectedMenuIds.length === 0) return toast.error("Please select at least one menu item");
     setSubmitting(true);
     try {
-      const menuIds = brandMenuItems.map((m) => m.id);
+      const menuIds = selectedMenuIds;
 
       // Determine selected optional payments to pass to invoice
       let finalOptionalPayments = [];
@@ -1229,7 +1257,7 @@ export default function BuyFranchiseSection() {
                 const isSelected = selectedBrand?.id === brand.id;
                 const outlets = Array.isArray(brand.outletSupport)
                   ? brand.outletSupport
-                  : ["KIOSK"];
+                  : [];
                 const supportsCurrentOutlet = outlets.includes(locationForm.outletType);
                 const supportedStates = Array.isArray(brand.supportedStates) ? brand.supportedStates : [];
                 const supportsCurrentState = (locationForm.stateId && supportedStates.includes(locationForm.stateId));
@@ -1567,38 +1595,36 @@ export default function BuyFranchiseSection() {
                     {selectedBrand.businessName}
                   </h4>
                   <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                    {brandMenuItems.length} recipes and menu items deployed automatically
+                    {selectedMenuIds.length} of {brandMenuItems.length} recipes and menu items selected
                   </span>
+                </div>
+                <div style={{ marginLeft: "auto" }}>
+                  <RoyaltyBadge percent={royaltyPercent} loading={loadingRoyalty} />
                 </div>
               </div>
 
               {brandMenuItems.length > 0 && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
-                  {brandMenuItems.slice(0, 6).map((item) => (
-                    <div
-                      key={item.id}
-                      style={{
-                        background: "var(--bg-hover)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 8,
-                        padding: 8,
-                        textAlign: "center",
-                      }}
-                    >
-                      {item.image && (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          style={{ width: "100%", height: 50, objectFit: "cover", borderRadius: 4, marginBottom: 4 }}
-                        />
-                      )}
-                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-heading)", display: "block" }}>
-                        {item.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                <BrandMenuSelector
+                  items={brandMenuItems}
+                  selectedIds={selectedMenuIds}
+                  onToggle={(id) =>
+                    setSelectedMenuIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+                  }
+                  onToggleAll={() =>
+                    setSelectedMenuIds((prev) => (prev.length === brandMenuItems.length ? [] : brandMenuItems.map((m) => m.id)))
+                  }
+                  onOpen={setActiveMenu}
+                />
               )}
+
+              <FranchiseMenuDrawer
+                menu={activeMenu}
+                stateId={locationForm.stateId || selectedCloudLocation?.stateId}
+                currency={currency}
+                fmt={fmt}
+                locationBills={selectedLocationBills}
+                onClose={() => setActiveMenu(null)}
+              />
             </div>
           </div>
 
