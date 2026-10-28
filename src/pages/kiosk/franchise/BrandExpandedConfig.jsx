@@ -12,6 +12,7 @@ export default function BrandExpandedConfig({
   onToggleAll,
   onOpenMenuDrawer,
   costMap = {},
+  profitMarginMap = {},
   loadingCosts = false,
   currency,
   fmt,
@@ -99,6 +100,7 @@ export default function BrandExpandedConfig({
             {menuItems.map((item) => {
               const isSelected = selectedMenuIds.includes(item.id);
               const cost = costMap[item.id];
+              const profitMargin = profitMarginMap[item.id];
 
               return (
                 <div
@@ -164,39 +166,71 @@ export default function BrandExpandedConfig({
                     )}
                   </div>
 
-                  {/* Name & Ticket time */}
+                  {/* Name & Ticket time / Profit Margin */}
                   <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
                     <strong style={{ fontSize: "0.82rem", color: "var(--text-heading)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {item.name}
                     </strong>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 3,
-                        fontSize: "0.66rem",
-                        color: "var(--text-muted)",
-                        fontWeight: 600,
-                        marginTop: 1,
-                      }}
-                    >
-                      <svg
-                        width="11"
-                        height="11"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                        style={{ opacity: 0.75, flexShrink: 0 }}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 2 }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 3,
+                          fontSize: "0.66rem",
+                          color: "var(--text-muted)",
+                          fontWeight: 600,
+                        }}
                       >
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                      </svg>
-                      <span>{item.ticketTime ? `${item.ticketTime} min` : "—"}</span>
-                    </span>
+                        <svg
+                          width="11"
+                          height="11"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          style={{ opacity: 0.75, flexShrink: 0 }}
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        <span>{item.ticketTime ? `${item.ticketTime} min` : "—"}</span>
+                      </span>
+
+                      {profitMargin != null && (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 3,
+                            fontSize: "0.66rem",
+                            color: "#16a34a",
+                            fontWeight: 700,
+                          }}
+                          title="Calculated Profit Margin"
+                        >
+                          <svg
+                            width="11"
+                            height="11"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#16a34a"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                            style={{ flexShrink: 0 }}
+                          >
+                            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                            <polyline points="16 7 22 7 22 13" />
+                          </svg>
+                          <span>{profitMargin.toFixed(1)}%</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Cost in Location */}

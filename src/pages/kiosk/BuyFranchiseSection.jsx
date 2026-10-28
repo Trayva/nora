@@ -106,6 +106,7 @@ export default function BuyFranchiseSection() {
   const [royaltyPercent, setRoyaltyPercent] = useState(null);
   const [loadingRoyalty, setLoadingRoyalty] = useState(false);
   const [menuCostMap, setMenuCostMap] = useState({});
+  const [menuProfitMarginMap, setMenuProfitMarginMap] = useState({});
   const [loadingCosts, setLoadingCosts] = useState(false);
 
   // Slots & Country Settings
@@ -229,10 +230,11 @@ export default function BuyFranchiseSection() {
     return countryDefault?.vendorPercent ? countryDefault?.vendorPercent + countryDefault?.noraPercent + countryDefault?.operatorPercent : null;
   };
 
-  // Calculate menu costs in selected location across all items in brandMenuItems
+  // Calculate menu costs and prices in selected location across all items in brandMenuItems
   useEffect(() => {
     if (!brandMenuItems.length) {
       setMenuCostMap({});
+      setMenuProfitMarginMap({});
       return;
     }
     const stateId = locationForm.stateId || selectedCloudLocation?.stateId;
@@ -240,19 +242,35 @@ export default function BuyFranchiseSection() {
     setLoadingCosts(true);
     Promise.all(
       brandMenuItems.map(async (m) => {
+        const params = { stateId, useAverage: true, variantId: m.variants[0]?.id };
         try {
-          console.log(m)
-          const res = await api.get(`/library/calculation/menu/${m.id}/calc`, {
-            params: { stateId, useAverage: true, variantId: m.variants[0]?.id },
-          });
-          return [m.id, res.data.data?.cost ?? null];
+          const [costRes, priceRes] = await Promise.all([
+            api.get(`/library/calculation/menu/${m.id}/calc`, { params }).catch(() => null),
+            api.get(`/library/price/menu/${m.id}`, { params }).catch(() => null),
+          ]);
+          const cost = costRes?.data?.data?.cost ?? null;
+          const price = priceRes?.data?.data?.sellingPrice ?? priceRes?.data?.data?.price ?? null;
+
+          let profitMargin = null;
+          if (cost != null && price != null && Number(cost) > 0) {
+            profitMargin = ((Number(price) - Number(cost)) / Number(cost)) * 100;
+          }
+
+          return { id: m.id, cost, profitMargin };
         } catch {
-          return [m.id, null];
+          return { id: m.id, cost: null, profitMargin: null };
         }
       })
-    ).then((entries) => {
+    ).then((items) => {
       if (cancelled) return;
-      setMenuCostMap(Object.fromEntries(entries));
+      const costEntries = {};
+      const marginEntries = {};
+      items.forEach((item) => {
+        costEntries[item.id] = item.cost;
+        marginEntries[item.id] = item.profitMargin;
+      });
+      setMenuCostMap(costEntries);
+      setMenuProfitMarginMap(marginEntries);
       setLoadingCosts(false);
     });
     return () => {
@@ -1559,6 +1577,7 @@ export default function BuyFranchiseSection() {
                         }
                         onOpenMenuDrawer={(item) => setActiveMenu(item)}
                         costMap={menuCostMap}
+                        profitMarginMap={menuProfitMarginMap}
                         loadingCosts={loadingCosts}
                         currency={currency}
                         fmt={fmt}
