@@ -17,7 +17,11 @@ const cardStyle = {
   background: "var(--bg-card)",
   border: "1px solid var(--border)",
   borderRadius: 14,
-  padding: "14px 16px",
+  padding: "12px 14px",
+  width: "100%",
+  maxWidth: "100%",
+  boxSizing: "border-box",
+  overflowX: "hidden",
 };
 
 const titleStyle = {
@@ -46,6 +50,7 @@ function AddButton({ onClick, children }) {
         display: "flex",
         alignItems: "center",
         gap: 4,
+        flexShrink: 0,
       }}
     >
       <MdAdd size={14} /> {children}
@@ -83,40 +88,68 @@ export function ExtraCostsSection({ items, onChange }) {
   const update = (id, patch) => onChange(items.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   return (
     <div style={cardStyle}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 8, flexWrap: "wrap" }}>
         <span style={titleStyle}>Extra Costs</span>
         <AddButton onClick={() => onChange([...items, { id: Date.now(), title: "", amount: "", type: "fixed", target: "cost" }])}>
           Add Cost
         </AddButton>
       </div>
       {items.length === 0 ? (
-        <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center" }}>No extra costs added.</div>
+        <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "6px 0" }}>No extra costs added.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {items.map((ac) => (
-            <div key={ac.id} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <div
+              key={ac.id}
+              style={{
+                display: "flex",
+                gap: 6,
+                flexWrap: "wrap",
+                alignItems: "center",
+                width: "100%",
+                boxSizing: "border-box",
+                background: "rgba(0,0,0,0.02)",
+                padding: "6px 8px",
+                borderRadius: 8,
+                border: "1px solid var(--border)",
+              }}
+            >
               <input
-                placeholder="Title (e.g. Labor)"
+                placeholder="Title (e.g. Labor, Packaging)"
                 value={ac.title}
                 onChange={(e) => update(ac.id, { title: e.target.value })}
-                style={{ ...inputStyle, flex: "1 1 120px" }}
+                style={{ ...inputStyle, flex: "1 1 130px", minWidth: 0 }}
               />
-              <select value={ac.type} onChange={(e) => update(ac.id, { type: e.target.value })} style={{ ...inputStyle, width: 82, padding: "0 4px" }}>
-                <option value="fixed">Flat</option>
-                <option value="percentage">Percent</option>
-              </select>
-              <input
-                type="number"
-                placeholder={ac.type === "percentage" ? "%" : "Amount"}
-                value={ac.amount}
-                onChange={(e) => update(ac.id, { amount: e.target.value })}
-                style={{ ...inputStyle, width: 80 }}
-              />
-              <select value={ac.target} onChange={(e) => update(ac.id, { target: e.target.value })} style={{ ...inputStyle, width: 106, padding: "0 4px" }}>
-                <option value="cost">Add to Cost</option>
-                <option value="price">Add to Price</option>
-              </select>
-              <RemoveButton onClick={() => onChange(items.filter((i) => i.id !== ac.id))} />
+
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flex: "1 1 200px", minWidth: 0, width: "100%" }}>
+                <select
+                  value={ac.type}
+                  onChange={(e) => update(ac.id, { type: e.target.value })}
+                  style={{ ...inputStyle, width: 72, minWidth: 60, padding: "0 4px", flexShrink: 0 }}
+                >
+                  <option value="fixed">Flat</option>
+                  <option value="percentage">%</option>
+                </select>
+
+                <input
+                  type="number"
+                  placeholder={ac.type === "percentage" ? "%" : "Amount"}
+                  value={ac.amount}
+                  onChange={(e) => update(ac.id, { amount: e.target.value })}
+                  style={{ ...inputStyle, flex: "1 1 65px", minWidth: 55 }}
+                />
+
+                <select
+                  value={ac.target}
+                  onChange={(e) => update(ac.id, { target: e.target.value })}
+                  style={{ ...inputStyle, flex: "1.2 1 90px", minWidth: 80, padding: "0 4px" }}
+                >
+                  <option value="cost">To Cost</option>
+                  <option value="price">To Price</option>
+                </select>
+
+                <RemoveButton onClick={() => onChange(items.filter((i) => i.id !== ac.id))} />
+              </div>
             </div>
           ))}
         </div>
@@ -133,30 +166,30 @@ export function OperationalCostSection({ bills, onBillsChange, dailyTarget, onTa
 
   return (
     <div style={cardStyle}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 8, flexWrap: "wrap" }}>
         <span style={titleStyle}>Operational Cost</span>
         <AddButton onClick={() => onBillsChange([...bills, { id: Date.now(), name: "", amount: "" }])}>Add Bill</AddButton>
       </div>
 
       <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>Monthly bills</span>
       {bills.length === 0 ? (
-        <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontStyle: "italic", marginBottom: 10 }}>No monthly bills listed.</div>
+        <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontStyle: "italic", marginBottom: 10, padding: "4px 0" }}>No monthly bills listed.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
           {bills.map((b) => (
-            <div key={b.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <div key={b.id} style={{ display: "flex", gap: 6, alignItems: "center", width: "100%", boxSizing: "border-box" }}>
               <input
-                placeholder="Bill (e.g. Rent)"
+                placeholder="Bill (e.g. Rent, Power)"
                 value={b.name}
                 onChange={(e) => update(b.id, { name: e.target.value })}
-                style={{ ...inputStyle, flex: 1 }}
+                style={{ ...inputStyle, flex: "1 1 120px", minWidth: 0 }}
               />
               <input
                 type="number"
                 placeholder="Amount"
                 value={b.amount}
                 onChange={(e) => update(b.id, { amount: e.target.value })}
-                style={{ ...inputStyle, width: 110 }}
+                style={{ ...inputStyle, width: 95, flexShrink: 0 }}
               />
               <RemoveButton onClick={() => onBillsChange(bills.filter((x) => x.id !== b.id))} />
             </div>
@@ -164,14 +197,14 @@ export function OperationalCostSection({ bills, onBillsChange, dailyTarget, onTa
         </div>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-        <span style={{ fontSize: "0.78rem", color: "var(--text-body)", flex: 1 }}>Daily target orders</span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12, flexWrap: "wrap", width: "100%", boxSizing: "border-box" }}>
+        <span style={{ fontSize: "0.78rem", color: "var(--text-body)", flex: "1 1 140px", minWidth: 0 }}>Daily target orders</span>
         <input
           type="number"
           min={1}
           value={dailyTarget}
           onChange={(e) => onTargetChange(e.target.value)}
-          style={{ ...inputStyle, width: 90 }}
+          style={{ ...inputStyle, width: 80, flexShrink: 0, textAlign: "center" }}
         />
       </div>
 

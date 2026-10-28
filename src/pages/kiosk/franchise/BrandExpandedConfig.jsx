@@ -47,18 +47,22 @@ export default function BrandExpandedConfig({
         borderTop: "1.5px dashed var(--border)",
         display: "flex",
         flexDirection: "column",
-        gap: 20,
+        gap: 16,
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        overflowX: "hidden",
       }}
     >
       {/* ── 1. Recipes & Pricing Section ──────────────────────── */}
-      <div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div>
+      <div style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 12, flexWrap: "wrap", width: "100%" }}>
+          <div style={{ flex: "1 1 200px", minWidth: 0 }}>
             <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "var(--text-heading)", textTransform: "uppercase", letterSpacing: "0.04em", display: "block" }}>
-              1. Brand Recipes &amp; Markup
+              1. Brand Recipes &amp; Deployment
             </span>
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-              Select recipes to deploy and enter desired markup percentage for each item.
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginTop: 2 }}>
+              Select recipes to deploy for this location.
             </span>
           </div>
           {menuItems.length > 0 && (
@@ -66,13 +70,15 @@ export default function BrandExpandedConfig({
               type="button"
               onClick={onToggleAll}
               style={{
-                background: "none",
-                border: "none",
+                background: "var(--bg-hover)",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
                 color: "var(--accent)",
-                fontSize: "0.74rem",
+                fontSize: "0.72rem",
                 fontWeight: 700,
                 cursor: "pointer",
-                padding: "4px 8px",
+                padding: "3px 9px",
+                flexShrink: 0,
               }}
             >
               {allSelected ? "Unselect all" : "Select all"}
@@ -89,13 +95,10 @@ export default function BrandExpandedConfig({
             No recipes published for this brand yet.
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
             {menuItems.map((item) => {
               const isSelected = selectedMenuIds.includes(item.id);
               const cost = costMap[item.id];
-              const rawMargin = getMargin(item.id);
-              const margin = num(rawMargin);
-              const pricing = cost != null ? priceFor(cost, margin) : null;
 
               return (
                 <div
@@ -103,14 +106,16 @@ export default function BrandExpandedConfig({
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 12,
-                    padding: "10px 12px",
+                    gap: 10,
+                    padding: "8px 10px",
                     borderRadius: 12,
                     background: isSelected ? "var(--bg-hover)" : "rgba(0,0,0,0.02)",
                     border: `1.5px solid ${isSelected ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
                     opacity: isSelected ? 1 : 0.55,
                     transition: "all 0.15s ease",
-                    flexWrap: "wrap",
+                    width: "100%",
+                    maxWidth: "100%",
+                    boxSizing: "border-box",
                   }}
                 >
                   {/* Checkbox */}
@@ -139,8 +144,8 @@ export default function BrandExpandedConfig({
                   {/* Thumbnail */}
                   <div
                     style={{
-                      width: 44,
-                      height: 44,
+                      width: 40,
+                      height: 40,
                       borderRadius: 8,
                       overflow: "hidden",
                       background: "var(--bg-card)",
@@ -155,29 +160,29 @@ export default function BrandExpandedConfig({
                     {item.image ? (
                       <img src={item.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
-                      <MdImage size={20} />
+                      <MdImage size={18} />
                     )}
                   </div>
 
-                  {/* Name & Details link */}
-                  <div style={{ flex: "1 1 140px", minWidth: 120 }}>
-                    <strong style={{ fontSize: "0.84rem", color: "var(--text-heading)", display: "block" }}>
+                  {/* Name & Ticket time */}
+                  <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                    <strong style={{ fontSize: "0.82rem", color: "var(--text-heading)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {item.name}
                     </strong>
                     <span
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
-                        gap: 4,
-                        fontSize: "0.68rem",
+                        gap: 3,
+                        fontSize: "0.66rem",
                         color: "var(--text-muted)",
                         fontWeight: 600,
-                        marginTop: 2,
+                        marginTop: 1,
                       }}
                     >
                       <svg
-                        width="12"
-                        height="12"
+                        width="11"
+                        height="11"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -195,11 +200,11 @@ export default function BrandExpandedConfig({
                   </div>
 
                   {/* Cost in Location */}
-                  <div style={{ textAlign: "right", minWidth: 85 }}>
-                    <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>
                       Cost
                     </span>
-                    <strong style={{ fontSize: "0.84rem", color: "var(--text-heading)" }}>
+                    <strong style={{ fontSize: "0.82rem", color: "var(--text-heading)" }}>
                       {loadingCosts && cost === undefined
                         ? "…"
                         : cost != null
@@ -207,47 +212,6 @@ export default function BrandExpandedConfig({
                           : "N/A"}
                     </strong>
                   </div>
-
-                  {/* Markup Input */}
-                  {/* <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <div style={{ position: "relative", width: 88 }}>
-                      <input
-                        type="number"
-                        min={0}
-                        step="any"
-                        placeholder="0"
-                        value={rawMargin}
-                        disabled={!isSelected}
-                        onChange={(e) => setMargin(item.id, e.target.value)}
-                        aria-label={`Markup percentage for ${item.name}`}
-                        style={{
-                          width: "100%",
-                          height: 32,
-                          borderRadius: 8,
-                          border: "1px solid var(--border)",
-                          background: "var(--bg-card)",
-                          color: "var(--text-heading)",
-                          padding: "0 24px 0 8px",
-                          fontSize: "0.78rem",
-                          fontWeight: 800,
-                          outline: "none",
-                        }}
-                      />
-                      <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 700 }}>
-                        %
-                      </span>
-                    </div>
-                  </div> */}
-
-                  {/* Selling Price */}
-                  {/* <div style={{ textAlign: "right", minWidth: 95 }}>
-                    <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>
-                      Selling Price
-                    </span>
-                    <strong style={{ fontSize: "0.92rem", color: "var(--accent)" }}>
-                      {pricing ? fmt(pricing.price, currency) : "—"}
-                    </strong>
-                  </div> */}
                 </div>
               );
             })}
@@ -256,38 +220,38 @@ export default function BrandExpandedConfig({
       </div>
 
       {/* ── 2. Operating Target & Extra Expenses ─────────────── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: "14px 16px", background: "var(--bg-card)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: "12px 14px", background: "var(--bg-card)", width: "100%", boxSizing: "border-box" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", width: "100%" }}>
+            <div style={{ flex: "1 1 180px", minWidth: 0 }}>
               <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "var(--text-heading)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block" }}>
                 Daily Sales Target
               </span>
-              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                Expected daily customer orders. Monthly projection = target × 30 days ({monthlyOrders.toLocaleString()} total orders/month, ~{selectedCount > 0 ? Math.round(monthlyOrders / selectedCount).toLocaleString() : 0} per selected menu).
+              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block", marginTop: 2 }}>
+                Target daily orders ({monthlyOrders.toLocaleString()}/mo, ~{selectedCount > 0 ? Math.round(monthlyOrders / selectedCount).toLocaleString() : 0}/menu).
               </span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
               <input
                 type="number"
                 min={1}
                 value={dailyTarget}
                 onChange={(e) => setDailyTarget(e.target.value)}
                 style={{
-                  width: 90,
+                  width: 75,
                   height: 34,
                   borderRadius: 8,
                   border: "1px solid var(--border)",
                   background: "var(--bg-hover)",
                   color: "var(--text-heading)",
-                  padding: "0 10px",
+                  padding: "0 8px",
                   fontSize: "0.85rem",
                   fontWeight: 800,
                   textAlign: "center",
                   outline: "none",
                 }}
               />
-              <span style={{ fontSize: "0.76rem", color: "var(--text-muted)", fontWeight: 700 }}>orders / day</span>
+              <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 700 }}>orders / day</span>
             </div>
           </div>
         </div>
@@ -311,12 +275,14 @@ export default function BrandExpandedConfig({
       <div
         style={{
           display: "flex",
-          gap: 12,
+          gap: 10,
           justifyContent: "space-between",
           alignItems: "center",
           flexWrap: "wrap",
-          paddingTop: 8,
+          paddingTop: 10,
           borderTop: "1px solid var(--border)",
+          width: "100%",
+          boxSizing: "border-box",
         }}
       >
         <button
@@ -326,15 +292,17 @@ export default function BrandExpandedConfig({
           className="app_btn app_btn_cancel"
           style={{
             height: 40,
-            padding: "0 18px",
-            fontSize: "0.82rem",
+            padding: "0 14px",
+            fontSize: "0.8rem",
             fontWeight: 800,
             display: "inline-flex",
             alignItems: "center",
+            justifyContent: "center",
             gap: 7,
             color: "var(--accent)",
             borderColor: "rgba(203,108,220,0.35)",
             background: "rgba(203,108,220,0.08)",
+            flex: "1 1 140px",
           }}
         >
           Break-Even Analysis
@@ -347,12 +315,14 @@ export default function BrandExpandedConfig({
           className="app_btn app_btn_confirm"
           style={{
             height: 40,
-            padding: "0 22px",
-            fontSize: "0.82rem",
+            padding: "0 18px",
+            fontSize: "0.8rem",
             fontWeight: 800,
             display: "inline-flex",
             alignItems: "center",
+            justifyContent: "center",
             gap: 8,
+            flex: "1 1 140px",
           }}
         >
           Review &amp; Sign <MdArrowForward size={16} />

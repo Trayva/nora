@@ -649,13 +649,20 @@ export default function BuyFranchiseSection() {
         /* Form inputs: 16px avoids iOS zoom-on-focus */
         .bf-root .modal-input { max-width: 100%; }
 
+        .bf-brand-card {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+          overflow-x: hidden;
+        }
+
         @media (max-width: 900px) {
           .bf-checkout-grid { grid-template-columns: 1fr !important; }
           .bf-sticky { position: static !important; }
         }
 
         @media (max-width: 640px) {
-          .bf-root { padding: 0 0 28px; }
+          .bf-root { padding: 0 0 28px; width: 100%; max-width: 100%; overflow-x: hidden; }
           .bf-stepper { gap: 6px; margin-bottom: 18px; justify-content: space-between; }
           .bf-step-sep { display: none; }
           .bf-step { flex: 0 0 auto; padding: 5px 10px 5px 5px; font-size: .76rem; }
@@ -664,7 +671,8 @@ export default function BuyFranchiseSection() {
           .bf-step:not(.active) { padding: 5px; }
           .bf-step-full { display: none; }
           .bf-step-short { display: inline; }
-          .bf-card { padding: 16px !important; border-radius: 14px !important; }
+          .bf-card { padding: 14px !important; border-radius: 14px !important; }
+          .bf-brand-card { padding: 14px !important; }
           .bf-root .modal-input { font-size: 16px !important; min-height: 44px; }
           .bf-root .app_btn { min-height: 44px; }
           .bf-title { font-size: 1.05rem !important; }
@@ -673,7 +681,7 @@ export default function BuyFranchiseSection() {
           .bf-coord-head { flex-direction: column; align-items: stretch !important; gap: 8px; }
           .bf-coord-actions { width: 100%; }
           .bf-coord-actions > button { flex: 1; height: 38px !important; justify-content: center; font-size: .76rem !important; }
-          .bf-brand-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .bf-brand-grid { grid-template-columns: 1fr !important; gap: 12px !important; width: 100%; max-width: 100%; }
           .bf-bill-row { flex-wrap: wrap; gap: 4px; }
           .bf-loc-hero { height: 170px !important; }
           .bf-lightbox { padding: 12px !important; }
@@ -1345,11 +1353,12 @@ export default function BuyFranchiseSection() {
                   <div
                     key={brand.id}
                     onClick={() => handleToggleExpandBrand(brand, isEligible)}
+                    className="bf-card bf-brand-card"
                     style={{
                       background: "var(--bg-card)",
                       border: `1.5px solid ${isExpanded ? "var(--accent)" : isSelected ? "var(--accent)" : isEligible ? "var(--border)" : "rgba(239, 68, 68, 0.25)"}`,
                       borderRadius: 16,
-                      padding: 20,
+                      padding: 18,
                       cursor: isEligible ? "pointer" : "not-allowed",
                       display: "flex",
                       flexDirection: "column",
@@ -1359,17 +1368,21 @@ export default function BuyFranchiseSection() {
                       opacity: isEligible ? 1 : 0.6,
                       gridColumn: isExpanded ? "1 / -1" : undefined,
                       boxShadow: isExpanded ? "0 8px 24px rgba(203,108,220,0.12)" : undefined,
+                      width: "100%",
+                      maxWidth: "100%",
+                      boxSizing: "border-box",
+                      overflowX: "hidden",
                     }}
                   >
-                    <div>
+                    <div style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
                       {/* Brand Header */}
-                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 12, width: "100%" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
                           <div
                             style={{
-                              width: 48,
-                              height: 48,
-                              borderRadius: 12,
+                              width: 44,
+                              height: 44,
+                              borderRadius: 10,
                               background: brand.branding?.color || "var(--bg-hover)",
                               display: "flex",
                               alignItems: "center",
@@ -1386,34 +1399,35 @@ export default function BuyFranchiseSection() {
                                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                               />
                             ) : (
-                              <MdStorefront size={24} color="#fff" />
+                              <MdStorefront size={22} color="#fff" />
                             )}
                           </div>
-                          <div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 2 }}>
-                              <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-heading)", margin: 0 }}>
+                              <h4 style={{ fontSize: "0.92rem", fontWeight: 800, color: "var(--text-heading)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 {brand.businessName}
                               </h4>
                               {(brand.origin || brand.branding?.origin) && (
                                 <span
                                   style={{
-                                    fontSize: "0.64rem",
+                                    fontSize: "0.62rem",
                                     fontWeight: 700,
-                                    padding: "1px 6px",
+                                    padding: "1px 5px",
                                     borderRadius: 4,
                                     background: "rgba(203,108,220,0.08)",
                                     color: "var(--accent)",
                                     border: "1px solid rgba(203,108,220,0.25)",
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: 3,
+                                    gap: 2,
+                                    whiteSpace: "nowrap",
                                   }}
                                 >
                                   📍 {brand.origin || brand.branding?.origin}
                                 </span>
                               )}
                             </div>
-                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                            <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {brand.branding?.tagline || "Verified Franchise Partner"}
                             </span>
                           </div>
@@ -1421,7 +1435,9 @@ export default function BuyFranchiseSection() {
 
                         {/* Brand Royalty Percentage Badge */}
                         {royaltyPct != null && (
-                          <RoyaltyBadge percent={royaltyPct} />
+                          <div style={{ flexShrink: 0 }}>
+                            <RoyaltyBadge percent={royaltyPct} />
+                          </div>
                         )}
                       </div>
 
