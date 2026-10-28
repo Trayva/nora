@@ -672,6 +672,7 @@ export default function BuyFranchiseSection() {
           max-width: 100%;
           box-sizing: border-box;
           overflow-x: hidden;
+          border-radius: 22px !important;
         }
 
         @media (max-width: 900px) {
@@ -690,7 +691,7 @@ export default function BuyFranchiseSection() {
           .bf-step-full { display: none; }
           .bf-step-short { display: inline; }
           .bf-card { padding: 14px !important; border-radius: 14px !important; }
-          .bf-brand-card { padding: 14px !important; }
+          .bf-brand-card { padding: 16px !important; border-radius: 18px !important; }
           .bf-root .modal-input { font-size: 16px !important; min-height: 44px; }
           .bf-root .app_btn { min-height: 44px; }
           .bf-title { font-size: 1.05rem !important; }
@@ -1366,6 +1367,11 @@ export default function BuyFranchiseSection() {
                 const payments = Array.isArray(brand.franchisePayments) ? brand.franchisePayments : [];
                 const brandFeeTotal = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
                 const royaltyPct = getBrandRoyalty(brand.id);
+                const originText =
+                  brand.origin ||
+                  brand.branding?.origin ||
+                  (Array.isArray(brand.supportedCountries) && brand.supportedCountries.length > 0 ? brand.supportedCountries.join(", ") : null) ||
+                  (brand.country ? brand.country : "Nigeria, United Arab Emirates");
 
                 return (
                   <div
@@ -1375,8 +1381,8 @@ export default function BuyFranchiseSection() {
                     style={{
                       background: "var(--bg-card)",
                       border: `1.5px solid ${isExpanded ? "var(--accent)" : isSelected ? "var(--accent)" : isEligible ? "var(--border)" : "rgba(239, 68, 68, 0.25)"}`,
-                      borderRadius: 16,
-                      padding: 18,
+                      borderRadius: 22,
+                      padding: "20px 22px",
                       cursor: isEligible ? "pointer" : "not-allowed",
                       display: "flex",
                       flexDirection: "column",
@@ -1385,7 +1391,7 @@ export default function BuyFranchiseSection() {
                       position: "relative",
                       opacity: isEligible ? 1 : 0.6,
                       gridColumn: isExpanded ? "1 / -1" : undefined,
-                      boxShadow: isExpanded ? "0 8px 24px rgba(203,108,220,0.12)" : undefined,
+                      boxShadow: isExpanded ? "0 8px 24px rgba(203,108,220,0.12)" : "0 2px 8px rgba(0,0,0,0.03)",
                       width: "100%",
                       maxWidth: "100%",
                       boxSizing: "border-box",
@@ -1393,116 +1399,102 @@ export default function BuyFranchiseSection() {
                     }}
                   >
                     <div style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
-                      {/* Brand Header */}
-                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 12, width: "100%" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-                          <div
-                            style={{
-                              width: 44,
-                              height: 44,
-                              borderRadius: 10,
-                              background: brand.branding?.color || "var(--bg-hover)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              overflow: "hidden",
-                              flexShrink: 0,
-                              border: "1px solid var(--border)",
-                            }}
-                          >
-                            {brand.branding?.logo ? (
-                              <img
-                                src={brand.branding.logo}
-                                alt={brand.businessName}
-                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                              />
-                            ) : (
-                              <MdStorefront size={22} color="#fff" />
-                            )}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 2 }}>
-                              <h4 style={{ fontSize: "0.92rem", fontWeight: 800, color: "var(--text-heading)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {brand.businessName}
-                              </h4>
-                              {(brand.origin || brand.branding?.origin) && (
-                                <span
-                                  style={{
-                                    fontSize: "0.62rem",
-                                    fontWeight: 700,
-                                    padding: "1px 5px",
-                                    borderRadius: 4,
-                                    background: "rgba(203,108,220,0.08)",
-                                    color: "var(--accent)",
-                                    border: "1px solid rgba(203,108,220,0.25)",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 2,
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  📍 {brand.origin || brand.branding?.origin}
-                                </span>
-                              )}
-                            </div>
-                            <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {brand.branding?.tagline || "Verified Franchise Partner"}
-                            </span>
-                          </div>
+                      {/* Top Row: Brand Logo & Title/Tagline */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12, width: "100%" }}>
+                        <div
+                          style={{
+                            width: 54,
+                            height: 54,
+                            borderRadius: 16,
+                            background: brand.branding?.color || "#1e1915",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            overflow: "hidden",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {brand.branding?.logo ? (
+                            <img
+                              src={brand.branding.logo}
+                              alt={brand.businessName}
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          ) : (
+                            <MdStorefront size={26} color="#fff" />
+                          )}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h4 style={{ fontSize: "1.08rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {brand.businessName}
+                          </h4>
+                          <span style={{ fontSize: "0.84rem", color: "var(--text-muted)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {brand.branding?.tagline || "Fresh, fast and local"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Second Row: Location Pin + Countries & Medal + Royalty */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
+                        {/* Location */}
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="#6b7280" aria-hidden="true" style={{ flexShrink: 0 }}>
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                          </svg>
+                          <strong style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                            {originText}
+                          </strong>
                         </div>
 
-                        {/* Brand Royalty Percentage Badge */}
+                        {/* Royalty badge */}
                         {royaltyPct != null && (
-                          <div style={{ flexShrink: 0 }}>
-                            <RoyaltyBadge percent={royaltyPct} />
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                              <path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" fill="#b45309" />
+                              <path d="M8.5 14L7 23L12 20L17 23L15.5 14" fill="#b45309" />
+                              <path d="M12 5L12.9 7.2L15.3 7.4L13.4 9L14 11.4L12 10.1L10 11.4L10.6 9L8.7 7.4L11.1 7.2L12 5Z" fill="#ffffff" />
+                            </svg>
+                            <strong style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                              Royalty {royaltyPct}%
+                            </strong>
                           </div>
                         )}
                       </div>
 
-                      {/* Outlet Support & State Eligibility Tags */}
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-                        {outlets.map((ot) => (
-                          <span
-                            key={ot}
-                            style={{
-                              fontSize: "0.68rem",
-                              fontWeight: 700,
-                              padding: "2px 7px",
-                              borderRadius: 5,
-                              background:
-                                ot === "KIOSK"
-                                  ? "rgba(34,197,94,0.1)"
-                                  : ot === "STORE_FRONT"
-                                    ? "rgba(245,158,11,0.12)"
-                                    : "rgba(99,102,241,0.1)",
-                              color:
-                                ot === "KIOSK"
-                                  ? "#16a34a"
-                                  : ot === "STORE_FRONT"
-                                    ? "#d97706"
-                                    : "#6366f1",
-                              border: `1px solid ${ot === "KIOSK"
-                                ? "rgba(34,197,94,0.25)"
-                                : ot === "STORE_FRONT"
-                                  ? "rgba(245,158,11,0.3)"
-                                  : "rgba(99,102,241,0.25)"
-                                }`,
-                            }}
-                          >
-                            {ot === "KIOSK" ? "Physical Kiosk" : ot === "STORE_FRONT" ? "Store Front" : "Cloud Kitchen"}
-                          </span>
-                        ))}
+                      {/* Third Row: Outlet Support Pills */}
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+                        {outlets.map((ot) => {
+                          const isKiosk = ot === "KIOSK";
+                          const isStoreFront = ot === "STORE_FRONT";
+                          const bg = isKiosk ? "#dcfce7" : isStoreFront ? "#fef3c7" : "#f3e8ff";
+                          const text = isKiosk ? "#15803d" : isStoreFront ? "#d97706" : "#9333ea";
+                          const label = isKiosk ? "Physical Kiosk" : isStoreFront ? "Store Front" : "Cloud Kitchen";
+                          return (
+                            <span
+                              key={ot}
+                              style={{
+                                fontSize: "0.74rem",
+                                fontWeight: 700,
+                                padding: "4px 12px",
+                                borderRadius: 999,
+                                background: bg,
+                                color: text,
+                              }}
+                            >
+                              {label}
+                            </span>
+                          );
+                        })}
 
                         {!supportsCurrentState && (
                           <span
                             style={{
-                              fontSize: "0.68rem",
+                              fontSize: "0.74rem",
                               fontWeight: 700,
-                              padding: "2px 7px",
-                              borderRadius: 5,
-                              background: "rgba(239, 68, 68, 0.1)",
+                              padding: "4px 12px",
+                              borderRadius: 999,
+                              background: "rgba(239, 68, 68, 0.12)",
                               color: "#ef4444",
-                              border: "1px solid rgba(239, 68, 68, 0.25)",
                             }}
                           >
                             Unavailable in {locationForm.stateName || "State"}
@@ -1510,18 +1502,19 @@ export default function BuyFranchiseSection() {
                         )}
                       </div>
 
-                      <p style={{ fontSize: "0.78rem", color: "var(--text-body)", lineHeight: 1.4, margin: "0 0 14px" }}>
+                      {/* Fourth Row: Description */}
+                      <p style={{ fontSize: "0.85rem", color: "var(--text-body)", lineHeight: 1.45, margin: "0 0 16px" }}>
                         {brand.branding?.description || "High-growth fast-casual franchise concept with proven unit economics."}
                       </p>
                     </div>
 
-                    {/* Card Footer: License fee & Chevron Toggle */}
-                    <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    {/* Card Footer: Licence fee & Menus Toggle */}
+                    <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                       <div>
-                        <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block" }}>
-                          Franchise License Fee
+                        <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "block", marginBottom: 2 }}>
+                          Franchise licence fee
                         </span>
-                        <strong style={{ fontSize: "0.95rem", color: "var(--text-heading)" }}>
+                        <strong style={{ fontSize: "1.18rem", fontWeight: 900, color: "var(--text-heading)", letterSpacing: -0.2 }}>
                           {fmt(brandFeeTotal, "NGN")}
                         </strong>
                       </div>
@@ -1534,25 +1527,27 @@ export default function BuyFranchiseSection() {
                         }}
                         aria-label={isExpanded ? "Collapse brand setup" : "Expand brand setup"}
                         style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 10,
-                          border: `1.5px solid ${isExpanded ? "var(--accent)" : "var(--border)"}`,
-                          background: isExpanded ? "rgba(203,108,220,0.12)" : "var(--bg-hover)",
-                          color: isExpanded ? "var(--accent)" : "var(--text-heading)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
+                          background: "none",
+                          border: "none",
                           cursor: isEligible ? "pointer" : "not-allowed",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          color: "var(--accent)",
+                          fontSize: "0.96rem",
+                          fontWeight: 800,
+                          padding: "6px 0",
+                          opacity: isEligible ? 1 : 0.5,
                           transition: "all 0.2s ease",
-                          padding: 0,
                         }}
                       >
+                        <span>Menus</span>
                         <LuChevronDown
-                          size={20}
+                          size={22}
                           style={{
                             transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
                             transition: "transform 0.25s ease",
+                            strokeWidth: 3,
                           }}
                         />
                       </button>
