@@ -305,7 +305,7 @@ export default function ProfitProjectionDrawer({
               {menus.length > 1 && (
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>Set all:</span>
-                  {[20, 30, 50, 100].map((preset) => (
+                  {[50, 100, 150, 200, 250].map((preset) => (
                     <button
                       key={preset}
                       type="button"
@@ -447,7 +447,7 @@ export default function ProfitProjectionDrawer({
                   {!r.missing && (
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <strong style={{ color: isChecked ? "var(--accent)" : "var(--text-muted)", fontSize: "1.05rem", fontWeight: 800 }}>
-                        {fmt(r.price, currency)}
+                        {fmt(r.price.toFixed(2), currency)}
                       </strong>
                       <span style={{ display: "block", fontSize: "0.62rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.3 }}>
                         Selling Price
@@ -545,7 +545,7 @@ export default function ProfitProjectionDrawer({
 
                     {/* Preset Quick Chips */}
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      {[15, 20, 30, 50, 100].map((preset) => (
+                      {[50, 100, 150, 200, 250].map((preset) => (
                         <button
                           key={preset}
                           type="button"

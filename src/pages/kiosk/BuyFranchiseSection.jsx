@@ -1369,9 +1369,7 @@ export default function BuyFranchiseSection() {
                 const royaltyPct = getBrandRoyalty(brand.id);
                 const originText =
                   brand.origin ||
-                  brand.branding?.origin ||
-                  (Array.isArray(brand.supportedCountries) && brand.supportedCountries.length > 0 ? brand.supportedCountries.join(", ") : null) ||
-                  (brand.country ? brand.country : "Nigeria, United Arab Emirates");
+                  brand.branding?.origin;
 
                 return (
                   <div
