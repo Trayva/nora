@@ -2115,7 +2115,18 @@ export default function BuyFranchiseSection() {
       <ProfitProjectionDrawer
         isOpen={showProjection}
         onClose={() => setShowProjection(false)}
-        menus={brandMenuItems.filter((m) => selectedMenuIds.includes(m.id))}
+        menus={brandMenuItems}
+        selectedMenuIds={selectedMenuIds}
+        onToggleMenu={(id) =>
+          setSelectedMenuIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+          )
+        }
+        onToggleAll={() =>
+          setSelectedMenuIds((prev) =>
+            prev.length === brandMenuItems.length ? [] : brandMenuItems.map((m) => m.id)
+          )
+        }
         stateId={locationForm.stateId || selectedCloudLocation?.stateId}
         currency={currency}
         fmt={fmt}
