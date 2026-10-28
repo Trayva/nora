@@ -337,7 +337,7 @@ export default function BrandExpandedConfig({
             background: "rgba(203,108,220,0.08)",
           }}
         >
-          <MdTrendingUp size={18} /> Run Break-Even Analysis
+          Break-Even Analysis
         </button>
 
         <button
@@ -355,7 +355,7 @@ export default function BrandExpandedConfig({
             gap: 8,
           }}
         >
-          Proceed to Review &amp; Sign <MdArrowForward size={16} />
+          Review &amp; Sign <MdArrowForward size={16} />
         </button>
       </div>
     </div>
