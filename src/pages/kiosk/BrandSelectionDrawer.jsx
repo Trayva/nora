@@ -5,6 +5,7 @@ import api from "../../api/axios";
 import ESignDrawer from "../../components/ESignDrawer";
 import InvoicePayModal from "./InvoicePayModal";
 import { MenuDetailDrawer } from "./MenuDetailDrawer";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 
 const MAX_MENU_ITEMS = 5;
 
@@ -27,6 +28,7 @@ const DEFAULT_VENDOR_AGREEMENT = `
 `;
 
 export default function BrandSelectionDrawer({ cart, onClose, onDone }) {
+  const { format: fmtCurrency } = useCurrencyDisplay();
   const [view, setView] = useState("brands");
 
   const [brands, setBrands] = useState([]);
@@ -867,7 +869,7 @@ export default function BrandSelectionDrawer({ cart, onClose, onDone }) {
                             flexShrink: 0,
                           }}
                         >
-                          {termsData.currency} {fmt(p.amount)}
+                          {fmtCurrency(p.amount, termsData.currency || "NGN")}
                         </div>
                       </div>
                     ))}

@@ -18,6 +18,7 @@ import {
   MdAutorenew,
 } from "react-icons/md";
 import api from "../../api/axios";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 import {
   SupplierPicker,
   useIngredientPrice,
@@ -393,6 +394,7 @@ function MachinerySearchSelect({ value, onChange }) {
 
 /* ── Add Inventory Form ─────────────────────────────────────── */
 function AddInventoryForm({ kioskId, onAdded, cart, isUtilities }) {
+  const kioskCurrency = cart?.location?.state?.currency || cart?.currency || "NGN";
   const [selectedItem, setSelectedItem] = useState(null);
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("g");
@@ -602,7 +604,7 @@ function AddInventoryForm({ kioskId, onAdded, cart, isUtilities }) {
         )}
       </div>
       <div className="form-field">
-        <label className="modal-label">Total Cost ({cart.location?.state?.currency}) — optional</label>
+        <label className="modal-label">Total Cost ({kioskCurrency}) — optional</label>
         <input
           className="modal-input"
           type="number"
@@ -619,7 +621,7 @@ function AddInventoryForm({ kioskId, onAdded, cart, isUtilities }) {
               fontWeight: 600,
             }}
           >
-            → {cart?.location?.state?.currency} {unitCost.toFixed(4)} per{" "}
+            → {kioskCurrency} {unitCost.toFixed(4)} per{" "}
             {unit === "kg" ? "g" : unit === "L" ? "ml" : unit}
           </div>
         )}
@@ -683,18 +685,41 @@ function IngredientPriceInline({
   stateId,
   qty,
   unit,
+  currency,
 }) {
   const { price, loading } = useIngredientPrice(
     ingredientId,
     supplierId,
     stateId,
   );
-  return <PriceTag price={price} loading={loading} qty={qty} unit={unit} />;
+  return (
+    <PriceTag
+      price={price}
+      loading={loading}
+      qty={qty}
+      unit={unit}
+      currency={currency}
+    />
+  );
 }
-function MachineryPriceInline({ machineryId, supplierId, stateId, qty }) {
+function MachineryPriceInline({
+  machineryId,
+  supplierId,
+  stateId,
+  qty,
+  currency,
+}) {
   const { prices, loading } = useMachinerySupplierPrices(supplierId, stateId);
   const price = prices.get(machineryId) ?? null;
-  return <PriceTag price={price} loading={loading} qty={qty} unit="unit" />;
+  return (
+    <PriceTag
+      price={price}
+      loading={loading}
+      qty={qty}
+      unit="unit"
+      currency={currency}
+    />
+  );
 }
 
 function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderData }) {
@@ -733,6 +758,19 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
   const [isRepeating, setIsRepeating] = useState(false);
   const [repeatInterval, setRepeatInterval] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const selectedSupplier = suppliers.find((s) => s.id === supplierId);
+  const supplierStateCurrency =
+    selectedSupplier?.state?.currency ||
+    cart?.location?.state?.currency ||
+    "NGN";
+  const supplierStateId =
+    selectedSupplier?.stateId ||
+    selectedSupplier?.state?.id ||
+    cart?.location?.stateId ||
+    "";
+
+  const { isConverted, displayCurrency } = useCurrencyDisplay();
 
   useEffect(() => {
     const stateId = cart?.location?.stateId || cart?.stateId || "";
@@ -914,6 +952,26 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
           onChange={setSupplierId}
         />
       </div>
+      {supplierId && isConverted(supplierStateCurrency) && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 12px",
+            borderRadius: 8,
+            background: "rgba(203,108,220,0.08)",
+            border: "1px solid rgba(203,108,220,0.22)",
+            fontSize: "0.72rem",
+            color: "var(--text-body)",
+          }}
+        >
+          <span style={{ fontSize: "0.95rem" }}>ℹ️</span>
+          <div>
+            Supplier operates in <strong>{selectedSupplier?.state?.name || "another region"}</strong> ({supplierStateCurrency}). Prices converted to <strong>{displayCurrency}</strong>.
+          </div>
+        </div>
+      )}
       {supplyTab === "ingredients" && (
         <div>
           <label
@@ -1109,13 +1167,14 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
                       <IngredientPriceInline
                         ingredientId={row.item.id}
                         supplierId={supplierId}
-                        stateId={cart?.location?.stateId}
+                        stateId={supplierStateId}
                         qty={
                           row.quantity
                             ? toBaseQuantity(row.quantity, row.unit)
                             : null
                         }
                         unit={row.item.unit || row.unit}
+                        currency={supplierStateCurrency}
                       />
                     )}
                   </div>
@@ -1319,8 +1378,9 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
                       <MachineryPriceInline
                         machineryId={row.item.id}
                         supplierId={supplierId}
-                        stateId={cart?.location?.stateId}
+                        stateId={supplierStateId}
                         qty={row.quantity}
+                        currency={supplierStateCurrency}
                       />
                     )}
                   </div>
@@ -1820,6 +1880,8 @@ const REASON_OPTIONS = [
 ];
 
 function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
+  const { format: fmtCurrency } = useCurrencyDisplay();
+  const kioskCurrency = cart?.location?.state?.currency || cart?.currency || "NGN";
   const [editing, setEditing] = useState(false);
   const [recordingUsage, setRecordingUsage] = useState(false);
   const [quantity, setQuantity] = useState("");
@@ -2075,7 +2137,7 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
             </div>
             {item.cost != null && !isMachinery && (
               <div className="kiosk_inventory_cost">
-                {cart?.location?.state?.currency} {Number(item.cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}/{isMachinery
+                {fmtCurrency(item.cost, kioskCurrency)}/{isMachinery
                   ? "unit"
                   : item.ingredient?.unit || item.prepItem?.unit || "units"}
               </div>
@@ -2209,7 +2271,7 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
           )}
           {!isMachinery && (
             <div className="form-field" style={{ marginBottom: 12 }}>
-              <label className="modal-label">Total Cost ({cart.location?.state?.currency}) — optional</label>
+              <label className="modal-label">Total Cost ({kioskCurrency}) — optional</label>
               <input
                 className="modal-input"
                 type="number"
@@ -2230,7 +2292,7 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
                     display: "inline-block",
                   }}
                 >
-                  → {cart?.location?.state?.currency} {unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} per {unit === "kg" ? "g" : unit === "L" ? "ml" : unit}
+                  → {kioskCurrency} {unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} per {unit === "kg" ? "g" : unit === "L" ? "ml" : unit}
                 </div>
               )}
             </div>
@@ -2423,6 +2485,8 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
 
 /* ── Supply Request Row ─────────────────────────────────────── */
 function SupplyRequestRow({ cart, req, onRefresh, onReorder }) {
+  const { format: fmtCurrency } = useCurrencyDisplay();
+  const kioskCurrency = cart?.location?.state?.currency || cart?.currency || "NGN";
   const [expanded, setExpanded] = useState(false);
   const [receiving, setReceiving] = useState(false);
   const fmt = (n) =>
@@ -2511,7 +2575,7 @@ function SupplyRequestRow({ cart, req, onRefresh, onReorder }) {
               {req.totalAmount > 0 && (
                 <>
                   <span className="contract_row_dot">·</span>
-                  <span>{cart?.location?.state?.currency} {fmt(req.totalAmount)}</span>
+                  <span>{fmtCurrency(req.totalAmount, kioskCurrency)}</span>
                 </>
               )}
               {req.isRepeating && (
@@ -2710,7 +2774,7 @@ function SupplyRequestRow({ cart, req, onRefresh, onReorder }) {
                     flexShrink: 0,
                   }}
                 >
-                  {cart?.location?.state?.currency} {fmt(it.priceAtTime)}/{it.isMach ? "unit" : it.unit}
+                  {fmtCurrency(it.priceAtTime, kioskCurrency)}/{it.isMach ? "unit" : it.unit}
                 </div>
               )}
             </div>
@@ -2740,7 +2804,7 @@ function SupplyRequestRow({ cart, req, onRefresh, onReorder }) {
                   >
                     {req.invoice.status}
                   </span>
-                  {cart?.location?.state?.currency} {fmt(req.invoice.total)}
+                  {fmtCurrency(req.invoice.total, req.invoice?.currency || kioskCurrency)}
                 </span>
               </div>
             )}
@@ -2771,6 +2835,8 @@ function SupplyRequestRow({ cart, req, onRefresh, onReorder }) {
 
 /* ── Main KioskInventory ───────────────────────────────────── */
 export default function KioskInventory({ cart, isUtilities = false }) {
+  const { format: fmtCurrency } = useCurrencyDisplay();
+  const kioskCurrency = cart?.location?.state?.currency || cart?.currency || "NGN";
   const [view, setView] = useState("stock");
   const [inventory, setInventory] = useState([]);
   const [supplyRequests, setSupplyRequests] = useState([]);
@@ -2874,7 +2940,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
           )}
           {totalValue > 0 && (
             <div className="kiosk_summary_chip">
-              {cart?.location?.state?.currency} {totalValue.toLocaleString()}
+              {fmtCurrency(totalValue, kioskCurrency)}
             </div>
           )}
         </div>

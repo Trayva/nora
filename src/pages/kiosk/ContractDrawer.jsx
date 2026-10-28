@@ -1,6 +1,7 @@
 import { MdCircle, MdReceiptLong, MdCalendarToday } from "react-icons/md";
 import { LuStore } from "react-icons/lu";
 import Drawer from "../../components/Drawer";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 
 const appStatusColors = {
   SUBMITTED: {
@@ -75,6 +76,8 @@ function formatDate(iso) {
 }
 
 export default function ContractDrawer({ contract, onClose }) {
+  const { format: fmt } = useCurrencyDisplay();
+  const invCurrency = contract?.invoiceDetails?.[0]?.currency || "NGN";
   return (
     <Drawer
       isOpen={!!contract}
@@ -164,7 +167,7 @@ export default function ContractDrawer({ contract, onClose }) {
                         × {item.quantity}
                       </span>
                       <span className="contract_invoice_item_amount">
-                        {Number(item.amount * item.quantity).toLocaleString()}
+                        {fmt(item.amount * item.quantity, invCurrency)}
                       </span>
                     </div>
                   </div>
@@ -172,7 +175,7 @@ export default function ContractDrawer({ contract, onClose }) {
                 <div className="contract_invoice_total">
                   <span className="contract_invoice_total_label">Total</span>
                   <span className="contract_invoice_total_amount">
-                    {Number(contract.invoiceDetails[0].total).toLocaleString()}
+                    {fmt(contract.invoiceDetails[0].total, invCurrency)}
                   </span>
                 </div>
               </div>

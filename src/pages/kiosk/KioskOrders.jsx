@@ -5,6 +5,7 @@ import {
   MdPhone, MdLocationOn, MdRefresh,
 } from "react-icons/md";
 import api from "../../api/axios";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 
 /* ── helpers ──────────────────────────────────────────────── */
 const fmt = (n) => Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 });
@@ -50,6 +51,8 @@ const NEXT_STATUSES = {
 
 /* ── Single order card ── */
 function OrderCard({ order, onUpdated }) {
+  const { format: fmtCurrency } = useCurrencyDisplay();
+  const orderCur = order.currency || "NGN";
   const [expanded, setExpanded] = useState(false);
   const [updating, setUpdating] = useState(null);
 
@@ -97,7 +100,7 @@ function OrderCard({ order, onUpdated }) {
           <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", gap: 8, flexWrap: "wrap" }}>
             <span style={{ fontWeight: 600, color: "var(--text-body)" }}>{order.customerName}</span>
             <span>{fmtDate(order.createdAt)} {fmtTime(order.createdAt)}</span>
-            <span style={{ fontWeight: 700, color: "var(--text-heading)" }}>₦{fmt(order.totalAmount)}</span>
+            <span style={{ fontWeight: 700, color: "var(--text-heading)" }}>{fmtCurrency(order.totalAmount, orderCur)}</span>
           </div>
         </div>
 
@@ -143,7 +146,7 @@ function OrderCard({ order, onUpdated }) {
                   )}
                 </div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--text-heading)" }}>₦{fmt(item.priceAtTime)}</div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--text-heading)" }}>{fmtCurrency(item.priceAtTime, orderCur)}</div>
                   <div style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>× {item.quantity}</div>
                 </div>
               </div>
@@ -153,7 +156,7 @@ function OrderCard({ order, onUpdated }) {
           {/* Total */}
           <div style={{ padding: "8px 14px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total</span>
-            <span style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--accent)" }}>₦{fmt(order.totalAmount)}</span>
+            <span style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--accent)" }}>{fmtCurrency(order.totalAmount, orderCur)}</span>
           </div>
 
           {/* Status actions */}

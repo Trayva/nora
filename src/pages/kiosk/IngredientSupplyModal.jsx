@@ -2,7 +2,36 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { MdClose, MdLocalShipping, MdOutlineInventory2 } from "react-icons/md";
 import api from "../../api/axios";
-import { SupplierPicker } from "../../components/SupplierPicker";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
+import {
+  SupplierPicker,
+  useIngredientPrice,
+  PriceTag,
+} from "../../components/SupplierPicker";
+
+function IngredientItemPrice({
+  ingredientId,
+  supplierId,
+  stateId,
+  qty,
+  unit,
+  currency,
+}) {
+  const { price, loading } = useIngredientPrice(
+    ingredientId,
+    supplierId,
+    stateId,
+  );
+  return (
+    <PriceTag
+      price={price}
+      loading={loading}
+      qty={qty}
+      unit={unit}
+      currency={currency}
+    />
+  );
+}
 
 export default function IngredientSupplyModal({
   isOpen,
@@ -17,6 +46,20 @@ export default function IngredientSupplyModal({
   const [quantities, setQuantities] = useState({});
   const [units, setUnits] = useState({});
   const [submitting, setSubmitting] = useState(false);
+
+  const selectedSupplier = suppliers.find((s) => s.id === supplierId);
+  const supplierStateId =
+    selectedSupplier?.stateId ||
+    selectedSupplier?.state?.id ||
+    cart?.location?.stateId ||
+    cart?.location?.state?.id ||
+    "";
+  const supplierStateCurrency =
+    selectedSupplier?.state?.currency ||
+    cart?.location?.state?.currency ||
+    "NGN";
+
+  const { isConverted, displayCurrency } = useCurrencyDisplay();
 
   // Reset state when opening
   useEffect(() => {
@@ -208,6 +251,26 @@ export default function IngredientSupplyModal({
               onChange={setSupplierId}
             />
           </div>
+          {supplierId && isConverted(supplierStateCurrency) && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 12px",
+                borderRadius: 8,
+                background: "rgba(203,108,220,0.08)",
+                border: "1px solid rgba(203,108,220,0.22)",
+                fontSize: "0.72rem",
+                color: "var(--text-body)",
+              }}
+            >
+              <span style={{ fontSize: "0.95rem" }}>ℹ️</span>
+              <div>
+                Supplier operates in <strong>{selectedSupplier?.state?.name || "another region"}</strong> ({supplierStateCurrency}). Prices converted to <strong>{displayCurrency}</strong>.
+              </div>
+            </div>
+          )}
           <div>
             <label
               className="modal-label"
@@ -284,6 +347,18 @@ export default function IngredientSupplyModal({
                       >
                         Ingredient{m.unit ? ` · ${m.unit}` : ""}
                       </div>
+                      {supplierId && (
+                        <div style={{ marginTop: 4 }}>
+                          <IngredientItemPrice
+                            ingredientId={m.id}
+                            supplierId={supplierId}
+                            stateId={supplierStateId}
+                            qty={quantities[m.id]}
+                            unit={units[m.id] || m.unit || "unit"}
+                            currency={supplierStateCurrency}
+                          />
+                        </div>
+                      )}
                     </div>
                     <div
                       style={{

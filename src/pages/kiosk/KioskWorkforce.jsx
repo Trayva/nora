@@ -284,7 +284,7 @@ function HireForm({ kioskId, cart, onHired }) {
       </div>
 
       <div className="form-field">
-        <label className="modal-label">Proposed Salary ({cart.location?.state?.currency})</label>
+        <label className="modal-label">Proposed Salary ({cart?.location?.state?.currency || cart?.currency || "NGN"})</label>
         <input
           className="modal-input"
           type="number"

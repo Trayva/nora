@@ -22,6 +22,7 @@ import {
   MdDownload,
 } from "react-icons/md";
 import api from "../../api/axios";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 
 // <span class="item-sub">${saleDate}</span>
 
@@ -174,6 +175,8 @@ const getExtrasLabel = (item) => {
 };
 
 function SaleRow({ sale }) {
+  const { format: fmtCurrency } = useCurrencyDisplay();
+  const cur = sale.currency || "NGN";
   const [expanded, setExpanded] = useState(false);
   return (
     <div
@@ -227,7 +230,7 @@ function SaleRow({ sale }) {
             <span className="contract_row_dot">·</span>
             <span>{sale.operator?.fullName || "Operator"}</span>
             <span className="contract_row_dot">·</span>
-            <span>VAT: {fmt(sale.vatAmount || 0)}</span>
+            <span>VAT: {fmtCurrency(sale.vatAmount || 0, cur)}</span>
             <span className="contract_row_dot">·</span>
             <span>{fmtDate(sale.createdAt)}</span>
           </div>
@@ -240,7 +243,7 @@ function SaleRow({ sale }) {
               color: "var(--text-heading)",
             }}
           >
-            {fmt(sale.totalAmount)}
+            {fmtCurrency(sale.totalAmount, cur)}
           </div>
         </div>
         {expanded ? (
@@ -347,7 +350,7 @@ function SaleRow({ sale }) {
                   flexShrink: 0,
                 }}
               >
-                {fmt(item.priceAtTime)}
+                {fmtCurrency(item.priceAtTime, cur)}
               </div>
             </div>
           ))}
@@ -1547,6 +1550,8 @@ function printSalesReport({ cart, sales, analytics, from, to, user }) {
 }
 
 export default function KioskSales({ cart }) {
+  const { format: fmtCurrency, isConverted, displayCurrency } = useCurrencyDisplay();
+  const kioskCurrency = cart?.location?.state?.currency || cart?.currency || "NGN";
   const [sales, setSales] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1892,7 +1897,7 @@ export default function KioskSales({ cart }) {
                   color: s.accent ? "var(--accent)" : "var(--text-heading)",
                 }}
               >
-                {fmt(s.value)}
+                {fmtCurrency(s.value, kioskCurrency)}
               </div>
             </div>
           ))}
@@ -2103,7 +2108,7 @@ export default function KioskSales({ cart }) {
                       marginTop: 1,
                     }}
                   >
-                    {fmt(total)}
+                    {fmtCurrency(total, kioskCurrency)}
                   </div>
                 </div>
               );

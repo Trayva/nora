@@ -25,6 +25,7 @@ import api from "../../api/axios";
 import Modal from "../../components/Modal";
 import LocationForm from "./LocationForm";
 import VendorMenuSection from "./VendorMenuSection";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 
 export { MenuDetailDrawer } from "./MenuDetailDrawer";
 
@@ -639,6 +640,9 @@ function LiveStreamModal({ cart, onClose }) {
 
 /* ── Main Component ─────────────────────────────────────────── */
 export default function KioskOverview({ cart, onUpdate, onRefresh }) {
+  const { format: fmt, isConverted, displayCurrency } = useCurrencyDisplay();
+  const kioskCurrency = cart.location?.state?.currency || cart.currency || "NGN";
+
   const [togglingOnline, setTogglingOnline] = useState(false);
   const [togglingLock, setTogglingLock] = useState(false);
   const [editingRadius, setEditingRadius] = useState(false);
@@ -1076,6 +1080,21 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
       {/* ── Operational Costs ── */}
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
         <span>Operational Costs</span>
+        {isConverted(kioskCurrency) && (
+          <span
+            style={{
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              color: "var(--accent)",
+              background: "rgba(var(--accent-rgb, 14, 165, 233), 0.1)",
+              padding: "2px 8px",
+              borderRadius: 6,
+              marginLeft: 8,
+            }}
+          >
+            Converted to {displayCurrency}
+          </span>
+        )}
         <button
           className="kiosk_icon_action_btn"
           style={{ marginLeft: "auto" }}
@@ -1110,7 +1129,17 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <label className="modal-label" style={{ marginBottom: 0 }}>Monthly Bills</label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <label className="modal-label" style={{ marginBottom: 0 }}>Monthly Bills</label>
+              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                Currency: {kioskCurrency}
+              </span>
+            </div>
+            {isConverted(kioskCurrency) && (
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", background: "var(--bg-hover)", padding: "6px 10px", borderRadius: 6, lineHeight: 1.4 }}>
+                Operational bills are stored in the outlet's currency (<strong>{kioskCurrency}</strong>). Selected state in header displays converted values (<strong>{displayCurrency}</strong>).
+              </div>
+            )}
             {bills.map((bill, index) => (
               <div key={index} style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <input
@@ -1134,7 +1163,7 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
                     updated[index].amount = e.target.value;
                     setBills(updated);
                   }}
-                  placeholder="Amount"
+                  placeholder={`Amount (${kioskCurrency})`}
                   style={{ flex: 1, marginBottom: 0 }}
                 />
                 <button
@@ -1227,7 +1256,12 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
               <div key={idx} className="kiosk_meta_row" style={{ paddingLeft: 12 }}>
                 <span className="kiosk_meta_key" style={{ fontWeight: 500, color: "var(--text-muted)" }}>↳ {b.name}</span>
                 <span className="kiosk_meta_val" style={{ fontWeight: 500 }}>
-                  {new Intl.NumberFormat("en-NG", { style: "currency", currency: cart.location?.state?.currency, maximumFractionDigits: 0 }).format(b.amount || 0)}
+                  {fmt(b.amount || 0, kioskCurrency)}
+                  {isConverted(kioskCurrency) && (
+                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginLeft: 6 }}>
+                      ({kioskCurrency} {Number(b.amount || 0).toLocaleString()})
+                    </span>
+                  )}
                 </span>
               </div>
             ))
@@ -1239,7 +1273,12 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
           <div className="kiosk_meta_row" style={{ borderTop: "1px dashed var(--border)", paddingTop: 8, marginTop: 4 }}>
             <span className="kiosk_meta_key" style={{ fontWeight: 800, color: "var(--text-heading)" }}>Operational Cost / Order</span>
             <span className="kiosk_meta_val" style={{ fontWeight: 800, color: "var(--accent)" }}>
-              {new Intl.NumberFormat("en-NG", { style: "currency", currency: cart.location?.state?.currency }).format(cart.operationalCost || 0)}
+              {fmt(cart.operationalCost || 0, kioskCurrency)}
+              {isConverted(kioskCurrency) && (
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginLeft: 6, fontWeight: 500 }}>
+                  ({kioskCurrency} {Number(cart.operationalCost || 0).toFixed(2)})
+                </span>
+              )}
             </span>
           </div>
         </div>

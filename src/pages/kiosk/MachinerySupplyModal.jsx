@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { MdClose, MdLocalShipping, MdBuild } from "react-icons/md";
 import api from "../../api/axios";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 import {
   SupplierPicker,
   useMachinerySupplierPrices,
@@ -21,11 +22,22 @@ export default function MachinerySupplyModal({
   const [quantities, setQuantities] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
+  const selectedSupplier = suppliers.find((s) => s.id === supplierId);
+  const supplierStateId =
+    selectedSupplier?.stateId ||
+    selectedSupplier?.state?.id ||
+    cart?.location?.stateId ||
+    cart?.location?.state?.id ||
+    "";
+  const supplierStateCurrency =
+    selectedSupplier?.state?.currency ||
+    cart?.location?.state?.currency ||
+    "NGN";
+
+  const { isConverted, displayCurrency } = useCurrencyDisplay();
+
   const { prices: machPrices, loading: machPricesLoading } =
-    useMachinerySupplierPrices(
-      supplierId,
-      cart?.location?.stateId || cart?.location?.state?.id || "",
-    );
+    useMachinerySupplierPrices(supplierId, supplierStateId);
 
   useEffect(() => {
     if (isOpen) {
@@ -192,6 +204,26 @@ export default function MachinerySupplyModal({
               onChange={setSupplierId}
             />
           </div>
+          {supplierId && isConverted(supplierStateCurrency) && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 12px",
+                borderRadius: 8,
+                background: "rgba(203,108,220,0.08)",
+                border: "1px solid rgba(203,108,220,0.22)",
+                fontSize: "0.72rem",
+                color: "var(--text-body)",
+              }}
+            >
+              <span style={{ fontSize: "0.95rem" }}>ℹ️</span>
+              <div>
+                Supplier operates in <strong>{selectedSupplier?.state?.name || "another region"}</strong> ({supplierStateCurrency}). Prices converted to <strong>{displayCurrency}</strong>.
+              </div>
+            </div>
+          )}
           <div>
             <label
               className="modal-label"
@@ -270,6 +302,7 @@ export default function MachinerySupplyModal({
                           loading={machPricesLoading && !!supplierId}
                           qty={quantities[m.id]}
                           unit="unit"
+                          currency={supplierStateCurrency}
                         />
                       </div>
                     )}

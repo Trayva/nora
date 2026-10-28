@@ -12,6 +12,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MdSearch, MdClose, MdVerified, MdBusiness, MdExpandMore, MdExpandLess } from "react-icons/md";
 import api from "../api/axios";
+import useCurrencyDisplay from "../hooks/useCurrencyDisplay";
 
 /* ═══════════════════════════════════════════════════════════
    Hooks
@@ -97,7 +98,9 @@ export function useMachinerySupplierPrices(supplierId, stateId) {
 /* ═══════════════════════════════════════════════════════════
    PriceTag — inline price + subtotal display
    ═══════════════════════════════════════════════════════════ */
-export function PriceTag({ price, loading, qty, unit }) {
+export function PriceTag({ price, loading, qty, unit, currency = "NGN" }) {
+  const { format: fmtCurrency, isConverted } = useCurrencyDisplay();
+
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
@@ -120,6 +123,7 @@ export function PriceTag({ price, loading, qty, unit }) {
 
   const numQty = qty ? Number(qty) : null;
   const subtotal = numQty && numQty > 0 ? price * numQty : null;
+  const converted = isConverted(currency);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexShrink: 0, gap: 2 }}>
@@ -127,15 +131,20 @@ export function PriceTag({ price, loading, qty, unit }) {
         fontSize: "0.68rem", fontWeight: 800, padding: "2px 8px", borderRadius: 999,
         background: "rgba(34,197,94,0.1)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.25)",
       }}>
-        ₦{Number(price).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}/{unit || "unit"}
+        {fmtCurrency(price, currency)}/{unit || "unit"}
       </span>
+      {converted && (
+        <span style={{ fontSize: "0.58rem", color: "var(--text-muted)", fontWeight: 600 }}>
+          Orig: {currency} {Number(price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+        </span>
+      )}
       {subtotal != null && (
         <span style={{
           fontSize: "0.64rem", fontWeight: 700, color: "var(--accent)",
           padding: "1px 6px", borderRadius: 5,
           background: "var(--bg-active)", border: "1px solid rgba(203,108,220,0.2)",
         }}>
-          = ₦{subtotal.toLocaleString("en-NG", { maximumFractionDigits: 2 })}
+          = {fmtCurrency(subtotal, currency)}
         </span>
       )}
     </div>
@@ -217,7 +226,9 @@ export function SupplierPicker({ suppliers = [], suppliersLoading, value, onChan
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
                 {selected.state?.name && (
-                  <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>📍 {selected.state.name}</span>
+                  <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                    📍 {selected.state.name}{selected.state.currency ? ` (${selected.state.currency})` : ""}
+                  </span>
                 )}
                 {selected.email && (
                   <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>{selected.email}</span>
@@ -314,7 +325,9 @@ export function SupplierPicker({ suppliers = [], suppliersLoading, value, onChan
                       </div>
                       <div style={{ display: "flex", gap: 8, marginTop: 2, flexWrap: "wrap" }}>
                         {s.state?.name && (
-                          <span style={{ fontSize: "0.67rem", color: "var(--text-muted)" }}>📍 {s.state.name}</span>
+                          <span style={{ fontSize: "0.67rem", color: "var(--text-muted)" }}>
+                            📍 {s.state.name}{s.state.currency ? ` (${s.state.currency})` : ""}
+                          </span>
                         )}
                         {s.email && (
                           <span style={{ fontSize: "0.67rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>

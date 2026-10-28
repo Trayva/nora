@@ -563,10 +563,25 @@ export default function BuyFranchiseSection() {
     setSubmitting(true);
     try {
       const menuIds = selectedMenuIds;
+      const configuredMenuItems = menuIds.map((id) => ({
+        id,
+        markup: Number(plan.getMargin(id)) || 0,
+      }));
+
+      const formattedBills = (plan.bills || []).map((b) => ({
+        id: b.id,
+        name: b.name || "Operational Expense",
+        amount: Number(b.amount) || 0,
+      }));
 
       const payload = {
         brandId: selectedBrand.id,
         menuIds,
+        menuItems: configuredMenuItems,
+        operationalBills: formattedBills,
+        expectedMonthlyOrders: Number(plan.monthlyOrders) || (Number(plan.dailyTarget) * 30) || 0,
+        dailyTarget: Number(plan.dailyTarget) || 0,
+        operationalCost: Number(plan.operationalPerOrder) || 0,
         selectedOptionalPayments,
         signatureName,
         terms,

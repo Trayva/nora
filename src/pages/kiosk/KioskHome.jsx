@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import ContractDrawer from "./ContractDrawer";
 import KioskDrawer from "./KioskDrawer";
 import api from "../../api/axios";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 import "./Kiosk.css";
 import {
   MdCircle,
@@ -109,6 +110,7 @@ import {
 } from "../../components/SkeletonTemplates";
 
 export default function KioskHome() {
+  const { format: fmt } = useCurrencyDisplay();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedKioskId = searchParams.get("kioskId");
@@ -571,7 +573,7 @@ export default function KioskHome() {
                         {invoice && is && (
                           <div className="contract_row_invoice">
                             <span className="contract_row_amount">
-                              {Number(invoice.total).toLocaleString()}
+                              {fmt(invoice.total, invoice.currency || "NGN")}
                             </span>
                             <span
                               className="kiosk_status_badge"

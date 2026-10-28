@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 
 export default function InvoicePayModal({ invoice, application, onPaid, onClose }) {
+  const { format: fmtCurrency } = useCurrencyDisplay();
   const [paying, setPaying] = useState(null);
   const [showMethods, setShowMethods] = useState(false);
   const [wallet, setWallet] = useState(null);
   const [walletLoading, setWalletLoading] = useState(true);
-  const fmtAmt = (n) =>
-    `${invoice.currency || "NGN"} ${Number(n || 0).toLocaleString()}`;
+  const fmtAmt = (n) => fmtCurrency(n, invoice.currency || "NGN");
   const fmtDate = (d) =>
     d
       ? new Date(d).toLocaleDateString("en-GB", {
