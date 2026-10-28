@@ -168,6 +168,26 @@ export default function ProfitProjectionDrawer({
       description={`${activeCount} of ${menus.length} menu item${menus.length === 1 ? "" : "s"} included`}
       width={560}
     >
+      <style>{`
+        .ppd-hero-right {
+          text-align: right;
+        }
+        .ppd-profit-val {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 4px;
+        }
+        @media (max-width: 640px) {
+          .ppd-hero-right {
+            text-align: left !important;
+            width: 100%;
+          }
+          .ppd-profit-val {
+            justify-content: flex-start !important;
+          }
+        }
+      `}</style>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Hero summary */}
         <div
@@ -185,13 +205,13 @@ export default function ProfitProjectionDrawer({
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
             <Stat k="Projected monthly income" v={loading ? "…" : fmt(revenue, currency)} big />
-            <div style={{ textAlign: "right" }}>
+            <div className="ppd-hero-right">
               <span style={label}>Net profit / month</span>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, color: profitable ? "#16a34a" : activeCount === 0 ? "var(--text-muted)" : "#ef4444" }}>
+              <div className="ppd-profit-val" style={{ color: profitable ? "#16a34a" : activeCount === 0 ? "var(--text-muted)" : "#ef4444" }}>
                 {profitable ? <MdTrendingUp size={20} /> : <MdTrendingDown size={20} />}
                 <strong style={{ fontSize: "1.35rem" }}>{loading ? "…" : fmt(profit, currency)}</strong>
               </div>
-              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{profitMarginPct.toFixed(1)}% profit margin</span>
+              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block" }}>{profitMarginPct.toFixed(1)}% profit margin</span>
             </div>
           </div>
 
