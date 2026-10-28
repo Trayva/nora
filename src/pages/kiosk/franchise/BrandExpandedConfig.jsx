@@ -240,14 +240,14 @@ export default function BrandExpandedConfig({
                   </div>
 
                   {/* Selling Price */}
-                  <div style={{ textAlign: "right", minWidth: 95 }}>
+                  {/* <div style={{ textAlign: "right", minWidth: 95 }}>
                     <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>
                       Selling Price
                     </span>
                     <strong style={{ fontSize: "0.92rem", color: "var(--accent)" }}>
                       {pricing ? fmt(pricing.price, currency) : "—"}
                     </strong>
-                  </div>
+                  </div> */}
                 </div>
               );
             })}
