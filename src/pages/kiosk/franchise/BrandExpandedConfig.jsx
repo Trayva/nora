@@ -209,7 +209,7 @@ export default function BrandExpandedConfig({
                   </div>
 
                   {/* Markup Input */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  {/* <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <div style={{ position: "relative", width: 88 }}>
                       <input
                         type="number"
@@ -237,7 +237,7 @@ export default function BrandExpandedConfig({
                         %
                       </span>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Selling Price */}
                   {/* <div style={{ textAlign: "right", minWidth: 95 }}>

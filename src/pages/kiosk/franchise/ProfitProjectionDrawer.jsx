@@ -70,13 +70,15 @@ export default function ProfitProjectionDrawer({
   }, [isOpen, idsKey, stateId, externalCostMap]);
 
   const {
-    monthlyBills,
-    monthlyOrders,
-    operationalPerOrder,
-    dailyTarget,
-    getMargin,
-    priceFor,
-  } = plan;
+    monthlyBills = 0,
+    monthlyOrders = 0,
+    operationalPerOrder = 0,
+    dailyTarget = 50,
+    getMargin = () => 30,
+    setMargin = () => { },
+    applyMarginToAll = () => { },
+    priceFor = (c, m) => ({ totalCost: c, price: c * (1 + m / 100) }),
+  } = plan || {};
 
   const royaltyRate = num(royaltyPercent) / 100;
   const ordersPerMenu = menus.length > 0 ? monthlyOrders / menus.length : 0; // target split across selected menus
@@ -86,20 +88,23 @@ export default function ProfitProjectionDrawer({
     const rawMargin = getMargin(m.id);
     const margin = num(rawMargin);
     if (cost == null) return { menu: m, margin, rawMargin, missing: true };
-    const { totalCost, price } = priceFor(cost, margin);
+    const baseCost = num(cost);
+    const finalCost = baseCost + operationalPerOrder;
+    const price = finalCost + (margin / 100) * finalCost;
     const royalty = price * royaltyRate;
-    const profitPerSale = price - totalCost - royalty;
+    const profitPerSale = price - finalCost - royalty;
     return {
       menu: m,
       margin,
       rawMargin,
-      cost,
-      totalCost,
+      cost: baseCost,
+      finalCost,
+      totalCost: finalCost,
       price,
       royalty,
       profitPerSale,
       revenue: price * ordersPerMenu,
-      totalCostMonthly: totalCost * ordersPerMenu,
+      totalCostMonthly: finalCost * ordersPerMenu,
       royaltyMonthly: royalty * ordersPerMenu,
       profitMonthly: profitPerSale * ordersPerMenu,
     };
@@ -186,35 +191,214 @@ export default function ProfitProjectionDrawer({
           </div>
         </div>
 
-        {/* Per-menu breakdown cards (Read-Only Analysis) */}
+        {/* Per-menu breakdown cards with interactive markup editor */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <span style={label}>Per Menu Financial Analysis</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+            <span style={label}>Per Menu Financial Analysis</span>
+            {menus.length > 1 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>Set all:</span>
+                {[20, 30, 50, 100].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => applyMarginToAll(preset)}
+                    style={{
+                      fontSize: "0.64rem",
+                      fontWeight: 700,
+                      padding: "2px 7px",
+                      borderRadius: 6,
+                      border: "1px solid var(--border)",
+                      background: "var(--bg-hover)",
+                      color: "var(--text-body)",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    title={`Set all menu markups to ${preset}%`}
+                  >
+                    {preset}%
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {loading && ok.length === 0 && <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Calculating costs…</div>}
+
           {rows.map((r) => (
             <div key={r.menu.id} style={{ border: "1px solid var(--border)", borderRadius: 14, background: "var(--bg-card)", padding: 12 }}>
               <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
                 <div style={{ width: 44, height: 44, borderRadius: 8, overflow: "hidden", background: "var(--bg-hover)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", flexShrink: 0 }}>
                   {r.menu.image ? <img src={r.menu.image} alt={r.menu.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <MdImage size={20} />}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <strong style={{ fontSize: "0.88rem", color: "var(--text-heading)", display: "block" }}>{r.menu.name}</strong>
-                  <span style={{ fontSize: "0.7rem", color: "var(--accent)", fontWeight: 700 }}>
-                    Markup: {r.margin}%
-                  </span>
-                </div>
-                {!r.missing && (
-                  <strong style={{ color: r.profitMonthly >= 0 ? "#16a34a" : "#ef4444", fontSize: "0.9rem" }}>
-                    {fmt(r.profitMonthly, currency)}
-                    <span style={{ display: "block", fontSize: "0.62rem", color: "var(--text-muted)", fontWeight: 600, textAlign: "right" }}>profit / month</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <strong style={{ fontSize: "0.88rem", color: "var(--text-heading)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {r.menu.name}
                   </strong>
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
+
+                    <span>Cost: <strong style={{ color: "var(--text-heading)" }}>{!r.missing ? fmt(r.finalCost, currency) : "—"}</strong></span>
+                  </div>
+                </div>
+                {/* <div style={{ flex: 1, minWidth: 0 }}>
+                  <strong style={{ fontSize: "0.88rem", color: "var(--text-heading)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {r.menu.name}
+                  </strong>
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
+                    <span>Base: <strong style={{ color: "var(--text-heading)" }}>{r.cost != null ? fmt(r.cost, currency) : "—"}</strong></span>
+                    <span>•</span>
+                    <span>Final Cost: <strong style={{ color: "var(--text-heading)" }}>{!r.missing ? fmt(r.finalCost, currency) : "—"}</strong></span>
+                  </div>
+                </div> */}
+                {!r.missing && (
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <strong style={{ color: "var(--accent)", fontSize: "1.05rem", fontWeight: 800 }}>
+                      {fmt(r.price, currency)}
+                    </strong>
+                    <span style={{ display: "block", fontSize: "0.62rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.3 }}>
+                      Selling Price
+                    </span>
+                  </div>
                 )}
               </div>
 
+              {/* Interactive Markup Editor for this Menu */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  padding: "8px 10px",
+                  borderRadius: 10,
+                  background: "var(--bg-hover)",
+                  marginBottom: 10,
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.3 }}>
+                      Markup
+                    </span>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 7,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setMargin(r.menu.id, Math.max(0, r.margin - 5))}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          padding: "2px 7px",
+                          cursor: "pointer",
+                          color: "var(--text-heading)",
+                          fontSize: "0.9rem",
+                          fontWeight: 700,
+                          lineHeight: 1,
+                        }}
+                        title="Decrease markup by 5%"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        min={0}
+                        max={1000}
+                        value={r.margin}
+                        onChange={(e) => {
+                          const val = Math.max(0, Math.min(1000, Number(e.target.value) || 0));
+                          setMargin(r.menu.id, val);
+                        }}
+                        style={{
+                          width: 44,
+                          border: "none",
+                          background: "transparent",
+                          textAlign: "center",
+                          fontSize: "0.82rem",
+                          fontWeight: 800,
+                          color: "var(--accent)",
+                          outline: "none",
+                          padding: 0,
+                        }}
+                      />
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", paddingRight: 6 }}>%</span>
+                      <button
+                        type="button"
+                        onClick={() => setMargin(r.menu.id, Math.min(1000, r.margin + 5))}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          padding: "2px 7px",
+                          cursor: "pointer",
+                          color: "var(--text-heading)",
+                          fontSize: "0.9rem",
+                          fontWeight: 700,
+                          lineHeight: 1,
+                        }}
+                        title="Increase markup by 5%"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Preset Quick Chips */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    {[15, 20, 30, 50, 100].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setMargin(r.menu.id, preset)}
+                        style={{
+                          border: r.margin === preset ? "1px solid var(--accent)" : "1px solid var(--border)",
+                          background: r.margin === preset ? "var(--accent)" : "var(--bg-card)",
+                          color: r.margin === preset ? "#fff" : "var(--text-body)",
+                          borderRadius: 6,
+                          fontSize: "0.64rem",
+                          fontWeight: 700,
+                          padding: "2px 6px",
+                          cursor: "pointer",
+                          transition: "all 0.12s ease",
+                        }}
+                      >
+                        {preset}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Range Slider */}
+                <input
+                  type="range"
+                  min={0}
+                  max={200}
+                  step={5}
+                  value={Math.min(200, r.margin)}
+                  onChange={(e) => setMargin(r.menu.id, Number(e.target.value))}
+                  style={{
+                    width: "100%",
+                    height: 4,
+                    borderRadius: 2,
+                    accentColor: "var(--accent)",
+                    cursor: "pointer",
+                    margin: "2px 0 0 0",
+                  }}
+                  aria-label={`Markup for ${r.menu.name}`}
+                />
+              </div>
+              {/* 
               {r.missing ? (
                 <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>Cost unavailable for this location — excluded from totals.</div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(105px, 1fr))", gap: 10, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
-                  <Stat k="Total Cost" v={fmt(r.totalCost, currency)} />
+                  <Stat k="Final Cost" v={fmt(r.finalCost, currency)} />
                   <Stat k="Selling Price" v={fmt(r.price, currency)} color="var(--accent)" />
                   <Stat
                     k={
@@ -225,10 +409,10 @@ export default function ProfitProjectionDrawer({
                     v={fmt(r.royalty, currency)}
                   />
                   <Stat k="Profit / Sale" v={fmt(r.profitPerSale, currency)} color={r.profitPerSale >= 0 ? "#16a34a" : "#ef4444"} />
+                  <Stat k="Monthly Profit" v={fmt(r.profitMonthly, currency)} color={r.profitMonthly >= 0 ? "#16a34a" : "#ef4444"} />
                   <Stat k="Monthly Income" v={fmt(r.revenue, currency)} />
-                  <Stat k="Monthly Orders" v={Math.round(ordersPerMenu).toLocaleString()} />
                 </div>
-              )}
+              )} */}
             </div>
           ))}
         </div>
