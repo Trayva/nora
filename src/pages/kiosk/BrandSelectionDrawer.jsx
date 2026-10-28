@@ -550,9 +550,28 @@ export default function BrandSelectionDrawer({ cart, onClose, onDone }) {
                                   display: "flex",
                                   alignItems: "center",
                                   gap: 6,
+                                  flexWrap: "wrap",
                                 }}
                               >
                                 {brand.businessName}
+                                {(brand.origin || brand.branding?.origin) && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.62rem",
+                                      fontWeight: 700,
+                                      padding: "1px 6px",
+                                      borderRadius: 4,
+                                      background: "var(--bg-hover)",
+                                      color: "var(--text-muted)",
+                                      border: "1px solid var(--border)",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 3,
+                                    }}
+                                  >
+                                    📍 {brand.origin || brand.branding?.origin}
+                                  </span>
+                                )}
                                 {hasMenusSelected && (
                                   <span
                                     style={{

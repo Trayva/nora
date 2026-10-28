@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import Modal from "../../../components/Modal";
 import { registerBusiness, updateBusiness } from "../../../api/vendor";
 import { toast } from "react-toastify";
+import { CountrySelect } from "../../admin/adminUtils_";
 
 export default function RegisterBusinessModal({ isOpen, onClose, onSuccess, mode = "register", defaultValues = {} }) {
   const [form, setForm] = useState({
-    businessName: "", brandTagline: "", brandColor: "",
+    businessName: "", brandTagline: "", brandColor: "", origin: "",
   });
   const [brandLogo, setBrandLogo] = useState(null);
   const [businessRegDoc, setBusinessRegDoc] = useState(null);
@@ -17,6 +18,7 @@ export default function RegisterBusinessModal({ isOpen, onClose, onSuccess, mode
         businessName: defaultValues.businessName || "",
         brandTagline: defaultValues.brandTagline || "",
         brandColor: defaultValues.brandColor || "",
+        origin: defaultValues.origin || defaultValues.branding?.origin || "",
       });
     }
   }, [isOpen]);
@@ -29,6 +31,7 @@ export default function RegisterBusinessModal({ isOpen, onClose, onSuccess, mode
       fd.append("businessName", form.businessName);
       if (form.brandTagline) fd.append("brandTagline", form.brandTagline);
       if (form.brandColor) fd.append("brandColor", form.brandColor);
+      if (form.origin !== undefined) fd.append("origin", form.origin);
       if (brandLogo) fd.append("brandLogo", brandLogo);
       if (businessRegDoc) fd.append("businessRegDoc", businessRegDoc);
 
@@ -73,6 +76,13 @@ export default function RegisterBusinessModal({ isOpen, onClose, onSuccess, mode
               value={form.brandTagline}
               onChange={(e) => setForm((p) => ({ ...p, brandTagline: e.target.value }))}
               maxLength={200}
+            />
+          </div>
+          <div className="form-field">
+            <label className="modal-label">Brand Origin / Country</label>
+            <CountrySelect
+              value={form.origin}
+              onChange={(e) => setForm((p) => ({ ...p, origin: e.target.value }))}
             />
           </div>
           <div className="form-field">

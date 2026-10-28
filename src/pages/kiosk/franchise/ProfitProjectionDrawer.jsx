@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { MdImage, MdTrendingUp, MdTrendingDown } from "react-icons/md";
 import api from "../../../api/axios";
 import Drawer from "../../../components/Drawer";
-import { ExtraCostsSection, OperationalCostSection } from "./CostSections";
 import { RoyaltyIcon } from "./RoyaltyBadge";
 import { num } from "./useFranchisePlan";
 
@@ -29,16 +28,26 @@ function BreakRow({ k, v, color, bold, sign }) {
   );
 }
 
-// Projection of monthly income and profit across all selected menus.
-export default function ProfitProjectionDrawer({ isOpen, onClose, menus, stateId, currency, fmt, plan, royaltyPercent }) {
-  const [costMap, setCostMap] = useState({}); // menuId -> cost | null
+// Projection of monthly income and profit across all selected menus (Analysis view only).
+export default function ProfitProjectionDrawer({
+  isOpen,
+  onClose,
+  menus,
+  stateId,
+  currency,
+  fmt,
+  plan,
+  royaltyPercent,
+  externalCostMap,
+}) {
+  const [internalCostMap, setInternalCostMap] = useState({});
   const [loading, setLoading] = useState(false);
-  const [showAssumptions, setShowAssumptions] = useState(false);
 
+  const costMap = externalCostMap || internalCostMap;
   const idsKey = menus.map((m) => m.id).join(",");
 
   useEffect(() => {
-    if (!isOpen || menus.length === 0) return;
+    if (!isOpen || menus.length === 0 || externalCostMap) return;
     let cancelled = false;
     setLoading(true);
     Promise.all(
@@ -52,17 +61,21 @@ export default function ProfitProjectionDrawer({ isOpen, onClose, menus, stateId
       })
     ).then((entries) => {
       if (cancelled) return;
-      setCostMap(Object.fromEntries(entries));
+      setInternalCostMap(Object.fromEntries(entries));
       setLoading(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [isOpen, idsKey, stateId]);
+  }, [isOpen, idsKey, stateId, externalCostMap]);
 
   const {
-    extraCosts, setExtraCosts, bills, setBills, dailyTarget, setDailyTarget,
-    monthlyBills, monthlyOrders, operationalPerOrder, getMargin, setMargin, applyMarginToAll, defaultMargin, priceFor,
+    monthlyBills,
+    monthlyOrders,
+    operationalPerOrder,
+    dailyTarget,
+    getMargin,
+    priceFor,
   } = plan;
 
   const royaltyRate = num(royaltyPercent) / 100;
@@ -77,7 +90,14 @@ export default function ProfitProjectionDrawer({ isOpen, onClose, menus, stateId
     const royalty = price * royaltyRate;
     const profitPerSale = price - totalCost - royalty;
     return {
-      menu: m, margin, rawMargin, cost, totalCost, price, royalty, profitPerSale,
+      menu: m,
+      margin,
+      rawMargin,
+      cost,
+      totalCost,
+      price,
+      royalty,
+      profitPerSale,
       revenue: price * ordersPerMenu,
       totalCostMonthly: totalCost * ordersPerMenu,
       royaltyMonthly: royalty * ordersPerMenu,
@@ -88,7 +108,7 @@ export default function ProfitProjectionDrawer({ isOpen, onClose, menus, stateId
   const ok = rows.filter((r) => !r.missing);
   const sum = (key) => ok.reduce((s, r) => s + r[key], 0);
   const revenue = sum("revenue");
-  const totalCostMonthly = sum("totalCostMonthly"); // includes operational share
+  const totalCostMonthly = sum("totalCostMonthly");
   const royaltyMonthly = sum("royaltyMonthly");
   const profit = sum("profitMonthly");
   const operationalMonthly = operationalPerOrder * ordersPerMenu * ok.length;
@@ -97,7 +117,7 @@ export default function ProfitProjectionDrawer({ isOpen, onClose, menus, stateId
   const profitMarginPct = revenue > 0 ? (profit / revenue) * 100 : 0;
 
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} title="Profit Projection" description={`${menus.length} menu item${menus.length === 1 ? "" : "s"} selected`} width={560}>
+    <Drawer isOpen={isOpen} onClose={onClose} title="Break-Even & Profit Projection" description={`${menus.length} menu item${menus.length === 1 ? "" : "s"} evaluated`} width={560}>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Hero summary */}
         <div
@@ -119,7 +139,7 @@ export default function ProfitProjectionDrawer({ isOpen, onClose, menus, stateId
                 {profitable ? <MdTrendingUp size={20} /> : <MdTrendingDown size={20} />}
                 <strong style={{ fontSize: "1.35rem" }}>{loading ? "…" : fmt(profit, currency)}</strong>
               </div>
-              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{profitMarginPct.toFixed(1)}% of income</span>
+              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{profitMarginPct.toFixed(1)}% profit margin</span>
             </div>
           </div>
 
@@ -130,65 +150,45 @@ export default function ProfitProjectionDrawer({ isOpen, onClose, menus, stateId
           </div>
         </div>
 
-        {/* Breakdown */}
+        {/* Breakdown Card */}
         <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: "12px 16px", background: "var(--bg-card)" }}>
-          <span style={label}>Monthly breakdown</span>
+          <span style={label}>Monthly Financial Breakdown</span>
           <div style={{ marginTop: 6 }}>
-            <BreakRow k="Sales income" v={fmt(revenue, currency)} bold />
-            <BreakRow k="Product costs" v={fmt(productCostMonthly, currency)} sign="− " color="#ef4444" />
-            <BreakRow k={`Operational costs (${fmt(monthlyBills, currency)} bills)`} v={fmt(operationalMonthly, currency)} sign="− " color="#ef4444" />
-            <BreakRow k={`Brand royalty (${num(royaltyPercent)}%)`} v={fmt(royaltyMonthly, currency)} sign="− " color="#ef4444" />
+            <BreakRow k="Sales Income (Gross)" v={fmt(revenue, currency)} bold />
+            <BreakRow k="Product Costs (Ingredients + Extra Costs)" v={fmt(productCostMonthly, currency)} sign="− " color="#ef4444" />
+            <BreakRow k={`Operational Costs (${fmt(monthlyBills, currency)} monthly bills)`} v={fmt(operationalMonthly, currency)} sign="− " color="#ef4444" />
+            <BreakRow k={`Brand Royalty (${num(royaltyPercent)}%)`} v={fmt(royaltyMonthly, currency)} sign="− " color="#ef4444" />
             <div style={{ borderTop: "1px solid var(--border)", marginTop: 6, paddingTop: 6 }}>
-              <BreakRow k="Net profit" v={fmt(profit, currency)} bold color={profitable ? "#16a34a" : "#ef4444"} />
+              <BreakRow k="Net Projected Profit" v={fmt(profit, currency)} bold color={profitable ? "#16a34a" : "#ef4444"} />
             </div>
           </div>
         </div>
 
-        {/* Assumptions */}
+        {/* Operating Parameters Summary (Read-Only) */}
         <div style={{ border: "1px solid var(--border)", borderRadius: 14, background: "var(--bg-card)", padding: "12px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-            <div>
-              <span style={label}>Daily target orders (all menus)</span>
-              <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
-                Split evenly: {Math.round(ordersPerMenu).toLocaleString()} orders / month per menu
-              </div>
+          <span style={label}>Operating Parameters</span>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginTop: 8 }}>
+            <div style={{ background: "var(--bg-hover)", padding: "8px 10px", borderRadius: 8 }}>
+              <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block" }}>Daily Target</span>
+              <strong style={{ fontSize: "0.86rem", color: "var(--text-heading)" }}>{dailyTarget} orders / day</strong>
+              <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", display: "block" }}>
+                (~{Math.round(ordersPerMenu).toLocaleString()}/menu/mo)
+              </span>
             </div>
-            <input
-              type="number"
-              min={1}
-              value={dailyTarget}
-              onChange={(e) => setDailyTarget(e.target.value)}
-              style={{ width: 90, height: 34, borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-hover)", color: "var(--text-heading)", padding: "0 10px", fontWeight: 700 }}
-            />
-          </div>
-          <div style={{ display: "flex", gap: 14, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <button
-              type="button"
-              onClick={() => setShowAssumptions((s) => !s)}
-              style={{ marginLeft: "auto", background: "none", border: "none", color: "var(--accent)", fontWeight: 700, fontSize: "0.74rem", cursor: "pointer" }}
-            >
-              {showAssumptions ? "Hide" : "Edit"} extra & operational costs
-            </button>
-          </div>
-          {showAssumptions && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
-              <ExtraCostsSection items={extraCosts} onChange={setExtraCosts} />
-              <OperationalCostSection
-                bills={bills}
-                onBillsChange={setBills}
-                dailyTarget={dailyTarget}
-                onTargetChange={setDailyTarget}
-                fmt={fmt}
-                currency={currency}
-                perOrder={operationalPerOrder}
-              />
+            <div style={{ background: "var(--bg-hover)", padding: "8px 10px", borderRadius: 8 }}>
+              <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block" }}>Total Monthly Bills</span>
+              <strong style={{ fontSize: "0.86rem", color: "var(--text-heading)" }}>{fmt(monthlyBills, currency)}</strong>
             </div>
-          )}
+            <div style={{ background: "var(--bg-hover)", padding: "8px 10px", borderRadius: 8 }}>
+              <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block" }}>Operational Cost / Order</span>
+              <strong style={{ fontSize: "0.86rem", color: "var(--text-heading)" }}>{fmt(operationalPerOrder, currency)}</strong>
+            </div>
+          </div>
         </div>
 
-        {/* Per-menu cards */}
+        {/* Per-menu breakdown cards (Read-Only Analysis) */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <span style={label}>Per menu</span>
+          <span style={label}>Per Menu Financial Analysis</span>
           {loading && ok.length === 0 && <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Calculating costs…</div>}
           {rows.map((r) => (
             <div key={r.menu.id} style={{ border: "1px solid var(--border)", borderRadius: 14, background: "var(--bg-card)", padding: 12 }}>
@@ -196,7 +196,12 @@ export default function ProfitProjectionDrawer({ isOpen, onClose, menus, stateId
                 <div style={{ width: 44, height: 44, borderRadius: 8, overflow: "hidden", background: "var(--bg-hover)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", flexShrink: 0 }}>
                   {r.menu.image ? <img src={r.menu.image} alt={r.menu.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <MdImage size={20} />}
                 </div>
-                <strong style={{ flex: 1, fontSize: "0.88rem", color: "var(--text-heading)" }}>{r.menu.name}</strong>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ fontSize: "0.88rem", color: "var(--text-heading)", display: "block" }}>{r.menu.name}</strong>
+                  <span style={{ fontSize: "0.7rem", color: "var(--accent)", fontWeight: 700 }}>
+                    Markup: {r.margin}%
+                  </span>
+                </div>
                 {!r.missing && (
                   <strong style={{ color: r.profitMonthly >= 0 ? "#16a34a" : "#ef4444", fontSize: "0.9rem" }}>
                     {fmt(r.profitMonthly, currency)}
@@ -208,40 +213,21 @@ export default function ProfitProjectionDrawer({ isOpen, onClose, menus, stateId
               {r.missing ? (
                 <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>Cost unavailable for this location — excluded from totals.</div>
               ) : (
-                <>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                    <span style={label}>Margin</span>
-                    <div style={{ position: "relative", width: 110 }}>
-                      <input
-                        type="number"
-                        min={0}
-                        step="any"
-                        inputMode="decimal"
-                        placeholder="0"
-                        value={r.rawMargin}
-                        onChange={(e) => setMargin(r.menu.id, e.target.value)}
-                        aria-label={`Margin percentage for ${r.menu.name}`}
-                        style={{ width: "100%", height: 34, borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-hover)", color: "var(--text-heading)", padding: "0 28px 0 10px", fontSize: "0.84rem", fontWeight: 800, outline: "none" }}
-                      />
-                      <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 700 }}>%</span>
-                    </div>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(105px, 1fr))", gap: 10 }}>
-                    <Stat k="Total cost" v={fmt(r.totalCost, currency)} />
-                    <Stat k="Selling price" v={fmt(r.price, currency)} color="var(--accent)" />
-                    <Stat
-                      k={
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
-                          <RoyaltyIcon size={11} /> Royalty
-                        </span>
-                      }
-                      v={fmt(r.royalty, currency)}
-                    />
-                    <Stat k="Profit / sale" v={fmt(r.profitPerSale, currency)} color={r.profitPerSale >= 0 ? "#16a34a" : "#ef4444"} />
-                    <Stat k="Monthly income" v={fmt(r.revenue, currency)} />
-                    <Stat k="Monthly orders" v={Math.round(ordersPerMenu).toLocaleString()} />
-                  </div>
-                </>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(105px, 1fr))", gap: 10, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+                  <Stat k="Total Cost" v={fmt(r.totalCost, currency)} />
+                  <Stat k="Selling Price" v={fmt(r.price, currency)} color="var(--accent)" />
+                  <Stat
+                    k={
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                        <RoyaltyIcon size={11} /> Royalty
+                      </span>
+                    }
+                    v={fmt(r.royalty, currency)}
+                  />
+                  <Stat k="Profit / Sale" v={fmt(r.profitPerSale, currency)} color={r.profitPerSale >= 0 ? "#16a34a" : "#ef4444"} />
+                  <Stat k="Monthly Income" v={fmt(r.revenue, currency)} />
+                  <Stat k="Monthly Orders" v={Math.round(ordersPerMenu).toLocaleString()} />
+                </div>
               )}
             </div>
           ))}

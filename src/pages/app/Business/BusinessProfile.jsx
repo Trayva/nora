@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LuPenLine } from "react-icons/lu";
+import { LuPenLine, LuGlobe } from "react-icons/lu";
 import { MdOutlineBusiness, MdOutlinePalette, MdOutlineVerified } from "react-icons/md";
 import RegisterBusinessModal from "./RegisterBusinessModal";
 
@@ -9,6 +9,7 @@ export default function BusinessProfile({ vendor, onUpdate }) {
   const logo = vendor.branding?.logo || vendor.brandLogo;
   const color = vendor.branding?.color || vendor.brandColor;
   const tagline = vendor.branding?.tagline || vendor.brandTagline;
+  const origin = vendor.origin || vendor.branding?.origin;
 
   const membershipColor = {
     ACTIVE: "email_badge_verified",
@@ -57,6 +58,25 @@ export default function BusinessProfile({ vendor, onUpdate }) {
               {vendor.businessRegDoc && (
                 <MdOutlineVerified size={20} style={{ color: "#22c55e", flexShrink: 0 }} title="Registered" />
               )}
+              {origin && (
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    padding: "2px 8px",
+                    borderRadius: 6,
+                    background: "rgba(203,108,220,0.1)",
+                    color: "var(--accent)",
+                    border: "1px solid rgba(203,108,220,0.25)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <LuGlobe size={13} />
+                  {origin}
+                </span>
+              )}
             </div>
 
             {tagline && <p className="biz_tagline">"{tagline}"</p>}
@@ -66,6 +86,12 @@ export default function BusinessProfile({ vendor, onUpdate }) {
               <span className={`email_badge ${membershipColor}`}>
                 {vendor.membershipStatus}
               </span>
+              {origin && (
+                <div className="biz_meta_item">
+                  <LuGlobe size={13} />
+                  <span>Origin: <strong>{origin}</strong></span>
+                </div>
+              )}
               {color && (
                 <div className="biz_meta_item">
                   <MdOutlinePalette size={13} />
@@ -89,7 +115,7 @@ export default function BusinessProfile({ vendor, onUpdate }) {
         onClose={() => setShowEdit(false)}
         onSuccess={() => { setShowEdit(false); onUpdate(); }}
         mode="update"
-        defaultValues={{ ...vendor, brandColor: color, brandTagline: tagline }}
+        defaultValues={{ ...vendor, brandColor: color, brandTagline: tagline, origin: origin || "" }}
       />
     </>
   );

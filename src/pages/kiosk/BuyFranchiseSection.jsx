@@ -8,6 +8,7 @@ import RoyaltyBadge from "./franchise/RoyaltyBadge";
 import BrandMenuSelector from "./franchise/BrandMenuSelector";
 import FranchiseMenuDrawer from "./franchise/FranchiseMenuDrawer";
 import ProfitProjectionDrawer from "./franchise/ProfitProjectionDrawer";
+import BrandExpandedConfig from "./franchise/BrandExpandedConfig";
 import useFranchisePlan from "./franchise/useFranchisePlan";
 import MapPicker from "./MapPicker";
 import {
@@ -23,7 +24,7 @@ import {
   MdClose,
   MdTrendingUp,
 } from "react-icons/md";
-import { LuStore, LuCloud } from "react-icons/lu";
+import { LuStore, LuCloud, LuChevronDown } from "react-icons/lu";
 import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 
 // Safe helper to parse bills from JSON string or array
@@ -94,6 +95,8 @@ export default function BuyFranchiseSection() {
   // Step 2: Brands & Menus
   const [brands, setBrands] = useState([]);
   const [loadingBrands, setLoadingBrands] = useState(false);
+  const [salesFormulas, setSalesFormulas] = useState([]);
+  const [expandedBrandId, setExpandedBrandId] = useState(null);
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [brandMenuItems, setBrandMenuItems] = useState([]);
   const [loadingMenu, setLoadingMenu] = useState(false);
@@ -101,6 +104,8 @@ export default function BuyFranchiseSection() {
   const [activeMenu, setActiveMenu] = useState(null);
   const [royaltyPercent, setRoyaltyPercent] = useState(null);
   const [loadingRoyalty, setLoadingRoyalty] = useState(false);
+  const [menuCostMap, setMenuCostMap] = useState({});
+  const [loadingCosts, setLoadingCosts] = useState(false);
 
   // Slots & Country Settings
   const [availableSlots, setAvailableSlots] = useState(null);
@@ -184,18 +189,104 @@ export default function BuyFranchiseSection() {
     }
   };
 
-  // Fetch Brands when moving to Step 2
+  // Fetch Brands and Sales Formulas when moving to Step 2
   const loadBrands = async () => {
     setLoadingBrands(true);
+    const formulaCountry = locationForm.country || selectedCloudLocation?.country || selectedCloudLocation?.state?.country || "Nigeria";
     try {
-      const res = await api.get("/vendor/profile", { params: { limit: 100 } });
-      const list = res.data.data?.vendors || (Array.isArray(res.data.data) ? res.data.data : []);
-      setBrands(list.filter((b) => b.isPublic !== false));
+      const [vendorsRes, formulaRes] = await Promise.allSettled([
+        api.get("/vendor/profile", { params: { limit: 100 } }),
+        api.get("/kiosk/sales-formula", { params: { country: formulaCountry } }),
+      ]);
+      if (vendorsRes.status === "fulfilled") {
+        const list = vendorsRes.value.data.data?.vendors || (Array.isArray(vendorsRes.value.data.data) ? vendorsRes.value.data.data : []);
+        setBrands(list.filter((b) => b.isPublic !== false));
+      } else {
+        toast.error("Failed to load franchise brands");
+      }
+      if (formulaRes.status === "fulfilled") {
+        const formulaList = Array.isArray(formulaRes.value.data.data) ? formulaRes.value.data.data : [];
+        setSalesFormulas(formulaList);
+      } else {
+        setSalesFormulas([]);
+      }
     } catch {
       toast.error("Failed to load franchise brands");
     } finally {
       setLoadingBrands(false);
     }
+  };
+
+  // Helper to extract brand-specific or country-default royalty percent
+  const getBrandRoyalty = (brandId) => {
+    if (!salesFormulas || salesFormulas.length === 0) return null;
+    const brandFormula = salesFormulas.find((f) => f.vendorId === brandId);
+    if (brandFormula && brandFormula.vendorPercent != null) {
+      return brandFormula.vendorPercent;
+    }
+    const countryDefault = salesFormulas.find((f) => !f.vendorId);
+    return countryDefault?.vendorPercent ?? null;
+  };
+
+  // Calculate menu costs in selected location across all items in brandMenuItems
+  useEffect(() => {
+    if (!brandMenuItems.length) {
+      setMenuCostMap({});
+      return;
+    }
+    const stateId = locationForm.stateId || selectedCloudLocation?.stateId;
+    let cancelled = false;
+    setLoadingCosts(true);
+    Promise.all(
+      brandMenuItems.map(async (m) => {
+        try {
+          const res = await api.get(`/library/calculation/menu/${m.id}/calc`, {
+            params: { stateId, useAverage: true },
+          });
+          return [m.id, res.data.data?.cost ?? null];
+        } catch {
+          return [m.id, null];
+        }
+      })
+    ).then((entries) => {
+      if (cancelled) return;
+      setMenuCostMap(Object.fromEntries(entries));
+      setLoadingCosts(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [brandMenuItems, locationForm.stateId, selectedCloudLocation?.stateId]);
+
+  // Handle expanding/collapsing a brand card in Step 2
+  const handleToggleExpandBrand = (brand, isEligible) => {
+    if (!isEligible) {
+      const outlets = Array.isArray(brand.outletSupport) ? brand.outletSupport : [];
+      const supportsCurrentOutlet = outlets.includes(locationForm.outletType);
+      const supportedStates = Array.isArray(brand.supportedStates) ? brand.supportedStates : [];
+      const supportsCurrentState = Boolean(locationForm.stateId && supportedStates.includes(locationForm.stateId));
+      if (!supportsCurrentOutlet) {
+        const otLabel =
+          locationForm.outletType === "CLOUD_KITCHEN"
+            ? "Cloud Kitchens"
+            : locationForm.outletType === "STORE_FRONT"
+              ? "Store Fronts"
+              : "Physical Kiosks";
+        return toast.error(`${brand.businessName} does not support ${otLabel}.`);
+      }
+      if (!supportsCurrentState) {
+        return toast.error(`${brand.businessName} does not operate in ${locationForm.stateName || "the selected state"}.`);
+      }
+      return;
+    }
+
+    if (expandedBrandId === brand.id) {
+      setExpandedBrandId(null);
+      return;
+    }
+
+    setExpandedBrandId(brand.id);
+    handleSelectBrand(brand);
   };
 
   const handleLocationChange = (key, val) => {
@@ -391,7 +482,7 @@ export default function BuyFranchiseSection() {
   const vendorPayments = Array.isArray(selectedBrand?.franchisePayments) ? selectedBrand.franchisePayments : [];
   const totalVendorPayments = vendorPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const rawGlobalPayments = Array.isArray(countrySettings?.payments) ? countrySettings.payments : [];
-  const currency = countrySettings?.currency;
+  const currency = countrySettings?.currency || "NGN";
 
   // Filter global payments targeted to this outletType ("ALL" applies to every outlet)
   const filteredGlobalPayments = rawGlobalPayments.filter((p) => {
@@ -1221,6 +1312,7 @@ export default function BuyFranchiseSection() {
             <div className="bf-brand-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 290px), 1fr))", gap: 18 }}>
               {brands.map((brand) => {
                 const isSelected = selectedBrand?.id === brand.id;
+                const isExpanded = expandedBrandId === brand.id;
                 const outlets = Array.isArray(brand.outletSupport)
                   ? brand.outletSupport
                   : [];
@@ -1230,75 +1322,90 @@ export default function BuyFranchiseSection() {
                 const isEligible = supportsCurrentOutlet && supportsCurrentState;
                 const payments = Array.isArray(brand.franchisePayments) ? brand.franchisePayments : [];
                 const brandFeeTotal = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                const royaltyPct = getBrandRoyalty(brand.id);
 
                 return (
                   <div
                     key={brand.id}
-                    onClick={() => {
-                      if (!supportsCurrentOutlet) {
-                        const otLabel =
-                          locationForm.outletType === "CLOUD_KITCHEN"
-                            ? "Cloud Kitchens"
-                            : locationForm.outletType === "STORE_FRONT"
-                              ? "Store Fronts"
-                              : "Physical Kiosks";
-                        return toast.error(`${brand.businessName} does not support ${otLabel}.`);
-                      }
-                      if (!supportsCurrentState) {
-                        return toast.error(`${brand.businessName} does not operate in ${locationForm.stateName || "the selected state"}.`);
-                      }
-                      handleSelectBrand(brand);
-                      setStep(3);
-                    }}
+                    onClick={() => handleToggleExpandBrand(brand, isEligible)}
                     style={{
                       background: "var(--bg-card)",
-                      border: `1.5px solid ${isSelected ? "var(--accent)" : isEligible ? "var(--border)" : "rgba(239, 68, 68, 0.25)"}`,
+                      border: `1.5px solid ${isExpanded ? "var(--accent)" : isSelected ? "var(--accent)" : isEligible ? "var(--border)" : "rgba(239, 68, 68, 0.25)"}`,
                       borderRadius: 16,
                       padding: 20,
                       cursor: isEligible ? "pointer" : "not-allowed",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
-                      transition: "all 0.15s ease",
+                      transition: "all 0.2s ease",
                       position: "relative",
                       opacity: isEligible ? 1 : 0.6,
+                      gridColumn: isExpanded ? "1 / -1" : undefined,
+                      boxShadow: isExpanded ? "0 8px 24px rgba(203,108,220,0.12)" : undefined,
                     }}
                   >
                     <div>
                       {/* Brand Header */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                        <div
-                          style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: 12,
-                            background: brand.branding?.color || "var(--bg-hover)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            overflow: "hidden",
-                            flexShrink: 0,
-                            border: "1px solid var(--border)",
-                          }}
-                        >
-                          {brand.branding?.logo ? (
-                            <img
-                              src={brand.branding.logo}
-                              alt={brand.businessName}
-                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                            />
-                          ) : (
-                            <MdStorefront size={24} color="#fff" />
-                          )}
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div
+                            style={{
+                              width: 48,
+                              height: 48,
+                              borderRadius: 12,
+                              background: brand.branding?.color || "var(--bg-hover)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              overflow: "hidden",
+                              flexShrink: 0,
+                              border: "1px solid var(--border)",
+                            }}
+                          >
+                            {brand.branding?.logo ? (
+                              <img
+                                src={brand.branding.logo}
+                                alt={brand.businessName}
+                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                              />
+                            ) : (
+                              <MdStorefront size={24} color="#fff" />
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 2 }}>
+                              <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-heading)", margin: 0 }}>
+                                {brand.businessName}
+                              </h4>
+                              {(brand.origin || brand.branding?.origin) && (
+                                <span
+                                  style={{
+                                    fontSize: "0.64rem",
+                                    fontWeight: 700,
+                                    padding: "1px 6px",
+                                    borderRadius: 4,
+                                    background: "rgba(203,108,220,0.08)",
+                                    color: "var(--accent)",
+                                    border: "1px solid rgba(203,108,220,0.25)",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 3,
+                                  }}
+                                >
+                                  📍 {brand.origin || brand.branding?.origin}
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                              {brand.branding?.tagline || "Verified Franchise Partner"}
+                            </span>
+                          </div>
                         </div>
-                        <div>
-                          <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 2px" }}>
-                            {brand.businessName}
-                          </h4>
-                          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                            {brand.branding?.tagline || "Verified Franchise Partner"}
-                          </span>
-                        </div>
+
+                        {/* Brand Royalty Percentage Badge */}
+                        {royaltyPct != null && (
+                          <RoyaltyBadge percent={royaltyPct} />
+                        )}
                       </div>
 
                       {/* Outlet Support & State Eligibility Tags */}
@@ -1357,6 +1464,7 @@ export default function BuyFranchiseSection() {
                       </p>
                     </div>
 
+                    {/* Card Footer: License fee & Chevron Toggle */}
                     <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block" }}>
@@ -1369,12 +1477,69 @@ export default function BuyFranchiseSection() {
                       <button
                         type="button"
                         disabled={!isEligible}
-                        className="app_btn app_btn_confirm"
-                        style={{ height: 32, fontSize: "0.75rem", padding: "0 14px", fontWeight: 700 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleExpandBrand(brand, isEligible);
+                        }}
+                        aria-label={isExpanded ? "Collapse brand setup" : "Expand brand setup"}
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 10,
+                          border: `1.5px solid ${isExpanded ? "var(--accent)" : "var(--border)"}`,
+                          background: isExpanded ? "rgba(203,108,220,0.12)" : "var(--bg-hover)",
+                          color: isExpanded ? "var(--accent)" : "var(--text-heading)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: isEligible ? "pointer" : "not-allowed",
+                          transition: "all 0.2s ease",
+                          padding: 0,
+                        }}
                       >
-                        Select Brand →
+                        <LuChevronDown
+                          size={20}
+                          style={{
+                            transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                            transition: "transform 0.25s ease",
+                          }}
+                        />
                       </button>
                     </div>
+
+                    {/* ── Expanded Brand Setup & Analysis ── */}
+                    {isExpanded && (
+                      <BrandExpandedConfig
+                        brand={brand}
+                        menuItems={brandMenuItems}
+                        loadingMenu={loadingMenu}
+                        selectedMenuIds={selectedMenuIds}
+                        onToggleMenu={(id) =>
+                          setSelectedMenuIds((prev) =>
+                            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+                          )
+                        }
+                        onToggleAll={() =>
+                          setSelectedMenuIds((prev) =>
+                            prev.length === brandMenuItems.length ? [] : brandMenuItems.map((m) => m.id)
+                          )
+                        }
+                        onOpenMenuDrawer={(item) => setActiveMenu(item)}
+                        costMap={menuCostMap}
+                        loadingCosts={loadingCosts}
+                        currency={currency}
+                        fmt={fmt}
+                        plan={plan}
+                        royaltyPercent={royaltyPercent ?? royaltyPct}
+                        onRunAnalysis={() => setShowProjection(true)}
+                        onProceed={() => {
+                          if (selectedMenuIds.length === 0) {
+                            return toast.error("Please select at least one menu item to proceed");
+                          }
+                          setStep(3);
+                        }}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -1557,9 +1722,29 @@ export default function BuyFranchiseSection() {
                   )}
                 </div>
                 <div>
-                  <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 2px" }}>
-                    {selectedBrand.businessName}
-                  </h4>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 2 }}>
+                    <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-heading)", margin: 0 }}>
+                      {selectedBrand.businessName}
+                    </h4>
+                    {(selectedBrand.origin || selectedBrand.branding?.origin) && (
+                      <span
+                        style={{
+                          fontSize: "0.64rem",
+                          fontWeight: 700,
+                          padding: "1px 6px",
+                          borderRadius: 4,
+                          background: "rgba(203,108,220,0.08)",
+                          color: "var(--accent)",
+                          border: "1px solid rgba(203,108,220,0.25)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 3,
+                        }}
+                      >
+                        📍 {selectedBrand.origin || selectedBrand.branding?.origin}
+                      </span>
+                    )}
+                  </div>
                   <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
                     {selectedMenuIds.length} of {brandMenuItems.length} recipes and menu items selected
                   </span>
@@ -1593,26 +1778,6 @@ export default function BuyFranchiseSection() {
                   <MdTrendingUp size={18} /> Project Profit for {selectedMenuIds.length} Menu{selectedMenuIds.length === 1 ? "" : "s"}
                 </button>
               )}
-
-              <FranchiseMenuDrawer
-                menu={activeMenu}
-                stateId={locationForm.stateId || selectedCloudLocation?.stateId}
-                currency={currency}
-                fmt={fmt}
-                plan={plan}
-                onClose={() => setActiveMenu(null)}
-              />
-
-              <ProfitProjectionDrawer
-                isOpen={showProjection}
-                onClose={() => setShowProjection(false)}
-                menus={brandMenuItems.filter((m) => selectedMenuIds.includes(m.id))}
-                stateId={locationForm.stateId || selectedCloudLocation?.stateId}
-                currency={currency}
-                fmt={fmt}
-                plan={plan}
-                royaltyPercent={royaltyPercent}
-              />
             </div>
           </div>
 
@@ -1889,6 +2054,28 @@ export default function BuyFranchiseSection() {
           onSubmit={handleSignSubmit}
         />
       )}
+
+      {/* ── DRAWERS (FRANCHISE MENU & PROFIT PROJECTION) ─── */}
+      <FranchiseMenuDrawer
+        menu={activeMenu}
+        stateId={locationForm.stateId || selectedCloudLocation?.stateId}
+        currency={currency}
+        fmt={fmt}
+        plan={plan}
+        onClose={() => setActiveMenu(null)}
+      />
+
+      <ProfitProjectionDrawer
+        isOpen={showProjection}
+        onClose={() => setShowProjection(false)}
+        menus={brandMenuItems.filter((m) => selectedMenuIds.includes(m.id))}
+        stateId={locationForm.stateId || selectedCloudLocation?.stateId}
+        currency={currency}
+        fmt={fmt}
+        plan={plan}
+        royaltyPercent={royaltyPercent ?? (selectedBrand ? getBrandRoyalty(selectedBrand.id) : null)}
+        externalCostMap={menuCostMap}
+      />
 
       {/* Lightbox Preview Modal for Cloud Kitchen Images */}
       {previewModalImage && (
