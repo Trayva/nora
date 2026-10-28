@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 export const num = (v) => parseFloat(v) || 0;
-export const DEFAULT_MARGIN = 30;
+export const DEFAULT_MARGIN = 100;
 
 // Shared pricing plan (margins, extra costs, operational bills, daily target) used by the
 // menu detail drawer and the profit projection drawer.

@@ -109,10 +109,9 @@ export default function ProfitProjectionDrawer({
     monthlyOrders = 0,
     operationalPerOrder = 0,
     dailyTarget = 50,
-    getMargin = () => 30,
+    getMargin = () => 100,
     setMargin = () => { },
     applyMarginToAll = () => { },
-    priceFor = (c, m) => ({ totalCost: c, price: c * (1 + m / 100) }),
   } = plan || {};
 
   const royaltyRate = num(royaltyPercent) / 100;

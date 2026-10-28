@@ -107,6 +107,7 @@ export default function BuyFranchiseSection() {
   const [loadingRoyalty, setLoadingRoyalty] = useState(false);
   const [menuCostMap, setMenuCostMap] = useState({});
   const [menuProfitMarginMap, setMenuProfitMarginMap] = useState({});
+  const [menuPriceMap, setMenuPriceMap] = useState({});
   const [loadingCosts, setLoadingCosts] = useState(false);
 
   // Slots & Country Settings
@@ -235,6 +236,7 @@ export default function BuyFranchiseSection() {
     if (!brandMenuItems.length) {
       setMenuCostMap({});
       setMenuProfitMarginMap({});
+      setMenuPriceMap({});
       return;
     }
     const stateId = locationForm.stateId || selectedCloudLocation?.stateId;
@@ -256,21 +258,24 @@ export default function BuyFranchiseSection() {
             profitMargin = ((Number(price) - Number(cost)) / Number(cost)) * 100;
           }
 
-          return { id: m.id, cost, profitMargin };
+          return { id: m.id, cost, price, profitMargin };
         } catch {
-          return { id: m.id, cost: null, profitMargin: null };
+          return { id: m.id, cost: null, price: null, profitMargin: null };
         }
       })
     ).then((items) => {
       if (cancelled) return;
       const costEntries = {};
       const marginEntries = {};
+      const priceEntries = {};
       items.forEach((item) => {
         costEntries[item.id] = item.cost;
         marginEntries[item.id] = item.profitMargin;
+        priceEntries[item.id] = item.price;
       });
       setMenuCostMap(costEntries);
       setMenuProfitMarginMap(marginEntries);
+      setMenuPriceMap(priceEntries);
       setLoadingCosts(false);
     });
     return () => {
@@ -1571,6 +1576,7 @@ export default function BuyFranchiseSection() {
                         onOpenMenuDrawer={(item) => setActiveMenu(item)}
                         costMap={menuCostMap}
                         profitMarginMap={menuProfitMarginMap}
+                        priceMap={menuPriceMap}
                         loadingCosts={loadingCosts}
                         currency={currency}
                         fmt={fmt}

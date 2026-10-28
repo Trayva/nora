@@ -13,6 +13,7 @@ export default function BrandExpandedConfig({
   onOpenMenuDrawer,
   costMap = {},
   profitMarginMap = {},
+  priceMap = {},
   loadingCosts = false,
   currency,
   fmt,
@@ -101,6 +102,7 @@ export default function BrandExpandedConfig({
               const isSelected = selectedMenuIds.includes(item.id);
               const cost = costMap[item.id];
               const profitMargin = profitMarginMap[item.id];
+              const price = priceMap[item.id] ?? item.price ?? item.sellingPrice ?? null;
 
               return (
                 <div
@@ -233,16 +235,16 @@ export default function BrandExpandedConfig({
                     </div>
                   </div>
 
-                  {/* Cost in Location */}
+                  {/* Price in Location */}
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
                     <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>
-                      Cost
+                      Price
                     </span>
                     <strong style={{ fontSize: "0.82rem", color: "var(--text-heading)" }}>
-                      {loadingCosts && cost === undefined
+                      {loadingCosts && price === undefined
                         ? "…"
-                        : cost != null
-                          ? fmt(cost.toFixed(2), currency)
+                        : price != null
+                          ? fmt(Number(price).toFixed(2), currency)
                           : "N/A"}
                     </strong>
                   </div>
