@@ -73,6 +73,160 @@ function getMobileTabs(role) {
   // Always cap at 4 + More
   return [...tabs.slice(0, 4), { id: "more", label: "More", icon: MdMoreHoriz, path: null }];
 }
+// ── Default State Resolution Helpers ──────────────────────────────────────────
+function cleanStr(val) {
+  return (val || "")
+    .toLowerCase()
+    .replace(/state/gi, "")
+    .replace(/emirate/gi, "")
+    .replace(/[^a-z0-9]/g, "")
+    .trim();
+}
+
+function matchCountry(sCountry, targetCountry) {
+  const c1 = cleanStr(sCountry);
+  const c2 = cleanStr(targetCountry);
+  if (!c1 || !c2) return false;
+  if (c1 === c2 || c1.includes(c2) || c2.includes(c1)) return true;
+  if ((c2 === "uae" || c2 === "ae") && c1.includes("emirates")) return true;
+  if ((c1 === "uae" || c1 === "ae") && c2.includes("emirates")) return true;
+  if (c2 === "ng" && c1.includes("nigeria")) return true;
+  return false;
+}
+
+function findStateByLocation(states, loc) {
+  if (!states?.length || !loc) return null;
+
+  const cCity = cleanStr(loc.city);
+  const cState = cleanStr(loc.stateName);
+
+  // 1a. Try matching state name directly with detected state name
+  if (cState) {
+    const match = states.find((s) => {
+      const sName = cleanStr(s.name);
+      return sName && (sName === cState || sName.includes(cState) || cState.includes(sName));
+    });
+    if (match) return match;
+  }
+
+  // 1b. Try matching state name directly with detected city
+  if (cCity) {
+    const match = states.find((s) => {
+      const sName = cleanStr(s.name);
+      return sName && (sName === cCity || sName.includes(cCity) || cCity.includes(sName));
+    });
+    if (match) return match;
+  }
+
+  // 1c. Select first state available in the country
+  if (loc.country) {
+    const match = states.find((s) => matchCountry(s.country, loc.country));
+    if (match) return match;
+  }
+
+  return null;
+}
+
+function findStateByUserProfile(states, user) {
+  if (!states?.length || !user) return null;
+
+  const userCity = cleanStr(user.city);
+  const userCountry = user.country || user.Vendor?.origin || user.address;
+
+  // Check user city if it matches a state
+  if (userCity) {
+    const match = states.find((s) => {
+      const sName = cleanStr(s.name);
+      return sName && (sName === userCity || sName.includes(userCity) || userCity.includes(sName));
+    });
+    if (match) return match;
+  }
+
+  // Select first state from user's country
+  if (userCountry) {
+    const match = states.find((s) => matchCountry(s.country, userCountry));
+    if (match) return match;
+  }
+
+  return null;
+}
+
+function findDefaultDubai(states) {
+  if (!states?.length) return null;
+  return (
+    states.find((s) => cleanStr(s.name).includes("dubai")) ||
+    states.find((s) => matchCountry(s.country, "United Arab Emirates")) ||
+    states[0]
+  );
+}
+
+async function detectUserLocation() {
+  // 1. Browser Geolocation (with 3.5s timeout)
+  const coords = await new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    const timeoutId = setTimeout(() => resolve(null), 3500);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        clearTimeout(timeoutId);
+        resolve({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        });
+      },
+      () => {
+        clearTimeout(timeoutId);
+        resolve(null);
+      },
+      { timeout: 3500, maximumAge: 600000 }
+    );
+  });
+
+  if (coords) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.latitude}&lon=${coords.longitude}`,
+        { signal: controller.signal }
+      );
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        const addr = data.address || {};
+        const info = {
+          city: addr.city || addr.town || addr.village || addr.municipality || addr.county || "",
+          stateName: addr.state || "",
+          country: addr.country || "",
+        };
+        if (info.city || info.stateName || info.country) {
+          return info;
+        }
+      }
+    } catch {
+      // Fall through to IP lookup
+    }
+  }
+
+  // 2. IP lookup fallback
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch("https://ipapi.co/json/", { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        city: data.city || "",
+        stateName: data.region || "",
+        country: data.country_name || "",
+      };
+    }
+  } catch {
+    // Both failed
+  }
+
+  return null;
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function AppIndex() {
@@ -83,6 +237,61 @@ export default function AppIndex() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { states, selectedState, changeState } = useAppState();
+
+  // Default state selection when states are loaded:
+  // 1. User current location (city -> matching state, or first state in country)
+  // 2. User profile country -> first state in country
+  // 3. Fallback to default Dubai
+  useEffect(() => {
+    if (!states || states.length === 0) return;
+
+    // If user has manually selected a state, respect their choice
+    if (localStorage.getItem("nora-state-manual") === "true") {
+      const saved = localStorage.getItem("nora-state");
+      const found = states.find((s) => s.id === saved);
+      if (found && selectedState?.id !== found.id) {
+        changeState(found);
+      }
+      return;
+    }
+
+    let isMounted = true;
+
+    async function applyDefaultState() {
+      // 1. Try to get user current location
+      const loc = await detectUserLocation();
+      if (!isMounted) return;
+
+      if (loc) {
+        const locState = findStateByLocation(states, loc);
+        if (locState) {
+          changeState(locState);
+          return;
+        }
+      }
+
+      // 2. Get country for user profile and select first state from their country
+      const profileState = findStateByUserProfile(states, user);
+      if (!isMounted) return;
+
+      if (profileState) {
+        changeState(profileState);
+        return;
+      }
+
+      // 3. Or select default Dubai
+      const dubaiState = findDefaultDubai(states);
+      if (dubaiState) {
+        changeState(dubaiState);
+      }
+    }
+
+    applyDefaultState();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [states, user]);
 
   // Close sidebar on route change (mobile)
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
@@ -178,7 +387,7 @@ export default function AppIndex() {
                 value={selectedState?.id || ""}
                 onChange={(e) => {
                   const found = states.find((s) => s.id === e.target.value);
-                  if (found) changeState(found);
+                  if (found) changeState(found, true);
                 }}
               >
                 {states.map((s) => (

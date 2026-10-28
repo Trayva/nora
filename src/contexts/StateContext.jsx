@@ -13,14 +13,14 @@ export default function StateProvider({ children }) {
         const res = await api.get("/config/state");
         const list = res.data.data || [];
         setStates(list);
-        // Restore saved state from localStorage
+        // Restore saved state from localStorage if manually selected
         const saved = localStorage.getItem("nora-state");
-        if (saved) {
+        const isManual = localStorage.getItem("nora-state-manual") === "true";
+        if (saved && isManual) {
           const found = list.find((s) => s.id === saved);
           if (found) setSelectedState(found);
         } else if (list.length > 0) {
-          setSelectedState(list[0]); // default to first
-          localStorage.setItem("nora-state", list[0].id);
+          setSelectedState(list[0]);
         }
       } catch {
         console.error("Failed to fetch states");
@@ -29,9 +29,12 @@ export default function StateProvider({ children }) {
     fetchStates();
   }, []);
 
-  const changeState = (state) => {
+  const changeState = (state, isManual = false) => {
     setSelectedState(state);
     localStorage.setItem("nora-state", state.id);
+    if (isManual) {
+      localStorage.setItem("nora-state-manual", "true");
+    }
   };
 
   return (
