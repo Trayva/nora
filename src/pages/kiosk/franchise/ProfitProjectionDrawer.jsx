@@ -160,8 +160,8 @@ export default function ProfitProjectionDrawer({
           <span style={label}>Monthly Financial Breakdown</span>
           <div style={{ marginTop: 6 }}>
             <BreakRow k="Sales Income (Gross)" v={fmt(revenue, currency)} bold />
-            <BreakRow k="Product Costs (Ingredients + Extra Costs)" v={fmt(productCostMonthly, currency)} sign="− " color="#ef4444" />
-            <BreakRow k={`Operational Costs (${fmt(monthlyBills, currency)} monthly bills)`} v={fmt(operationalMonthly, currency)} sign="− " color="#ef4444" />
+            <BreakRow k="Product Costs" v={fmt(productCostMonthly, currency)} sign="− " color="#ef4444" />
+            <BreakRow k={`Operational Costs`} v={fmt(operationalMonthly, currency)} sign="− " color="#ef4444" />
             <BreakRow k={`Brand Royalty (${num(royaltyPercent)}%)`} v={fmt(royaltyMonthly, currency)} sign="− " color="#ef4444" />
             <div style={{ borderTop: "1px solid var(--border)", marginTop: 6, paddingTop: 6 }}>
               <BreakRow k="Net Projected Profit" v={fmt(profit, currency)} bold color={profitable ? "#16a34a" : "#ef4444"} />
