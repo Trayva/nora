@@ -115,7 +115,7 @@ function UserAvatar({ user, className = "sidebar-user-avatar", style = {} }) {
 
 export default function Sidebar({ mobileOpen = false, onMobileClose, onStartTour }) {
   const { theme, toggle } = useTheme();
-  // const { states, selectedState, changeState } = useAppState();
+  const { states, selectedState, changeState } = useAppState();
   const { user, savedAccounts, switchAccount, removeAccount } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
@@ -240,7 +240,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose, onStartTour
           ))}
 
           {/* State selector */}
-          {/* <div className="sidebar_state_section" title={collapsed ? selectedState?.name || "Location" : undefined}>
+          <div className="sidebar_state_section" title={collapsed ? selectedState?.name || "Location" : undefined}>
             <MdLocationOn className="sidebar_state_icon" />
             {!collapsed && (
               <span className="sidebar_state_label">{selectedState?.name || "Select location"}</span>
@@ -257,7 +257,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose, onStartTour
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
-          </div> */}
+          </div>
 
           {/* Theme toggle */}
           {/* <li>
