@@ -11,6 +11,7 @@ import ProfitProjectionDrawer from "./franchise/ProfitProjectionDrawer";
 import BrandExpandedConfig from "./franchise/BrandExpandedConfig";
 import useFranchisePlan from "./franchise/useFranchisePlan";
 import MapPicker from "./MapPicker";
+
 import {
   MdStorefront,
   MdLocationOn,
@@ -222,10 +223,10 @@ export default function BuyFranchiseSection() {
     if (!salesFormulas || salesFormulas.length === 0) return null;
     const brandFormula = salesFormulas.find((f) => f.vendorId === brandId);
     if (brandFormula && brandFormula.vendorPercent != null) {
-      return brandFormula.vendorPercent;
+      return brandFormula.vendorPercent + brandFormula.noraPercent + brandFormula.operatorPercent;
     }
     const countryDefault = salesFormulas.find((f) => !f.vendorId);
-    return countryDefault?.vendorPercent ?? null;
+    return countryDefault?.vendorPercent ? countryDefault?.vendorPercent + countryDefault?.noraPercent + countryDefault?.operatorPercent : null;
   };
 
   // Calculate menu costs in selected location across all items in brandMenuItems
@@ -240,8 +241,9 @@ export default function BuyFranchiseSection() {
     Promise.all(
       brandMenuItems.map(async (m) => {
         try {
+          console.log(m)
           const res = await api.get(`/library/calculation/menu/${m.id}/calc`, {
-            params: { stateId, useAverage: true },
+            params: { stateId, useAverage: true, variantId: m.variants[0]?.id },
           });
           return [m.id, res.data.data?.cost ?? null];
         } catch {
@@ -1790,7 +1792,7 @@ export default function BuyFranchiseSection() {
                   onClick={() => setShowProjection(true)}
                   style={{ marginTop: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                 >
-                  <MdTrendingUp size={18} /> Project Profit for {selectedMenuIds.length} Menu{selectedMenuIds.length === 1 ? "" : "s"}
+                  <MdTrendingUp size={18} /> Run Break-Even Analysis
                 </button>
               )}
             </div>

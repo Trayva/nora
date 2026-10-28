@@ -197,13 +197,13 @@ export default function BrandExpandedConfig({
                   {/* Cost in Location */}
                   <div style={{ textAlign: "right", minWidth: 85 }}>
                     <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>
-                      Base Cost
+                      Cost
                     </span>
                     <strong style={{ fontSize: "0.84rem", color: "var(--text-heading)" }}>
                       {loadingCosts && cost === undefined
                         ? "…"
                         : cost != null
-                          ? fmt(cost, currency)
+                          ? fmt(cost.toFixed(2), currency)
                           : "N/A"}
                     </strong>
                   </div>
