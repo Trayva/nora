@@ -34,6 +34,8 @@ import * as Yup from "yup";
 import { Formik, Form } from "formik";
 import "./Profile.css";
 import { COUNTRIES } from "../admin/adminUtils_";
+import SumsubModal from "../../components/SumsubModal";
+import { getSumsubKycStatus } from "../../api/kyc";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function getInitials(name = "") {
@@ -142,6 +144,10 @@ export default function Profile() {
     useNotifications();
   const [updatingNotif, setUpdatingNotif] = useState(false);
 
+  // Sumsub KYC modal state
+  const [sumsubModal, setSumsubModal] = useState({ isOpen: false, level: "level-2" });
+  const [syncingKyc, setSyncingKyc] = useState(false);
+
   // ── Load profile ─────────────────────────────────────────────
   const fetchProfile = async () => {
     try {
@@ -166,6 +172,20 @@ export default function Profile() {
       setProfileError(err.message);
     } finally {
       setProfileLoading(false);
+    }
+  };
+
+  const handleSyncKyc = async () => {
+    setSyncingKyc(true);
+    try {
+      await getSumsubKycStatus();
+      toast.success("KYC status synchronized with verification provider");
+      await fetchProfile();
+    } catch (err) {
+      console.error("KYC sync error:", err);
+      toast.error("Failed to sync KYC status");
+    } finally {
+      setSyncingKyc(false);
     }
   };
 
@@ -648,7 +668,18 @@ export default function Profile() {
                       </p>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        className="profile-photo-btn"
+                        onClick={handleSyncKyc}
+                        disabled={syncingKyc}
+                        style={{ padding: "5px 12px", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: 5 }}
+                        title="Synchronize latest KYC status from Sumsub"
+                      >
+                        <MdRefresh size={14} className={syncingKyc ? "spin-icon" : ""} />
+                        {syncingKyc ? "Syncing..." : "Sync Status"}
+                      </button>
                       <span
                         style={{
                           display: "inline-flex",
@@ -823,15 +854,27 @@ export default function Profile() {
                             {profile?.phone || "—"}
                           </strong>
                         </div>
-                        <span
-                          className={`profile-kyc-contact-badge ${
-                            profile?.phoneVerified
-                              ? "profile-kyc-contact-badge--ok"
-                              : "profile-kyc-contact-badge--no"
-                          }`}
-                        >
-                          {profile?.phoneVerified ? "✓ Verified" : "Unverified"}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                          <span
+                            className={`profile-kyc-contact-badge ${
+                              profile?.phoneVerified
+                                ? "profile-kyc-contact-badge--ok"
+                                : "profile-kyc-contact-badge--no"
+                            }`}
+                          >
+                            {profile?.phoneVerified ? "✓ Verified" : "Unverified"}
+                          </span>
+                          {!profile?.phoneVerified && (
+                            <button
+                              type="button"
+                              className="app_btn app_btn_confirm"
+                              onClick={() => setSumsubModal({ isOpen: true, level: "phone" })}
+                              style={{ padding: "4px 10px", fontSize: "0.72rem", borderRadius: 6, whiteSpace: "nowrap" }}
+                            >
+                              Verify Phone
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -861,6 +904,40 @@ export default function Profile() {
                         {isLevel2Approved ? "Verified (Level 2)" : "Identity ID"}
                       </span>
                     </div>
+
+                    {!isLevel2Approved && (
+                      <div
+                        style={{
+                          margin: "0 0 16px",
+                          padding: "14px 16px",
+                          borderRadius: 12,
+                          background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)",
+                          border: "1px solid rgba(99, 102, 241, 0.25)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          flexWrap: "wrap",
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ minWidth: 200, flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--text-heading)", display: "flex", alignItems: "center", gap: 6 }}>
+                            <MdVerifiedUser size={18} color="#6366f1" /> Instant Verification with Sumsub
+                          </div>
+                          <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: 2 }}>
+                            Scan your ID document and complete a 5-second face liveness check.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="app_btn app_btn_confirm"
+                          onClick={() => setSumsubModal({ isOpen: true, level: "level-2" })}
+                          style={{ padding: "8px 18px", fontSize: "0.82rem", borderRadius: 8, whiteSpace: "nowrap" }}
+                        >
+                          Verify with Sumsub
+                        </button>
+                      </div>
+                    )}
 
                     <div className="profile-form-row">
                       <div className="profile-form-field">
@@ -951,6 +1028,40 @@ export default function Profile() {
                         {isLevel3Approved ? "Verified (Level 3)" : "Advanced KYC"}
                       </span>
                     </div>
+
+                    {!isLevel3Approved && (
+                      <div
+                        style={{
+                          margin: "0 0 16px",
+                          padding: "14px 16px",
+                          borderRadius: 12,
+                          background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)",
+                          border: "1px solid rgba(16, 185, 129, 0.25)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          flexWrap: "wrap",
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ minWidth: 200, flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--text-heading)", display: "flex", alignItems: "center", gap: 6 }}>
+                            <MdVerifiedUser size={18} color="#10b981" /> Instant Address Verification with Sumsub
+                          </div>
+                          <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: 2 }}>
+                            Upload a utility bill or bank statement with automated Sumsub proof of residency checks.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="app_btn app_btn_confirm"
+                          onClick={() => setSumsubModal({ isOpen: true, level: "level-3" })}
+                          style={{ padding: "8px 18px", fontSize: "0.82rem", borderRadius: 8, background: "#10b981", border: "1px solid #10b981", whiteSpace: "nowrap" }}
+                        >
+                          Verify with Sumsub
+                        </button>
+                      </div>
+                    )}
 
                     <div className="profile-form-row" style={{ marginBottom: 14 }}>
                       <div className="profile-form-field">
@@ -1438,6 +1549,17 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Sumsub Verification Modal */}
+      <SumsubModal
+        isOpen={sumsubModal.isOpen}
+        level={sumsubModal.level}
+        user={profile}
+        onClose={() => setSumsubModal((p) => ({ ...p, isOpen: false }))}
+        onSuccess={() => {
+          fetchProfile();
+        }}
+      />
     </div>
   );
 }
