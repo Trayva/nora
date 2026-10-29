@@ -128,7 +128,7 @@ export default function BuyFranchiseSection() {
   // Target State & Currency selected from AppIndex layout (NOT outlet/location selected by user)
   const { selectedState } = useAppState();
   const stateCurrency = selectedState?.currency || "NGN";
-  const { format: fmt, convert, isConverted } = useCurrencyDisplay(stateCurrency);
+  const { format: fmt, convert, isConverted, isRateLoading } = useCurrencyDisplay(stateCurrency);
 
   // Load States on mount
   useEffect(() => {
@@ -532,9 +532,12 @@ export default function BuyFranchiseSection() {
   // ── Fee Calculations & Payment Partitioning ────────────────
   const vendorPayments = Array.isArray(selectedBrand?.franchisePayments) ? selectedBrand.franchisePayments : [];
   const totalVendorPayments = vendorPayments.reduce((sum, p) => {
+    if (sum === null) return null;
     const fromCurr = p.currency || "NGN";
     const amt = parseFloat(p.amount) || 0;
-    return sum + convert(amt, fromCurr);
+    const c = convert(amt, fromCurr);
+    if (c === null) return null;
+    return sum + c;
   }, 0);
   const rawGlobalPayments = Array.isArray(countrySettings?.payments) ? countrySettings.payments : [];
   const currency = stateCurrency;
@@ -555,25 +558,31 @@ export default function BuyFranchiseSection() {
       ? parseBills(selectedCloudLocation.bills)
       : [];
   const totalLocationBills = selectedLocationBills.reduce((sum, b) => {
+    if (sum === null) return null;
     const fromCurr = b.currency || selectedCloudLocation?.state?.currency || "NGN";
-    return sum + convert(parseFloat(b.amount) || 0, fromCurr);
+    const c = convert(parseFloat(b.amount) || 0, fromCurr);
+    if (c === null) return null;
+    return sum + c;
   }, 0);
 
   // Compute Platform/Global Fees
   const computedGlobalFee = filteredGlobalPayments.reduce((sum, p) => {
+    if (sum === null) return null;
     const isOptional = Boolean(p.optional || p.isOptional);
     const title = p.title || "";
-    const isPct = Boolean(p.isPercentage);
-    const fromCurr = p.currency || countrySettings?.currency || "NGN";
-    const rawAmt = parseFloat(p.amount) || 0;
-    const amt = isPct
-      ? totalVendorPayments * (rawAmt / 100)
-      : convert(rawAmt, fromCurr);
-
     if (isOptional && !selectedOptionalPayments.includes(title)) {
       return sum;
     }
-    return sum + amt;
+    const isPct = Boolean(p.isPercentage);
+    const fromCurr = p.currency || countrySettings?.currency || "NGN";
+    const rawAmt = parseFloat(p.amount) || 0;
+    if (isPct) {
+      if (totalVendorPayments === null) return null;
+      return sum + totalVendorPayments * (rawAmt / 100);
+    }
+    const c = convert(rawAmt, fromCurr);
+    if (c === null) return null;
+    return sum + c;
   }, 0);
 
   // Check if any line items require currency conversion
@@ -583,7 +592,10 @@ export default function BuyFranchiseSection() {
     filteredGlobalPayments.some((p) => (!p.isPercentage && (p.currency || countrySettings?.currency || "NGN").toUpperCase() !== currency.toUpperCase()));
 
   // Total Due: Brand Fees + Global Setup & Licensing + Location Facility Bills
-  const totalFranchiseCost = totalVendorPayments + computedGlobalFee + totalLocationBills;
+  const totalFranchiseCost =
+    totalVendorPayments === null || computedGlobalFee === null || totalLocationBills === null
+      ? null
+      : totalVendorPayments + computedGlobalFee + totalLocationBills;
 
   // Combined operational monthly bills (for Profit Projection & Costing):
   // 1. Facility/location bills (excluding refundable one-off deposits) converted to stateCurrency
@@ -592,10 +604,11 @@ export default function BuyFranchiseSection() {
     .map((b, idx) => {
       const fromCurr = b.currency || selectedCloudLocation?.state?.currency || "NGN";
       const rawAmt = parseFloat(b.amount) || 0;
+      const converted = convert(rawAmt, fromCurr);
       return {
         id: `loc-${idx}-${b.title || b.name || "bill"}`,
         name: b.title || b.name || "Location Facility Bill",
-        amount: Number(convert(rawAmt, fromCurr).toFixed(2)),
+        amount: converted == null ? null : Number(converted.toFixed(2)),
         rawAmount: rawAmt,
         fromCurrency: fromCurr,
       };
@@ -615,12 +628,12 @@ export default function BuyFranchiseSection() {
       const fromCurr = p.currency || countrySettings?.currency || "NGN";
       const rawAmt = parseFloat(p.amount) || 0;
       const amt = isPct
-        ? totalVendorPayments * (rawAmt / 100)
+        ? (totalVendorPayments == null ? null : totalVendorPayments * (rawAmt / 100))
         : convert(rawAmt, fromCurr);
       return {
         id: `global-rec-${idx}-${p.title}`,
         name: `${p.title} (Monthly Fee)`,
-        amount: Number(amt.toFixed(2)),
+        amount: amt == null ? null : Number(amt.toFixed(2)),
         rawAmount: rawAmt,
         fromCurrency: fromCurr,
       };
@@ -1128,8 +1141,11 @@ export default function BuyFranchiseSection() {
                       const isSelected = selectedCloudLocation?.id === loc.id;
                       const bills = parseBills(loc.bills);
                       const billsSumConverted = bills.reduce((sum, b) => {
+                        if (sum === null) return null;
                         const fromCurr = b.currency || loc.state?.currency || "NGN";
-                        return sum + convert(parseFloat(b.amount) || 0, fromCurr);
+                        const c = convert(parseFloat(b.amount) || 0, fromCurr);
+                        if (c === null) return null;
+                        return sum + c;
                       }, 0);
                       const locImages = parseImages(loc.images);
 
@@ -1311,7 +1327,7 @@ export default function BuyFranchiseSection() {
                                 Facility Bills &amp; Expenses Schedule
                               </span>
                               <span style={{ fontSize: "0.78rem", fontWeight: 800, color: isSelected ? "#6366f1" : "var(--text-heading)" }}>
-                                Total: {fmt(billsSumConverted, currency)}
+                                Total: {billsSumConverted == null ? "-" : fmt(billsSumConverted, currency)}
                               </span>
                             </div>
 
@@ -1356,7 +1372,7 @@ export default function BuyFranchiseSection() {
                                         <strong style={{ color: "var(--text-heading)", display: "block" }}>
                                           {fmt(rawAmt, billFromCurr)}
                                         </strong>
-                                        {isDiff && (
+                                        {isDiff && !isRateLoading(billFromCurr) && (
                                           <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
                                             Orig: {billFromCurr} {rawAmt.toLocaleString()}
                                           </span>
@@ -1437,8 +1453,11 @@ export default function BuyFranchiseSection() {
                 const isEligible = supportsCurrentOutlet && supportsCurrentState;
                 const payments = Array.isArray(brand.franchisePayments) ? brand.franchisePayments : [];
                 const brandFeeTotal = payments.reduce((sum, p) => {
+                  if (sum === null) return null;
                   const fromCurr = p.currency || "NGN";
-                  return sum + convert(parseFloat(p.amount) || 0, fromCurr);
+                  const c = convert(parseFloat(p.amount) || 0, fromCurr);
+                  if (c === null) return null;
+                  return sum + c;
                 }, 0);
                 const royaltyPct = getBrandRoyalty(brand.id);
                 const originText =
@@ -1618,7 +1637,7 @@ export default function BuyFranchiseSection() {
                           Franchise licence fee
                         </span>
                         <strong style={{ fontSize: "1.18rem", fontWeight: 900, color: "var(--text-heading)", letterSpacing: -0.2 }}>
-                          {fmt(brandFeeTotal.toFixed(2), currency)}
+                          {brandFeeTotal == null ? "-" : fmt(brandFeeTotal.toFixed(2), currency)}
                         </strong>
                       </div>
                       <button
@@ -1971,7 +1990,7 @@ export default function BuyFranchiseSection() {
                       <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.82rem", marginBottom: 6 }}>
                         <div>
                           <span style={{ color: "var(--text-body)", fontWeight: 500 }}>{p.title}</span>
-                          {isDiff && (
+                          {isDiff && !isRateLoading(fromCurr) && (
                             <span style={{ display: "block", fontSize: "0.68rem", color: "var(--text-muted)" }}>
                               Original: {fromCurr} {rawAmt.toLocaleString()}
                             </span>
@@ -2034,7 +2053,7 @@ export default function BuyFranchiseSection() {
                                     </span>
                                   )}
                                 </div>
-                                {isDiff && (
+                                {isDiff && !isRateLoading(billFromCurr) && (
                                   <span style={{ display: "block", fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
                                     Original: {billFromCurr} {rawAmt.toLocaleString()}
                                   </span>
@@ -2068,7 +2087,7 @@ export default function BuyFranchiseSection() {
                       const rawAmt = parseFloat(p.amount) || 0;
                       const isDiff = !isPct && fromCurr.toUpperCase() !== currency.toUpperCase();
                       const amt = isPct
-                        ? totalVendorPayments * (rawAmt / 100)
+                        ? (totalVendorPayments == null ? null : totalVendorPayments * (rawAmt / 100))
                         : convert(rawAmt, fromCurr);
                       return (
                         <div key={`mand-${idx}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "0.82rem", marginBottom: 6 }}>
@@ -2088,7 +2107,7 @@ export default function BuyFranchiseSection() {
                                 </span>
                               )}
                             </div>
-                            {isDiff && (
+                            {isDiff && !isRateLoading(fromCurr) && (
                               <span style={{ display: "block", fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
                                 Original: {fromCurr} {rawAmt.toLocaleString()}
                               </span>
@@ -2114,7 +2133,7 @@ export default function BuyFranchiseSection() {
                             const rawAmt = parseFloat(p.amount) || 0;
                             const isDiff = !isPct && fromCurr.toUpperCase() !== currency.toUpperCase();
                             const amt = isPct
-                              ? totalVendorPayments * (rawAmt / 100)
+                              ? (totalVendorPayments == null ? null : totalVendorPayments * (rawAmt / 100))
                               : convert(rawAmt, fromCurr);
                             const isChecked = selectedOptionalPayments.includes(p.title);
                             return (
@@ -2156,7 +2175,7 @@ export default function BuyFranchiseSection() {
                                         {p.description || "Optional add-on service"}
                                       </span>
                                     </div>
-                                    {isDiff && (
+                                    {isDiff && !isRateLoading(fromCurr) && (
                                       <span style={{ display: "block", fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
                                         Original: {fromCurr} {rawAmt.toLocaleString()}
                                       </span>
@@ -2192,7 +2211,7 @@ export default function BuyFranchiseSection() {
                 Total Due
               </span>
               <span style={{ fontSize: "1.35rem", fontWeight: 900, color: "var(--accent)" }}>
-                {fmt(totalFranchiseCost, currency)}
+                {totalFranchiseCost == null ? "-" : fmt(totalFranchiseCost, currency)}
               </span>
             </div>
             {hasConvertedItems && (

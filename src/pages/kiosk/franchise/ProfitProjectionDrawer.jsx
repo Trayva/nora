@@ -4,6 +4,8 @@ import api from "../../../api/axios";
 import Drawer from "../../../components/Drawer";
 import { RoyaltyIcon } from "./RoyaltyBadge";
 import { num } from "./useFranchisePlan";
+import { useAppState } from "../../../contexts/StateContext";
+import useCurrencyDisplay from "../../../hooks/useCurrencyDisplay";
 
 const label = { fontSize: "0.68rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.4 };
 
@@ -37,12 +39,23 @@ export default function ProfitProjectionDrawer({
   onToggleMenu,
   onToggleAll,
   stateId,
-  currency,
-  fmt,
+  currency: propCurrency,
+  fmt: propFmt,
   plan,
   royaltyPercent,
   externalCostMap,
 }) {
+  const { selectedState } = useAppState();
+  const effectiveCurrency = selectedState?.currency || propCurrency || "NGN";
+  const { format: appFmt, isRateLoading } = useCurrencyDisplay(effectiveCurrency);
+  const fmt = propFmt || appFmt;
+  const currency = effectiveCurrency;
+
+  const isBillsRateLoading = (plan?.bills || []).some(
+    (b) => b.fromCurrency && isRateLoading(b.fromCurrency)
+  );
+  const isCurrencyLoading = isBillsRateLoading || isRateLoading(currency);
+
   const [internalCostMap, setInternalCostMap] = useState({});
   const [internalSelectedIds, setInternalSelectedIds] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -203,20 +216,20 @@ export default function ProfitProjectionDrawer({
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
-            <Stat k="Projected monthly income" v={loading ? "…" : fmt(revenue, currency)} big />
+            <Stat k="Projected monthly income" v={loading || isCurrencyLoading ? "-" : fmt(revenue, currency)} big />
             <div className="ppd-hero-right">
               <span style={label}>Net profit / month</span>
               <div className="ppd-profit-val" style={{ color: profitable ? "#16a34a" : activeCount === 0 ? "var(--text-muted)" : "#ef4444" }}>
                 {profitable ? <MdTrendingUp size={20} /> : <MdTrendingDown size={20} />}
-                <strong style={{ fontSize: "1.35rem" }}>{loading ? "…" : fmt(profit, currency)}</strong>
+                <strong style={{ fontSize: "1.35rem" }}>{loading || isCurrencyLoading ? "-" : fmt(profit, currency)}</strong>
               </div>
-              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block" }}>{profitMarginPct.toFixed(1)}% profit margin</span>
+              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block" }}>{isCurrencyLoading ? "-" : `${profitMarginPct.toFixed(1)}%`} profit margin</span>
             </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 16, paddingTop: 14, borderTop: "1px dashed var(--border)" }}>
-            <Stat k="Daily income" v={fmt(revenue / 30, currency)} />
-            <Stat k="Daily profit" v={fmt(profit / 30, currency)} color={profitable ? "#16a34a" : activeCount === 0 ? "var(--text-muted)" : "#ef4444"} />
+            <Stat k="Daily income" v={loading || isCurrencyLoading ? "-" : fmt(revenue / 30, currency)} />
+            <Stat k="Daily profit" v={loading || isCurrencyLoading ? "-" : fmt(profit / 30, currency)} color={profitable ? "#16a34a" : activeCount === 0 ? "var(--text-muted)" : "#ef4444"} />
             <Stat k="Orders / month" v={activeCount > 0 ? monthlyOrders.toLocaleString() : "0"} />
           </div>
         </div>
@@ -261,12 +274,12 @@ export default function ProfitProjectionDrawer({
         <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: "12px 16px", background: "var(--bg-card)" }}>
           <span style={label}>Monthly Financial Breakdown</span>
           <div style={{ marginTop: 6 }}>
-            <BreakRow k="Sales Income (Gross)" v={fmt(revenue, currency)} bold />
-            <BreakRow k="Product Costs" v={fmt(productCostMonthly, currency)} sign="− " color="#ef4444" />
-            <BreakRow k={`Operational Costs`} v={fmt(operationalMonthly, currency)} sign="− " color="#ef4444" />
-            <BreakRow k={`Brand Royalty (${num(royaltyPercent)}%)`} v={fmt(royaltyMonthly, currency)} sign="− " color="#ef4444" />
+            <BreakRow k="Sales Income (Gross)" v={loading || isCurrencyLoading ? "-" : fmt(revenue, currency)} bold />
+            <BreakRow k="Product Costs" v={loading || isCurrencyLoading ? "-" : fmt(productCostMonthly, currency)} sign={loading || isCurrencyLoading ? "" : "− "} color="#ef4444" />
+            <BreakRow k={`Operational Costs`} v={loading || isCurrencyLoading ? "-" : fmt(operationalMonthly, currency)} sign={loading || isCurrencyLoading ? "" : "− "} color="#ef4444" />
+            <BreakRow k={`Brand Royalty (${num(royaltyPercent)}%)`} v={loading || isCurrencyLoading ? "-" : fmt(royaltyMonthly, currency)} sign={loading || isCurrencyLoading ? "" : "− "} color="#ef4444" />
             <div style={{ borderTop: "1px solid var(--border)", marginTop: 6, paddingTop: 6 }}>
-              <BreakRow k="Net Projected Profit" v={fmt(profit, currency)} bold color={profitable ? "#16a34a" : activeCount === 0 ? "var(--text-muted)" : "#ef4444"} />
+              <BreakRow k="Net Projected Profit" v={loading || isCurrencyLoading ? "-" : fmt(profit, currency)} bold color={profitable ? "#16a34a" : activeCount === 0 ? "var(--text-muted)" : "#ef4444"} />
             </div>
           </div>
         </div>
@@ -284,11 +297,11 @@ export default function ProfitProjectionDrawer({
             </div>
             <div style={{ background: "var(--bg-hover)", padding: "8px 10px", borderRadius: 8 }}>
               <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block" }}>Total Monthly Bills</span>
-              <strong style={{ fontSize: "0.86rem", color: "var(--text-heading)" }}>{fmt(monthlyBills, currency)}</strong>
+              <strong style={{ fontSize: "0.86rem", color: "var(--text-heading)" }}>{isCurrencyLoading ? "-" : fmt(monthlyBills, currency)}</strong>
             </div>
             <div style={{ background: "var(--bg-hover)", padding: "8px 10px", borderRadius: 8 }}>
               <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block" }}>Operational Cost / Order</span>
-              <strong style={{ fontSize: "0.86rem", color: "var(--text-heading)" }}>{fmt(operationalPerOrder, currency)}</strong>
+              <strong style={{ fontSize: "0.86rem", color: "var(--text-heading)" }}>{isCurrencyLoading ? "-" : fmt(operationalPerOrder, currency)}</strong>
             </div>
           </div>
         </div>
@@ -453,7 +466,7 @@ export default function ProfitProjectionDrawer({
                       )}
                     </div>
                     <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "flex", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
-                      <span>Cost: <strong style={{ color: "var(--text-heading)" }}>{!r.missing ? fmt(r.finalCost, currency) : "—"}</strong></span>
+                      <span>Cost: <strong style={{ color: "var(--text-heading)" }}>{!r.missing && !isCurrencyLoading ? fmt(r.finalCost, currency) : "-"}</strong></span>
                       {/* {isChecked && !r.missing && (
                         <>
                           <span>•</span>
@@ -466,7 +479,7 @@ export default function ProfitProjectionDrawer({
                   {!r.missing && (
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <strong style={{ color: isChecked ? "var(--accent)" : "var(--text-muted)", fontSize: "1.05rem", fontWeight: 800 }}>
-                        {fmt(r.price.toFixed(2), currency)}
+                        {isCurrencyLoading ? "-" : fmt(r.price.toFixed(2), currency)}
                       </strong>
                       <span style={{ display: "block", fontSize: "0.62rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.3 }}>
                         Selling Price

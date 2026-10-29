@@ -27,7 +27,7 @@ export default function BrandExpandedConfig({
 }) {
   const { selectedState } = useAppState();
   const effectiveCurrency = selectedState?.currency || propCurrency || "NGN";
-  const { format: appFmt } = useCurrencyDisplay(effectiveCurrency);
+  const { format: appFmt, isRateLoading } = useCurrencyDisplay(effectiveCurrency);
   const fmt = propFmt || appFmt;
   const currency = effectiveCurrency;
   const {
@@ -251,15 +251,20 @@ export default function BrandExpandedConfig({
                     <strong style={{ fontSize: "0.82rem", color: "var(--text-heading)", display: "block" }}>
                       {loadingCosts && price === undefined
                         ? "…"
-                        : price != null
-                          ? fmt(Number(price).toFixed(2), currency)
-                          : "N/A"}
+                        : (rawPriceMap[item.id]?.currency && isRateLoading(rawPriceMap[item.id].currency))
+                          ? "-"
+                          : price != null
+                            ? fmt(Number(price).toFixed(2), currency)
+                            : "N/A"}
                     </strong>
-                    {rawPriceMap[item.id] && rawPriceMap[item.id].currency && rawPriceMap[item.id].currency.toUpperCase() !== currency.toUpperCase() && (
-                      <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", display: "block" }}>
-                        Orig: {rawPriceMap[item.id].currency} {Number(rawPriceMap[item.id].rawPrice).toLocaleString()}
-                      </span>
-                    )}
+                    {rawPriceMap[item.id] &&
+                      rawPriceMap[item.id].currency &&
+                      rawPriceMap[item.id].currency.toUpperCase() !== currency.toUpperCase() &&
+                      !isRateLoading(rawPriceMap[item.id].currency) && (
+                        <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", display: "block" }}>
+                          Orig: {rawPriceMap[item.id].currency} {Number(rawPriceMap[item.id].rawPrice).toLocaleString()}
+                        </span>
+                      )}
                   </div>
                 </div>
               );

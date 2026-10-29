@@ -38,22 +38,22 @@ import { getMenuPackagingCost } from "../../../api/library";
 
 
 const COUNTRIES = [
-  "Afghanistan","Albania","Algeria","Angola","Argentina","Australia","Austria",
-  "Bangladesh","Belgium","Bolivia","Brazil","Cameroon","Canada","Chile","China",
-  "Colombia","Congo","Côte d'Ivoire","Croatia","Czech Republic","Denmark",
-  "Ecuador","Egypt","Ethiopia","Finland","France","Germany","Ghana","Greece",
-  "Guatemala","Honduras","Hungary","India","Indonesia","Iran","Iraq","Ireland",
-  "Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kuwait",
-  "Lebanon","Libya","Malaysia","Mexico","Morocco","Mozambique","Myanmar","Nepal",
-  "Netherlands","New Zealand","Nicaragua","Niger","Nigeria","Norway","Pakistan",
-  "Panama","Peru","Philippines","Poland","Portugal","Romania","Russia",
-  "Saudi Arabia","Senegal","Sierra Leone","Somalia","South Africa","South Korea",
-  "Spain","Sri Lanka","Sudan","Sweden","Switzerland","Syria","Tanzania","Thailand",
-  "Tunisia","Turkey","Uganda","Ukraine","United Arab Emirates","United Kingdom",
-  "United States","Uruguay","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe",
+  "Afghanistan", "Albania", "Algeria", "Angola", "Argentina", "Australia", "Austria",
+  "Bangladesh", "Belgium", "Bolivia", "Brazil", "Cameroon", "Canada", "Chile", "China",
+  "Colombia", "Congo", "Côte d'Ivoire", "Croatia", "Czech Republic", "Denmark",
+  "Ecuador", "Egypt", "Ethiopia", "Finland", "France", "Germany", "Ghana", "Greece",
+  "Guatemala", "Honduras", "Hungary", "India", "Indonesia", "Iran", "Iraq", "Ireland",
+  "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kuwait",
+  "Lebanon", "Libya", "Malaysia", "Mexico", "Morocco", "Mozambique", "Myanmar", "Nepal",
+  "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "Norway", "Pakistan",
+  "Panama", "Peru", "Philippines", "Poland", "Portugal", "Romania", "Russia",
+  "Saudi Arabia", "Senegal", "Sierra Leone", "Somalia", "South Africa", "South Korea",
+  "Spain", "Sri Lanka", "Sudan", "Sweden", "Switzerland", "Syria", "Tanzania", "Thailand",
+  "Tunisia", "Turkey", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom",
+  "United States", "Uruguay", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe",
 ];
 
-const UNIT_OPTIONS = ["g","kg","ml","L","unit","pcs","oz","lb","cup","tbsp","tsp"];
+const UNIT_OPTIONS = ["g", "kg", "ml", "L", "unit", "pcs", "oz", "lb", "cup", "tbsp", "tsp"];
 
 /* ── Collapsible section wrapper ── */
 function Section({ title, count, defaultOpen = true, children, action }) {
@@ -1111,7 +1111,7 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
                   </div>
                 </form>
               )}
-              
+
               {packCostLoading ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <div className="skeleton_shimmer skeleton_rect" style={{ height: 40, borderRadius: 8 }} />
@@ -1127,7 +1127,7 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
                           <MdBuild size={12} style={{ color: "var(--accent)" }} />
                         </div>
                       )}
-                      
+
                       <div className="recipe_step_info" style={{ flex: 1, minWidth: 0 }}>
                         <span className="recipe_step_id" style={{ fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                           {pitem.name}
@@ -1182,7 +1182,7 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
           </Section>
 
           {/* Task Templates */}
-          <Section title="Task Templates" count={templates.length} defaultOpen={false} action={<button className="app_btn app_btn_confirm biz_add_btn" onClick={() => { resetTemplateForm(); setShowTemplateForm((v) => !v); }}><LuPlus size={13} /> Add</button>}>
+          <Section title="SOPs Templates" count={templates.length} defaultOpen={false} action={<button className="app_btn app_btn_confirm biz_add_btn" onClick={() => { resetTemplateForm(); setShowTemplateForm((v) => !v); }}><LuPlus size={13} /> Add</button>}>
             {(showTemplateForm || editingTemplate) && (
               <div className="recipe_add_form">
                 {!editingTemplate && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}><span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-heading)" }}>New Template</span><button className="biz_icon_btn" onClick={resetTemplateForm}><LuX size={13} /></button></div>}
@@ -1213,7 +1213,7 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
                   <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 52, borderRadius: 10 }} />
                 ))}
               </div>
-            ) : templates.length === 0 && !showTemplateForm ? <div className="biz_empty" style={{ padding: "16px 0" }}><p>No task templates for this menu item yet.</p></div>
+            ) : templates.length === 0 && !showTemplateForm ? <div className="biz_empty" style={{ padding: "16px 0" }}><p>No SOPs templates for this menu item yet.</p></div>
               : <div className="drawer_items_list" style={{ marginTop: 8 }}>{templates.map((tpl) => (<div key={tpl.id} className="recipe_step_row" style={{ opacity: editingTemplate?.id === tpl.id ? 0.4 : 1 }}><div className="recipe_step_info"><span className="recipe_step_id">{tpl.name}</span><span className="recipe_step_instruction">{tpl.type} · {tpl.recurrence}{tpl.time ? ` · ${tpl.time}` : ""}</span></div><span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text-muted)", flexShrink: 0 }}>{tpl.schema?.fields?.length || 0} fields</span><button className="biz_icon_btn" onClick={() => { setEditingTemplate(tpl); setTemplateName(tpl.name); setTemplateDesc(tpl.description || ""); setTemplateType(tpl.type || "CHECKLIST"); setTemplateRecurrence(tpl.recurrence || "DAILY"); setTemplateTime(tpl.time || ""); setTemplateFields(tpl.schema?.fields || [{ type: "checkbox", label: "" }]); setShowTemplateForm(false); }} title="Edit"><LuPencil size={13} /></button><button className="biz_icon_btn biz_icon_btn_danger" onClick={() => handleDeleteTemplate(tpl.id)} disabled={deletingTemplate === tpl.id} style={{ position: "relative" }}>{deletingTemplate === tpl.id ? <span className="btn_loader" style={{ width: 12, height: 12, borderColor: "#ef4444", borderTopColor: "transparent" }} /> : <LuTrash2 size={13} />}</button></div>))}</div>}
           </Section>
 

@@ -53,7 +53,7 @@ const requestRate = (from, to) => {
 export default function useCurrencyDisplay(overrideCurrency = null) {
   const { selectedState } = useAppState();
   const target = overrideCurrency || selectedState?.currency || null;
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     const l = () => setTick((n) => n + 1);
@@ -64,40 +64,56 @@ export default function useCurrencyDisplay(overrideCurrency = null) {
   // Rate from `from` to the selected currency; 1 when identical, null while loading/unavailable.
   const getRate = useCallback(
     (from) => {
-      if (!from || !target || from === target) return 1;
+      if (!from || !target || from.toUpperCase() === target.toUpperCase()) return 1;
       const rate = readRate(from, target);
       if (rate == null) requestRate(from, target); // idempotent, deduplicated
       return rate;
     },
-    [target]
+    [target, tick]
+  );
+
+  const isRateLoading = useCallback(
+    (from) => {
+      if (!from || !target || from.toUpperCase() === target.toUpperCase()) return false;
+      return getRate(from) == null;
+    },
+    [getRate, target]
   );
 
   const convert = useCallback(
     (amount, from) => {
-      const n = Number(amount) || 0;
+      if (amount == null) return null;
+      const n = Number(amount);
+      if (isNaN(n)) return null;
+      if (!from || !target || from.toUpperCase() === target.toUpperCase()) return n;
       const rate = getRate(from);
-      return rate == null ? n : n * rate;
+      return rate == null ? null : n * rate;
     },
-    [getRate]
+    [getRate, target]
   );
 
   // "NGN 1,000" in the original currency, or "≈ USD 0.65" once converted to the selected state's currency.
+  // When currency is loading (rate == null), displays '-' instead of the original amount.
   const format = useCallback(
     (amount, from) => {
-      const n = Number(amount) || 0;
-      if (!from) return n.toLocaleString();
+      if (amount == null) return "-";
+      const n = Number(amount);
+      if (isNaN(n)) return "-";
+      if (!from) return target ? `${target} ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : n.toLocaleString();
+      if (!target || from.toUpperCase() === target.toUpperCase()) {
+        return target ? `${target} ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : n.toLocaleString();
+      }
       const rate = getRate(from);
-      if (rate == null) return `${from} ${n.toLocaleString()}`;
-      if (from === target) return `${from} ${n.toLocaleString()}`;
+      if (rate == null) return "-";
       return `≈ ${target} ${(n * rate).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
     },
     [getRate, target]
   );
 
   const isConverted = useCallback(
-    (from) => !!from && !!target && from !== target && getRate(from) != null,
+    (from) => !!from && !!target && from.toUpperCase() !== target.toUpperCase() && getRate(from) != null,
     [getRate, target]
   );
 
-  return { format, convert, getRate, isConverted, displayCurrency: target };
+  return { format, convert, getRate, isConverted, isRateLoading, displayCurrency: target };
 }
