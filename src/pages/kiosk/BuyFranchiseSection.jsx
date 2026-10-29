@@ -2290,11 +2290,20 @@ export default function BuyFranchiseSection() {
           )
         }
         stateId={locationForm.stateId || selectedCloudLocation?.stateId}
+        loadingCosts={loadingCosts}
+        outletCurrency={states.find((s) => s.id === (locationForm.stateId || selectedCloudLocation?.stateId))?.currency || selectedCloudLocation?.state?.currency || "NGN"}
         currency={currency}
         fmt={fmt}
         plan={plan}
         royaltyPercent={royaltyPercent ?? (selectedBrand ? getBrandRoyalty(selectedBrand.id) : null)}
         externalCostMap={menuCostMap}
+        onProceed={() => {
+          if (selectedMenuIds.length === 0) {
+            return toast.error("Please select at least one menu item to proceed");
+          }
+          setShowProjection(false);
+          setStep(3);
+        }}
       />
 
       {/* Lightbox Preview Modal for Cloud Kitchen Images */}

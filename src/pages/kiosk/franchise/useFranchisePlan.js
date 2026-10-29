@@ -19,14 +19,19 @@ export default function useFranchisePlan(locationBills = []) {
       locationBills.map((b, i) => ({
         id: b.id || `bill-${i}`,
         name: b.name || b.title || "",
-        amount: b.amount ?? "",
+        amount: b.amount,
+        rawAmount: b.rawAmount,
+        fromCurrency: b.fromCurrency,
       }))
     );
   }, [billsKey]);
 
-  const monthlyBills = bills.reduce((s, b) => s + num(b.amount), 0);
+  const monthlyBills = bills.reduce((s, b) => {
+    if (s === null || b.amount === null || b.amount === undefined) return null;
+    return s + num(b.amount);
+  }, 0);
   const monthlyOrders = num(dailyTarget) * 30;
-  const operationalPerOrder = monthlyOrders > 0 ? monthlyBills / monthlyOrders : 0;
+  const operationalPerOrder = monthlyBills === null ? null : (monthlyOrders > 0 ? monthlyBills / monthlyOrders : 0);
 
   const getMargin = (menuId) => (margins[menuId] ?? defaultMargin);
   const setMargin = (menuId, v) => setMargins((p) => ({ ...p, [menuId]: v }));

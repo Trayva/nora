@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MdCheck, MdImage, MdTrendingUp, MdTrendingDown } from "react-icons/md";
+import { MdCheck, MdImage, MdTrendingUp, MdTrendingDown, MdArrowForward } from "react-icons/md";
 import api from "../../../api/axios";
 import Drawer from "../../../components/Drawer";
 import { RoyaltyIcon } from "./RoyaltyBadge";
@@ -39,11 +39,14 @@ export default function ProfitProjectionDrawer({
   onToggleMenu,
   onToggleAll,
   stateId,
+  loadingCosts = false,
+  outletCurrency = null,
   currency: propCurrency,
   fmt: propFmt,
   plan,
   royaltyPercent,
   externalCostMap,
+  onProceed,
 }) {
   const { selectedState } = useAppState();
   const effectiveCurrency = selectedState?.currency || propCurrency || "NGN";
@@ -51,10 +54,13 @@ export default function ProfitProjectionDrawer({
   const fmt = propFmt || appFmt;
   const currency = effectiveCurrency;
 
-  const isBillsRateLoading = (plan?.bills || []).some(
-    (b) => b.fromCurrency && isRateLoading(b.fromCurrency)
-  );
-  const isCurrencyLoading = isBillsRateLoading || isRateLoading(currency);
+  const handleProceed = () => {
+    if (onProceed) {
+      onProceed();
+    } else {
+      onClose();
+    }
+  };
 
   const [internalCostMap, setInternalCostMap] = useState({});
   const [internalSelectedIds, setInternalSelectedIds] = useState([]);
@@ -135,7 +141,7 @@ export default function ProfitProjectionDrawer({
     const cost = costMap[m.id];
     const rawMargin = getMargin(m.id);
     const margin = num(rawMargin);
-    if (cost == null) return { menu: m, margin, rawMargin, checked, missing: true };
+    if (cost == null || operationalPerOrder == null) return { menu: m, margin, rawMargin, checked, missing: true };
     const baseCost = num(cost);
     const finalCost = baseCost + operationalPerOrder;
     const price = finalCost + (margin / 100) * finalCost;
@@ -167,10 +173,25 @@ export default function ProfitProjectionDrawer({
   const totalCostMonthly = sum("totalCostMonthly");
   const royaltyMonthly = sum("royaltyMonthly");
   const profit = sum("profitMonthly");
-  const operationalMonthly = operationalPerOrder * ordersPerMenu * ok.length;
+  const operationalMonthly = (operationalPerOrder || 0) * ordersPerMenu * ok.length;
   const productCostMonthly = Math.max(0, totalCostMonthly - operationalMonthly);
   const profitable = profit >= 0 && activeCount > 0;
   const profitMarginPct = revenue > 0 ? (profit / revenue) * 100 : 0;
+
+  const isBillsRateLoading = (plan?.bills || []).some(
+    (b) => b.amount == null || (b.fromCurrency && isRateLoading(b.fromCurrency))
+  );
+  const isOutletRateLoading = outletCurrency ? isRateLoading(outletCurrency) : false;
+  const isMissingActiveCosts = activeCount > 0 && ok.length === 0;
+  const isCurrencyLoading =
+    loading ||
+    loadingCosts ||
+    isBillsRateLoading ||
+    isOutletRateLoading ||
+    isRateLoading(currency) ||
+    plan?.monthlyBills === null ||
+    plan?.operationalPerOrder === null ||
+    isMissingActiveCosts;
 
   return (
     <Drawer
@@ -207,20 +228,22 @@ export default function ProfitProjectionDrawer({
             borderRadius: 18,
             padding: 18,
             color: "var(--text-heading)",
-            border: `1px solid ${profitable ? "rgba(34,197,94,0.35)" : activeCount === 0 ? "var(--border)" : "rgba(239,68,68,0.35)"}`,
-            background: profitable
-              ? "linear-gradient(135deg, rgba(34,197,94,0.14), rgba(203,108,220,0.10))"
-              : activeCount === 0
-                ? "var(--bg-hover)"
-                : "linear-gradient(135deg, rgba(239,68,68,0.14), rgba(203,108,220,0.08))",
+            border: `1px solid ${isCurrencyLoading ? "var(--border)" : profitable ? "rgba(34,197,94,0.35)" : activeCount === 0 ? "var(--border)" : "rgba(239,68,68,0.35)"}`,
+            background: isCurrencyLoading
+              ? "var(--bg-hover)"
+              : profitable
+                ? "linear-gradient(135deg, rgba(34,197,94,0.14), rgba(203,108,220,0.10))"
+                : activeCount === 0
+                  ? "var(--bg-hover)"
+                  : "linear-gradient(135deg, rgba(239,68,68,0.14), rgba(203,108,220,0.08))",
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
             <Stat k="Projected monthly income" v={loading || isCurrencyLoading ? "-" : fmt(revenue, currency)} big />
             <div className="ppd-hero-right">
               <span style={label}>Net profit / month</span>
-              <div className="ppd-profit-val" style={{ color: profitable ? "#16a34a" : activeCount === 0 ? "var(--text-muted)" : "#ef4444" }}>
-                {profitable ? <MdTrendingUp size={20} /> : <MdTrendingDown size={20} />}
+              <div className="ppd-profit-val" style={{ color: isCurrencyLoading ? "var(--text-muted)" : profitable ? "#16a34a" : activeCount === 0 ? "var(--text-muted)" : "#ef4444" }}>
+                {!isCurrencyLoading && (profitable ? <MdTrendingUp size={20} /> : <MdTrendingDown size={20} />)}
                 <strong style={{ fontSize: "1.35rem" }}>{loading || isCurrencyLoading ? "-" : fmt(profit, currency)}</strong>
               </div>
               <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block" }}>{isCurrencyLoading ? "-" : `${profitMarginPct.toFixed(1)}%`} profit margin</span>
@@ -642,6 +665,61 @@ export default function ProfitProjectionDrawer({
               </div>
             );
           })}
+        </div>
+
+        {/* ── Bottom Actions: Close & Review & Sign (like in BrandExpandedConfig) ── */}
+        <div
+          style={{
+            position: "sticky",
+            bottom: -20,
+            marginLeft: -24,
+            marginRight: -24,
+            marginBottom: -20,
+            padding: "14px 24px",
+            background: "var(--bg-card)",
+            borderTop: "1px solid var(--border)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            boxShadow: "0 -4px 20px rgba(0,0,0,0.06)",
+            zIndex: 20,
+          }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="app_btn app_btn_cancel"
+            style={{
+              height: 42,
+              padding: "0 18px",
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              flex: "0 0 auto",
+            }}
+          >
+            Close
+          </button>
+
+          <button
+            type="button"
+            onClick={handleProceed}
+            disabled={activeCount === 0}
+            className="app_btn app_btn_confirm"
+            style={{
+              height: 42,
+              padding: "0 22px",
+              fontSize: "0.82rem",
+              fontWeight: 800,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              flex: 1,
+            }}
+          >
+            Review &amp; Sign <MdArrowForward size={16} />
+          </button>
         </div>
       </div>
     </Drawer>
