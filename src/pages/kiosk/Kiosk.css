@@ -2080,3 +2080,88 @@
     transform: translateY(0);
   }
 }
+
+/* ── Scope Switcher for Brand vs Kiosk Owner ─────────────────────── */
+.kiosk_home_scope_switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 22px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.kiosk_scope_btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.kiosk_scope_btn:hover {
+  color: var(--text-heading);
+}
+
+.kiosk_scope_btn.active {
+  background: var(--bg-card);
+  color: var(--text-heading);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.kiosk_scope_badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--bg-active);
+  color: var(--accent);
+}
+
+/* Pagination container */
+.kiosk_pagination_row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.kiosk_page_btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-heading);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kiosk_page_btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.kiosk_page_btn:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

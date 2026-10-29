@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import ContractDrawer from "./ContractDrawer";
 import KioskDrawer from "./KioskDrawer";
 import api from "../../api/axios";
+import { useAuth } from "../../contexts/AuthContext";
 import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 import "./Kiosk.css";
 import {
@@ -20,6 +21,10 @@ import {
   MdLocationOn,
   MdOutlineKitchen,
   MdCloud,
+  MdStorefront,
+  MdNavigateBefore,
+  MdNavigateNext,
+  MdPerson,
 } from "react-icons/md";
 import { LuStore } from "react-icons/lu"; // Changed icon to LuStore for Kiosk
 
@@ -110,6 +115,16 @@ import {
 } from "../../components/SkeletonTemplates";
 
 export default function KioskHome() {
+  const { user } = useAuth();
+  const isBrand = Boolean(
+    user?.Vendor ||
+    user?.vendorId ||
+    user?.roles?.includes("BRAND") ||
+    user?.roles?.includes("VENDOR") ||
+    user?.role === "BRAND" ||
+    user?.role === "VENDOR"
+  );
+
   const { format: fmt } = useCurrencyDisplay();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -122,6 +137,33 @@ export default function KioskHome() {
   const [contractsOpen, setContractsOpen] = useState(true);
   const [deactivatedOpen, setDeactivatedOpen] = useState(false);
 
+  // Franchisees state for Brand view
+  const [activeScope, setActiveScope] = useState("my_outlets"); // "my_outlets" | "franchisees"
+  const [franchiseeKiosks, setFranchiseeKiosks] = useState([]);
+  const [franchiseePage, setFranchiseePage] = useState(1);
+  const [franchiseePages, setFranchiseePages] = useState(1);
+  const [franchiseeTotal, setFranchiseeTotal] = useState(0);
+  const [franchiseeLoading, setFranchiseeLoading] = useState(false);
+  const [isFranchiseeDrawer, setIsFranchiseeDrawer] = useState(false);
+
+  const fetchFranchiseeKiosks = async (page = 1) => {
+    setFranchiseeLoading(true);
+    try {
+      const res = await api.get("/kiosk/franchisees", {
+        params: { page, limit: 12 },
+      });
+      const data = res.data?.data || {};
+      setFranchiseeKiosks(data.items || []);
+      setFranchiseeTotal(data.total || 0);
+      setFranchiseePages(data.pages || 1);
+      setFranchiseePage(data.page || page);
+    } catch (err) {
+      console.error("Failed to load franchisee kiosks:", err);
+    } finally {
+      setFranchiseeLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchAll = async () => {
       try {
@@ -129,8 +171,8 @@ export default function KioskHome() {
           api.get("/kiosk/vendor"),
           api.get("/contract/application"),
         ]);
-        setKiosks(kiosksRes.data.data.items || []);
-        setContracts(contractsRes.data.data.items || []);
+        setKiosks(kiosksRes.data?.data?.items || []);
+        setContracts(contractsRes.data?.data?.items || []);
       } catch {
         toast.error("Failed to load Kiosk data");
       } finally {
@@ -138,10 +180,19 @@ export default function KioskHome() {
       }
     };
     fetchAll();
-  }, []);
+
+    if (isBrand) {
+      fetchFranchiseeKiosks(1);
+    }
+  }, [isBrand]);
 
   const handleKioskUpdate = (updatedKiosk) => {
     setKiosks((prev) =>
+      prev.map((k) =>
+        k.id === updatedKiosk.id ? { ...k, ...updatedKiosk } : k
+      )
+    );
+    setFranchiseeKiosks((prev) =>
       prev.map((k) =>
         k.id === updatedKiosk.id ? { ...k, ...updatedKiosk } : k
       )
@@ -183,7 +234,251 @@ export default function KioskHome() {
         </div>
       </div>
 
-      {loading ? (
+      {/* ── Brand Scope Switcher (My Outlets vs Franchisees) ── */}
+      {isBrand && (
+        <div className="kiosk_home_scope_switcher">
+          <button
+            type="button"
+            className={`kiosk_scope_btn ${activeScope === "my_outlets" ? "active" : ""}`}
+            onClick={() => setActiveScope("my_outlets")}
+          >
+            <LuStore size={16} />
+            <span>My Outlets</span>
+            <span className="kiosk_scope_badge">{activeKiosks.length}</span>
+          </button>
+          <button
+            type="button"
+            className={`kiosk_scope_btn ${activeScope === "franchisees" ? "active" : ""}`}
+            onClick={() => {
+              setActiveScope("franchisees");
+              if (franchiseeKiosks.length === 0) {
+                fetchFranchiseeKiosks(1);
+              }
+            }}
+          >
+            <MdStorefront size={17} />
+            <span>Franchisees Outlets</span>
+            <span className="kiosk_scope_badge">{franchiseeTotal}</span>
+          </button>
+        </div>
+      )}
+
+      {activeScope === "franchisees" ? (
+        franchiseeLoading && franchiseeKiosks.length === 0 ? (
+          <div style={{ marginTop: "24px" }}>
+            <div
+              className="skeleton_shimmer skeleton_text"
+              style={{ width: "150px", height: "18px", marginBottom: "20px" }}
+            />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                gap: "20px",
+                marginBottom: "40px",
+              }}
+            >
+              {Array(4)
+                .fill(0)
+                .map((_, i) => (
+                  <div
+                    key={i}
+                    className="kiosk_item_card"
+                    style={{ height: "200px" }}
+                  >
+                    <div
+                      className="skeleton_shimmer skeleton_rect"
+                      style={{ height: "100%", borderRadius: "12px" }}
+                    />
+                  </div>
+                ))}
+            </div>
+          </div>
+        ) : franchiseeKiosks.length === 0 ? (
+          <div
+            className="kiosk_empty_state"
+            style={{ padding: "48px 0", marginBottom: 32 }}
+          >
+            <MdStorefront size={36} style={{ opacity: 0.3, marginBottom: 8 }} />
+            <p className="kiosk_empty_title">No Franchisee Outlets Yet</p>
+            <p className="kiosk_empty_sub">
+              When partners purchase your franchise brand, their active kitchens will appear here for oversight.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="kiosk_summary_row">
+              <div className="kiosk_summary_chip">
+                <MdStorefront size={14} />
+                {franchiseeTotal} Franchisee Outlet{franchiseeTotal !== 1 ? "s" : ""}
+              </div>
+              <div className="kiosk_summary_chip">
+                <MdCircle size={7} style={{ color: "#22c55e" }} />
+                {franchiseeKiosks.filter((k) => k.isOnline).length} Online
+              </div>
+              <div className="kiosk_summary_chip">
+                <MdLockOpen size={13} />
+                {franchiseeKiosks.filter((k) => !k.isLocked).length} Unlocked
+              </div>
+            </div>
+
+            <div className="kiosk_grid" style={{ marginBottom: 36 }}>
+              {franchiseeKiosks.map((kiosk) => {
+                const outletTypeLabel =
+                  kiosk.kitchenType === "CLOUD" || kiosk.outletType === "CLOUD_KITCHEN" || kiosk.outletType === "CLOUD"
+                    ? "Cloud Kitchen"
+                    : kiosk.kitchenType === "STORE_FRONT" || kiosk.outletType === "STORE_FRONT"
+                    ? "Store Front"
+                    : "Physical Kiosk";
+
+                return (
+                  <div
+                    key={kiosk.id}
+                    className="kiosk_item_card"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                      setIsFranchiseeDrawer(true);
+                      const params = new URLSearchParams(searchParams);
+                      params.set("kioskId", kiosk.id);
+                      setSearchParams(params);
+                    }}
+                  >
+                    <div className="kiosk_item_top">
+                      <div className="kiosk_item_icon">
+                        <MdStorefront size={18} />
+                      </div>
+                      <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                        <span
+                          style={{
+                            fontSize: "0.6rem",
+                            fontWeight: 800,
+                            padding: "2px 7px",
+                            borderRadius: 20,
+                            background:
+                              outletTypeLabel === "Cloud Kitchen"
+                                ? "rgba(99,102,241,0.12)"
+                                : "rgba(34,197,94,0.1)",
+                            color:
+                              outletTypeLabel === "Cloud Kitchen"
+                                ? "#6366f1"
+                                : "#16a34a",
+                            border: `1px solid ${
+                              outletTypeLabel === "Cloud Kitchen"
+                                ? "rgba(99,102,241,0.3)"
+                                : "rgba(34,197,94,0.3)"
+                            }`,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 3,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.04em",
+                          }}
+                        >
+                          {outletTypeLabel === "Cloud Kitchen" ? (
+                            <>
+                              <MdCloud size={10} /> Cloud
+                            </>
+                          ) : (
+                            <>
+                              <MdOutlineKitchen size={10} /> Kiosk
+                            </>
+                          )}
+                        </span>
+                        <StatusBadge
+                          status={kiosk.status}
+                          colors={kioskStatusColors}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="kiosk_item_serial">{kiosk.serialNumber}</div>
+
+                    <div className="kiosk_item_indicators">
+                      <span
+                        className={`kiosk_indicator ${
+                          kiosk.isOnline ? "kiosk_ind_on" : "kiosk_ind_off"
+                        }`}
+                      >
+                        {kiosk.isOnline ? <MdWifi size={12} /> : <MdWifiOff size={12} />}
+                        {kiosk.isOnline ? "Online" : "Offline"}
+                      </span>
+                      <span
+                        className={`kiosk_indicator ${
+                          kiosk.isLocked ? "kiosk_ind_locked" : "kiosk_ind_unlocked"
+                        }`}
+                      >
+                        {kiosk.isLocked ? <MdLock size={11} /> : <MdLockOpen size={11} />}
+                        {kiosk.isLocked ? "Locked" : "Unlocked"}
+                      </span>
+                    </div>
+
+                    <div className="kiosk_item_meta">
+                      <div className="kiosk_meta_row">
+                        <span className="kiosk_meta_key">Franchisee</span>
+                        <span className="kiosk_meta_val" style={{ fontWeight: 700 }}>
+                          {kiosk.owner?.fullName || "Licensed Partner"}
+                        </span>
+                      </div>
+                      <div className="kiosk_meta_row">
+                        <span className="kiosk_meta_key">Location</span>
+                        <span className="kiosk_meta_val">
+                          {kiosk.location?.name || kiosk.location?.address ? (
+                            <span className="kiosk_location_val">
+                              <MdLocationOn size={12} />
+                              {kiosk.location.name || kiosk.location.address}
+                            </span>
+                          ) : (
+                            <span className="kiosk_meta_muted">Not assigned</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="kiosk_meta_row">
+                        <span className="kiosk_meta_key">Operating</span>
+                        <span className="kiosk_meta_val">
+                          {kiosk.operatingHours || "08:00 - 22:00"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination */}
+            {franchiseePages > 1 && (
+              <div className="kiosk_pagination_row">
+                <span
+                  style={{
+                    fontSize: "0.78rem",
+                    color: "var(--text-muted)",
+                    fontWeight: 600,
+                  }}
+                >
+                  Page {franchiseePage} of {franchiseePages} ({franchiseeTotal} total outlets)
+                </span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    className="kiosk_page_btn"
+                    disabled={franchiseePage <= 1 || franchiseeLoading}
+                    onClick={() => fetchFranchiseeKiosks(franchiseePage - 1)}
+                  >
+                    <MdNavigateBefore size={16} /> Previous
+                  </button>
+                  <button
+                    type="button"
+                    className="kiosk_page_btn"
+                    disabled={franchiseePage >= franchiseePages || franchiseeLoading}
+                    onClick={() => fetchFranchiseeKiosks(franchiseePage + 1)}
+                  >
+                    Next <MdNavigateNext size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )
+      ) : loading ? (
         <div style={{ marginTop: "24px" }}>
           <div
             className="skeleton_shimmer skeleton_text"
@@ -273,6 +568,7 @@ export default function KioskHome() {
                       className="kiosk_item_card"
                       style={{ cursor: "pointer" }}
                       onClick={() => {
+                        setIsFranchiseeDrawer(false);
                         const params = new URLSearchParams(searchParams);
                         params.set("kioskId", kiosk.id);
                         setSearchParams(params);
@@ -342,18 +638,6 @@ export default function KioskHome() {
                       </div>
 
                       <div className="kiosk_item_meta">
-                        {/* {kiosk?.status !== "PURCHASED" ? (
-                          <div className="kiosk_meta_row">
-                            <span className="kiosk_meta_key">Contract</span>
-                            <span className="kiosk_meta_val">
-                              {kiosk.contract?.contractStatus || (
-                                <span className="kiosk_meta_muted">
-                                  Not started
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        ) : null} */}
                         <div className="kiosk_meta_row">
                           <span className="kiosk_meta_key">Brand</span>
                           <span className="kiosk_meta_val">
@@ -433,6 +717,7 @@ export default function KioskHome() {
                       className="kiosk_item_card"
                       style={{ cursor: "pointer", grayscale: 1 }}
                       onClick={() => {
+                        setIsFranchiseeDrawer(false);
                         const params = new URLSearchParams(searchParams);
                         params.set("kioskId", kiosk.id);
                         setSearchParams(params);
@@ -614,8 +899,14 @@ export default function KioskHome() {
           const params = new URLSearchParams(searchParams);
           params.delete("kioskId");
           setSearchParams(params);
+          setIsFranchiseeDrawer(false);
         }}
         onUpdate={handleKioskUpdate}
+        isBrandView={
+          isFranchiseeDrawer ||
+          activeScope === "franchisees" ||
+          franchiseeKiosks.some((k) => k.id === selectedKioskId)
+        }
       />
     </div>
   );

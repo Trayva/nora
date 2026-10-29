@@ -20,6 +20,7 @@ import KioskInventory from "./KioskInventory";
 import KioskSales from "./KioskSales";
 import KioskOrders from "./KioskOrders";
 import KioskReports from "./KioskReports"; // ← new
+import FranchiseeKioskView from "./FranchiseeKioskView";
 
 const TABS = [
   { key: "overview", label: "Overview", icon: MdStorefront },
@@ -32,7 +33,7 @@ const TABS = [
   { key: "reports", label: "Reports", icon: MdOutlineAssessment },
 ];
 
-export default function KioskDrawer({ kioskId, onClose, onUpdate }) {
+export default function KioskDrawer({ kioskId, onClose, onUpdate, isBrandView = false }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -84,21 +85,6 @@ export default function KioskDrawer({ kioskId, onClose, onUpdate }) {
       }
       width={520}
     >
-      {/* Sticky Tabs */}
-      <Tabs
-        tabs={TABS}
-        className="borderless"
-        activeTab={activeTab}
-        onChange={setActiveTab}
-        style={{
-          margin: "-20px -24px 20px",
-          borderRadius: 0,
-          borderLeft: "none",
-          borderRight: "none",
-          borderTop: "none",
-        }}
-      />
-
       {/* Content */}
       {loading ? (
         <div style={{ padding: "12px" }}>
@@ -121,8 +107,29 @@ export default function KioskDrawer({ kioskId, onClose, onUpdate }) {
             style={{ height: "120px", borderRadius: "12px" }}
           />
         </div>
-      ) : !cart ? null : (
+      ) : !cart ? null : isBrandView ? (
+        <FranchiseeKioskView
+          cart={cart}
+          onUpdate={handleCartUpdate}
+          onRefresh={fetchCart}
+        />
+      ) : (
         <>
+          {/* Sticky Tabs for Owner */}
+          <Tabs
+            tabs={TABS}
+            className="borderless"
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            style={{
+              margin: "-20px -24px 20px",
+              borderRadius: 0,
+              borderLeft: "none",
+              borderRight: "none",
+              borderTop: "none",
+            }}
+          />
+
           {activeTab === "overview" && (
             <KioskOverview
               cart={cart}
