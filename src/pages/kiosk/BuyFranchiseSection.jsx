@@ -545,12 +545,12 @@ export default function BuyFranchiseSection() {
   // Filter global payments targeted to this outletType ("ALL" applies to every outlet)
   const filteredGlobalPayments = rawGlobalPayments.filter((p) => {
     const paymentOutlet = String(p.outletType || "ALL").toUpperCase();
-    return paymentOutlet === "ALL" || paymentOutlet === locationForm.outletType;
+    return (paymentOutlet === "ALL" || paymentOutlet === locationForm.outletType) && p.target === 'franchisee';
   });
 
   // Categorize for UI and calculations:
-  const mandatoryGlobalItems = filteredGlobalPayments.filter((p) => !Boolean(p.optional || p.isOptional));
-  const optionalGlobalItems = filteredGlobalPayments.filter((p) => Boolean(p.optional || p.isOptional));
+  const mandatoryGlobalItems = filteredGlobalPayments.filter((p) => (!Boolean(p.optional || p.isOptional)));
+  const optionalGlobalItems = filteredGlobalPayments.filter((p) => (Boolean(p.optional || p.isOptional)));
 
   // Location Bills (for Cloud Kitchen and Store Front)
   const selectedLocationBills =
@@ -2214,11 +2214,11 @@ export default function BuyFranchiseSection() {
                 {totalFranchiseCost == null ? "-" : fmt(totalFranchiseCost, currency)}
               </span>
             </div>
-            {hasConvertedItems && (
+            {/* {hasConvertedItems && (
               <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "right", marginTop: -12, marginBottom: 16 }}>
                 Amounts converted to {currency} ({selectedState?.name || "Selected State"}). Converted values are estimates matching your state selected in the app layout.
               </p>
-            )}
+            )} */}
 
             <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.4, marginBottom: 20 }}>
               An invoice will be generated. Once paid, your location bills and franchise deployment will be activated.
