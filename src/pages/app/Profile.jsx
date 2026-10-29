@@ -739,6 +739,7 @@ export default function Profile() {
                           display: "flex",
                           alignItems: "center",
                           gap: 12,
+                          minWidth: 0,
                         }}
                       >
                         <div
@@ -758,11 +759,11 @@ export default function Profile() {
                         >
                           {stepItem.completed ? "✓" : stepItem.level}
                         </div>
-                        <div>
-                          <div style={{ fontSize: "0.84rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: "0.84rem", fontWeight: 700, color: "var(--text-heading)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {stepItem.title}
                           </div>
-                          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {stepItem.desc}
                           </div>
                         </div>
@@ -771,9 +772,9 @@ export default function Profile() {
                   </div>
 
                   {/* ── Tier 1: Basic Email & Phone ── */}
-                  <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: 18, marginBottom: 20 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                      <div>
+                  <div className="profile-kyc-tier-card">
+                    <div className="profile-kyc-tier-header">
+                      <div className="profile-kyc-tier-header-info">
                         <h4 style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--text-heading)", margin: "0 0 2px" }}>
                           1. Basic Contact Verification
                         </h4>
@@ -787,6 +788,7 @@ export default function Profile() {
                           fontWeight: 700,
                           padding: "3px 8px",
                           borderRadius: 6,
+                          flexShrink: 0,
                           background: isLevel1Complete ? "rgba(34, 197, 94, 0.15)" : "rgba(245, 158, 11, 0.15)",
                           color: isLevel1Complete ? "#16a34a" : "#ca8a04",
                         }}
@@ -795,23 +797,39 @@ export default function Profile() {
                       </span>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                      <div style={{ padding: "12px 14px", borderRadius: 10, background: "var(--bg-hover)", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block" }}>Email Address</span>
-                          <strong style={{ fontSize: "0.82rem", color: "var(--text-heading)" }}>{profile?.email || "—"}</strong>
+                    <div className="profile-kyc-contact-grid">
+                      <div className="profile-kyc-contact-card">
+                        <div className="profile-kyc-contact-info">
+                          <span className="profile-kyc-contact-label">Email Address</span>
+                          <strong className="profile-kyc-contact-value" title={profile?.email || ""}>
+                            {profile?.email || "—"}
+                          </strong>
                         </div>
-                        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: profile?.emailVerified ? "#16a34a" : "#ef4444" }}>
+                        <span
+                          className={`profile-kyc-contact-badge ${
+                            profile?.emailVerified
+                              ? "profile-kyc-contact-badge--ok"
+                              : "profile-kyc-contact-badge--no"
+                          }`}
+                        >
                           {profile?.emailVerified ? "✓ Verified" : "Unverified"}
                         </span>
                       </div>
 
-                      <div style={{ padding: "12px 14px", borderRadius: 10, background: "var(--bg-hover)", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block" }}>Phone Number</span>
-                          <strong style={{ fontSize: "0.82rem", color: "var(--text-heading)" }}>{profile?.phone || "—"}</strong>
+                      <div className="profile-kyc-contact-card">
+                        <div className="profile-kyc-contact-info">
+                          <span className="profile-kyc-contact-label">Phone Number</span>
+                          <strong className="profile-kyc-contact-value" title={profile?.phone || ""}>
+                            {profile?.phone || "—"}
+                          </strong>
                         </div>
-                        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: profile?.phoneVerified ? "#16a34a" : "#ef4444" }}>
+                        <span
+                          className={`profile-kyc-contact-badge ${
+                            profile?.phoneVerified
+                              ? "profile-kyc-contact-badge--ok"
+                              : "profile-kyc-contact-badge--no"
+                          }`}
+                        >
                           {profile?.phoneVerified ? "✓ Verified" : "Unverified"}
                         </span>
                       </div>
@@ -819,9 +837,9 @@ export default function Profile() {
                   </div>
 
                   {/* ── Tier 2: Identity Verification (Official Government ID) ── */}
-                  <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: 18, marginBottom: 20 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                      <div>
+                  <div className="profile-kyc-tier-card">
+                    <div className="profile-kyc-tier-header">
+                      <div className="profile-kyc-tier-header-info">
                         <h4 style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--text-heading)", margin: "0 0 2px" }}>
                           2. Identity Verification
                         </h4>
@@ -835,6 +853,7 @@ export default function Profile() {
                           fontWeight: 700,
                           padding: "3px 8px",
                           borderRadius: 6,
+                          flexShrink: 0,
                           background: isLevel2Approved ? "rgba(34, 197, 94, 0.15)" : (formData.governmentIdNumber && (formData.governmentIdImage || profile?.governmentIdImage)) ? "rgba(99, 102, 241, 0.15)" : "rgba(100, 116, 139, 0.15)",
                           color: isLevel2Approved ? "#16a34a" : (formData.governmentIdNumber && (formData.governmentIdImage || profile?.governmentIdImage)) ? "#6366f1" : "#64748b",
                         }}
@@ -908,9 +927,9 @@ export default function Profile() {
                   </div>
 
                   {/* ── Tier 3: Advanced KYC (Address & Additional Documents) ── */}
-                  <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: 18, marginBottom: 24 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                      <div>
+                  <div className="profile-kyc-tier-card" style={{ marginBottom: 24 }}>
+                    <div className="profile-kyc-tier-header">
+                      <div className="profile-kyc-tier-header-info">
                         <h4 style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--text-heading)", margin: "0 0 2px" }}>
                           3. Advanced KYC (Address & Supporting Documents)
                         </h4>
@@ -924,6 +943,7 @@ export default function Profile() {
                           fontWeight: 700,
                           padding: "3px 8px",
                           borderRadius: 6,
+                          flexShrink: 0,
                           background: isLevel3Approved ? "rgba(34, 197, 94, 0.15)" : "rgba(100, 116, 139, 0.15)",
                           color: isLevel3Approved ? "#16a34a" : "#64748b",
                         }}
@@ -971,7 +991,7 @@ export default function Profile() {
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div className="profile-form-row">
                       <div className="profile-form-field">
                         <label className="profile-form-label">Proof of Address (Utility Bill / Tenancy / Bank Statement) *</label>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

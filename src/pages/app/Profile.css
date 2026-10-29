@@ -549,6 +549,92 @@
   transform: translateX(18px);
 }
 
+/* ── KYC Verification tab styles ── */
+.profile-kyc-tier-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 20px;
+  min-width: 0;
+}
+
+.profile-kyc-tier-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.profile-kyc-tier-header-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-kyc-contact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.profile-kyc-contact-card {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.profile-kyc-contact-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-kyc-contact-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.profile-kyc-contact-value {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-kyc-contact-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.profile-kyc-contact-badge--ok {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.profile-kyc-contact-badge--no {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
 /* ══════════════════════════════════════════════════════════════
    MOBILE RESPONSIVE
    ══════════════════════════════════════════════════════════════ */
@@ -578,12 +664,21 @@
   }
 }
 
+@media (max-width: 768px) {
+  .profile-kyc-contact-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .profile-kyc-tier-card {
+    padding: 14px;
+  }
+}
+
 @media (max-width: 640px) {
   .profile-page {
     padding: 16px 16px 100px;
   }
-
-
 
   .profile-form-row {
     grid-template-columns: 1fr;
