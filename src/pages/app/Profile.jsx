@@ -250,8 +250,8 @@ export default function Profile() {
       setFormData((p) => ({ ...p, twoFactorEnabled: !value }));
       toast.error(
         err.response?.data?.message ||
-          err.message ||
-          "Failed to update two-factor preference",
+        err.message ||
+        "Failed to update two-factor preference",
       );
     } finally {
       setTwoFactorSaving(false);
@@ -497,29 +497,26 @@ export default function Profile() {
           {/* Verification badges */}
           <div className="profile-badges">
             <span
-              className={`profile-verify-badge ${
-                profile?.emailVerified
-                  ? "profile-verify-badge--ok"
-                  : "profile-verify-badge--no"
-              }`}
+              className={`profile-verify-badge ${profile?.emailVerified
+                ? "profile-verify-badge--ok"
+                : "profile-verify-badge--no"
+                }`}
             >
               {profile?.emailVerified ? "✓" : "✗"} Email
             </span>
             <span
-              className={`profile-verify-badge ${
-                profile?.phoneVerified
-                  ? "profile-verify-badge--ok"
-                  : "profile-verify-badge--no"
-              }`}
+              className={`profile-verify-badge ${profile?.phoneVerified
+                ? "profile-verify-badge--ok"
+                : "profile-verify-badge--no"
+                }`}
             >
               {profile?.phoneVerified ? "✓" : "✗"} Phone
             </span>
             <span
-              className={`profile-verify-badge ${
-                profile?.twoFactorEnabled
-                  ? "profile-verify-badge--ok"
-                  : "profile-verify-badge--no"
-              }`}
+              className={`profile-verify-badge ${profile?.twoFactorEnabled
+                ? "profile-verify-badge--ok"
+                : "profile-verify-badge--no"
+                }`}
             >
               {profile?.twoFactorEnabled ? "✓" : "✗"} Two-factor
             </span>
@@ -613,9 +610,8 @@ export default function Profile() {
                     </button>
                     <button
                       id="profile-save-btn"
-                      className={`app_btn app_btn_confirm ${
-                        saving ? "btn_loading" : ""
-                      }`}
+                      className={`app_btn app_btn_confirm ${saving ? "btn_loading" : ""
+                        }`}
                       onClick={handleSavePersonal}
                       disabled={saving}
                       style={{ position: "relative", minWidth: 120 }}
@@ -877,7 +873,7 @@ export default function Profile() {
                         />
                       </div>
 
-                      <div className="profile-form-field">
+                      <div className="profile-form-field" style={{ position: 'relative' }}>
                         <label className="profile-form-label">Upload Official ID Document *</label>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <button
@@ -885,7 +881,7 @@ export default function Profile() {
                             onClick={() => govFileRef.current?.click()}
                             type="button"
                             disabled={isLevel2Approved}
-                            style={{ opacity: isLevel2Approved ? 0.6 : 1, cursor: isLevel2Approved ? "not-allowed" : "pointer" }}
+                            style={{ opacity: isLevel2Approved ? 0.6 : 1, cursor: isLevel2Approved ? "not-allowed" : "pointer", }}
                           >
                             <MdUpload size={14} /> Select File
                           </button>
@@ -901,10 +897,10 @@ export default function Profile() {
                             {formData.governmentIdImage instanceof File
                               ? formData.governmentIdImage.name
                               : profile?.governmentIdImage ? (
-                                  <a href={profile.governmentIdImage} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>
-                                    View Document
-                                  </a>
-                                ) : "No document"}
+                                <a href={profile.governmentIdImage} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>
+                                  View Document
+                                </a>
+                              ) : "No document"}
                           </span>
                         </div>
                       </div>
@@ -984,7 +980,7 @@ export default function Profile() {
                             onClick={() => proofFileRef.current?.click()}
                             type="button"
                             disabled={isLevel3Approved}
-                            style={{ opacity: isLevel3Approved ? 0.6 : 1, cursor: isLevel3Approved ? "not-allowed" : "pointer" }}
+                            style={{ opacity: isLevel3Approved ? 0.6 : 1, cursor: isLevel3Approved ? "not-allowed" : "pointer", position: "relative" }}
                           >
                             <MdUpload size={14} /> Upload Proof
                           </button>
@@ -1000,10 +996,10 @@ export default function Profile() {
                             {formData.proofOfAddressImage instanceof File
                               ? formData.proofOfAddressImage.name
                               : profile?.proofOfAddressImage ? (
-                                  <a href={profile.proofOfAddressImage} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>
-                                    View Proof
-                                  </a>
-                                ) : "No file"}
+                                <a href={profile.proofOfAddressImage} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>
+                                  View Proof
+                                </a>
+                              ) : ""}
                           </span>
                         </div>
                       </div>
@@ -1016,7 +1012,7 @@ export default function Profile() {
                             onClick={() => addDocFileRef.current?.click()}
                             type="button"
                             disabled={isLevel3Approved}
-                            style={{ opacity: isLevel3Approved ? 0.6 : 1, cursor: isLevel3Approved ? "not-allowed" : "pointer" }}
+                            style={{ opacity: isLevel3Approved ? 0.6 : 1, cursor: isLevel3Approved ? "not-allowed" : "pointer", position: "relative" }}
                           >
                             <MdUpload size={14} /> Upload Doc
                           </button>
@@ -1032,10 +1028,10 @@ export default function Profile() {
                             {formData.additionalDocumentImage instanceof File
                               ? formData.additionalDocumentImage.name
                               : profile?.additionalDocumentImage ? (
-                                  <a href={profile.additionalDocumentImage} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>
-                                    View Document
-                                  </a>
-                                ) : "No file"}
+                                <a href={profile.additionalDocumentImage} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>
+                                  View Document
+                                </a>
+                              ) : ""}
                           </span>
                         </div>
                       </div>
@@ -1145,11 +1141,10 @@ export default function Profile() {
                         <div className="login_password_wrapper">
                           <input
                             id="profile-current-pw"
-                            className={`modal-input ${
-                              touched.currentPassword && errors.currentPassword
-                                ? "modal-input-error"
-                                : ""
-                            }`}
+                            className={`modal-input ${touched.currentPassword && errors.currentPassword
+                              ? "modal-input-error"
+                              : ""
+                              }`}
                             type={showCurrent ? "text" : "password"}
                             name="currentPassword"
                             placeholder="••••••••"
@@ -1185,11 +1180,10 @@ export default function Profile() {
                           <div className="login_password_wrapper">
                             <input
                               id="profile-new-pw"
-                              className={`modal-input ${
-                                touched.newPassword && errors.newPassword
-                                  ? "modal-input-error"
-                                  : ""
-                              }`}
+                              className={`modal-input ${touched.newPassword && errors.newPassword
+                                ? "modal-input-error"
+                                : ""
+                                }`}
                               type={showNew ? "text" : "password"}
                               name="newPassword"
                               placeholder="••••••••"
@@ -1223,12 +1217,11 @@ export default function Profile() {
                           <div className="login_password_wrapper">
                             <input
                               id="profile-confirm-pw"
-                              className={`modal-input ${
-                                touched.confirmPassword &&
+                              className={`modal-input ${touched.confirmPassword &&
                                 errors.confirmPassword
-                                  ? "modal-input-error"
-                                  : ""
-                              }`}
+                                ? "modal-input-error"
+                                : ""
+                                }`}
                               type={showConfirm ? "text" : "password"}
                               name="confirmPassword"
                               placeholder="••••••••"
@@ -1262,7 +1255,7 @@ export default function Profile() {
                         <button
                           type="button"
                           className="app_btn app_btn_cancel"
-                          onClick={() => {}}
+                          onClick={() => { }}
                         >
                           <MdClose size={14} style={{ marginRight: 4 }} />{" "}
                           Cancel
@@ -1271,9 +1264,8 @@ export default function Profile() {
                           id="profile-update-pw-btn"
                           type="submit"
                           disabled={isSubmitting}
-                          className={`app_btn app_btn_confirm ${
-                            isSubmitting ? "btn_loading" : ""
-                          }`}
+                          className={`app_btn app_btn_confirm ${isSubmitting ? "btn_loading" : ""
+                            }`}
                           style={{ position: "relative", minWidth: 140 }}
                         >
                           <span
@@ -1367,9 +1359,8 @@ export default function Profile() {
                         await logout();
                       }}
                       disabled={loggingOut}
-                      className={`app_btn app_btn_logout ${
-                        loggingOut ? "btn_loading" : ""
-                      }`}
+                      className={`app_btn app_btn_logout ${loggingOut ? "btn_loading" : ""
+                        }`}
                       style={{ position: "relative" }}
                     >
                       <span className="btn_text">Logout</span>
@@ -1382,9 +1373,8 @@ export default function Profile() {
                         await logoutAll();
                       }}
                       disabled={loggingOutAll}
-                      className={`app_btn app_btn_logout_all ${
-                        loggingOutAll ? "btn_loading" : ""
-                      }`}
+                      className={`app_btn app_btn_logout_all ${loggingOutAll ? "btn_loading" : ""
+                        }`}
                       style={{ position: "relative" }}
                     >
                       <span className="btn_text">Logout of all devices</span>
