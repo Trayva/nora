@@ -244,7 +244,7 @@ export default function KioskHome() {
           >
             <LuStore size={16} />
             <span>My Outlets</span>
-            <span className="kiosk_scope_badge">{activeKiosks.length}</span>
+            {/* <span className="kiosk_scope_badge">{activeKiosks.length}</span> */}
           </button>
           <button
             type="button"
@@ -258,7 +258,7 @@ export default function KioskHome() {
           >
             <MdStorefront size={17} />
             <span>Franchisees Outlets</span>
-            <span className="kiosk_scope_badge">{franchiseeTotal}</span>
+            {/* <span className="kiosk_scope_badge">{franchiseeTotal}</span> */}
           </button>
         </div>
       )}
@@ -328,8 +328,8 @@ export default function KioskHome() {
                   kiosk.kitchenType === "CLOUD" || kiosk.outletType === "CLOUD_KITCHEN" || kiosk.outletType === "CLOUD"
                     ? "Cloud Kitchen"
                     : kiosk.kitchenType === "STORE_FRONT" || kiosk.outletType === "STORE_FRONT"
-                    ? "Store Front"
-                    : "Physical Kiosk";
+                      ? "Store Front"
+                      : "Physical Kiosk";
 
                 return (
                   <div
@@ -362,11 +362,10 @@ export default function KioskHome() {
                               outletTypeLabel === "Cloud Kitchen"
                                 ? "#6366f1"
                                 : "#16a34a",
-                            border: `1px solid ${
-                              outletTypeLabel === "Cloud Kitchen"
+                            border: `1px solid ${outletTypeLabel === "Cloud Kitchen"
                                 ? "rgba(99,102,241,0.3)"
                                 : "rgba(34,197,94,0.3)"
-                            }`,
+                              }`,
                             display: "inline-flex",
                             alignItems: "center",
                             gap: 3,
@@ -395,17 +394,15 @@ export default function KioskHome() {
 
                     <div className="kiosk_item_indicators">
                       <span
-                        className={`kiosk_indicator ${
-                          kiosk.isOnline ? "kiosk_ind_on" : "kiosk_ind_off"
-                        }`}
+                        className={`kiosk_indicator ${kiosk.isOnline ? "kiosk_ind_on" : "kiosk_ind_off"
+                          }`}
                       >
                         {kiosk.isOnline ? <MdWifi size={12} /> : <MdWifiOff size={12} />}
                         {kiosk.isOnline ? "Online" : "Offline"}
                       </span>
                       <span
-                        className={`kiosk_indicator ${
-                          kiosk.isLocked ? "kiosk_ind_locked" : "kiosk_ind_unlocked"
-                        }`}
+                        className={`kiosk_indicator ${kiosk.isLocked ? "kiosk_ind_locked" : "kiosk_ind_unlocked"
+                          }`}
                       >
                         {kiosk.isLocked ? <MdLock size={11} /> : <MdLockOpen size={11} />}
                         {kiosk.isLocked ? "Locked" : "Unlocked"}
