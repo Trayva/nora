@@ -50,9 +50,9 @@ const requestRate = (from, to) => {
  * is fetched once and every amount is converted locally with that rate.
  * Display only - invoices and contracts are still billed in the original currency.
  */
-export default function useCurrencyDisplay() {
+export default function useCurrencyDisplay(overrideCurrency = null) {
   const { selectedState } = useAppState();
-  const target = selectedState?.currency || null;
+  const target = overrideCurrency || selectedState?.currency || null;
   const [, setTick] = useState(0);
 
   useEffect(() => {

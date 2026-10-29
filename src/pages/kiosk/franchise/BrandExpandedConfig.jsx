@@ -2,6 +2,8 @@ import { useState } from "react";
 import { MdCheck, MdImage, MdTrendingUp, MdArrowForward } from "react-icons/md";
 import { ExtraCostsSection, OperationalCostSection } from "./CostSections";
 import { num } from "./useFranchisePlan";
+import { useAppState } from "../../../contexts/StateContext";
+import useCurrencyDisplay from "../../../hooks/useCurrencyDisplay";
 
 export default function BrandExpandedConfig({
   brand,
@@ -14,14 +16,20 @@ export default function BrandExpandedConfig({
   costMap = {},
   profitMarginMap = {},
   priceMap = {},
+  rawPriceMap = {},
   loadingCosts = false,
-  currency,
-  fmt,
+  currency: propCurrency,
+  fmt: propFmt,
   plan,
   royaltyPercent,
   onRunAnalysis,
   onProceed,
 }) {
+  const { selectedState } = useAppState();
+  const effectiveCurrency = selectedState?.currency || propCurrency || "NGN";
+  const { format: appFmt } = useCurrencyDisplay(effectiveCurrency);
+  const fmt = propFmt || appFmt;
+  const currency = effectiveCurrency;
   const {
     extraCosts,
     setExtraCosts,
@@ -64,7 +72,7 @@ export default function BrandExpandedConfig({
               1. Brand Recipes &amp; Deployment
             </span>
             <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginTop: 2 }}>
-              Select recipes to deploy for this location.
+              Select recipes to deploy for this location. Prices converted to {currency} ({selectedState?.name || "Selected State"}).
             </span>
           </div>
           {menuItems.length > 0 && (
@@ -240,13 +248,18 @@ export default function BrandExpandedConfig({
                     <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>
                       Price
                     </span>
-                    <strong style={{ fontSize: "0.82rem", color: "var(--text-heading)" }}>
+                    <strong style={{ fontSize: "0.82rem", color: "var(--text-heading)", display: "block" }}>
                       {loadingCosts && price === undefined
                         ? "…"
                         : price != null
                           ? fmt(Number(price).toFixed(2), currency)
                           : "N/A"}
                     </strong>
+                    {rawPriceMap[item.id] && rawPriceMap[item.id].currency && rawPriceMap[item.id].currency.toUpperCase() !== currency.toUpperCase() && (
+                      <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", display: "block" }}>
+                        Orig: {rawPriceMap[item.id].currency} {Number(rawPriceMap[item.id].rawPrice).toLocaleString()}
+                      </span>
+                    )}
                   </div>
                 </div>
               );

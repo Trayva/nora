@@ -18,10 +18,6 @@ export const updateProfile = async (data) => {
   return response.data;
 };
 
-export const verifyBVN = async (bvn) => {
-  const response = await api.post("/account/profile/verify-bvn", { bvn });
-  return response.data;
-};
 
 export const updateUserRoles = async (userId, roles) => {
   const response = await api.put(`/account/${userId}/roles`, { roles });

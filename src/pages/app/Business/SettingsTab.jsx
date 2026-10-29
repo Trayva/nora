@@ -9,6 +9,7 @@ const EMPTY_PAYMENT = {
   title: "",
   description: "",
   amount: "",
+  currency: "USD",
   refundable: false,
   recurring: false,
   intervalInDays: 30,
@@ -32,7 +33,7 @@ export default function SettingsTab({ vendor, onUpdate }) {
     api
       .get("/config/state")
       .then((res) => setAvailableStates(res.data.data || []))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingStates(false));
   }, []);
 
@@ -46,9 +47,26 @@ export default function SettingsTab({ vendor, onUpdate }) {
       setOutletSupport(vendor.outletSupport && vendor.outletSupport.length > 0 ? vendor.outletSupport : ["KIOSK"]);
       setSupportedStates(Array.isArray(vendor.supportedStates) ? vendor.supportedStates : []);
       setPendingStates(Array.isArray(vendor.pendingStateRequests) ? vendor.pendingStateRequests : []);
-      setPayments(vendor.franchisePayments || []);
+      const loadedPayments = Array.isArray(vendor.franchisePayments)
+        ? vendor.franchisePayments.map((p) => ({ ...p, currency: p.currency || "NGN" }))
+        : [];
+      setPayments(loadedPayments);
     }
   }, [vendor]);
+
+  const availableCurrencies = Array.from(
+    new Set([
+      "NGN",
+      "USD",
+      "AED",
+      "GBP",
+      "EUR",
+      "GHS",
+      "KES",
+      "ZAR",
+      ...availableStates.map((s) => s.currency).filter(Boolean),
+    ])
+  );
 
   const toggleOutletSupport = (type) => {
     setOutletSupport((prev) => {
@@ -124,6 +142,7 @@ export default function SettingsTab({ vendor, onUpdate }) {
       fd.append("supportedStates", JSON.stringify(supportedStates));
       fd.append("franchisePayments", JSON.stringify(payments.map(p => ({
         ...p,
+        currency: p.currency || "NGN",
         amount: parseFloat(p.amount),
         intervalInDays: p.intervalInDays ? parseInt(p.intervalInDays) : 30
       }))));
@@ -392,7 +411,7 @@ export default function SettingsTab({ vendor, onUpdate }) {
                       type="checkbox"
                       checked={isChecked}
                       disabled={isPending}
-                      onChange={() => {}}
+                      onChange={() => { }}
                       style={{ accentColor: "var(--accent)", cursor: "inherit", margin: 0 }}
                     />
                     <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -475,7 +494,7 @@ export default function SettingsTab({ vendor, onUpdate }) {
                     </button>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.9fr 1.1fr", gap: 12, marginBottom: 12 }}>
                     <div className="form-field" style={{ marginBottom: 0 }}>
                       <label className="modal-label">Title *</label>
                       <input
@@ -484,6 +503,21 @@ export default function SettingsTab({ vendor, onUpdate }) {
                         value={p.title}
                         onChange={(e) => updatePayment(i, "title", e.target.value)}
                       />
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <label className="modal-label">Currency *</label>
+                      <select
+                        className="modal-input"
+                        value={p.currency || "NGN"}
+                        onChange={(e) => updatePayment(i, "currency", e.target.value)}
+                        style={{ cursor: "pointer", background: "var(--bg-card)", fontWeight: 600 }}
+                      >
+                        {availableCurrencies.map((curr) => (
+                          <option key={curr} value={curr}>
+                            {curr}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="form-field" style={{ marginBottom: 0 }}>
                       <label className="modal-label">Amount *</label>

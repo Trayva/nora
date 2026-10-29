@@ -171,7 +171,9 @@ export function OperationalCostSection({ bills, onBillsChange, dailyTarget, onTa
         <AddButton onClick={() => onBillsChange([...bills, { id: Date.now(), name: "", amount: "" }])}>Add Bill</AddButton>
       </div>
 
-      <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>Monthly bills</span>
+      <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
+        Monthly bills{currency ? ` (${currency})` : ""}
+      </span>
       {bills.length === 0 ? (
         <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontStyle: "italic", marginBottom: 10, padding: "4px 0" }}>No monthly bills listed.</div>
       ) : (
@@ -186,10 +188,10 @@ export function OperationalCostSection({ bills, onBillsChange, dailyTarget, onTa
               />
               <input
                 type="number"
-                placeholder="Amount"
+                placeholder={currency ? `Amt (${currency})` : "Amount"}
                 value={b.amount}
                 onChange={(e) => update(b.id, { amount: e.target.value })}
-                style={{ ...inputStyle, width: 95, flexShrink: 0 }}
+                style={{ ...inputStyle, width: 105, flexShrink: 0 }}
               />
               <RemoveButton onClick={() => onBillsChange(bills.filter((x) => x.id !== b.id))} />
             </div>

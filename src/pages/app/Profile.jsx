@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getProfile, updateProfile, verifyBVN } from "../../api/account";
+import { getProfile, updateProfile } from "../../api/account";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../api/axios";
 import { toast } from "react-toastify";
@@ -17,6 +17,10 @@ import {
   MdRefresh,
   MdClose,
   MdUpload,
+  MdCheckCircle,
+  MdPending,
+  MdErrorOutline,
+  MdVerifiedUser,
 } from "react-icons/md";
 import { BsPersonCheck, BsShieldLock } from "react-icons/bs";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
@@ -115,11 +119,13 @@ export default function Profile() {
     governmentIdType: "",
     governmentIdNumber: "",
     governmentIdImage: null,
-    bvn: "",
-    bvnVerified: false,
+    proofOfAddressImage: null,
+    additionalDocumentImage: null,
   });
   const fileInputRef = useRef(null);
   const govFileRef = useRef(null);
+  const proofFileRef = useRef(null);
+  const addDocFileRef = useRef(null);
   const [imagePreview, setImagePreview] = useState(null);
 
   // Password show/hide
@@ -152,8 +158,8 @@ export default function Profile() {
         governmentIdType: data.data.governmentIdType || "",
         governmentIdNumber: data.data.governmentIdNumber || "",
         governmentIdImage: data.data.governmentIdImage || null,
-        bvn: data.data.bvn || "",
-        bvnVerified: data.data.bvnVerified || false,
+        proofOfAddressImage: data.data.proofOfAddressImage || null,
+        additionalDocumentImage: data.data.additionalDocumentImage || null,
       });
       updateUser?.(data.data);
     } catch (err) {
@@ -200,10 +206,13 @@ export default function Profile() {
         payload.append("governmentIdType", formData.governmentIdType);
       if (formData.governmentIdNumber)
         payload.append("governmentIdNumber", formData.governmentIdNumber);
-      if (formData.bvn) payload.append("bvn", formData.bvn);
       if (formData.image) payload.append("image", formData.image);
-      if (formData.governmentIdImage)
+      if (formData.governmentIdImage instanceof File)
         payload.append("governmentIdImage", formData.governmentIdImage);
+      if (formData.proofOfAddressImage instanceof File)
+        payload.append("proofOfAddressImage", formData.proofOfAddressImage);
+      if (formData.additionalDocumentImage instanceof File)
+        payload.append("additionalDocumentImage", formData.additionalDocumentImage);
       await updateProfile(payload);
       await fetchProfile();
       setImagePreview(null);
@@ -290,6 +299,18 @@ export default function Profile() {
     const file = e.target.files?.[0];
     if (!file) return;
     setFormData((p) => ({ ...p, governmentIdImage: file }));
+  };
+
+  const handleProofOfAddressChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFormData((p) => ({ ...p, proofOfAddressImage: file }));
+  };
+
+  const handleAddDocChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFormData((p) => ({ ...p, additionalDocumentImage: file }));
   };
 
   // ── Derived values ────────────────────────────────────────────
@@ -613,221 +634,438 @@ export default function Profile() {
             )}
 
             {/* ── KYC ── */}
-            {activeTab === "kyc" && (
-              <div className="profile-panel-section">
-                <h3 className="profile-section-heading">KYC information</h3>
-                <p className="profile-section-sub">
-                  Provide government ID and address details.
-                </p>
+            {activeTab === "kyc" && (() => {
+              const currentLevel = Number(profile?.kycLevel) || ((profile?.emailVerified && profile?.phoneVerified) ? 1 : 0);
+              const isLevel1Complete = Boolean(profile?.emailVerified && profile?.phoneVerified);
+              const isLevel2Approved = currentLevel >= 2 && profile?.kycStatus === "APPROVED";
+              const isLevel3Approved = currentLevel >= 3 && profile?.kycStatus === "APPROVED";
+              const isSubmitted = profile?.kycStatus === "SUBMITTED";
+              const isRejected = profile?.kycStatus === "REJECTED";
 
-                {profile?.kycStatus === "APPROVED" && (
-                  <div style={{
-                    padding: "12px 16px",
-                    borderRadius: 10,
-                    background: "rgba(34, 197, 94, 0.1)",
-                    color: "#16a34a",
-                    border: "1px solid rgba(34, 197, 94, 0.25)",
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
-                    marginBottom: 20,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8
-                  }}>
-                    <span>✓</span> Your KYC has been verified. Editing is disabled.
-                  </div>
-                )}
-
-                <div className="profile-form-row">
-                  <div className="profile-form-field">
-                    <label className="profile-form-label">Address</label>
-                    <input
-                      className="modal-input"
-                      type="text"
-                      placeholder="Street address"
-                      value={formData.address}
-                      onChange={(e) =>
-                        setFormData((p) => ({ ...p, address: e.target.value }))
-                      }
-                      disabled={profile?.kycStatus === "APPROVED"}
-                    />
-                  </div>
-                  <div className="profile-form-field">
-                    <label className="profile-form-label">City</label>
-                    <input
-                      className="modal-input"
-                      type="text"
-                      placeholder="City"
-                      value={formData.city}
-                      onChange={(e) =>
-                        setFormData((p) => ({ ...p, city: e.target.value }))
-                      }
-                      disabled={profile?.kycStatus === "APPROVED"}
-                    />
-                  </div>
-                  <div className="profile-form-field">
-                    <label className="profile-form-label">Country</label>
-                    <select
-                      className="modal-input"
-                      type="text"
-                      placeholder="Country"
-                      value={formData.country}
-                      onChange={(e) =>
-                        setFormData((p) => ({ ...p, country: e.target.value }))
-                      }
-                      disabled={profile?.kycStatus === "APPROVED"}
-                    >
-                      <option value="">Select country</option>
-                      {COUNTRIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <br />
-                <div className="profile-form-row">
-                  <div className="profile-form-field">
-                    <label className="profile-form-label">
-                      Government ID type
-                    </label>
-                    <select
-                      className="modal-input"
-                      value={formData.governmentIdType}
-                      onChange={(e) =>
-                        setFormData((p) => ({
-                          ...p,
-                          governmentIdType: e.target.value,
-                        }))
-                      }
-                      disabled={profile?.kycStatus === "APPROVED"}
-                    >
-                      <option value="">Select ID type</option>
-                      <option value="NIN">National ID</option>
-                      <option value="PASSPORT">Passport</option>
-                      <option value="DRIVER_LICENSE">Driver's license</option>
-                    </select>
-                  </div>
-                  <div className="profile-form-field">
-                    <label className="profile-form-label">
-                      Government ID number
-                    </label>
-                    <input
-                      className="modal-input"
-                      type="text"
-                      placeholder="ID number"
-                      value={formData.governmentIdNumber}
-                      onChange={(e) =>
-                        setFormData((p) => ({
-                          ...p,
-                          governmentIdNumber: e.target.value,
-                        }))
-                      }
-                      disabled={profile?.kycStatus === "APPROVED"}
-                    />
-                  </div>
-                  <div className="profile-form-field">
-                    <label className="profile-form-label">
-                      Upload ID image
-                    </label>
+              return (
+                <div className="profile-panel-section">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
                     <div>
-                      <button
-                        className="profile-photo-btn"
-                        onClick={() => govFileRef.current?.click()}
-                        type="button"
-                        disabled={profile?.kycStatus === "APPROVED"}
+                      <h3 className="profile-section-heading" style={{ margin: 0 }}>KYC Verification</h3>
+                      <p className="profile-section-sub" style={{ margin: "4px 0 0" }}>
+                        Complete the verification levels to unlock higher limits and platform features.
+                      </p>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span
                         style={{
-                          opacity: profile?.kycStatus === "APPROVED" ? 0.6 : 1,
-                          cursor: profile?.kycStatus === "APPROVED" ? "not-allowed" : "pointer"
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "6px 12px",
+                          borderRadius: 20,
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          background: currentLevel >= 3 ? "rgba(34, 197, 94, 0.12)" : currentLevel >= 2 ? "rgba(99, 102, 241, 0.12)" : currentLevel >= 1 ? "rgba(234, 179, 8, 0.12)" : "rgba(100, 116, 139, 0.12)",
+                          color: currentLevel >= 3 ? "#16a34a" : currentLevel >= 2 ? "#6366f1" : currentLevel >= 1 ? "#ca8a04" : "#64748b",
+                          border: `1px solid ${currentLevel >= 3 ? "rgba(34, 197, 94, 0.3)" : currentLevel >= 2 ? "rgba(99, 102, 241, 0.3)" : currentLevel >= 1 ? "rgba(234, 179, 8, 0.3)" : "rgba(100, 116, 139, 0.3)"}`,
                         }}
                       >
-                        <MdUpload size={12} /> Upload ID
-                      </button>
-                      <input
-                        ref={govFileRef}
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={handleGovIdChange}
-                        disabled={profile?.kycStatus === "APPROVED"}
-                      />
-                      <span style={{ marginLeft: 8 }}>
-                        {formData.governmentIdImage
-                          ? formData.governmentIdImage.name
-                          : profile?.governmentIdImage
-                            ? "Saved document"
-                            : "No file"}
+                        <MdVerifiedUser size={16} />
+                        Level {currentLevel}: {currentLevel === 3 ? "Advanced" : currentLevel === 2 ? "Identity Verified" : currentLevel === 1 ? "Basic" : "Unverified"}
+                      </span>
+
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 5,
+                          padding: "6px 12px",
+                          borderRadius: 20,
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          background: profile?.kycStatus === "APPROVED" ? "rgba(34, 197, 94, 0.12)" : isSubmitted ? "rgba(245, 158, 11, 0.12)" : isRejected ? "rgba(239, 68, 68, 0.12)" : "rgba(100, 116, 139, 0.12)",
+                          color: profile?.kycStatus === "APPROVED" ? "#16a34a" : isSubmitted ? "#f59e0b" : isRejected ? "#ef4444" : "#64748b",
+                        }}
+                      >
+                        {profile?.kycStatus === "APPROVED" && <MdCheckCircle size={15} />}
+                        {isSubmitted && <MdPending size={15} />}
+                        {isRejected && <MdErrorOutline size={15} />}
+                        {profile?.kycStatus || "PENDING"}
                       </span>
                     </div>
                   </div>
-                </div>
 
-                <div style={{ marginTop: 12 }}>
-                  {/* BVN only for Nigeria */}
-                  <label className="profile-form-label">BVN (Nigeria)</label>
-                  <div
-                    style={{ display: "flex", gap: 8, alignItems: "center" }}
-                  >
-                    <input
-                      className="modal-input"
-                      type="text"
-                      placeholder="Enter BVN"
-                      value={formData.bvn}
-                      onChange={(e) =>
-                        setFormData((p) => ({ ...p, bvn: e.target.value }))
-                      }
-                      style={{ maxWidth: 260 }}
-                      disabled={profile?.kycStatus === "APPROVED"}
-                    />
-                    <button
-                      className="app_btn app_btn_confirm"
-                      onClick={async () => {
-                        try {
-                          const resp = await verifyBVN(formData.bvn);
-                          toast.success(resp.message || "BVN verified");
-                          await fetchProfile();
-                        } catch (err) {
-                          toast.error(
-                            err.response?.data?.message ||
-                              err.message ||
-                              "BVN verification failed",
-                          );
-                        }
-                      }}
-                      disabled={profile?.kycStatus === "APPROVED" || !formData.bvn}
-                    >
-                      Verify BVN
-                    </button>
-                    {formData.bvnVerified || profile?.bvnVerified ? (
-                      <span style={{ color: "green" }}>Verified</span>
-                    ) : (
-                      <span style={{ color: "var(--text-muted)" }}>
-                        Not verified
+                  {/* KYC Feedback alerts */}
+                  {isRejected && profile?.kycNotes && (
+                    <div style={{ padding: "12px 16px", borderRadius: 10, background: "rgba(239, 68, 68, 0.08)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.25)", fontSize: "0.85rem", marginBottom: 20 }}>
+                      <strong>KYC Review Notes:</strong> {profile.kycNotes}
+                    </div>
+                  )}
+
+                  {isSubmitted && (
+                    <div style={{ padding: "12px 16px", borderRadius: 10, background: "rgba(245, 158, 11, 0.08)", color: "#b45309", border: "1px solid rgba(245, 158, 11, 0.25)", fontSize: "0.85rem", marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
+                      <MdPending size={18} /> Documents submitted and currently under review by compliance.
+                    </div>
+                  )}
+
+                  {isLevel3Approved && (
+                    <div style={{ padding: "12px 16px", borderRadius: 10, background: "rgba(34, 197, 94, 0.1)", color: "#16a34a", border: "1px solid rgba(34, 197, 94, 0.25)", fontSize: "0.85rem", fontWeight: 600, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
+                      <MdCheckCircle size={18} /> Advanced KYC has been fully verified. Editing is locked.
+                    </div>
+                  )}
+
+                  {/* Level Progression Stepper */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 28, marginTop: 16 }}>
+                    {[
+                      {
+                        level: 1,
+                        title: "Level 1: Basic",
+                        desc: "Email & Phone Verification",
+                        completed: isLevel1Complete || currentLevel >= 1,
+                      },
+                      {
+                        level: 2,
+                        title: "Level 2: Identity",
+                        desc: "Official Document Verification",
+                        completed: isLevel2Approved || currentLevel >= 2,
+                      },
+                      {
+                        level: 3,
+                        title: "Level 3: Advanced",
+                        desc: "Address & Supporting Docs",
+                        completed: isLevel3Approved || currentLevel >= 3,
+                      },
+                    ].map((stepItem) => (
+                      <div
+                        key={stepItem.level}
+                        style={{
+                          padding: "14px 16px",
+                          borderRadius: 12,
+                          background: stepItem.completed ? "rgba(34, 197, 94, 0.06)" : currentLevel + 1 === stepItem.level ? "var(--bg-hover)" : "var(--bg-card)",
+                          border: `1.5px solid ${stepItem.completed ? "#16a34a" : currentLevel + 1 === stepItem.level ? "var(--accent)" : "var(--border)"}`,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.78rem",
+                            fontWeight: 800,
+                            background: stepItem.completed ? "#16a34a" : currentLevel + 1 === stepItem.level ? "var(--accent)" : "var(--border)",
+                            color: "#fff",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {stepItem.completed ? "✓" : stepItem.level}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "0.84rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                            {stepItem.title}
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                            {stepItem.desc}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ── Tier 1: Basic Email & Phone ── */}
+                  <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: 18, marginBottom: 20 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <div>
+                        <h4 style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--text-heading)", margin: "0 0 2px" }}>
+                          1. Basic Contact Verification
+                        </h4>
+                        <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                          Verifies user identity via primary email address and SMS/Phone.
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          padding: "3px 8px",
+                          borderRadius: 6,
+                          background: isLevel1Complete ? "rgba(34, 197, 94, 0.15)" : "rgba(245, 158, 11, 0.15)",
+                          color: isLevel1Complete ? "#16a34a" : "#ca8a04",
+                        }}
+                      >
+                        {isLevel1Complete ? "Completed" : "Incomplete"}
                       </span>
-                    )}
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      <div style={{ padding: "12px 14px", borderRadius: 10, background: "var(--bg-hover)", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block" }}>Email Address</span>
+                          <strong style={{ fontSize: "0.82rem", color: "var(--text-heading)" }}>{profile?.email || "—"}</strong>
+                        </div>
+                        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: profile?.emailVerified ? "#16a34a" : "#ef4444" }}>
+                          {profile?.emailVerified ? "✓ Verified" : "Unverified"}
+                        </span>
+                      </div>
+
+                      <div style={{ padding: "12px 14px", borderRadius: 10, background: "var(--bg-hover)", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block" }}>Phone Number</span>
+                          <strong style={{ fontSize: "0.82rem", color: "var(--text-heading)" }}>{profile?.phone || "—"}</strong>
+                        </div>
+                        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: profile?.phoneVerified ? "#16a34a" : "#ef4444" }}>
+                          {profile?.phoneVerified ? "✓ Verified" : "Unverified"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Tier 2: Identity Verification (Official Government ID) ── */}
+                  <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: 18, marginBottom: 20 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                      <div>
+                        <h4 style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--text-heading)", margin: "0 0 2px" }}>
+                          2. Identity Verification
+                        </h4>
+                        <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                          Upload an official government ID (Passport, National ID, Driver's License, or Voter's Card).
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          padding: "3px 8px",
+                          borderRadius: 6,
+                          background: isLevel2Approved ? "rgba(34, 197, 94, 0.15)" : (formData.governmentIdNumber && (formData.governmentIdImage || profile?.governmentIdImage)) ? "rgba(99, 102, 241, 0.15)" : "rgba(100, 116, 139, 0.15)",
+                          color: isLevel2Approved ? "#16a34a" : (formData.governmentIdNumber && (formData.governmentIdImage || profile?.governmentIdImage)) ? "#6366f1" : "#64748b",
+                        }}
+                      >
+                        {isLevel2Approved ? "Verified (Level 2)" : "Identity ID"}
+                      </span>
+                    </div>
+
+                    <div className="profile-form-row">
+                      <div className="profile-form-field">
+                        <label className="profile-form-label">Government ID Type *</label>
+                        <select
+                          className="modal-input"
+                          value={formData.governmentIdType}
+                          onChange={(e) => setFormData((p) => ({ ...p, governmentIdType: e.target.value }))}
+                          disabled={isLevel2Approved}
+                        >
+                          <option value="">Select ID type</option>
+                          <option value="PASSPORT">International Passport</option>
+                          <option value="NATIONAL_ID">National ID / NIN</option>
+                          <option value="DRIVER_LICENSE">Driver's License</option>
+                          <option value="VOTER_CARD">Voter's Card</option>
+                          <option value="OTHER">Other Official ID</option>
+                        </select>
+                      </div>
+
+                      <div className="profile-form-field">
+                        <label className="profile-form-label">Government ID Number *</label>
+                        <input
+                          className="modal-input"
+                          type="text"
+                          placeholder="e.g. A12345678"
+                          value={formData.governmentIdNumber}
+                          onChange={(e) => setFormData((p) => ({ ...p, governmentIdNumber: e.target.value }))}
+                          disabled={isLevel2Approved}
+                        />
+                      </div>
+
+                      <div className="profile-form-field">
+                        <label className="profile-form-label">Upload Official ID Document *</label>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <button
+                            className="profile-photo-btn"
+                            onClick={() => govFileRef.current?.click()}
+                            type="button"
+                            disabled={isLevel2Approved}
+                            style={{ opacity: isLevel2Approved ? 0.6 : 1, cursor: isLevel2Approved ? "not-allowed" : "pointer" }}
+                          >
+                            <MdUpload size={14} /> Select File
+                          </button>
+                          <input
+                            ref={govFileRef}
+                            type="file"
+                            accept="image/*,.pdf"
+                            style={{ display: "none" }}
+                            onChange={handleGovIdChange}
+                            disabled={isLevel2Approved}
+                          />
+                          <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                            {formData.governmentIdImage instanceof File
+                              ? formData.governmentIdImage.name
+                              : profile?.governmentIdImage ? (
+                                  <a href={profile.governmentIdImage} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>
+                                    View Document
+                                  </a>
+                                ) : "No document"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Tier 3: Advanced KYC (Address & Additional Documents) ── */}
+                  <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: 18, marginBottom: 24 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                      <div>
+                        <h4 style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--text-heading)", margin: "0 0 2px" }}>
+                          3. Advanced KYC (Address & Supporting Documents)
+                        </h4>
+                        <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                          Residential address verification and additional documents (Utility Bill, Bank Statement, Tenancy).
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          padding: "3px 8px",
+                          borderRadius: 6,
+                          background: isLevel3Approved ? "rgba(34, 197, 94, 0.15)" : "rgba(100, 116, 139, 0.15)",
+                          color: isLevel3Approved ? "#16a34a" : "#64748b",
+                        }}
+                      >
+                        {isLevel3Approved ? "Verified (Level 3)" : "Advanced KYC"}
+                      </span>
+                    </div>
+
+                    <div className="profile-form-row" style={{ marginBottom: 14 }}>
+                      <div className="profile-form-field">
+                        <label className="profile-form-label">Street Address *</label>
+                        <input
+                          className="modal-input"
+                          type="text"
+                          placeholder="Full residential or business address"
+                          value={formData.address}
+                          onChange={(e) => setFormData((p) => ({ ...p, address: e.target.value }))}
+                          disabled={isLevel3Approved}
+                        />
+                      </div>
+                      <div className="profile-form-field">
+                        <label className="profile-form-label">City *</label>
+                        <input
+                          className="modal-input"
+                          type="text"
+                          placeholder="City"
+                          value={formData.city}
+                          onChange={(e) => setFormData((p) => ({ ...p, city: e.target.value }))}
+                          disabled={isLevel3Approved}
+                        />
+                      </div>
+                      <div className="profile-form-field">
+                        <label className="profile-form-label">Country *</label>
+                        <select
+                          className="modal-input"
+                          value={formData.country}
+                          onChange={(e) => setFormData((p) => ({ ...p, country: e.target.value }))}
+                          disabled={isLevel3Approved}
+                        >
+                          <option value="">Select country</option>
+                          {COUNTRIES.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      <div className="profile-form-field">
+                        <label className="profile-form-label">Proof of Address (Utility Bill / Tenancy / Bank Statement) *</label>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <button
+                            className="profile-photo-btn"
+                            onClick={() => proofFileRef.current?.click()}
+                            type="button"
+                            disabled={isLevel3Approved}
+                            style={{ opacity: isLevel3Approved ? 0.6 : 1, cursor: isLevel3Approved ? "not-allowed" : "pointer" }}
+                          >
+                            <MdUpload size={14} /> Upload Proof
+                          </button>
+                          <input
+                            ref={proofFileRef}
+                            type="file"
+                            accept="image/*,.pdf"
+                            style={{ display: "none" }}
+                            onChange={handleProofOfAddressChange}
+                            disabled={isLevel3Approved}
+                          />
+                          <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                            {formData.proofOfAddressImage instanceof File
+                              ? formData.proofOfAddressImage.name
+                              : profile?.proofOfAddressImage ? (
+                                  <a href={profile.proofOfAddressImage} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>
+                                    View Proof
+                                  </a>
+                                ) : "No file"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="profile-form-field">
+                        <label className="profile-form-label">Additional Supporting Document (Optional)</label>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <button
+                            className="profile-photo-btn"
+                            onClick={() => addDocFileRef.current?.click()}
+                            type="button"
+                            disabled={isLevel3Approved}
+                            style={{ opacity: isLevel3Approved ? 0.6 : 1, cursor: isLevel3Approved ? "not-allowed" : "pointer" }}
+                          >
+                            <MdUpload size={14} /> Upload Doc
+                          </button>
+                          <input
+                            ref={addDocFileRef}
+                            type="file"
+                            accept="image/*,.pdf"
+                            style={{ display: "none" }}
+                            onChange={handleAddDocChange}
+                            disabled={isLevel3Approved}
+                          />
+                          <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                            {formData.additionalDocumentImage instanceof File
+                              ? formData.additionalDocumentImage.name
+                              : profile?.additionalDocumentImage ? (
+                                  <a href={profile.additionalDocumentImage} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>
+                                    View Document
+                                  </a>
+                                ) : "No file"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="profile-form-actions" style={{ marginTop: 20 }}>
+                    <button
+                      className="app_btn app_btn_cancel"
+                      onClick={() => fetchProfile()}
+                      disabled={isLevel3Approved}
+                    >
+                      Reset
+                    </button>
+                    <button
+                      id="profile-save-kyc-btn"
+                      className={`app_btn app_btn_confirm ${saving ? "btn_loading" : ""}`}
+                      onClick={handleSavePersonal}
+                      disabled={saving || isLevel3Approved}
+                    >
+                      <span className="btn_text">
+                        {isSubmitted ? "Update Submission" : "Submit KYC Documents"}
+                      </span>
+                      {saving && <span className="btn_loader" style={{ width: 16, height: 16 }} />}
+                    </button>
                   </div>
                 </div>
-
-                <div className="profile-form-actions" style={{ marginTop: 16 }}>
-                  <button
-                    className="app_btn app_btn_cancel"
-                    onClick={() => fetchProfile()}
-                    disabled={profile?.kycStatus === "APPROVED"}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    id="profile-save-kyc-btn"
-                    className={`app_btn app_btn_confirm ${saving ? "btn_loading" : ""}`}
-                    onClick={handleSavePersonal}
-                    disabled={saving || profile?.kycStatus === "APPROVED"}
-                  >
-                    Save KYC
-                  </button>
-                </div>
-              </div>
-            )}
+              );
+            })()}
             {/* ── Security ── */}
             {activeTab === "security" && (
               <div className="profile-panel-section">

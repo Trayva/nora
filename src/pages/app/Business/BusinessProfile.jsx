@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LuPenLine, LuGlobe } from "react-icons/lu";
 import { MdOutlineBusiness, MdOutlinePalette, MdOutlineVerified } from "react-icons/md";
+import { BsInstagram } from "react-icons/bs";
 import RegisterBusinessModal from "./RegisterBusinessModal";
 
 export default function BusinessProfile({ vendor, onUpdate }) {
@@ -10,12 +11,27 @@ export default function BusinessProfile({ vendor, onUpdate }) {
   const color = vendor.branding?.color || vendor.brandColor;
   const tagline = vendor.branding?.tagline || vendor.brandTagline;
   const origin = vendor.origin || vendor.branding?.origin;
+  const instagram = vendor.instagramProfile || vendor.branding?.instagramProfile;
 
   const membershipColor = {
     ACTIVE: "email_badge_verified",
     PENDING: "email_badge_unverified",
     EXPIRED: "email_badge_unverified",
   }[vendor.membershipStatus] || "email_badge_unverified";
+
+  const instagramUrl = instagram
+    ? instagram.startsWith("http")
+      ? instagram
+      : `https://instagram.com/${instagram.replace(/^@/, "")}`
+    : null;
+
+  const instagramHandle = instagram
+    ? instagram.startsWith("http")
+      ? `@${instagram.split("/").filter(Boolean).pop()}`
+      : instagram.startsWith("@")
+        ? instagram
+        : `@${instagram}`
+    : null;
 
   return (
     <>
@@ -77,6 +93,30 @@ export default function BusinessProfile({ vendor, onUpdate }) {
                   {origin}
                 </span>
               )}
+              {instagramUrl && (
+                <a
+                  href={instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    padding: "2px 8px",
+                    borderRadius: 6,
+                    background: "rgba(225,48,108,0.1)",
+                    color: "#e1306c",
+                    border: "1px solid rgba(225,48,108,0.25)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    textDecoration: "none",
+                  }}
+                  title="Instagram Profile"
+                >
+                  <BsInstagram size={12} />
+                  {instagramHandle}
+                </a>
+              )}
             </div>
 
             {tagline && <p className="biz_tagline">"{tagline}"</p>}
@@ -91,6 +131,18 @@ export default function BusinessProfile({ vendor, onUpdate }) {
                   <LuGlobe size={13} />
                   <span>Origin: <strong>{origin}</strong></span>
                 </div>
+              )}
+              {instagramUrl && (
+                <a
+                  href={instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="biz_meta_item"
+                  style={{ textDecoration: "none", color: "#e1306c" }}
+                >
+                  <BsInstagram size={13} />
+                  <span>Instagram: <strong>{instagramHandle}</strong></span>
+                </a>
               )}
               {color && (
                 <div className="biz_meta_item">
@@ -115,7 +167,7 @@ export default function BusinessProfile({ vendor, onUpdate }) {
         onClose={() => setShowEdit(false)}
         onSuccess={() => { setShowEdit(false); onUpdate(); }}
         mode="update"
-        defaultValues={{ ...vendor, brandColor: color, brandTagline: tagline, origin: origin || "" }}
+        defaultValues={{ ...vendor, brandColor: color, brandTagline: tagline, origin: origin || "", instagramProfile: instagram || "" }}
       />
     </>
   );

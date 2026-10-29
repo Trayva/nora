@@ -460,10 +460,15 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
   const [country, setCountry] = useState(initialUser.country || "");
   const [govIdType, setGovIdType] = useState(initialUser.governmentIdType || "");
   const [govIdNumber, setGovIdNumber] = useState(initialUser.governmentIdNumber || "");
-  const [bvnVerified, setBvnVerified] = useState(initialUser.bvnVerified ?? false);
+  const [kycLevel, setKycLevel] = useState(initialUser.kycLevel ?? 0);
   const [kycStatus, setKycStatus] = useState(initialUser.kycStatus || "PENDING");
+  const [kycNotes, setKycNotes] = useState(initialUser.kycNotes || "");
   const [govIdImageFile, setGovIdImageFile] = useState(null);
   const [govIdImagePreview, setGovIdImagePreview] = useState(null);
+  const [proofOfAddressFile, setProofOfAddressFile] = useState(null);
+  const [proofOfAddressPreview, setProofOfAddressPreview] = useState(null);
+  const [additionalDocFile, setAdditionalDocFile] = useState(null);
+  const [additionalDocPreview, setAdditionalDocPreview] = useState(null);
 
   // Custom permissions
   const [selectedPermissions, setSelectedPermissions] = useState([]);
@@ -567,10 +572,17 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
       payload.append("country", country);
       payload.append("governmentIdType", govIdType);
       payload.append("governmentIdNumber", govIdNumber);
-      payload.append("bvnVerified", bvnVerified);
+      payload.append("kycLevel", kycLevel);
       payload.append("kycStatus", kycStatus);
+      if (kycNotes) payload.append("kycNotes", kycNotes);
       if (govIdImageFile) {
         payload.append("governmentIdImage", govIdImageFile);
+      }
+      if (proofOfAddressFile) {
+        payload.append("proofOfAddressImage", proofOfAddressFile);
+      }
+      if (additionalDocFile) {
+        payload.append("additionalDocumentImage", additionalDocFile);
       }
 
       const res = await api.put(`/account/${currentUser.id}`, payload, {
@@ -580,6 +592,10 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
       setIsEditingKyc(false);
       setGovIdImageFile(null);
       setGovIdImagePreview(null);
+      setProofOfAddressFile(null);
+      setProofOfAddressPreview(null);
+      setAdditionalDocFile(null);
+      setAdditionalDocPreview(null);
       toast.success("KYC details updated successfully");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update KYC");
@@ -603,8 +619,9 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
     setCountry(currentUser?.country || "");
     setGovIdType(currentUser?.governmentIdType || "");
     setGovIdNumber(currentUser?.governmentIdNumber || "");
-    setBvnVerified(currentUser?.bvnVerified ?? false);
+    setKycLevel(currentUser?.kycLevel ?? 0);
     setKycStatus(currentUser?.kycStatus || "PENDING");
+    setKycNotes(currentUser?.kycNotes || "");
     setRoles(currentUser?.roles?.map((r) => r.role || r) || []);
     setSelectedPermissions(currentUser?.permissions || []);
   }, [currentUser]);
@@ -1168,19 +1185,22 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
                   />
                 </div> */}
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <label className="modal-label">BVN Verified</label>
+                  <label className="modal-label">KYC Level</label>
                   <select
                     className="modal-input"
-                    value={String(bvnVerified)}
-                    onChange={(e) => setBvnVerified(e.target.value === "true")}
+                    value={kycLevel}
+                    onChange={(e) => setKycLevel(Number(e.target.value))}
                     style={{
                       background: "var(--bg-active)",
                       color: "var(--text-body)",
                       border: "1px solid var(--border)",
+                      fontWeight: 600,
                     }}
                   >
-                    <option value="true">Verified</option>
-                    <option value="false">Not Verified</option>
+                    <option value={0}>Level 0: Unverified</option>
+                    <option value={1}>Level 1: Basic (Email & Phone)</option>
+                    <option value={2}>Level 2: Identity Verified</option>
+                    <option value={3}>Level 3: Advanced KYC</option>
                   </select>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
@@ -1196,6 +1216,7 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
                     }}
                   >
                     <option value="PENDING">PENDING</option>
+                    <option value="SUBMITTED">SUBMITTED</option>
                     <option value="APPROVED">APPROVED</option>
                     <option value="REJECTED">REJECTED</option>
                   </select>
@@ -1216,6 +1237,15 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
                     value={govIdNumber}
                     onChange={(e) => setGovIdNumber(e.target.value)}
                     placeholder="ID Number"
+                  />
+                </div>
+                <div className="form-field" style={{ marginBottom: 0, gridColumn: "1 / -1" }}>
+                  <label className="modal-label">KYC Review Notes / Feedback</label>
+                  <input
+                    className="modal-input"
+                    value={kycNotes}
+                    onChange={(e) => setKycNotes(e.target.value)}
+                    placeholder="Notes, feedback or rejection reason"
                   />
                 </div>
               </div>
@@ -1302,8 +1332,9 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
                     setCountry(currentUser?.country || "");
                     setGovIdType(currentUser?.governmentIdType || "");
                     setGovIdNumber(currentUser?.governmentIdNumber || "");
-                    setBvnVerified(currentUser?.bvnVerified ?? false);
+                    setKycLevel(currentUser?.kycLevel ?? 0);
                     setKycStatus(currentUser?.kycStatus || "PENDING");
+                    setKycNotes(currentUser?.kycNotes || "");
                   }}
                   disabled={savingKyc}
                 >
@@ -1380,14 +1411,10 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
                   }}
                 >
                   <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: 6 }}>
-                    BVN
+                    KYC Level
                   </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    {user.bvnVerified ? (
-                      <span style={{ color: "green", fontWeight: 700 }}>Verified</span>
-                    ) : (
-                      <span style={{ color: "var(--text-muted)" }}>Not verified</span>
-                    )}
+                  <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                    Level {user.kycLevel || 0}: {user.kycLevel === 3 ? "Advanced" : user.kycLevel === 2 ? "Identity Verified" : user.kycLevel === 1 ? "Basic" : "Unverified"}
                   </div>
                 </div>
                 <div
@@ -1413,8 +1440,19 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
                 </div>
               </div>
 
-              <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
+              {/* KYC Review Notes if any */}
+              {user.kycNotes && (
+                <div style={{ padding: "8px 12px", borderRadius: 8, background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.2)", fontSize: "0.78rem", color: "var(--text-heading)", marginTop: 10 }}>
+                  <strong>Notes:</strong> {user.kycNotes}
+                </div>
+              )}
+
+              {/* Document Cards */}
+              <div style={{ marginTop: 14, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-start" }}>
                 <div>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+                    Official ID Document
+                  </span>
                   {user.governmentIdImage ? (
                     <a href={user.governmentIdImage} target="_blank" rel="noreferrer">
                       <img
@@ -1441,85 +1479,151 @@ export default function AdminUserDetail({ user: initialUser, onClose }) {
                         justifyContent: "center",
                         color: "var(--text-muted)",
                         border: "1px dashed var(--border)",
+                        fontSize: "0.75rem",
                       }}
                     >
-                      No document
+                      No ID document
                     </div>
                   )}
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      className="app_btn app_btn_confirm"
-                      onClick={async () => {
-                        try {
-                          await api.put(`/account/${user.id}`, {
-                            kycStatus: "APPROVED",
-                            kycVerifiedAt: new Date().toISOString(),
-                          });
-                          toast.success("KYC approved");
-                          onClose();
-                        } catch (err) {
-                          toast.error(err.response?.data?.message || "Failed to approve KYC");
-                        }
+                <div>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+                    Proof of Address
+                  </span>
+                  {user.proofOfAddressImage ? (
+                    <a href={user.proofOfAddressImage} target="_blank" rel="noreferrer">
+                      <img
+                        src={user.proofOfAddressImage}
+                        alt="proof-of-address"
+                        style={{
+                          width: 140,
+                          height: 90,
+                          objectFit: "cover",
+                          borderRadius: 8,
+                          border: "1px solid var(--border)",
+                        }}
+                      />
+                    </a>
+                  ) : (
+                    <div
+                      style={{
+                        width: 140,
+                        height: 90,
+                        borderRadius: 8,
+                        background: "var(--bg-active)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "var(--text-muted)",
+                        border: "1px dashed var(--border)",
+                        fontSize: "0.75rem",
                       }}
                     >
-                      <MdCheck /> Approve KYC
-                    </button>
-                    <button
-                      className="app_btn app_btn_cancel"
-                      onClick={async () => {
-                        try {
-                          await api.put(`/account/${user.id}`, {
-                            kycStatus: "REJECTED",
-                          });
-                          toast.success("KYC rejected");
-                          onClose();
-                        } catch (err) {
-                          toast.error(err.response?.data?.message || "Failed to reject KYC");
-                        }
-                      }}
-                    >
-                      Reject
-                    </button>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      className="app_btn"
-                      onClick={async () => {
-                        try {
-                          await api.put(`/account/${user.id}`, {
-                            bvnVerified: true,
-                          });
-                          toast.success("BVN marked verified");
-                          onClose();
-                        } catch (err) {
-                          toast.error(err.response?.data?.message || "Failed to mark BVN");
-                        }
-                      }}
-                    >
-                      Mark BVN Verified
-                    </button>
-                    <button
-                      className="app_btn app_btn_cancel"
-                      onClick={async () => {
-                        try {
-                          await api.put(`/account/${user.id}`, {
-                            bvnVerified: false,
-                          });
-                          toast.success("BVN unverified");
-                          onClose();
-                        } catch (err) {
-                          toast.error(err.response?.data?.message || "Failed to unverify BVN");
-                        }
-                      }}
-                    >
-                      Unverify BVN
-                    </button>
-                  </div>
+                      No proof of address
+                    </div>
+                  )}
                 </div>
+
+                <div>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+                    Additional Document
+                  </span>
+                  {user.additionalDocumentImage ? (
+                    <a href={user.additionalDocumentImage} target="_blank" rel="noreferrer">
+                      <img
+                        src={user.additionalDocumentImage}
+                        alt="additional-doc"
+                        style={{
+                          width: 140,
+                          height: 90,
+                          objectFit: "cover",
+                          borderRadius: 8,
+                          border: "1px solid var(--border)",
+                        }}
+                      />
+                    </a>
+                  ) : (
+                    <div
+                      style={{
+                        width: 140,
+                        height: 90,
+                        borderRadius: 8,
+                        background: "var(--bg-active)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "var(--text-muted)",
+                        border: "1px dashed var(--border)",
+                        fontSize: "0.75rem",
+                      }}
+                    >
+                      No additional doc
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <button
+                  className="app_btn app_btn_confirm"
+                  style={{ height: 32, fontSize: "0.78rem" }}
+                  onClick={async () => {
+                    try {
+                      const res = await api.put(`/account/${user.id}`, {
+                        kycLevel: 2,
+                        kycStatus: "APPROVED",
+                      });
+                      setCurrentUser(res.data.data);
+                      toast.success("KYC Level 2 (Identity) Approved");
+                    } catch (err) {
+                      toast.error(err.response?.data?.message || "Failed to approve Level 2");
+                    }
+                  }}
+                >
+                  <MdCheck /> Approve Level 2 (Identity)
+                </button>
+
+                <button
+                  className="app_btn app_btn_confirm"
+                  style={{ height: 32, fontSize: "0.78rem", background: "#16a34a" }}
+                  onClick={async () => {
+                    try {
+                      const res = await api.put(`/account/${user.id}`, {
+                        kycLevel: 3,
+                        kycStatus: "APPROVED",
+                      });
+                      setCurrentUser(res.data.data);
+                      toast.success("KYC Level 3 (Advanced) Approved");
+                    } catch (err) {
+                      toast.error(err.response?.data?.message || "Failed to approve Level 3");
+                    }
+                  }}
+                >
+                  <MdCheck /> Approve Level 3 (Advanced)
+                </button>
+
+                <button
+                  className="app_btn app_btn_cancel"
+                  style={{ height: 32, fontSize: "0.78rem" }}
+                  onClick={async () => {
+                    const reason = window.prompt("Reason for KYC rejection (optional):", user.kycNotes || "");
+                    if (reason === null) return;
+                    try {
+                      const res = await api.put(`/account/${user.id}`, {
+                        kycStatus: "REJECTED",
+                        kycNotes: reason,
+                      });
+                      setCurrentUser(res.data.data);
+                      toast.success("KYC marked as rejected");
+                    } catch (err) {
+                      toast.error(err.response?.data?.message || "Failed to reject KYC");
+                    }
+                  }}
+                >
+                  Reject KYC
+                </button>
               </div>
             </>
           )}

@@ -6,7 +6,7 @@ import { CountrySelect } from "../../admin/adminUtils_";
 
 export default function RegisterBusinessModal({ isOpen, onClose, onSuccess, mode = "register", defaultValues = {} }) {
   const [form, setForm] = useState({
-    businessName: "", brandTagline: "", brandColor: "", origin: "",
+    businessName: "", brandTagline: "", brandColor: "", origin: "", instagramProfile: "",
   });
   const [brandLogo, setBrandLogo] = useState(null);
   const [businessRegDoc, setBusinessRegDoc] = useState(null);
@@ -19,6 +19,7 @@ export default function RegisterBusinessModal({ isOpen, onClose, onSuccess, mode
         brandTagline: defaultValues.brandTagline || "",
         brandColor: defaultValues.brandColor || "",
         origin: defaultValues.origin || defaultValues.branding?.origin || "",
+        instagramProfile: defaultValues.instagramProfile || defaultValues.branding?.instagramProfile || "",
       });
     }
   }, [isOpen]);
@@ -32,6 +33,7 @@ export default function RegisterBusinessModal({ isOpen, onClose, onSuccess, mode
       if (form.brandTagline) fd.append("brandTagline", form.brandTagline);
       if (form.brandColor) fd.append("brandColor", form.brandColor);
       if (form.origin !== undefined) fd.append("origin", form.origin);
+      if (form.instagramProfile !== undefined) fd.append("instagramProfile", form.instagramProfile);
       if (brandLogo) fd.append("brandLogo", brandLogo);
       if (businessRegDoc) fd.append("businessRegDoc", businessRegDoc);
 
@@ -83,6 +85,16 @@ export default function RegisterBusinessModal({ isOpen, onClose, onSuccess, mode
             <CountrySelect
               value={form.origin}
               onChange={(e) => setForm((p) => ({ ...p, origin: e.target.value }))}
+            />
+          </div>
+          <div className="form-field">
+            <label className="modal-label">Instagram Profile</label>
+            <input
+              className="modal-input"
+              placeholder="e.g. @norafoods or https://instagram.com/norafoods"
+              value={form.instagramProfile}
+              onChange={(e) => setForm((p) => ({ ...p, instagramProfile: e.target.value }))}
+              maxLength={200}
             />
           </div>
           <div className="form-field">

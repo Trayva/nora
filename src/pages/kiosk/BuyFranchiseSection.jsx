@@ -26,7 +26,9 @@ import {
   MdTrendingUp,
 } from "react-icons/md";
 import { LuStore, LuCloud, LuChevronDown } from "react-icons/lu";
+import { BsInstagram } from "react-icons/bs";
 import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
+import { useAppState } from "../../contexts/StateContext";
 
 // Safe helper to parse bills from JSON string or array
 const parseBills = (bills) => {
@@ -61,7 +63,6 @@ const parseImages = (images) => {
 export default function BuyFranchiseSection() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { format: fmt, isConverted } = useCurrencyDisplay();
 
   // Steps: 1 = Location & Outlet Type, 2 = Select Brand, 3 = Review & Submit
   const [step, setStep] = useState(1);
@@ -108,6 +109,7 @@ export default function BuyFranchiseSection() {
   const [menuCostMap, setMenuCostMap] = useState({});
   const [menuProfitMarginMap, setMenuProfitMarginMap] = useState({});
   const [menuPriceMap, setMenuPriceMap] = useState({});
+  const [menuRawPriceMap, setMenuRawPriceMap] = useState({});
   const [loadingCosts, setLoadingCosts] = useState(false);
 
   // Slots & Country Settings
@@ -122,6 +124,11 @@ export default function BuyFranchiseSection() {
   // Step 3 & 4: E-Sign & Submitting
   const [showSignDrawer, setShowSignDrawer] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Target State & Currency selected from AppIndex layout (NOT outlet/location selected by user)
+  const { selectedState } = useAppState();
+  const stateCurrency = selectedState?.currency || "NGN";
+  const { format: fmt, convert, isConverted } = useCurrencyDisplay(stateCurrency);
 
   // Load States on mount
   useEffect(() => {
@@ -237,6 +244,7 @@ export default function BuyFranchiseSection() {
       setMenuCostMap({});
       setMenuProfitMarginMap({});
       setMenuPriceMap({});
+      setMenuRawPriceMap({});
       return;
     }
     const stateId = locationForm.stateId || selectedCloudLocation?.stateId;
@@ -253,14 +261,29 @@ export default function BuyFranchiseSection() {
           const cost = costRes?.data?.data?.cost ?? null;
           const price = priceRes?.data?.data?.sellingPrice ?? priceRes?.data?.data?.price ?? null;
 
+          const outletState = states.find((s) => s.id === stateId) || selectedCloudLocation?.state;
+          const outletCurrency = outletState?.currency || "NGN";
+
+          // Convert cost and price from outlet's currency to stateCurrency (selected from AppIndex)
+          const convertedCost = cost != null ? convert(Number(cost), outletCurrency) : null;
+          const convertedPrice = price != null ? convert(Number(price), outletCurrency) : null;
+
           let profitMargin = null;
           if (cost != null && price != null && Number(cost) > 0) {
             profitMargin = ((Number(price) - Number(cost)) / Number(cost)) * 100;
           }
 
-          return { id: m.id, cost, price, profitMargin };
+          return {
+            id: m.id,
+            cost: convertedCost,
+            price: convertedPrice,
+            rawCost: cost,
+            rawPrice: price,
+            outletCurrency,
+            profitMargin,
+          };
         } catch {
-          return { id: m.id, cost: null, price: null, profitMargin: null };
+          return { id: m.id, cost: null, price: null, rawCost: null, rawPrice: null, outletCurrency: "NGN", profitMargin: null };
         }
       })
     ).then((items) => {
@@ -268,20 +291,23 @@ export default function BuyFranchiseSection() {
       const costEntries = {};
       const marginEntries = {};
       const priceEntries = {};
+      const rawPriceEntries = {};
       items.forEach((item) => {
         costEntries[item.id] = item.cost;
         marginEntries[item.id] = item.profitMargin;
         priceEntries[item.id] = item.price;
+        rawPriceEntries[item.id] = { rawPrice: item.rawPrice, currency: item.outletCurrency };
       });
       setMenuCostMap(costEntries);
       setMenuProfitMarginMap(marginEntries);
       setMenuPriceMap(priceEntries);
+      setMenuRawPriceMap(rawPriceEntries);
       setLoadingCosts(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [brandMenuItems, locationForm.stateId, selectedCloudLocation?.stateId]);
+  }, [brandMenuItems, locationForm.stateId, selectedCloudLocation?.stateId, stateCurrency, convert]);
 
   // Handle expanding/collapsing a brand card in Step 2
   const handleToggleExpandBrand = (brand, isEligible) => {
@@ -505,9 +531,13 @@ export default function BuyFranchiseSection() {
 
   // ── Fee Calculations & Payment Partitioning ────────────────
   const vendorPayments = Array.isArray(selectedBrand?.franchisePayments) ? selectedBrand.franchisePayments : [];
-  const totalVendorPayments = vendorPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+  const totalVendorPayments = vendorPayments.reduce((sum, p) => {
+    const fromCurr = p.currency || "NGN";
+    const amt = parseFloat(p.amount) || 0;
+    return sum + convert(amt, fromCurr);
+  }, 0);
   const rawGlobalPayments = Array.isArray(countrySettings?.payments) ? countrySettings.payments : [];
-  const currency = countrySettings?.currency || "NGN";
+  const currency = stateCurrency;
 
   // Filter global payments targeted to this outletType ("ALL" applies to every outlet)
   const filteredGlobalPayments = rawGlobalPayments.filter((p) => {
@@ -524,16 +554,21 @@ export default function BuyFranchiseSection() {
     (locationForm.outletType === "CLOUD_KITCHEN" || locationForm.outletType === "STORE_FRONT") && selectedCloudLocation
       ? parseBills(selectedCloudLocation.bills)
       : [];
-  const totalLocationBills = selectedLocationBills.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
+  const totalLocationBills = selectedLocationBills.reduce((sum, b) => {
+    const fromCurr = b.currency || selectedCloudLocation?.state?.currency || "NGN";
+    return sum + convert(parseFloat(b.amount) || 0, fromCurr);
+  }, 0);
 
   // Compute Platform/Global Fees
   const computedGlobalFee = filteredGlobalPayments.reduce((sum, p) => {
     const isOptional = Boolean(p.optional || p.isOptional);
     const title = p.title || "";
     const isPct = Boolean(p.isPercentage);
+    const fromCurr = p.currency || countrySettings?.currency || "NGN";
+    const rawAmt = parseFloat(p.amount) || 0;
     const amt = isPct
-      ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
-      : parseFloat(p.amount) || 0;
+      ? totalVendorPayments * (rawAmt / 100)
+      : convert(rawAmt, fromCurr);
 
     if (isOptional && !selectedOptionalPayments.includes(title)) {
       return sum;
@@ -541,20 +576,32 @@ export default function BuyFranchiseSection() {
     return sum + amt;
   }, 0);
 
+  // Check if any line items require currency conversion
+  const hasConvertedItems =
+    vendorPayments.some((p) => (p.currency || "NGN").toUpperCase() !== currency.toUpperCase()) ||
+    selectedLocationBills.some((b) => (b.currency || selectedCloudLocation?.state?.currency || "NGN").toUpperCase() !== currency.toUpperCase()) ||
+    filteredGlobalPayments.some((p) => (!p.isPercentage && (p.currency || countrySettings?.currency || "NGN").toUpperCase() !== currency.toUpperCase()));
+
   // Total Due: Brand Fees + Global Setup & Licensing + Location Facility Bills
   const totalFranchiseCost = totalVendorPayments + computedGlobalFee + totalLocationBills;
 
   // Combined operational monthly bills (for Profit Projection & Costing):
-  // 1. Facility/location bills (excluding refundable one-off deposits)
+  // 1. Facility/location bills (excluding refundable one-off deposits) converted to stateCurrency
   const locationRecurringBills = selectedLocationBills
     .filter((b) => !b.refundable)
-    .map((b, idx) => ({
-      id: `loc-${idx}-${b.title || b.name || "bill"}`,
-      name: b.title || b.name || "Location Facility Bill",
-      amount: parseFloat(b.amount) || 0,
-    }));
+    .map((b, idx) => {
+      const fromCurr = b.currency || selectedCloudLocation?.state?.currency || "NGN";
+      const rawAmt = parseFloat(b.amount) || 0;
+      return {
+        id: `loc-${idx}-${b.title || b.name || "bill"}`,
+        name: b.title || b.name || "Location Facility Bill",
+        amount: Number(convert(rawAmt, fromCurr).toFixed(2)),
+        rawAmount: rawAmt,
+        fromCurrency: fromCurr,
+      };
+    });
 
-  // 2. Global platform payments targeted to this outletType that recur every 30 days
+  // 2. Global platform payments targeted to this outletType that recur every 30 days converted to stateCurrency
   // (mandatory payments + currently selected optional payments)
   const globalRecurringBills = filteredGlobalPayments
     .filter((p) => {
@@ -565,13 +612,17 @@ export default function BuyFranchiseSection() {
     })
     .map((p, idx) => {
       const isPct = Boolean(p.isPercentage);
+      const fromCurr = p.currency || countrySettings?.currency || "NGN";
+      const rawAmt = parseFloat(p.amount) || 0;
       const amt = isPct
-        ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
-        : parseFloat(p.amount) || 0;
+        ? totalVendorPayments * (rawAmt / 100)
+        : convert(rawAmt, fromCurr);
       return {
         id: `global-rec-${idx}-${p.title}`,
         name: `${p.title} (Monthly Fee)`,
-        amount: amt,
+        amount: Number(amt.toFixed(2)),
+        rawAmount: rawAmt,
+        fromCurrency: fromCurr,
       };
     });
 
@@ -1076,7 +1127,10 @@ export default function BuyFranchiseSection() {
                     {cloudLocations.map((loc) => {
                       const isSelected = selectedCloudLocation?.id === loc.id;
                       const bills = parseBills(loc.bills);
-                      const billsSum = bills.reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
+                      const billsSumConverted = bills.reduce((sum, b) => {
+                        const fromCurr = b.currency || loc.state?.currency || "NGN";
+                        return sum + convert(parseFloat(b.amount) || 0, fromCurr);
+                      }, 0);
                       const locImages = parseImages(loc.images);
 
                       return (
@@ -1257,7 +1311,7 @@ export default function BuyFranchiseSection() {
                                 Facility Bills &amp; Expenses Schedule
                               </span>
                               <span style={{ fontSize: "0.78rem", fontWeight: 800, color: isSelected ? "#6366f1" : "var(--text-heading)" }}>
-                                Total: {fmt(billsSum, loc.state.currency)}
+                                Total: {fmt(billsSumConverted, currency)}
                               </span>
                             </div>
 
@@ -1267,38 +1321,50 @@ export default function BuyFranchiseSection() {
                               </div>
                             ) : (
                               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                                {bills.map((bill, bIdx) => (
-                                  <div
-                                    className="bf-bill-row"
-                                    key={bIdx}
-                                    style={{
-                                      display: "flex",
-                                      justifyContent: "space-between",
-                                      alignItems: "center",
-                                      fontSize: "0.75rem",
-                                      background: "var(--bg-hover)",
-                                      padding: "6px 10px",
-                                      borderRadius: 6,
-                                    }}
-                                  >
-                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                      <span style={{ color: "var(--text-body)", fontWeight: 600 }}>{bill.title}</span>
-                                      {bill.recurring && (
-                                        <span style={{ fontSize: "0.62rem", color: "#6366f1", background: "rgba(99,102,241,0.12)", padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>
-                                          {bill.intervalInDays ? `${bill.intervalInDays}d` : "Recurring"}
-                                        </span>
-                                      )}
-                                      {bill.refundable && (
-                                        <span style={{ fontSize: "0.62rem", color: "#16a34a", background: "rgba(22,163,74,0.12)", padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>
-                                          Refundable
-                                        </span>
-                                      )}
+                                {bills.map((bill, bIdx) => {
+                                  const billFromCurr = bill.currency || loc.state?.currency || "NGN";
+                                  const rawAmt = parseFloat(bill.amount) || 0;
+                                  const isDiff = billFromCurr.toUpperCase() !== currency.toUpperCase();
+                                  return (
+                                    <div
+                                      className="bf-bill-row"
+                                      key={bIdx}
+                                      style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                        fontSize: "0.75rem",
+                                        background: "var(--bg-hover)",
+                                        padding: "6px 10px",
+                                        borderRadius: 6,
+                                      }}
+                                    >
+                                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                        <span style={{ color: "var(--text-body)", fontWeight: 600 }}>{bill.title}</span>
+                                        {bill.recurring && (
+                                          <span style={{ fontSize: "0.62rem", color: "#6366f1", background: "rgba(99,102,241,0.12)", padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>
+                                            {bill.intervalInDays ? `${bill.intervalInDays}d` : "Recurring"}
+                                          </span>
+                                        )}
+                                        {bill.refundable && (
+                                          <span style={{ fontSize: "0.62rem", color: "#16a34a", background: "rgba(22,163,74,0.12)", padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>
+                                            Refundable
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div style={{ textAlign: "right" }}>
+                                        <strong style={{ color: "var(--text-heading)", display: "block" }}>
+                                          {fmt(rawAmt, billFromCurr)}
+                                        </strong>
+                                        {isDiff && (
+                                          <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                                            Orig: {billFromCurr} {rawAmt.toLocaleString()}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
-                                    <strong style={{ color: "var(--text-heading)" }}>
-                                      {fmt(parseFloat(bill.amount) || 0, loc.state.currency)}
-                                    </strong>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -1370,11 +1436,17 @@ export default function BuyFranchiseSection() {
                 const supportsCurrentState = (locationForm.stateId && supportedStates.includes(locationForm.stateId));
                 const isEligible = supportsCurrentOutlet && supportsCurrentState;
                 const payments = Array.isArray(brand.franchisePayments) ? brand.franchisePayments : [];
-                const brandFeeTotal = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                const brandFeeTotal = payments.reduce((sum, p) => {
+                  const fromCurr = p.currency || "NGN";
+                  return sum + convert(parseFloat(p.amount) || 0, fromCurr);
+                }, 0);
                 const royaltyPct = getBrandRoyalty(brand.id);
                 const originText =
                   brand.origin ||
                   brand.branding?.origin;
+                const brandInstagram =
+                  brand.instagramProfile ||
+                  brand.branding?.instagramProfile;
 
                 return (
                   <div
@@ -1428,9 +1500,37 @@ export default function BuyFranchiseSection() {
                           )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <h4 style={{ fontSize: "1.08rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {brand.businessName}
-                          </h4>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                            <h4 style={{ fontSize: "1.08rem", fontWeight: 800, color: "var(--text-heading)", margin: "0 0 3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {brand.businessName}
+                            </h4>
+                            {brandInstagram && (
+                              <a
+                                href={brandInstagram.startsWith("http") ? brandInstagram : `https://instagram.com/${brandInstagram.replace(/^@/, "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                title={`Visit ${brand.businessName} on Instagram`}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  width: 26,
+                                  height: 26,
+                                  borderRadius: 8,
+                                  background: "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
+                                  color: "#fff",
+                                  flexShrink: 0,
+                                  boxShadow: "0 2px 6px rgba(220,39,67,0.28)",
+                                  transition: "transform 0.15s ease",
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.12)")}
+                                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1.0)")}
+                              >
+                                <BsInstagram size={13} />
+                              </a>
+                            )}
+                          </div>
                           <span style={{ fontSize: "0.84rem", color: "var(--text-muted)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {brand.branding?.tagline || "Fresh, fast and local"}
                           </span>
@@ -1518,7 +1618,7 @@ export default function BuyFranchiseSection() {
                           Franchise licence fee
                         </span>
                         <strong style={{ fontSize: "1.18rem", fontWeight: 900, color: "var(--text-heading)", letterSpacing: -0.2 }}>
-                          {fmt(brandFeeTotal, "NGN")}
+                          {fmt(brandFeeTotal.toFixed(2), currency)}
                         </strong>
                       </div>
                       <button
@@ -1577,6 +1677,7 @@ export default function BuyFranchiseSection() {
                         costMap={menuCostMap}
                         profitMarginMap={menuProfitMarginMap}
                         priceMap={menuPriceMap}
+                        rawPriceMap={menuRawPriceMap}
                         loadingCosts={loadingCosts}
                         currency={currency}
                         fmt={fmt}
@@ -1862,14 +1963,26 @@ export default function BuyFranchiseSection() {
                     No custom brand fees configured.
                   </div>
                 ) : (
-                  vendorPayments.map((p, idx) => (
-                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", marginBottom: 4 }}>
-                      <span style={{ color: "var(--text-body)" }}>{p.title}</span>
-                      <strong style={{ color: "var(--text-heading)" }}>
-                        {fmt(parseFloat(p.amount) || 0, currency)}
-                      </strong>
-                    </div>
-                  ))
+                  vendorPayments.map((p, idx) => {
+                    const fromCurr = p.currency || "NGN";
+                    const rawAmt = parseFloat(p.amount) || 0;
+                    const isDiff = fromCurr.toUpperCase() !== currency.toUpperCase();
+                    return (
+                      <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.82rem", marginBottom: 6 }}>
+                        <div>
+                          <span style={{ color: "var(--text-body)", fontWeight: 500 }}>{p.title}</span>
+                          {isDiff && (
+                            <span style={{ display: "block", fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                              Original: {fromCurr} {rawAmt.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                        <strong style={{ color: "var(--text-heading)" }}>
+                          {fmt(rawAmt, fromCurr)}
+                        </strong>
+                      </div>
+                    );
+                  })
                 )}
               </div>
 
@@ -1901,28 +2014,38 @@ export default function BuyFranchiseSection() {
                       </div>
                     ) : (
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {selectedLocationBills.map((bill, idx) => (
-                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "0.82rem" }}>
-                            <div>
-                              <span style={{ color: "var(--text-body)", display: "block", fontWeight: 600 }}>{bill.title}</span>
-                              <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
-                                {bill.recurring && (
-                                  <span style={{ fontSize: "0.62rem", color: "#6366f1", background: "rgba(99,102,241,0.1)", padding: "1px 5px", borderRadius: 4 }}>
-                                    {bill.intervalInDays ? `Every ${bill.intervalInDays}d` : "Recurring"}
-                                  </span>
-                                )}
-                                {bill.refundable && (
-                                  <span style={{ fontSize: "0.62rem", color: "#16a34a", background: "rgba(22,163,74,0.1)", padding: "1px 5px", borderRadius: 4 }}>
-                                    Refundable Deposit
+                        {selectedLocationBills.map((bill, idx) => {
+                          const billFromCurr = bill.currency || selectedCloudLocation?.state?.currency || "NGN";
+                          const rawAmt = parseFloat(bill.amount) || 0;
+                          const isDiff = billFromCurr.toUpperCase() !== currency.toUpperCase();
+                          return (
+                            <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "0.82rem" }}>
+                              <div>
+                                <span style={{ color: "var(--text-body)", display: "block", fontWeight: 600 }}>{bill.title}</span>
+                                <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+                                  {bill.recurring && (
+                                    <span style={{ fontSize: "0.62rem", color: "#6366f1", background: "rgba(99,102,241,0.1)", padding: "1px 5px", borderRadius: 4 }}>
+                                      {bill.intervalInDays ? `Every ${bill.intervalInDays}d` : "Recurring"}
+                                    </span>
+                                  )}
+                                  {bill.refundable && (
+                                    <span style={{ fontSize: "0.62rem", color: "#16a34a", background: "rgba(22,163,74,0.1)", padding: "1px 5px", borderRadius: 4 }}>
+                                      Refundable Deposit
+                                    </span>
+                                  )}
+                                </div>
+                                {isDiff && (
+                                  <span style={{ display: "block", fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
+                                    Original: {billFromCurr} {rawAmt.toLocaleString()}
                                   </span>
                                 )}
                               </div>
+                              <strong style={{ color: "var(--text-heading)", marginLeft: 8 }}>
+                                {fmt(rawAmt, billFromCurr)}
+                              </strong>
                             </div>
-                            <strong style={{ color: "var(--text-heading)", marginLeft: 8 }}>
-                              {fmt(parseFloat(bill.amount) || 0, currency)}
-                            </strong>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -1941,9 +2064,12 @@ export default function BuyFranchiseSection() {
                     {/* Non-optional Platform Payments */}
                     {mandatoryGlobalItems.map((p, idx) => {
                       const isPct = Boolean(p.isPercentage);
+                      const fromCurr = p.currency || countrySettings?.currency || "NGN";
+                      const rawAmt = parseFloat(p.amount) || 0;
+                      const isDiff = !isPct && fromCurr.toUpperCase() !== currency.toUpperCase();
                       const amt = isPct
-                        ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
-                        : parseFloat(p.amount) || 0;
+                        ? totalVendorPayments * (rawAmt / 100)
+                        : convert(rawAmt, fromCurr);
                       return (
                         <div key={`mand-${idx}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "0.82rem", marginBottom: 6 }}>
                           <div>
@@ -1962,26 +2088,34 @@ export default function BuyFranchiseSection() {
                                 </span>
                               )}
                             </div>
+                            {isDiff && (
+                              <span style={{ display: "block", fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
+                                Original: {fromCurr} {rawAmt.toLocaleString()}
+                              </span>
+                            )}
                           </div>
                           <strong style={{ color: "var(--text-heading)", marginLeft: 8 }}>
-                            {fmt(amt, currency)}
+                            {isPct ? fmt(amt, currency) : fmt(rawAmt, fromCurr)}
                           </strong>
                         </div>
                       );
                     })}
 
-                    {/*  & Services (Checkboxes) */}
+                    {/* Optional Platform Add-ons & Services (Checkboxes) */}
                     {optionalGlobalItems.length > 0 && (
                       <div style={{ marginTop: 10 }}>
                         <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: 6 }}>
-                          :
+                          Optional Platform Add-ons:
                         </span>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                           {optionalGlobalItems.map((p, idx) => {
                             const isPct = Boolean(p.isPercentage);
+                            const fromCurr = p.currency || countrySettings?.currency || "NGN";
+                            const rawAmt = parseFloat(p.amount) || 0;
+                            const isDiff = !isPct && fromCurr.toUpperCase() !== currency.toUpperCase();
                             const amt = isPct
-                              ? totalVendorPayments * ((parseFloat(p.amount) || 0) / 100)
-                              : parseFloat(p.amount) || 0;
+                              ? totalVendorPayments * (rawAmt / 100)
+                              : convert(rawAmt, fromCurr);
                             const isChecked = selectedOptionalPayments.includes(p.title);
                             return (
                               <label
@@ -2022,10 +2156,15 @@ export default function BuyFranchiseSection() {
                                         {p.description || "Optional add-on service"}
                                       </span>
                                     </div>
+                                    {isDiff && (
+                                      <span style={{ display: "block", fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
+                                        Original: {fromCurr} {rawAmt.toLocaleString()}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                                 <strong style={{ color: isChecked ? "var(--text-heading)" : "var(--text-muted)" }}>
-                                  {fmt(amt, currency)}
+                                  {isPct ? fmt(amt, currency) : fmt(rawAmt, fromCurr)}
                                 </strong>
                               </label>
                             );
@@ -2056,9 +2195,9 @@ export default function BuyFranchiseSection() {
                 {fmt(totalFranchiseCost, currency)}
               </span>
             </div>
-            {isConverted(currency) && (
+            {hasConvertedItems && (
               <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "right", marginTop: -12, marginBottom: 16 }}>
-                Billed in {currency} {totalFranchiseCost.toLocaleString()}. Converted amounts are estimates based on the selected state's currency.
+                Amounts converted to {currency} ({selectedState?.name || "Selected State"}). Converted values are estimates matching your state selected in the app layout.
               </p>
             )}
 
