@@ -90,6 +90,10 @@ function TemplateBuilder({
   );
   const [isGlobal, setIsGlobal] = useState(editTemplate?.isGlobal || false);
   const [time, setTime] = useState(editTemplate?.time || "");
+  const [dueTime, setDueTime] = useState(editTemplate?.dueTime || "");
+  const [dueMinutes, setDueMinutes] = useState(
+    editTemplate?.dueMinutes ?? "",
+  );
   const [operatorId, setOperatorId] = useState(editTemplate?.operatorId || "");
   const [fields, setFields] = useState(
     editTemplate?.schema?.fields || [{ type: "checkbox", label: "" }],
@@ -120,6 +124,8 @@ function TemplateBuilder({
       kioskId: isGlobal ? undefined : kioskId,
       operatorId: operatorId || undefined,
       time: time || undefined,
+      dueTime: dueTime || undefined,
+      dueMinutes: dueMinutes !== "" ? Number(dueMinutes) : undefined,
     };
 
     setSaving(true);
@@ -135,7 +141,7 @@ function TemplateBuilder({
     } catch (err) {
       toast.error(
         err.response?.data?.message ||
-          `Failed to ${isEdit ? "update" : "create"} template`,
+        `Failed to ${isEdit ? "update" : "create"} template`,
       );
     } finally {
       setSaving(false);
@@ -242,6 +248,34 @@ function TemplateBuilder({
               </option>
             ))}
           </select>
+        </div>
+      </div>
+
+      {/* Due Window / Minutes Row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div className="form-field">
+          <label className="modal-label">
+            Due Within (Minutes)
+          </label>
+          <input
+            className="modal-input"
+            type="number"
+            min="1"
+            placeholder="e.g. 30, 45, 60 mins"
+            value={dueMinutes}
+            onChange={(e) => setDueMinutes(e.target.value)}
+          />
+        </div>
+        <div className="form-field">
+          <label className="modal-label">
+            Or Due Time (optional)
+          </label>
+          <input
+            className="modal-input"
+            type="time"
+            value={dueTime}
+            onChange={(e) => setDueTime(e.target.value)}
+          />
         </div>
       </div>
 
@@ -411,7 +445,6 @@ function TaskSubmitForm({ task, onSubmitted }) {
         <label className="modal-label" style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <MdVideocam size={15} style={{ color: "var(--accent)" }} />
           <span>Upload Video Proof</span>
-          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 500 }}>(Vimeo Proof)</span>
         </label>
 
         {videoFile ? (
@@ -471,7 +504,7 @@ function TaskSubmitForm({ task, onSubmitted }) {
               Select video proof of task execution
             </span>
             <span style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: 2 }}>
-              MP4, MOV, WebM (Saved to Vimeo)
+              MP4, MOV, WebM
             </span>
           </label>
         )}
@@ -847,7 +880,21 @@ export default function KioskTasks({ cart, showAudit = false }) {
                       {tpl.time && (
                         <>
                           <span className="contract_row_dot">·</span>
-                          <span>{tpl.time}</span>
+                          <span>Start {tpl.time}</span>
+                        </>
+                      )}
+                      {tpl.dueMinutes && (
+                        <>
+                          <span className="contract_row_dot">·</span>
+                          <span style={{ color: "var(--accent)", fontWeight: 600 }}>
+                            {tpl.dueMinutes}m window
+                          </span>
+                        </>
+                      )}
+                      {tpl.dueTime && (
+                        <>
+                          <span className="contract_row_dot">·</span>
+                          <span>Due {tpl.dueTime}</span>
                         </>
                       )}
                       {tpl.operator?.user?.fullName && (

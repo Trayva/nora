@@ -360,8 +360,9 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
   const [templateName, setTemplateName] = useState("");
   const [templateDesc, setTemplateDesc] = useState("");
   const [templateType, setTemplateType] = useState("CHECKLIST");
-  const [templateRecurrence, setTemplateRecurrence] = useState("DAILY");
   const [templateTime, setTemplateTime] = useState("");
+  const [templateDueMinutes, setTemplateDueMinutes] = useState("");
+  const [templateDueTime, setTemplateDueTime] = useState("");
   const [templateFields, setTemplateFields] = useState([{ type: "checkbox", label: "" }]);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [deletingTemplate, setDeletingTemplate] = useState(null);
@@ -604,6 +605,7 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
   const resetTemplateForm = () => {
     setTemplateName(""); setTemplateDesc(""); setTemplateType("CHECKLIST");
     setTemplateRecurrence("DAILY"); setTemplateTime("");
+    setTemplateDueMinutes(""); setTemplateDueTime("");
     setTemplateFields([{ type: "checkbox", label: "" }]);
     setEditingTemplate(null); setShowTemplateForm(false);
   };
@@ -613,7 +615,17 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
     const validFields = templateFields.filter((f) => f.label.trim());
     if (!validFields.length) return toast.error("Add at least one field");
     setSavingTemplate(true);
-    const payload = { name: templateName.trim(), description: templateDesc.trim() || undefined, type: templateType, recurrence: templateRecurrence, schema: { fields: validFields }, menuItemId: item.id, time: templateTime || undefined };
+    const payload = {
+      name: templateName.trim(),
+      description: templateDesc.trim() || undefined,
+      type: templateType,
+      recurrence: templateRecurrence,
+      schema: { fields: validFields },
+      menuItemId: item.id,
+      time: templateTime || undefined,
+      dueMinutes: templateDueMinutes ? Number(templateDueMinutes) : undefined,
+      dueTime: templateDueTime || undefined,
+    };
     try {
       if (editingTemplate) { await api.patch(`/kiosk/tasks/templates/${editingTemplate.id}`, payload); toast.success("Template updated"); }
       else { await api.post("/kiosk/tasks/templates", payload); toast.success("Template created"); }
@@ -1192,7 +1204,10 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
                   <div className="form-field" style={{ marginBottom: 0 }}><label className="modal-label">Type</label><select className="modal-input" value={templateType} onChange={(e) => setTemplateType(e.target.value)}><option value="CHECKLIST">Checklist</option><option value="LOG">Log</option><option value="PROCESS">Process</option></select></div>
                   <div className="form-field" style={{ marginBottom: 0 }}><label className="modal-label">Recurrence</label><select className="modal-input" value={templateRecurrence} onChange={(e) => setTemplateRecurrence(e.target.value)}><option value="DAILY">Daily</option><option value="PER_SHIFT">Per Shift</option><option value="WEEKLY">Weekly</option><option value="AS_NEEDED">As Needed</option></select></div>
                 </div>
-                <div className="form-field"><label className="modal-label">Scheduled Time (optional)</label><input className="modal-input" type="time" value={templateTime} onChange={(e) => setTemplateTime(e.target.value)} /></div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <div className="form-field"><label className="modal-label">Scheduled Time (optional)</label><input className="modal-input" type="time" value={templateTime} onChange={(e) => setTemplateTime(e.target.value)} /></div>
+                  <div className="form-field"><label className="modal-label">Due Within (Minutes)</label><input className="modal-input" type="number" min="1" placeholder="e.g. 30 mins" value={templateDueMinutes} onChange={(e) => setTemplateDueMinutes(e.target.value)} /></div>
+                </div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}><label className="modal-label" style={{ margin: 0 }}>Fields *</label><button className="biz_icon_btn" onClick={() => setTemplateFields((p) => [...p, { type: "checkbox", label: "" }])}><LuPlus size={13} /></button></div>
                 {templateFields.map((field, i) => (
                   <div key={i} style={{ display: "flex", gap: 6, marginBottom: 6, alignItems: "center" }}>
@@ -1214,7 +1229,7 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
                 ))}
               </div>
             ) : templates.length === 0 && !showTemplateForm ? <div className="biz_empty" style={{ padding: "16px 0" }}><p>No SOPs templates for this menu item yet.</p></div>
-              : <div className="drawer_items_list" style={{ marginTop: 8 }}>{templates.map((tpl) => (<div key={tpl.id} className="recipe_step_row" style={{ opacity: editingTemplate?.id === tpl.id ? 0.4 : 1 }}><div className="recipe_step_info"><span className="recipe_step_id">{tpl.name}</span><span className="recipe_step_instruction">{tpl.type} · {tpl.recurrence}{tpl.time ? ` · ${tpl.time}` : ""}</span></div><span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text-muted)", flexShrink: 0 }}>{tpl.schema?.fields?.length || 0} fields</span><button className="biz_icon_btn" onClick={() => { setEditingTemplate(tpl); setTemplateName(tpl.name); setTemplateDesc(tpl.description || ""); setTemplateType(tpl.type || "CHECKLIST"); setTemplateRecurrence(tpl.recurrence || "DAILY"); setTemplateTime(tpl.time || ""); setTemplateFields(tpl.schema?.fields || [{ type: "checkbox", label: "" }]); setShowTemplateForm(false); }} title="Edit"><LuPencil size={13} /></button><button className="biz_icon_btn biz_icon_btn_danger" onClick={() => handleDeleteTemplate(tpl.id)} disabled={deletingTemplate === tpl.id} style={{ position: "relative" }}>{deletingTemplate === tpl.id ? <span className="btn_loader" style={{ width: 12, height: 12, borderColor: "#ef4444", borderTopColor: "transparent" }} /> : <LuTrash2 size={13} />}</button></div>))}</div>}
+              : <div className="drawer_items_list" style={{ marginTop: 8 }}>{templates.map((tpl) => (<div key={tpl.id} className="recipe_step_row" style={{ opacity: editingTemplate?.id === tpl.id ? 0.4 : 1 }}><div className="recipe_step_info"><span className="recipe_step_id">{tpl.name}</span><span className="recipe_step_instruction">{tpl.type} · {tpl.recurrence}{tpl.time ? ` · ${tpl.time}` : ""}{tpl.dueMinutes ? ` · ${tpl.dueMinutes}m window` : (tpl.dueTime ? ` · Due ${tpl.dueTime}` : "")}</span></div><span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text-muted)", flexShrink: 0 }}>{tpl.schema?.fields?.length || 0} fields</span><button className="biz_icon_btn" onClick={() => { setEditingTemplate(tpl); setTemplateName(tpl.name); setTemplateDesc(tpl.description || ""); setTemplateType(tpl.type || "CHECKLIST"); setTemplateRecurrence(tpl.recurrence || "DAILY"); setTemplateTime(tpl.time || ""); setTemplateDueMinutes(tpl.dueMinutes ?? ""); setTemplateDueTime(tpl.dueTime || ""); setTemplateFields(tpl.schema?.fields || [{ type: "checkbox", label: "" }]); setShowTemplateForm(false); }} title="Edit"><LuPencil size={13} /></button><button className="biz_icon_btn biz_icon_btn_danger" onClick={() => handleDeleteTemplate(tpl.id)} disabled={deletingTemplate === tpl.id} style={{ position: "relative" }}>{deletingTemplate === tpl.id ? <span className="btn_loader" style={{ width: 12, height: 12, borderColor: "#ef4444", borderTopColor: "transparent" }} /> : <LuTrash2 size={13} />}</button></div>))}</div>}
           </Section>
 
           {/* Tutorial */}
