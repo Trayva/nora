@@ -34,7 +34,7 @@ function pathLabel(pathname) {
   const segments = pathname.replace(/^\/app\/?/, "").split("/").filter(Boolean);
   if (!segments.length) return { section: "Dashboard", sub: null };
   const labels = {
-    "kiosk-home": "Kitchens", finance: "Finance", business: "My Business",
+    "kiosk-home": "Outlets", finance: "Finance", business: "My Business",
     supplier: "Supplier", operator: "Operator", aggregator: "Aggregator",
     admin: "Admin", settings: "Account", profile: "Profile",
   };
@@ -55,7 +55,7 @@ function greeting() {
 function getMobileTabs(role) {
   const base = [
     { id: "finance", label: "Finance", icon: MdOutlineBarChart, path: "/app/finance" },
-    { id: "kiosk", label: "Kitchens", icon: MdOutlineKitchen, path: "/app/kiosk-home" },
+    { id: "kiosk", label: "Outlets", icon: MdOutlineKitchen, path: "/app/kiosk-home" },
     { id: "profile", label: "Profile", icon: MdOutlinePerson, path: "/app/profile" },
   ];
 
