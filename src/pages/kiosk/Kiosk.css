@@ -1444,6 +1444,13 @@
   flex: 1;
 }
 
+.kiosk_task_badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .kiosk_task_icon {
   width: 30px;
   height: 30px;
@@ -1475,6 +1482,97 @@
   font-weight: 500;
   margin-top: 2px;
   flex-wrap: wrap;
+}
+
+/* ── Task Timing Schedule Grid & Proof ── */
+.task_schedule_grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.task_schedule_cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.task_schedule_label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.task_schedule_val {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task_video_proof_card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(203, 108, 220, 0.06);
+  border: 1px solid rgba(203, 108, 220, 0.25);
+  border-radius: 10px;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .kiosk_task_card_top {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .kiosk_task_card_left {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .kiosk_task_badges {
+    width: 100%;
+    justify-content: space-between;
+    padding-top: 4px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.06);
+  }
+
+  .task_schedule_grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .task_schedule_cell_full {
+    grid-column: span 2;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+
+  .task_video_proof_card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .task_video_proof_card .app_btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .kiosk_task_expanded {

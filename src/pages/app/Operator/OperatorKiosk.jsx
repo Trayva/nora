@@ -27,7 +27,16 @@ import {
   MdHistory,
   MdRemoveCircleOutline,
   MdArrowForward,
+  MdVideocam,
+  MdCloudUpload,
+  MdDelete,
 } from "react-icons/md";
+import {
+  TaskTimingScoreBadge,
+  TaskTimingScheduleSection,
+  TaskVideoProofCard,
+  formatTaskDateShort,
+} from "../../../utils/taskTiming";
 import { LuStore } from "react-icons/lu";
 import {
   AreaChart,
@@ -133,19 +142,43 @@ function TaskSubmitForm({ task, onSubmitted }) {
       schema.map((f) => [f.label, f.type === "checkbox" ? false : ""]),
     ),
   );
+  const [videoFile, setVideoFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const handleVideoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("video/")) {
+        return toast.error("Please upload a valid video file (MP4, MOV, WebM, etc.)");
+      }
+      setVideoFile(file);
+    }
+  };
+
+  const removeVideo = () => {
+    setVideoFile(null);
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      await api.patch(`/kiosk/tasks/${task.id}/submit`, { data: formData });
-      toast.success("Task submitted");
+      const payload = new FormData();
+      payload.append("data", JSON.stringify(formData));
+      if (videoFile) {
+        payload.append("video", videoFile);
+      }
+      await api.patch(`/kiosk/tasks/${task.id}/submit`, payload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Task completed successfully");
       onSubmitted();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to submit");
+      toast.error(err.response?.data?.message || "Failed to submit task");
     } finally {
       setSubmitting(false);
     }
   };
+
   return (
     <div
       style={{
@@ -184,13 +217,86 @@ function TaskSubmitForm({ task, onSubmitted }) {
           )}
         </div>
       ))}
+
+      {/* Video Proof Upload */}
+      <div className="form-field" style={{ marginTop: 4 }}>
+        <label className="modal-label" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <MdVideocam size={15} style={{ color: "var(--accent)" }} />
+          <span>Video Proof</span>
+          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 500 }}>(MP4, MOV, WebM)</span>
+        </label>
+        {videoFile ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "9px 12px",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+              <MdVideocam size={18} style={{ color: "var(--accent)", flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: "0.76rem", fontWeight: 600, color: "var(--text-body)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {videoFile.name}
+                </div>
+                <div style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>
+                  {(videoFile.size / (1024 * 1024)).toFixed(1)} MB
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={removeVideo}
+              className="app_btn app_btn_cancel"
+              style={{ height: 26, padding: "0 8px", fontSize: "0.7rem", color: "#ef4444" }}
+            >
+              <MdDelete size={13} /> Remove
+            </button>
+          </div>
+        ) : (
+          <label
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "16px",
+              border: "1px dashed var(--border)",
+              borderRadius: 8,
+              cursor: "pointer",
+              background: "var(--bg-card)",
+            }}
+          >
+            <input
+              type="file"
+              accept="video/mp4,video/quicktime,video/webm,video/x-msvideo"
+              onChange={handleVideoChange}
+              style={{ display: "none" }}
+            />
+            <MdCloudUpload size={22} style={{ color: "var(--text-muted)", marginBottom: 4 }} />
+            <span style={{ fontSize: "0.76rem", fontWeight: 600, color: "var(--text-body)" }}>
+              Upload video proof of completed task
+            </span>
+            <span style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: 2 }}>
+              MP4, MOV, WebM (Saved to Vimeo)
+            </span>
+          </label>
+        )}
+      </div>
+
       <button
         className={`app_btn app_btn_confirm${submitting ? " btn_loading" : ""}`}
-        style={{ height: 40, position: "relative" }}
+        style={{ height: 40, position: "relative", marginTop: 6 }}
         onClick={handleSubmit}
         disabled={submitting}
       >
-        <span className="btn_text">Submit Task</span>
+        <span className="btn_text">
+          {submitting ? "Uploading Video & Submitting..." : "Submit Task"}
+        </span>
         {submitting && (
           <span className="btn_loader" style={{ width: 14, height: 14 }} />
         )}
@@ -214,40 +320,52 @@ function TaskCard({ task, onRefresh }) {
       }}
     >
       <div
+        className="kiosk_task_card_top"
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "13px 14px",
+          padding: "12px 14px",
           cursor: "pointer",
         }}
         onClick={() => setExpanded((v) => !v)}
       >
-        <div className="kiosk_task_icon">
-          <MdTask size={14} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="kiosk_task_name">
-            {task.template?.name || task.name || "Task"}
+        <div className="kiosk_task_card_left">
+          <div className="kiosk_task_icon">
+            <MdTask size={14} />
           </div>
-          <div className="kiosk_task_meta">
-            {task.template?.recurrence && (
-              <span>{task.template.recurrence}</span>
-            )}
-            {task.dueAt && (
-              <>
-                <span className="contract_row_dot">·</span>
-                <span>Due {fmtDate(task.dueAt)}</span>
-              </>
-            )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="kiosk_task_name">
+              {task.template?.name || task.name || "Task"}
+            </div>
+            <div className="kiosk_task_meta">
+              {task.template?.recurrence && (
+                <span>{task.template.recurrence}</span>
+              )}
+              {task.completedAt ? (
+                <>
+                  <span className="contract_row_dot">·</span>
+                  <span style={{ color: "var(--accent)", fontWeight: 600 }}>
+                    Done {formatTaskDateShort(task.completedAt)}
+                  </span>
+                </>
+              ) : (task.dueDate || task.dueAt) ? (
+                <>
+                  <span className="contract_row_dot">·</span>
+                  <span>Due {formatTaskDateShort(task.dueDate || task.dueAt)}</span>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
-        <StatusChip status={task.status} />
-        {expanded ? (
-          <MdExpandLess size={16} style={{ color: "var(--text-muted)" }} />
-        ) : (
-          <MdExpandMore size={16} style={{ color: "var(--text-muted)" }} />
-        )}
+        <div className="kiosk_task_badges">
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <TaskTimingScoreBadge task={task} />
+            <StatusChip status={task.status} />
+          </div>
+          {expanded ? (
+            <MdExpandLess size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+          ) : (
+            <MdExpandMore size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+          )}
+        </div>
       </div>
       {expanded && (
         <div
@@ -256,8 +374,16 @@ function TaskCard({ task, onRefresh }) {
             borderTop: "1px solid var(--border)",
           }}
         >
+          {/* Detailed Schedule, Due Date, Completed At and Timing Score */}
+          <div style={{ marginTop: 12 }}>
+            <TaskTimingScheduleSection task={task} />
+          </div>
+
+          {/* Show Video Proof if attached */}
+          {task.videoUrl && <TaskVideoProofCard videoUrl={task.videoUrl} />}
+
           {task.data && Object.keys(task.data).length > 0 && (
-            <div className="kiosk_task_data" style={{ marginTop: 12 }}>
+            <div className="kiosk_task_data" style={{ marginTop: 10 }}>
               {Object.entries(task.data).map(([k, v]) => (
                 <div key={k} className="kiosk_task_data_row">
                   <span className="kiosk_meta_key">{k}</span>

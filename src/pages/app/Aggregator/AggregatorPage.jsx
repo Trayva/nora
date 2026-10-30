@@ -28,6 +28,12 @@ import {
 } from "react-icons/md";
 import { LuShoppingCart } from "react-icons/lu";
 import { TbGridDots } from "react-icons/tb";
+import {
+  TaskTimingScoreBadge,
+  TaskTimingScheduleSection,
+  TaskVideoProofCard,
+  formatTaskDateShort,
+} from "../../../utils/taskTiming";
 
 /* ── helpers ── */
 const fmtDate = (d) =>
@@ -309,45 +315,69 @@ function TaskCard({ task }) {
       }}
     >
       <div
+        className="kiosk_task_card_top"
         style={{
-          display: "flex", alignItems: "center", gap: 10,
-          padding: "13px 14px", cursor: "pointer",
+          padding: "12px 14px",
+          cursor: "pointer",
         }}
         onClick={() => setExpanded((v) => !v)}
       >
-        <div
-          style={{
-            width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-            background: "var(--bg-hover)", border: "1px solid var(--border)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}
-        >
-          <MdTask size={14} style={{ color: "var(--text-muted)" }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-body)", marginBottom: 2 }}>
-            {task.template?.name || task.name || "Task"}
+        <div className="kiosk_task_card_left">
+          <div
+            style={{
+              width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+              background: "var(--bg-hover)", border: "1px solid var(--border)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <MdTask size={14} style={{ color: "var(--text-muted)" }} />
           </div>
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            {task.template?.recurrence && (
-              <span style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>{task.template.recurrence}</span>
-            )}
-            {task.dueAt && (
-              <span style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>
-                · Due {fmtDate(task.dueAt)}
-              </span>
-            )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-body)", marginBottom: 2 }}>
+              {task.template?.name || task.name || "Task"}
+            </div>
+            <div className="kiosk_task_meta">
+              {task.template?.recurrence && (
+                <span>{task.template.recurrence}</span>
+              )}
+              {task.completedAt ? (
+                <>
+                  <span className="contract_row_dot">·</span>
+                  <span style={{ color: "var(--accent)", fontWeight: 600 }}>
+                    Done {formatTaskDateShort(task.completedAt)}
+                  </span>
+                </>
+              ) : (task.dueDate || task.dueAt) ? (
+                <>
+                  <span className="contract_row_dot">·</span>
+                  <span>Due {formatTaskDateShort(task.dueDate || task.dueAt)}</span>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
-        <StatusBadge status={task.status} />
-        {expanded
-          ? <MdExpandLess size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-          : <MdExpandMore size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-        }
+        <div className="kiosk_task_badges">
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <TaskTimingScoreBadge task={task} />
+            <StatusBadge status={task.status} />
+          </div>
+          {expanded
+            ? <MdExpandLess size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+            : <MdExpandMore size={16} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+          }
+        </div>
       </div>
 
       {expanded && (
         <div style={{ padding: "0 14px 14px", borderTop: "1px solid var(--border)" }}>
+          {/* Detailed Schedule, Due Date, Completed At and Timing Score */}
+          <div style={{ marginTop: 12 }}>
+            <TaskTimingScheduleSection task={task} />
+          </div>
+
+          {/* Show Video Proof if attached */}
+          {task.videoUrl && <TaskVideoProofCard videoUrl={task.videoUrl} />}
+
           {task.data && Object.keys(task.data).length > 0 && (
             <div style={{ marginTop: 12 }}>
               <div style={{ fontSize: "0.62rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: 8 }}>
