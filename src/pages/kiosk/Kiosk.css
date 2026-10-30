@@ -2165,3 +2165,409 @@
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* ── Create Brand Outlet Flow ────────────────────────────────── */
+.create_outlet_wrapper {
+  max-width: 960px;
+  margin: 0 auto;
+  padding-bottom: 60px;
+}
+
+.create_outlet_back_btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 0;
+  margin-bottom: 12px;
+  transition: color 0.15s ease;
+}
+
+.create_outlet_back_btn:hover {
+  color: var(--accent);
+}
+
+.create_outlet_header {
+  margin-bottom: 24px;
+}
+
+.create_outlet_title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--text-heading);
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+
+.create_outlet_sub {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Stepper Bar */
+.create_outlet_stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 28px;
+  background: var(--bg-hover);
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.create_outlet_step_item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.create_outlet_step_item.active {
+  background: var(--bg-card);
+  color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.create_outlet_step_item.completed {
+  color: #16a34a;
+}
+
+.create_outlet_step_num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg-active);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.create_outlet_step_item.active .create_outlet_step_num {
+  background: var(--accent);
+  color: #fff;
+}
+
+.create_outlet_step_item.completed .create_outlet_step_num {
+  background: #16a34a;
+  color: #fff;
+}
+
+/* Outlet Type Selector Grid */
+.outlet_types_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.outlet_type_card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.outlet_type_card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(203, 108, 220, 0.4);
+  box-shadow: 0 8px 24px rgba(203, 108, 220, 0.08);
+}
+
+.outlet_type_card.selected {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, var(--bg-active) 0%, var(--bg-card) 100%);
+  box-shadow: 0 0 0 1px var(--accent), 0 8px 24px rgba(203, 108, 220, 0.15);
+}
+
+.outlet_type_icon_wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  background: var(--bg-active);
+  color: var(--accent);
+}
+
+.outlet_type_name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  margin: 0 0 6px;
+}
+
+.outlet_type_desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0 0 14px;
+  flex-grow: 1;
+}
+
+/* Menu Grid */
+.brand_menu_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.brand_menu_card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand_menu_card:hover {
+  border-color: rgba(203, 108, 220, 0.3);
+  transform: translateY(-2px);
+}
+
+.brand_menu_card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(203, 108, 220, 0.12);
+}
+
+.brand_menu_img_wrap {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  background: var(--bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.brand_menu_img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.brand_menu_body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: 4px;
+}
+
+.brand_menu_title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brand_menu_cat {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.brand_menu_price {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin-top: auto;
+}
+
+.brand_menu_check_wrap {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  transition: transform 0.15s ease;
+}
+
+.brand_menu_card.selected .brand_menu_check_wrap {
+  transform: scale(1.08);
+}
+
+.step_label_desktop {
+  display: inline;
+}
+
+.step_label_mobile {
+  display: none;
+}
+
+.create_outlet_grid_2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+/* ── Create Brand Outlet Mobile Responsiveness ─────────────────── */
+@media (max-width: 640px) {
+  .create_outlet_wrapper {
+    padding-bottom: 40px;
+  }
+
+  .create_outlet_header {
+    margin-bottom: 16px;
+  }
+
+  .create_outlet_title {
+    font-size: 1.25rem;
+  }
+
+  .create_outlet_sub {
+    font-size: 0.78rem;
+  }
+
+  /* Stepper on mobile */
+  .create_outlet_stepper {
+    gap: 4px;
+    padding: 6px 8px;
+    margin-bottom: 20px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .create_outlet_step_item {
+    padding: 5px 8px;
+    font-size: 0.72rem;
+    gap: 5px;
+  }
+
+  .step_label_desktop {
+    display: none;
+  }
+
+  .step_label_mobile {
+    display: inline;
+    font-size: 0.72rem;
+  }
+
+  .create_outlet_step_num {
+    width: 18px;
+    height: 18px;
+    font-size: 0.62rem;
+  }
+
+  /* Outlet types grid on mobile */
+  .outlet_types_grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .outlet_type_card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .outlet_type_icon_wrap {
+    width: 38px;
+    height: 38px;
+    margin-bottom: 10px;
+  }
+
+  .outlet_type_name {
+    font-size: 0.95rem;
+  }
+
+  /* Compact 2-column menu grid on mobile instead of 1 full-width card */
+  .brand_menu_grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .brand_menu_card {
+    border-radius: 12px;
+  }
+
+  .brand_menu_img_wrap {
+    height: 95px;
+  }
+
+  .brand_menu_body {
+    padding: 8px 10px;
+    gap: 2px;
+  }
+
+  .brand_menu_title {
+    font-size: 0.78rem;
+  }
+
+  .brand_menu_cat {
+    font-size: 0.62rem;
+  }
+
+  .brand_menu_price {
+    font-size: 0.78rem;
+  }
+
+  .brand_menu_check_wrap {
+    top: 6px;
+    right: 6px;
+  }
+
+  .create_outlet_grid_2 {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .brand_menu_grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .brand_menu_img_wrap {
+    height: 80px;
+  }
+
+  .brand_menu_body {
+    padding: 6px 8px;
+  }
+
+  .brand_menu_title {
+    font-size: 0.74rem;
+  }
+
+  .brand_menu_price {
+    font-size: 0.74rem;
+  }
+}

@@ -207,17 +207,17 @@ export default function KioskHome() {
       {/* Page header */}
       <div className="kiosk_page_header">
         <div>
-          <h2 className="page_title_big m-0">Outlets</h2>
-          <p className="welcome_message" style={{ marginBottom: 0 }}>
-            Purchase and manage your franchise
-          </p>
+          {isBrand ? null : <><h2 className="page_title_big m-0">Outlets</h2>
+            <p className="welcome_message" style={{ marginBottom: 0 }}>
+              Purchase and manage your franchise
+            </p></>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
             className="kiosk_franchise_add_btn"
-            onClick={() => navigate("/app/purchase-kiosk?tab=franchise")}
-            title="Buy Franchise"
-            aria-label="Buy Franchise"
+            onClick={() => navigate(isBrand ? "/app/create-outlet" : "/app/purchase-kiosk?tab=franchise")}
+            title={isBrand ? "Create Brand Outlet" : "Buy Franchise"}
+            aria-label={isBrand ? "Create Brand Outlet" : "Buy Franchise"}
           >
             <MdAdd size={22} />
           </button>
@@ -240,7 +240,10 @@ export default function KioskHome() {
           <button
             type="button"
             className={`kiosk_scope_btn ${activeScope === "my_outlets" ? "active" : ""}`}
-            onClick={() => setActiveScope("my_outlets")}
+            onClick={() => {
+              setActiveScope("my_outlets");
+              setIsFranchiseeDrawer(false);
+            }}
           >
             <LuStore size={16} />
             <span>My Outlets</span>
@@ -363,8 +366,8 @@ export default function KioskHome() {
                                 ? "#6366f1"
                                 : "#16a34a",
                             border: `1px solid ${outletTypeLabel === "Cloud Kitchen"
-                                ? "rgba(99,102,241,0.3)"
-                                : "rgba(34,197,94,0.3)"
+                              ? "rgba(99,102,241,0.3)"
+                              : "rgba(34,197,94,0.3)"
                               }`,
                             display: "inline-flex",
                             alignItems: "center",
@@ -768,7 +771,7 @@ export default function KioskHome() {
           )}
 
           {/* ── Contract Applications ── */}
-          <div
+          {/* <div
             className="kiosk_section_label_row kiosk_section_label_row_clickable"
             onClick={() => setContractsOpen((v) => !v)}
           >
@@ -879,15 +882,15 @@ export default function KioskHome() {
                   );
                 })}
               </div>
-            ))}
+            ))} */}
         </>
       )}
 
       {/* Contract drawer */}
-      <ContractDrawer
+      {/* <ContractDrawer
         contract={selectedContract}
         onClose={() => setSelectedContract(null)}
-      />
+      /> */}
 
       {/* Kiosk detail drawer */}
       <KioskDrawer
@@ -899,11 +902,10 @@ export default function KioskHome() {
           setIsFranchiseeDrawer(false);
         }}
         onUpdate={handleKioskUpdate}
-        isBrandView={
-          isFranchiseeDrawer ||
-          activeScope === "franchisees" ||
-          franchiseeKiosks.some((k) => k.id === selectedKioskId)
-        }
+        isBrandView={Boolean(
+          activeScope === "franchisees" &&
+          (isFranchiseeDrawer || !kiosks.some((k) => k.id === selectedKioskId))
+        )}
       />
     </div>
   );

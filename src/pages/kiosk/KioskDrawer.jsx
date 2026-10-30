@@ -69,18 +69,17 @@ export default function KioskDrawer({ kioskId, onClose, onUpdate, isBrandView = 
     <Drawer
       isOpen={!!kioskId}
       onClose={onClose}
-      title={cart ? cart.serialNumber : "Kitchen Details"}
+      title={cart ? cart.serialNumber : "Outlet Details"}
       description={
         cart
-          ? `${cart.location?.name || "No location assigned"}${
-              (cart.kitchenType || cart.outletType)
-                ? ` · ${(cart.kitchenType === "CLOUD" || cart.outletType === "CLOUD_KITCHEN" || cart.outletType === "CLOUD")
-                    ? "Cloud Kitchen"
-                    : (cart.kitchenType === "STORE_FRONT" || cart.outletType === "STORE_FRONT")
-                      ? "Store Front"
-                      : "Physical Kiosk"}`
-                : ""
-            }`
+          ? `${cart.location?.name || "No location assigned"}${(cart.kitchenType || cart.outletType)
+            ? ` · ${(cart.kitchenType === "CLOUD" || cart.outletType === "CLOUD_KITCHEN" || cart.outletType === "CLOUD")
+              ? "Cloud Kitchen"
+              : (cart.kitchenType === "STORE_FRONT" || cart.outletType === "STORE_FRONT")
+                ? "Store Front"
+                : "Physical Kiosk"}`
+            : ""
+          }`
           : ""
       }
       width={520}

@@ -170,6 +170,7 @@ import Landing from "../pages/website/Landing";
 import NotFound from "../pages/NotFound";
 import KioskHome from "../pages/kiosk/KioskHome";
 import PurchaseKiosk from "../pages/kiosk/PurchaseKiosk";
+import CreateBrandOutlet from "../pages/kiosk/CreateBrandOutlet";
 import Invoices from "../pages/incoices/Invoices";
 import Business from "../pages/app/Business";
 import ConceptPage from "../pages/app/Business/ConceptPage";
@@ -295,6 +296,7 @@ export default function Routes() {
         { path: "finance", element: <Wallet /> },
         { path: "kiosk-home", element: <KioskHome /> },
         { path: "purchase-kiosk", element: <PurchaseKiosk /> },
+        { path: "create-outlet", element: <CreateBrandOutlet /> },
         { path: "invoices", element: <Invoices /> },
         { path: "business", element: <Business /> },
         { path: "supplier", element: <SupplierHome /> },
