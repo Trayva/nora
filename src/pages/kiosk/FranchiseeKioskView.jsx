@@ -46,6 +46,7 @@ import Modal from "../../components/Modal";
 import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 import KioskTasks from "./KioskTasks";
 import KioskReports from "./KioskReports";
+import SopComplianceAudit from "./SopComplianceAudit";
 
 const BRAND_DRAWER_TABS = [
   { key: "overview", label: "Format & Status", icon: MdStorefront },
@@ -858,29 +859,11 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
       {/* ── TAB 3: SOPS COMPLIANCE ── */}
       {activeTab === "tasks" && (
         <div>
-          <div
-            style={{
-              padding: "14px 16px",
-              borderRadius: "12px",
-              background: "rgba(99,102,241,0.08)",
-              border: "1px solid rgba(99,102,241,0.2)",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 16,
-            }}
-          >
-            <MdCheckCircle size={22} color="#6366f1" style={{ flexShrink: 0 }} />
-            <div>
-              <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--text-heading)" }}>
-                Brand Standard Operating Procedures (SOPs)
-              </div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                Monitor hygiene, safety, opening/closing checklists and operator compliance records.
-              </div>
-            </div>
-          </div>
-
+          <SopComplianceAudit
+            cart={cart}
+            onNavigateTab={setActiveTab}
+            showActions={true}
+          />
           <KioskTasks cart={cart} />
         </div>
       )}

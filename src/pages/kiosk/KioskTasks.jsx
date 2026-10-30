@@ -14,6 +14,7 @@ import {
   MdEdit,
 } from "react-icons/md";
 import api from "../../api/axios";
+import SopComplianceAudit from "./SopComplianceAudit";
 
 /* ── helpers ───────────────────────────────────────────────── */
 const taskStatusColors = {
@@ -566,7 +567,7 @@ function TaskCard({ task, onRefresh }) {
 }
 
 /* ── Main KioskTasks ───────────────────────────────────────── */
-export default function KioskTasks({ cart }) {
+export default function KioskTasks({ cart, showAudit = false }) {
   const [view, setView] = useState("pending"); // pending | ledger | templates | newTemplate
   const [tasks, setTasks] = useState([]);
   const [ledger, setLedger] = useState([]);
@@ -624,6 +625,9 @@ export default function KioskTasks({ cart }) {
 
   return (
     <div className="kiosk_tab_content">
+      {/* Optional SOP Compliance Audit Overview */}
+      {showAudit && <SopComplianceAudit cart={cart} showActions={false} />}
+
       {/* Sub-nav */}
       <div className="kiosk_sub_nav">
         {subViews.map((sv) => (

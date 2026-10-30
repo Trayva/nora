@@ -137,7 +137,7 @@ export default function KioskDrawer({ kioskId, onClose, onUpdate, isBrandView = 
               onRefresh={fetchCart}
             />
           )}
-          {activeTab === "tasks" && <KioskTasks cart={cart} />}
+          {activeTab === "tasks" && <KioskTasks cart={cart} showAudit={true} />}
           {activeTab === "workforce" && (
             <KioskWorkforce cart={cart} onRefresh={fetchCart} />
           )}
