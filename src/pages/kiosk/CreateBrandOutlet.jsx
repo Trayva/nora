@@ -247,11 +247,83 @@ export default function CreateBrandOutlet() {
           );
           const geo = await r.json();
           const a = geo.address || {};
+          const detectedStateName = a.state || a.province || a.region || "";
+          const detectedCityName = a.city || a.town || a.village || a.county || a.state_district || "";
+          const fullDisplayName = geo.display_name || "";
+
+          // Smart matching for state from states list
+          const clean = (s) =>
+            String(s || "")
+              .toLowerCase()
+              .replace(/state/gi, "")
+              .replace(/federal capital territory/gi, "fct abuja")
+              .replace(/[^a-z0-9]/g, "");
+
+          let matchedState = null;
+          if (states.length > 0) {
+            const cleanState = clean(detectedStateName);
+            const cleanCity = clean(detectedCityName);
+            const cleanDisplay = clean(fullDisplayName);
+
+            // 1. Exact match on cleaned state name or code
+            matchedState = states.find((s) => {
+              const cs = clean(s.name);
+              const cc = clean(s.code);
+              return (
+                (cs && cleanState && (cs === cleanState || cleanState.includes(cs) || cs.includes(cleanState))) ||
+                (cc && cleanState && cc === cleanState)
+              );
+            });
+
+            // 2. If not matched, try matching against detected city / state_district
+            if (!matchedState && cleanCity) {
+              matchedState = states.find((s) => {
+                const cs = clean(s.name);
+                const cc = clean(s.code);
+                return (
+                  (cs && (cs === cleanCity || cleanCity.includes(cs) || cs.includes(cleanCity))) ||
+                  (cc && cc === cleanCity)
+                );
+              });
+            }
+
+            // 3. Special handling for Abuja / FCT
+            if (!matchedState) {
+              const isFCT =
+                cleanDisplay.includes("abuja") ||
+                cleanDisplay.includes("fct") ||
+                cleanState.includes("fct") ||
+                cleanState.includes("abuja") ||
+                cleanCity.includes("abuja");
+              if (isFCT) {
+                matchedState = states.find((s) => {
+                  const cs = clean(s.name);
+                  const cc = clean(s.code);
+                  return (
+                    cs.includes("abuja") ||
+                    cs.includes("fct") ||
+                    cc === "abj" ||
+                    cc === "fct"
+                  );
+                });
+              }
+            }
+
+            // 4. Fallback search: any state whose clean name appears in full display_name
+            if (!matchedState) {
+              matchedState = states.find((s) => {
+                const cs = clean(s.name);
+                return cs && cs.length >= 3 && cleanDisplay.includes(cs);
+              });
+            }
+          }
 
           setLocationForm((p) => ({
             ...p,
             latitude: latitude.toFixed(6),
             longitude: longitude.toFixed(6),
+            stateId: matchedState ? matchedState.id : p.stateId,
+            country: matchedState?.country || p.country,
             name:
               p.name ||
               a.neighbourhood ||
@@ -265,10 +337,15 @@ export default function CreateBrandOutlet() {
               [a.road, a.house_number].filter(Boolean).join(" ") ||
               geo.display_name?.split(",")[0] ||
               "",
-            city: p.city || a.city || a.town || a.village || a.county || "",
-            lga: p.lga || a.county || a.state_district || a.suburb || "",
+            city: a.city || a.town || a.village || a.county || p.city || "",
+            lga: a.county || a.state_district || a.suburb || p.lga || "",
           }));
-          toast.success("Coordinates and address auto-detected!");
+
+          if (matchedState) {
+            toast.success(`Location and state (${matchedState.name}) auto-detected!`);
+          } else {
+            toast.success("Coordinates and address auto-detected!");
+          }
         } catch {
           toast.success("GPS coordinates detected!");
         } finally {
