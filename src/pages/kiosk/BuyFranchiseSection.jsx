@@ -270,7 +270,7 @@ export default function BuyFranchiseSection() {
 
           let profitMargin = null;
           if (cost != null && price != null && Number(cost) > 0) {
-            profitMargin = ((Number(price) - Number(cost)) / Number(cost)) * 100;
+            profitMargin = ((Number(price) - Number(cost)) / Number(price)) * 100;
           }
 
           return {
