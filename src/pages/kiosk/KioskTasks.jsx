@@ -296,7 +296,7 @@ function TodoTaskBuilder({
       {/* Due Window / Minutes Row */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div className="form-field">
-          <label className="modal-label">Due Within (Minutes)</label>
+          <label className="modal-label">Duration (Minutes)</label>
           <input
             className="modal-input"
             type="number"
@@ -322,7 +322,7 @@ function TodoTaskBuilder({
         className="drawer_section_title"
         style={{ display: "flex", alignItems: "center" }}
       >
-        <span>Instructions / Fields</span>
+        <span>Instructions</span>
         <button
           className="kiosk_icon_action_btn"
           style={{ marginLeft: "auto" }}
