@@ -229,7 +229,7 @@ export default function TaskVideoRecorder({
           <div className="livelens_title_group">
             <span className="livelens_dot" />
             <div>
-              <div className="livelens_brand">Livelens</div>
+              <div className="livelens_brand">NORA</div>
               <p className="livelens_subtitle">
                 {previewUrl ? "Review task video proof" : `Capture ${taskTitle}`}
               </p>
@@ -375,9 +375,8 @@ export default function TaskVideoRecorder({
             {/* Shutter / Record Trigger */}
             <button
               type="button"
-              className={`livelens_shutter_ring ${
-                isRecording ? "livelens_shutter_recording" : ""
-              }`}
+              className={`livelens_shutter_ring ${isRecording ? "livelens_shutter_recording" : ""
+                }`}
               onClick={isRecording ? handleStopRecording : handleStartRecording}
               title={isRecording ? "Stop Recording" : "Start Recording"}
             >
