@@ -486,7 +486,7 @@ function TemplateBuilder({
             color: "var(--text-heading)",
           }}
         >
-          {isEdit ? "Edit Template" : "New Template"}
+          {isEdit ? "Edit SOP" : "New SOP"}
         </span>
         {isEdit && onCancelEdit && (
           <button className="kiosk_icon_action_btn" onClick={onCancelEdit}>
@@ -496,7 +496,7 @@ function TemplateBuilder({
       </div>
 
       <div className="form-field">
-        <label className="modal-label">Template Name *</label>
+        <label className="modal-label">SOP Name *</label>
         <input
           className="modal-input"
           value={name}
