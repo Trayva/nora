@@ -16,9 +16,11 @@ import {
   MdCloudUpload,
   MdDelete,
   MdFlashOn,
+  MdRefresh,
 } from "react-icons/md";
 import api from "../../api/axios";
 import SopComplianceAudit from "./SopComplianceAudit";
+import TaskVideoRecorder from "../../components/TaskVideoRecorder";
 import {
   TaskTimingScoreBadge,
   TaskTimingScheduleSection,
@@ -694,6 +696,7 @@ function TaskSubmitForm({ task, onSubmitted }) {
     ),
   );
   const [videoFile, setVideoFile] = useState(null);
+  const [showRecorder, setShowRecorder] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleVideoChange = (e) => {
@@ -772,73 +775,181 @@ function TaskSubmitForm({ task, onSubmitted }) {
 
       {/* Video Proof Section */}
       <div className="form-field" style={{ marginTop: 10 }}>
-        <label className="modal-label" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <MdVideocam size={15} style={{ color: "var(--accent)" }} />
-          <span>Upload Video Proof</span>
+        <label className="modal-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <MdVideocam size={15} style={{ color: "var(--accent)" }} />
+            <span>Task Video Proof</span>
+          </div>
+          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+            MP4, MOV, WebM
+          </span>
         </label>
 
         {videoFile ? (
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "9px 12px",
+              padding: "10px 12px",
               background: "var(--bg-card)",
               border: "1px solid var(--border)",
-              borderRadius: 8,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-              <MdVideocam size={18} style={{ color: "var(--accent)", flexShrink: 0 }} />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: "0.76rem", fontWeight: 600, color: "var(--text-body)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {videoFile.name}
-                </div>
-                <div style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>
-                  {(videoFile.size / (1024 * 1024)).toFixed(1)} MB
-                </div>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={removeVideo}
-              className="app_btn app_btn_cancel"
-              style={{ height: 26, padding: "0 8px", fontSize: "0.7rem", color: "#ef4444" }}
-            >
-              <MdDelete size={13} /> Remove
-            </button>
-          </div>
-        ) : (
-          <label
-            style={{
+              borderRadius: 10,
               display: "flex",
               flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "16px",
-              border: "1px dashed var(--border)",
-              borderRadius: 8,
-              cursor: "pointer",
-              background: "var(--bg-card)",
+              gap: 8,
             }}
           >
-            <input
-              type="file"
-              accept="video/mp4,video/quicktime,video/webm,video/x-msvideo"
-              onChange={handleVideoChange}
-              style={{ display: "none" }}
-            />
-            <MdCloudUpload size={22} style={{ color: "var(--text-muted)", marginBottom: 4 }} />
-            <span style={{ fontSize: "0.76rem", fontWeight: 600, color: "var(--text-body)" }}>
-              Select video proof of task execution
-            </span>
-            <span style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: 2 }}>
-              MP4, MOV, WebM
-            </span>
-          </label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <span
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 6,
+                    background: "rgba(22, 163, 74, 0.12)",
+                    color: "#16a34a",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <MdCheck size={16} />
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: "0.76rem",
+                      fontWeight: 600,
+                      color: "var(--text-body)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {videoFile.name}
+                  </div>
+                  <div style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>
+                    {(videoFile.size / (1024 * 1024)).toFixed(1)} MB · Video proof attached
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowRecorder(true)}
+                  className="app_btn app_btn_cancel"
+                  style={{ height: 26, padding: "0 8px", fontSize: "0.7rem" }}
+                  title="Record again"
+                >
+                  <MdRefresh size={13} /> Re-record
+                </button>
+                <button
+                  type="button"
+                  onClick={removeVideo}
+                  className="app_btn app_btn_cancel"
+                  style={{ height: 26, padding: "0 8px", fontSize: "0.7rem", color: "#ef4444" }}
+                >
+                  <MdDelete size={13} /> Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {/* Record with Livelens camera */}
+            <button
+              type="button"
+              onClick={() => setShowRecorder(true)}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "14px 10px",
+                border: "1px solid var(--accent)",
+                borderRadius: 10,
+                background: "rgba(203, 108, 220, 0.06)",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                gap: 4,
+              }}
+            >
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: "var(--accent)",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 2px 8px rgba(203, 108, 220, 0.4)",
+                }}
+              >
+                <MdVideocam size={18} />
+              </div>
+              <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-heading)", marginTop: 2 }}>
+                Record Video
+              </span>
+              <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                Livelens in-app camera
+              </span>
+            </button>
+
+            {/* Upload file fallback */}
+            <label
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "14px 10px",
+                border: "1px dashed var(--border)",
+                borderRadius: 10,
+                cursor: "pointer",
+                background: "var(--bg-card)",
+                transition: "all 0.2s ease",
+                gap: 4,
+              }}
+            >
+              <input
+                type="file"
+                accept="video/mp4,video/quicktime,video/webm,video/x-msvideo"
+                onChange={handleVideoChange}
+                style={{ display: "none" }}
+              />
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: "var(--bg-hover)",
+                  color: "var(--text-muted)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <MdCloudUpload size={18} />
+              </div>
+              <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-body)", marginTop: 2 }}>
+                Upload Video File
+              </span>
+              <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                From phone or desktop
+              </span>
+            </label>
+          </div>
         )}
       </div>
+
+      {/* Livelens Video Recorder Modal */}
+      <TaskVideoRecorder
+        isOpen={showRecorder}
+        onClose={() => setShowRecorder(false)}
+        onVideoRecorded={(file) => setVideoFile(file)}
+        taskTitle={task.template?.name || "Task Proof"}
+      />
 
       <button
         className={`app_btn app_btn_confirm ${submitting ? "btn_loading" : ""}`}
