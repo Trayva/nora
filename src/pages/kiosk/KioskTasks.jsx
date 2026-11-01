@@ -17,6 +17,7 @@ import {
   MdDelete,
   MdFlashOn,
   MdRefresh,
+  MdNotes,
 } from "react-icons/md";
 import api from "../../api/axios";
 import SopComplianceAudit from "./SopComplianceAudit";
@@ -695,6 +696,7 @@ function TaskSubmitForm({ task, onSubmitted }) {
       schema.map((f) => [f.label, f.type === "checkbox" ? false : ""]),
     ),
   );
+  const [remark, setRemark] = useState("");
   const [videoFile, setVideoFile] = useState(null);
   const [showRecorder, setShowRecorder] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -717,7 +719,12 @@ function TaskSubmitForm({ task, onSubmitted }) {
     setSubmitting(true);
     try {
       const payload = new FormData();
-      payload.append("data", JSON.stringify(formData));
+      const dataToSubmit = { ...formData };
+      if (remark.trim()) {
+        dataToSubmit.remark = remark.trim();
+        payload.append("remark", remark.trim());
+      }
+      payload.append("data", JSON.stringify(dataToSubmit));
       if (videoFile) {
         payload.append("video", videoFile);
       }
@@ -943,6 +950,37 @@ function TaskSubmitForm({ task, onSubmitted }) {
         )}
       </div>
 
+      {/* Operator Remark (Optional) */}
+      <div className="form-field" style={{ marginTop: 12 }}>
+        <label
+          className="modal-label"
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <MdNotes size={15} style={{ color: "var(--accent)" }} />
+            <span>Remark (Optional)</span>
+          </div>
+          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+            Notes or observations
+          </span>
+        </label>
+        <textarea
+          className="modal-input"
+          style={{
+            minHeight: 64,
+            height: 64,
+            resize: "vertical",
+            padding: "8px 10px",
+            fontSize: "0.82rem",
+            lineHeight: 1.4,
+            fontFamily: "inherit",
+          }}
+          value={remark}
+          onChange={(e) => setRemark(e.target.value)}
+          placeholder="Add any notes, observations, or remarks before submitting..."
+        />
+      </div>
+
       {/* Livelens Video Recorder Modal */}
       <TaskVideoRecorder
         isOpen={showRecorder}
@@ -1082,24 +1120,53 @@ function TaskCard({ task, onRefresh }) {
           {task.videoUrl && <TaskVideoProofCard videoUrl={task.videoUrl} />}
 
           {/* Show submitted data */}
-          {task.data && Object.keys(task.data).length > 0 && (
-            <div className="kiosk_task_data" style={{ marginTop: 8 }}>
-              {Object.entries(task.data).map(([k, v]) => (
-                <div key={k} className="kiosk_task_data_row">
-                  <span className="kiosk_meta_key">{k}</span>
-                  <span className="kiosk_meta_val">
-                    {typeof v === "boolean" ? (
-                      v ? (
-                        <MdCheck size={14} style={{ color: "#22c55e" }} />
-                      ) : (
-                        <MdClose size={14} style={{ color: "#ef4444" }} />
-                      )
-                    ) : (
-                      String(v)
-                    )}
-                  </span>
-                </div>
-              ))}
+          {task.data &&
+            Object.keys(task.data).filter(
+              (k) => !["remark", "_remark", "operatorRemark"].includes(k),
+            ).length > 0 && (
+              <div className="kiosk_task_data" style={{ marginTop: 8 }}>
+                {Object.entries(task.data)
+                  .filter(([k]) => !["remark", "_remark", "operatorRemark"].includes(k))
+                  .map(([k, v]) => (
+                    <div key={k} className="kiosk_task_data_row">
+                      <span className="kiosk_meta_key">{k}</span>
+                      <span className="kiosk_meta_val">
+                        {typeof v === "boolean" ? (
+                          v ? (
+                            <MdCheck size={14} style={{ color: "#22c55e" }} />
+                          ) : (
+                            <MdClose size={14} style={{ color: "#ef4444" }} />
+                          )
+                        ) : (
+                          String(v)
+                        )}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+          {/* Operator Remark */}
+          {(task.data?.remark || task.data?._remark || task.operatorRemark) && (
+            <div
+              className="kiosk_operator_comment"
+              style={{
+                marginTop: 8,
+                padding: "10px 12px",
+                borderRadius: 8,
+                background: "rgba(59, 130, 246, 0.08)",
+                border: "1px solid rgba(59, 130, 246, 0.2)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                <MdNotes size={14} style={{ color: "#3b82f6" }} />
+                <span className="kiosk_meta_key" style={{ color: "#3b82f6", fontWeight: 700, fontSize: "0.72rem" }}>
+                  Operator Remark
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--text-body)", whiteSpace: "pre-wrap" }}>
+                {task.data?.remark || task.data?._remark || task.operatorRemark}
+              </p>
             </div>
           )}
 
