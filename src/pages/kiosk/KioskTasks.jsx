@@ -15,6 +15,7 @@ import {
   MdVideocam,
   MdCloudUpload,
   MdDelete,
+  MdFlashOn,
 } from "react-icons/md";
 import api from "../../api/axios";
 import SopComplianceAudit from "./SopComplianceAudit";
@@ -67,6 +68,325 @@ function StatusPill({ status }) {
     >
       {status}
     </span>
+  );
+}
+
+/* ── Instant Todo Task Creator ─────────────────────────────── */
+function TodoTaskBuilder({
+  kioskId,
+  templates = [],
+  recentTasks = [],
+  operators = [],
+  onCreated,
+  onCancel,
+}) {
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [type, setType] = useState("CHECKLIST");
+  const [operatorId, setOperatorId] = useState("");
+  const [time, setTime] = useState("");
+  const [dueTime, setDueTime] = useState("");
+  const [dueMinutes, setDueMinutes] = useState("");
+  const [fields, setFields] = useState([{ type: "checkbox", label: "" }]);
+  const [saving, setSaving] = useState(false);
+
+  // Pre-fill form when an existing template is chosen
+  const handleSelectTemplate = (id) => {
+    setSelectedTemplateId(id);
+    if (!id) {
+      setName("");
+      setDescription("");
+      setType("CHECKLIST");
+      setFields([{ type: "checkbox", label: "" }]);
+      setOperatorId("");
+      setTime("");
+      setDueTime("");
+      setDueMinutes("");
+      return;
+    }
+
+    const tpl =
+      templates.find((t) => t.id === id) ||
+      recentTasks.find((t) => (t.templateId || t.template?.id) === id)?.template;
+
+    if (tpl) {
+      setName(tpl.name || "");
+      setDescription(tpl.description || "");
+      setType(tpl.type || "CHECKLIST");
+      if (tpl.schema?.fields?.length > 0) {
+        setFields(tpl.schema.fields.map((f) => ({ ...f })));
+      } else {
+        setFields([{ type: "checkbox", label: "" }]);
+      }
+      setDueMinutes(tpl.dueMinutes ?? "");
+      setDueTime(tpl.dueTime || "");
+      setOperatorId(tpl.operatorId || "");
+      setTime(tpl.time || "");
+    }
+  };
+
+  const addField = () =>
+    setFields([...fields, { type: "checkbox", label: "" }]);
+  const removeField = (i) => setFields(fields.filter((_, idx) => idx !== i));
+  const updateField = (i, key, val) => {
+    const updated = [...fields];
+    updated[i] = { ...updated[i], [key]: val };
+    setFields(updated);
+  };
+
+  const handleDispatch = async () => {
+    if (!name.trim()) return toast.error("Task name is required");
+    const validFields = fields.filter((f) => f.label.trim());
+    if (!validFields.length) return toast.error("Add at least one instruction / field");
+
+    setSaving(true);
+    try {
+      const payload = {
+        kioskId,
+        templateId: selectedTemplateId || undefined,
+        name: name.trim(),
+        description: description.trim() || undefined,
+        type,
+        schema: { fields: validFields },
+        operatorId: operatorId || undefined,
+        time: time || undefined,
+        dueTime: dueTime || undefined,
+        dueMinutes: dueMinutes !== "" ? Number(dueMinutes) : undefined,
+      };
+
+      await api.post("/kiosk/tasks/todo", payload);
+      toast.success("Task dispatched to operators");
+      onCreated();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to dispatch task");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="kiosk_template_builder">
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 4,
+        }}
+      >
+        <div>
+          <span
+            style={{
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              color: "var(--text-heading)",
+            }}
+          >
+            Create Task (Todo)
+          </span>
+          <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
+            Select an existing template to prefill, or fill out the form per usual.
+          </p>
+        </div>
+        {onCancel && (
+          <button className="kiosk_icon_action_btn" onClick={onCancel} title="Cancel">
+            <MdClose size={14} />
+          </button>
+        )}
+      </div>
+
+      {/* Select Template (optional) */}
+      <div className="form-field">
+        <label className="modal-label">Template (Optional - Select to prefill)</label>
+        <select
+          className="modal-input"
+          value={selectedTemplateId}
+          onChange={(e) => handleSelectTemplate(e.target.value)}
+        >
+          <option value="">-- None --</option>
+          {templates.length > 0 && (
+            <optgroup label="Available SOPs">
+              {templates.map((tpl) => (
+                <option key={tpl.id} value={tpl.id}>
+                  {tpl.name} ({tpl.type}{tpl.recurrence ? ` · ${tpl.recurrence}` : ""})
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {recentTasks.length > 0 && (
+            <optgroup label="Recent Tasks">
+              {recentTasks
+                .filter((t) => t.template?.id && !templates.some((tpl) => tpl.id === t.template.id))
+                .map((t) => (
+                  <option key={t.id} value={t.templateId || t.template.id}>
+                    {t.template?.name || "Task"}
+                  </option>
+                ))}
+            </optgroup>
+          )}
+        </select>
+      </div>
+
+      {/* Task Name */}
+      <div className="form-field">
+        <label className="modal-label">Task Name *</label>
+        <input
+          className="modal-input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Deep clean refrigerator, Check syrups"
+        />
+      </div>
+
+      {/* Description */}
+      <div className="form-field">
+        <label className="modal-label">Description</label>
+        <input
+          className="modal-input"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Optional instructions for operator"
+        />
+      </div>
+
+      {/* Type */}
+      <div className="form-field">
+        <label className="modal-label">Type</label>
+        <select
+          className="modal-input"
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+        >
+          <option value="CHECKLIST">Checklist</option>
+          <option value="LOG">Log</option>
+          <option value="PROCESS">Process</option>
+        </select>
+      </div>
+
+      {/* Time + Operator row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div className="form-field">
+          <label className="modal-label">Scheduled Time (optional)</label>
+          <input
+            className="modal-input"
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          />
+        </div>
+        <div className="form-field">
+          <label className="modal-label">Assign Operator (optional)</label>
+          <select
+            className="modal-input"
+            value={operatorId}
+            onChange={(e) => setOperatorId(e.target.value)}
+          >
+            <option value="">Any operator</option>
+            {operators.map((op) => (
+              <option key={op.id} value={op.id}>
+                {op.user?.fullName || op.user?.email || op.id.slice(0, 8)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Due Window / Minutes Row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div className="form-field">
+          <label className="modal-label">Due Within (Minutes)</label>
+          <input
+            className="modal-input"
+            type="number"
+            min="1"
+            placeholder="e.g. 30, 45, 60 mins"
+            value={dueMinutes}
+            onChange={(e) => setDueMinutes(e.target.value)}
+          />
+        </div>
+        <div className="form-field">
+          <label className="modal-label">Or Due Time (optional)</label>
+          <input
+            className="modal-input"
+            type="time"
+            value={dueTime}
+            onChange={(e) => setDueTime(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Instructions / Fields */}
+      <div
+        className="drawer_section_title"
+        style={{ display: "flex", alignItems: "center" }}
+      >
+        <span>Instructions / Fields</span>
+        <button
+          className="kiosk_icon_action_btn"
+          style={{ marginLeft: "auto" }}
+          onClick={addField}
+        >
+          <MdAdd size={15} />
+        </button>
+      </div>
+
+      <div className="kiosk_fields_list">
+        {fields.map((field, i) => (
+          <div key={i} className="kiosk_field_row">
+            <select
+              className="modal-input"
+              style={{ width: 110, flexShrink: 0 }}
+              value={field.type}
+              onChange={(e) => updateField(i, "type", e.target.value)}
+            >
+              <option value="checkbox">Checkbox</option>
+              <option value="number">Number</option>
+              <option value="text">Text</option>
+            </select>
+            <input
+              className="modal-input"
+              style={{ flex: 1 }}
+              placeholder="Field label / step"
+              value={field.label}
+              onChange={(e) => updateField(i, "label", e.target.value)}
+            />
+            <button
+              className="kiosk_icon_action_btn kiosk_icon_danger"
+              onClick={() => removeField(i)}
+              disabled={fields.length === 1}
+            >
+              <MdClose size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        {onCancel && (
+          <button
+            className="app_btn app_btn_cancel"
+            style={{ width: 90, height: 40 }}
+            onClick={onCancel}
+            disabled={saving}
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
+          style={{ flex: 1, height: 40, position: "relative" }}
+          onClick={handleDispatch}
+          disabled={saving}
+        >
+          <span className="btn_text">Dispatch Task</span>
+          {saving && (
+            <span className="btn_loader" style={{ width: 14, height: 14 }} />
+          )}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -255,7 +575,7 @@ function TemplateBuilder({
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div className="form-field">
           <label className="modal-label">
-            Due Within (Minutes)
+            Duration (Minutes)
           </label>
           <input
             className="modal-input"
@@ -295,7 +615,7 @@ function TemplateBuilder({
         className="drawer_section_title"
         style={{ display: "flex", alignItems: "center" }}
       >
-        <span>Form Fields</span>
+        <span>Instructions</span>
         <button
           className="kiosk_icon_action_btn"
           style={{ marginLeft: "auto" }}
@@ -337,6 +657,16 @@ function TemplateBuilder({
       </div>
 
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        {onCancelEdit && (
+          <button
+            className="app_btn app_btn_cancel"
+            style={{ width: 90, height: 40 }}
+            onClick={onCancelEdit}
+            disabled={saving}
+          >
+            Cancel
+          </button>
+        )}
         <button
           className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
           style={{ flex: 1, height: 40, position: "relative" }}
@@ -723,6 +1053,20 @@ export default function KioskTasks({ cart, showAudit = false }) {
   const [loading, setLoading] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null); // template being edited
 
+  const handleDispatchTemplate = async (tpl) => {
+    try {
+      await api.post("/kiosk/tasks/todo", {
+        kioskId: cart.id,
+        templateId: tpl.id,
+      });
+      toast.success(`Task "${tpl.name}" dispatched to operators`);
+      setView("pending");
+      fetchPending();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to dispatch task");
+    }
+  };
+
   const fetchPending = async () => {
     setLoading(true);
     try {
@@ -763,12 +1107,16 @@ export default function KioskTasks({ cart, showAudit = false }) {
     if (view === "pending") fetchPending();
     else if (view === "ledger") fetchLedger();
     else if (view === "templates") fetchTemplates();
+    else if (view === "newTodo") {
+      fetchTemplates();
+      if (tasks.length === 0) fetchPending();
+    }
   }, [view]);
 
   const subViews = [
     { key: "pending", label: "Pending", icon: <MdTask size={13} /> },
     { key: "ledger", label: "Ledger", icon: <MdHistory size={13} /> },
-    { key: "templates", label: "Templates", icon: <MdListAlt size={13} /> },
+    { key: "templates", label: "SPOs/Task", icon: <MdListAlt size={13} /> },
   ];
 
   return (
@@ -782,18 +1130,34 @@ export default function KioskTasks({ cart, showAudit = false }) {
           <button
             key={sv.key}
             className={`kiosk_sub_nav_btn ${view === sv.key ? "kiosk_sub_nav_active" : ""}`}
-            onClick={() => setView(sv.key)}
+            onClick={() => {
+              setEditingTemplate(null);
+              setView(sv.key);
+            }}
           >
             {sv.icon} {sv.label}
           </button>
         ))}
-        <button
-          className={`kiosk_sub_nav_btn ${view === "newTemplate" ? "kiosk_sub_nav_active" : ""}`}
-          onClick={() => setView("newTemplate")}
-          style={{ marginLeft: "auto" }}
-        >
-          <MdAdd size={13} /> New Template
-        </button>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <button
+            className={`kiosk_sub_nav_btn ${view === "newTodo" ? "kiosk_sub_nav_active" : ""}`}
+            onClick={() => {
+              setEditingTemplate(null);
+              setView("newTodo");
+            }}
+          >
+            <MdAdd size={13} /> New Task
+          </button>
+          <button
+            className={`kiosk_sub_nav_btn ${view === "newTemplate" ? "kiosk_sub_nav_active" : ""}`}
+            onClick={() => {
+              setEditingTemplate(null);
+              setView("newTemplate");
+            }}
+          >
+            <MdAdd size={13} /> New SOP
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -802,6 +1166,19 @@ export default function KioskTasks({ cart, showAudit = false }) {
             <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 60, borderRadius: 12 }} />
           ))}
         </div>
+      ) : view === "newTodo" ? (
+        <TodoTaskBuilder
+          kioskId={cart.id}
+          templates={templates}
+          recentTasks={[...tasks, ...ledger]}
+          operators={cart.operators || []}
+          onCreated={() => {
+            setView("pending");
+            fetchPending();
+          }}
+          onCancel={() => setView("pending")}
+          onGoToTemplates={() => setView("newTemplate")}
+        />
       ) : view === "newTemplate" ? (
         <TemplateBuilder
           kioskId={cart.id}
@@ -810,12 +1187,20 @@ export default function KioskTasks({ cart, showAudit = false }) {
             setView("templates");
             fetchTemplates();
           }}
+          onCancelEdit={() => setView("templates")}
         />
       ) : view === "pending" ? (
         tasks.length === 0 ? (
           <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
             <MdTask size={24} style={{ opacity: 0.3 }} />
             <span>No pending tasks</span>
+            <button
+              className="app_btn app_btn_confirm"
+              style={{ marginTop: 12, height: 32, fontSize: "0.78rem", padding: "0 14px" }}
+              onClick={() => setView("newTodo")}
+            >
+              <MdAdd size={14} /> Create Task
+            </button>
           </div>
         ) : (
           <div className="kiosk_tasks_list">
@@ -924,6 +1309,13 @@ export default function KioskTasks({ cart, showAudit = false }) {
                     <span className="kiosk_section_count">
                       {tpl.schema?.fields?.length || 0} fields
                     </span>
+                    <button
+                      className="kiosk_icon_action_btn"
+                      onClick={() => handleDispatchTemplate(tpl)}
+                      title="Dispatch task from this template now"
+                    >
+                      <MdFlashOn size={13} />
+                    </button>
                     <button
                       className="kiosk_icon_action_btn"
                       onClick={() => {
