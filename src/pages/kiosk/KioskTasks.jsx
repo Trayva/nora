@@ -199,7 +199,7 @@ function TodoTaskBuilder({
 
       {/* Select Template (optional) */}
       <div className="form-field">
-        <label className="modal-label">Template (Optional - Select to prefill)</label>
+        <label className="modal-label">SOP (Optional - Select to prefill)</label>
         <select
           className="modal-input"
           value={selectedTemplateId}
@@ -1047,6 +1047,7 @@ function TaskCard({ task, onRefresh }) {
 /* ── Main KioskTasks ───────────────────────────────────────── */
 export default function KioskTasks({ cart, showAudit = false }) {
   const [view, setView] = useState("pending"); // pending | ledger | templates | newTemplate
+  const [showCompliance, setShowCompliance] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [ledger, setLedger] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -1122,7 +1123,11 @@ export default function KioskTasks({ cart, showAudit = false }) {
   return (
     <div className="kiosk_tab_content">
       {/* Optional SOP Compliance Audit Overview */}
-      {showAudit && <SopComplianceAudit cart={cart} showActions={false} />}
+      {showAudit && showCompliance && (
+        <div style={{ marginBottom: 16 }}>
+          <SopComplianceAudit cart={cart} showActions={false} />
+        </div>
+      )}
 
       {/* Sub-nav */}
       <div className="kiosk_sub_nav">
@@ -1138,6 +1143,16 @@ export default function KioskTasks({ cart, showAudit = false }) {
             {sv.icon} {sv.label}
           </button>
         ))}
+        {showAudit && (
+          <button
+            className={`kiosk_sub_nav_btn ${showCompliance ? "kiosk_sub_nav_active" : ""}`}
+            onClick={() => setShowCompliance((prev) => !prev)}
+            title="Toggle Compliance Audit"
+          >
+            {showCompliance ? <MdExpandLess size={13} /> : <MdExpandMore size={13} />}{" "}
+            {showCompliance ? "Hide Compliance" : "Show Compliance"}
+          </button>
+        )}
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <button
             className={`kiosk_sub_nav_btn ${view === "newTodo" ? "kiosk_sub_nav_active" : ""}`}
