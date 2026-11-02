@@ -7,6 +7,8 @@ import {
   LuChevronRight,
   LuPencil,
   LuX,
+  LuStore,
+  LuCloud,
 } from "react-icons/lu";
 import {
   MdOutlineFastfood,
@@ -14,6 +16,7 @@ import {
   MdBuild,
   MdPublic,
   MdImage,
+  MdStorefront,
 } from "react-icons/md";
 import Drawer from "../../../components/Drawer";
 import RecipeStepForm from "../../../components/RecipeStepForm";
@@ -81,6 +84,9 @@ function EditMenuItemForm({ item, onSaved, onCancel }) {
   const [origin, setOrigin] = useState(item?.origin || "");
   const [serveTo, setServeTo] = useState(item?.serveTo || "");
   const [packaging, setPackaging] = useState(item?.packaging || "");
+  const [outletSupport, setOutletSupport] = useState(
+    Array.isArray(item?.outletSupport) && item.outletSupport.length > 0 ? item.outletSupport : ["KIOSK"]
+  );
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(item?.image || null);
   const [packImgFile, setPackImgFile] = useState(null);
@@ -88,6 +94,19 @@ function EditMenuItemForm({ item, onSaved, onCancel }) {
   const [saving, setSaving] = useState(false);
   const fileRef = useRef(null);
   const packRef = useRef(null);
+
+  const toggleOutletSupport = (type) => {
+    setOutletSupport((prev) => {
+      if (prev.includes(type)) {
+        if (prev.length === 1) {
+          toast.warning("At least one outlet type must be supported.");
+          return prev;
+        }
+        return prev.filter((t) => t !== type);
+      }
+      return [...prev, type];
+    });
+  };
 
   const handleSubmit = async () => {
     if (!name.trim()) return toast.error("Name is required");
@@ -98,6 +117,7 @@ function EditMenuItemForm({ item, onSaved, onCancel }) {
     if (origin) fd.append("origin", origin.trim());
     if (serveTo) fd.append("serveTo", serveTo.trim());
     if (packaging) fd.append("packaging", packaging.trim());
+    fd.append("outletSupport", JSON.stringify(outletSupport));
     if (imageFile) fd.append("image", imageFile);
     if (packImgFile) fd.append("packagingImage", packImgFile);
     setSaving(true);
@@ -133,6 +153,63 @@ function EditMenuItemForm({ item, onSaved, onCancel }) {
         <div className="form-field"><label className="modal-label">Origin</label><input className="modal-input" placeholder="e.g. Nigeria" value={origin} onChange={(e) => setOrigin(e.target.value)} /></div>
         <div className="form-field"><label className="modal-label">Serves</label><input className="modal-input" placeholder="e.g. All ages" value={serveTo} onChange={(e) => setServeTo(e.target.value)} /></div>
       </div>
+
+      {/* Supported Outlet Types */}
+      <div className="form-field">
+        <label className="modal-label">Supported Outlet Types</label>
+        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginBottom: 8 }}>
+          Select the outlet formats that can serve this menu item.
+        </span>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
+          {[
+            { id: "KIOSK", label: "Physical Kiosk", icon: LuStore },
+            { id: "CLOUD_KITCHEN", label: "Cloud Kitchen", icon: LuCloud },
+            { id: "STORE_FRONT", label: "Store Front", icon: MdStorefront },
+          ].map((type) => {
+            const isSelected = outletSupport.includes(type.id);
+            const Icon = type.icon;
+            return (
+              <div
+                key={type.id}
+                onClick={() => toggleOutletSupport(type.id)}
+                style={{
+                  background: isSelected ? "rgba(203,108,220,0.08)" : "var(--bg-hover)",
+                  border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Icon size={14} style={{ color: isSelected ? "var(--accent)" : "var(--text-muted)" }} />
+                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                    {type.label}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: "50%",
+                    border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                    background: isSelected ? "var(--accent)" : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {isSelected && <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#fff" }} />}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="form-field"><label className="modal-label">Packaging Details</label><textarea className="modal-input" rows={2} style={{ resize: "none" }} placeholder="e.g. Sealed paper bag" value={packaging} onChange={(e) => setPackaging(e.target.value)} /></div>
       <div className="form-field">
         <label className="modal-label">Packaging Image</label>
@@ -578,6 +655,30 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
     }
   };
 
+  const handleToggleOutletSupport = async (typeId) => {
+    const current = Array.isArray(detail?.outletSupport) && detail.outletSupport.length > 0 ? detail.outletSupport : ["KIOSK"];
+    let updated;
+    if (current.includes(typeId)) {
+      if (current.length === 1) {
+        toast.warning("At least one outlet type must be supported.");
+        return;
+      }
+      updated = current.filter((t) => t !== typeId);
+    } else {
+      updated = [...current, typeId];
+    }
+    try {
+      const fd = new FormData();
+      fd.append("outletSupport", JSON.stringify(updated));
+      await updateMenuItem(item.id, fd);
+      toast.success("Supported outlet types updated");
+      fetchDetail();
+      onUpdated?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update outlet support");
+    }
+  };
+
   const handleAddMarkup = async (e) => {
     e.preventDefault();
     if (!markupCountry.trim()) return toast.error("Select a country");
@@ -759,6 +860,68 @@ export default function MenuItemDrawer({ item, onClose, onUpdated }) {
           {editingMenuItem && (
             <EditMenuItemForm item={detail} onSaved={() => { setEditingMenuItem(false); fetchDetail(); onUpdated?.(); }} onCancel={() => setEditingMenuItem(false)} />
           )}
+
+          {/* Supported Outlet Types */}
+          <Section title="Supported Outlet Types" defaultOpen={true}>
+            <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: "0 0 12px" }}>
+              Select which outlet types (Physical Kiosk, Cloud Kitchen, Store Front) can prepare and sell this menu item.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10 }}>
+              {[
+                { id: "KIOSK", label: "Physical Kiosk", desc: "Modular food cart / stand", icon: LuStore },
+                { id: "CLOUD_KITCHEN", label: "Cloud Kitchen", desc: "Ghost / delivery kitchen", icon: LuCloud },
+                { id: "STORE_FRONT", label: "Store Front", desc: "Retail / dine-in store", icon: MdStorefront },
+              ].map((type) => {
+                const isSelected = (Array.isArray(detail?.outletSupport) && detail.outletSupport.length > 0 ? detail.outletSupport : ["KIOSK"]).includes(type.id);
+                const Icon = type.icon;
+                return (
+                  <div
+                    key={type.id}
+                    onClick={() => handleToggleOutletSupport(type.id)}
+                    style={{
+                      background: isSelected ? "rgba(203,108,220,0.08)" : "var(--bg-hover)",
+                      border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                      borderRadius: 12,
+                      padding: "12px 14px",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <Icon size={16} style={{ color: isSelected ? "var(--accent)" : "var(--text-muted)" }} />
+                        <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                          {type.label}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          width: 14,
+                          height: 14,
+                          borderRadius: "50%",
+                          border: `2px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                          background: isSelected ? "var(--accent)" : "transparent",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {isSelected && (
+                          <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#fff" }} />
+                        )}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
+                      {type.desc}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </Section>
 
           {/* Recipe Steps */}
           <Section title="Recipe Steps" count={steps.length} action={<button className="app_btn app_btn_confirm biz_add_btn" onClick={() => setShowRecipeForm((v) => !v)}><LuPlus size={13} /> Add Step</button>}>

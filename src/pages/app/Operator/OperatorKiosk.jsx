@@ -62,6 +62,12 @@ const fmtDate = (d) =>
 
 function StatusChip({ status }) {
   const colors = {
+    PENDING_OWNER_SELECTION: {
+      bg: "rgba(245,158,11,0.1)",
+      color: "#d97706",
+      border: "rgba(245,158,11,0.25)",
+      label: "Awaiting Owner",
+    },
     PENDING: {
       bg: "rgba(234,179,8,0.1)",
       color: "#ca8a04",
@@ -123,7 +129,7 @@ function StatusChip({ status }) {
         border: `1px solid ${s.border}`,
       }}
     >
-      <MdCircle size={5} /> {status}
+      <MdCircle size={5} /> {s.label || status}
     </span>
   );
 }
@@ -802,7 +808,6 @@ export function InventoryTab({ kioskId }) {
   };
 
   const handleSubmitSupply = async () => {
-    if (!supplierId) return toast.error("Select a supplier");
     const valid = supplyItems.filter(
       (r) => r.ingredient && r.quantity && Number(r.quantity) > 0,
     );
@@ -811,13 +816,12 @@ export function InventoryTab({ kioskId }) {
     try {
       await api.post("/kiosk/supply", {
         kioskId,
-        supplierId,
         items: valid.map((row) => ({
           ingredientId: row.ingredient.id,
           quantity: toBase(row.quantity, row.unit),
         })),
       });
-      toast.success("Supply request submitted");
+      toast.success("Supply request submitted to kiosk owner");
       setShowSupplyForm(false);
       setSupplyItems([
         { query: "", ingredient: null, quantity: "", unit: "g" },
@@ -1121,20 +1125,23 @@ export function InventoryTab({ kioskId }) {
               }}
             >
               <div className="drawer_section_title">New Supply Request</div>
-              <div className="form-field">
-                <label className="modal-label">Supplier *</label>
-                <select
-                  className="modal-input"
-                  value={supplierId}
-                  onChange={(e) => setSupplierId(e.target.value)}
-                >
-                  <option value="">Select supplier…</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.businessName || s.user?.fullName || s.id.slice(0, 8)}
-                    </option>
-                  ))}
-                </select>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  background: "rgba(59,130,246,0.08)",
+                  border: "1px solid rgba(59,130,246,0.2)",
+                  fontSize: "0.75rem",
+                  color: "var(--text-body)",
+                }}
+              >
+                <span style={{ fontSize: "1.1rem" }}>ℹ️</span>
+                <div>
+                  <strong>Operator Request</strong>: Add items and quantities below. Your request will be forwarded to the kiosk owner to choose a supplier and complete the order.
+                </div>
               </div>
               {supplyItems.map((row, i) => (
                 <div

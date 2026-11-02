@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { MdClose, MdLocalShipping, MdOutlineInventory2 } from "react-icons/md";
 import api from "../../api/axios";
+import { useAuth } from "../../contexts/AuthContext";
 import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
 import {
   SupplierPicker,
@@ -39,7 +40,14 @@ export default function IngredientSupplyModal({
   selectedIngItems,
   onClose,
   onSubmitted,
+  isOperator: forcedIsOperator,
 }) {
+  const { user } = useAuth();
+  const isOperator =
+    forcedIsOperator !== undefined
+      ? forcedIsOperator
+      : user?.role === "OPERATOR" || (cart?.currentOwnerId && user?.id !== cart.currentOwnerId);
+
   const [suppliers, setSuppliers] = useState([]);
   const [suppliersLoading, setSuppliersLoading] = useState(true);
   const [supplierId, setSupplierId] = useState("");
@@ -111,7 +119,7 @@ export default function IngredientSupplyModal({
   };
 
   const handleSubmit = async () => {
-    if (!supplierId) return toast.error("Select a supplier");
+    if (!isOperator && !supplierId) return toast.error("Select a supplier");
     const valid = (selectedIngItems || []).filter(
       (m) => quantities[m.id] && Number(quantities[m.id]) > 0,
     );
@@ -119,14 +127,20 @@ export default function IngredientSupplyModal({
       return toast.error("Enter quantity for at least one item");
     setSubmitting(true);
     try {
-      await api.post("/kiosk/supply", {
+      const payload = {
         kioskId: cart?.id,
-        supplierId,
         items: valid.map((m) => ({
           ingredientId: m.id,
           quantity: toBaseQty(quantities[m.id], units[m.id] || "g"),
         })),
-      });
+      };
+      if (supplierId) payload.supplierId = supplierId;
+      await api.post("/kiosk/supply", payload);
+      toast.success(
+        supplierId
+          ? "Supply request created successfully"
+          : "Supply request submitted to kiosk owner"
+      );
       onSubmitted();
     } catch (err) {
       toast.error(
@@ -242,15 +256,36 @@ export default function IngredientSupplyModal({
             gap: 16,
           }}
         >
-          <div className="form-field">
-            <label className="modal-label">Supplier *</label>
-            <SupplierPicker
-              suppliers={suppliers}
-              suppliersLoading={suppliersLoading}
-              value={supplierId}
-              onChange={setSupplierId}
-            />
-          </div>
+          {isOperator ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 14px",
+                borderRadius: 10,
+                background: "rgba(59,130,246,0.08)",
+                border: "1px solid rgba(59,130,246,0.2)",
+                fontSize: "0.76rem",
+                color: "var(--text-body)",
+              }}
+            >
+              <span style={{ fontSize: "1.1rem" }}>ℹ️</span>
+              <div>
+                <strong>Operator Supply Request</strong>: Select required quantities below. Your request will be forwarded directly to the kiosk owner to pick a supplier and confirm.
+              </div>
+            </div>
+          ) : (
+            <div className="form-field">
+              <label className="modal-label">Supplier *</label>
+              <SupplierPicker
+                suppliers={suppliers}
+                suppliersLoading={suppliersLoading}
+                value={supplierId}
+                onChange={setSupplierId}
+              />
+            </div>
+          )}
           {supplierId && isConverted(supplierStateCurrency) && (
             <div
               style={{
@@ -532,10 +567,10 @@ export default function IngredientSupplyModal({
               gap: 6,
             }}
             onClick={handleSubmit}
-            disabled={submitting || !supplierId}
+            disabled={submitting || (!isOperator && !supplierId)}
           >
             <span className="btn_text">
-              <MdLocalShipping size={15} /> Submit Request
+              <MdLocalShipping size={15} /> {isOperator ? "Submit Request to Owner" : "Submit Request"}
             </span>
             {submitting && (
               <span className="btn_loader" style={{ width: 14, height: 14 }} />

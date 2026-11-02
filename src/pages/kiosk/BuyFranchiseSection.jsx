@@ -451,9 +451,17 @@ export default function BuyFranchiseSection() {
 
     try {
       const res = await api.get("/vendor/menu", {
-        params: { vendorId: brand.id, page: 1, limit: 100 },
+        params: {
+          vendorId: brand.id,
+          page: 1,
+          limit: 100,
+          outletType: locationForm.outletType,
+        },
       });
-      const items = res.data.data?.items || (Array.isArray(res.data.data) ? res.data.data : []);
+      const rawItems = res.data.data?.items || (Array.isArray(res.data.data) ? res.data.data : []);
+      const items = rawItems.filter(
+        (m) => !m.outletSupport || m.outletSupport.length === 0 || m.outletSupport.includes(locationForm.outletType)
+      );
       setBrandMenuItems(items);
       setSelectedMenuIds(items.map((m) => m.id)); // all selected by default
     } catch {

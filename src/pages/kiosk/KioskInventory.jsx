@@ -83,6 +83,12 @@ function toUnitCost(totalCost, displayQty, displayUnit) {
 }
 
 const supplyStatusColors = {
+  PENDING_OWNER_SELECTION: {
+    bg: "rgba(245,158,11,0.1)",
+    color: "#d97706",
+    border: "rgba(245,158,11,0.25)",
+    label: "Awaiting Supplier",
+  },
   PENDING: {
     bg: "rgba(234,179,8,0.1)",
     color: "#ca8a04",
@@ -131,7 +137,7 @@ function StatusPill({ status }) {
         border: `1px solid ${s.border}`,
       }}
     >
-      {status}
+      {s.label || status}
     </span>
   );
 }
@@ -2484,7 +2490,7 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
 }
 
 /* ── Supply Request Row ─────────────────────────────────────── */
-function SupplyRequestRow({ cart, req, onRefresh, onReorder }) {
+function SupplyRequestRow({ cart, req, onRefresh, onReorder, onSelectSupplier }) {
   const { format: fmtCurrency } = useCurrencyDisplay();
   const kioskCurrency = cart?.location?.state?.currency || cart?.currency || "NGN";
   const [expanded, setExpanded] = useState(false);
@@ -2513,7 +2519,7 @@ function SupplyRequestRow({ cart, req, onRefresh, onReorder }) {
   const allItems = [...ingItems, ...machItems];
 
   const supplierName =
-    req.supplier?.businessName || req.supplier?.user?.name || "Supplier";
+    req.supplier?.businessName || req.supplier?.user?.name || (req.status === "PENDING_OWNER_SELECTION" ? "No Supplier Assigned" : "Supplier");
   const firstNames = allItems
     .slice(0, 2)
     .map((it) => it.entity?.name)
@@ -2626,6 +2632,26 @@ function SupplyRequestRow({ cart, req, onRefresh, onReorder }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <StatusPill status={req.status} />
+          {req.status === "PENDING_OWNER_SELECTION" && (
+            <button
+              className="app_btn app_btn_confirm"
+              style={{
+                height: 28,
+                padding: "0 10px",
+                fontSize: "0.72rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                flexShrink: 0,
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectSupplier?.(req);
+              }}
+            >
+              Select Supplier
+            </button>
+          )}
           {req.status === "SHIPPED" && (
             <button
               className={`app_btn app_btn_confirm${receiving ? " btn_loading" : ""}`}
@@ -2846,6 +2872,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
   const [historyItem, setHistoryItem] = useState(null);
   const [historyStartDate, setHistoryStartDate] = useState("");
   const [historyEndDate, setHistoryEndDate] = useState("");
+  const [selectingSupplierReq, setSelectingSupplierReq] = useState(null);
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -3067,6 +3094,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
                 key={req.id}
                 req={req}
                 onRefresh={fetchSupply}
+                onSelectSupplier={(r) => setSelectingSupplierReq(r)}
                 onReorder={(r) => {
                   setReorderData(r);
                   setView("addSupply");
@@ -3236,6 +3264,153 @@ export default function KioskInventory({ cart, isUtilities = false }) {
           onClose={() => setHistoryItem(null)}
         />
       )}
+
+      {selectingSupplierReq && (
+        <SelectSupplierModal
+          isOpen={!!selectingSupplierReq}
+          req={selectingSupplierReq}
+          cart={cart}
+          onClose={() => setSelectingSupplierReq(null)}
+          onAssigned={fetchSupply}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Select Supplier Modal for Kiosk Owner ─────────────────── */
+function SelectSupplierModal({ isOpen, req, cart, onClose, onAssigned }) {
+  const [suppliers, setSuppliers] = useState([]);
+  const [suppliersLoading, setSuppliersLoading] = useState(true);
+  const [selectedSupplierId, setSelectedSupplierId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const stateId = cart?.location?.stateId || cart?.location?.state?.id || "";
+    const url = stateId ? `/supplier?stateId=${stateId}` : "/supplier";
+    api
+      .get(url)
+      .then((r) => {
+        const d = r.data.data;
+        setSuppliers(Array.isArray(d) ? d : d?.items || d?.suppliers || []);
+      })
+      .catch(() => toast.error("Failed to load suppliers"))
+      .finally(() => setSuppliersLoading(false));
+  }, [isOpen, cart]);
+
+  if (!isOpen || !req) return null;
+
+  const items = req.items || [];
+  const machItems = req.supplyRequestMachineryItems || [];
+
+  const handleConfirm = async () => {
+    if (!selectedSupplierId) return toast.error("Please select a supplier");
+    setSubmitting(true);
+    try {
+      await api.patch(`/kiosk/supply/${req.id}/select-supplier`, {
+        supplierId: selectedSupplierId,
+      });
+      toast.success("Supplier selected and supply request sent!");
+      onAssigned?.();
+      onClose();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to select supplier");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 2000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={!submitting ? onClose : undefined}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(0,0,0,0.55)",
+          backdropFilter: "blur(3px)",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          width: "min(480px, 100%)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 14,
+          padding: 22,
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+          boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "var(--text-heading)" }}>
+              Select Supplier for Request
+            </h3>
+            <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+              Requested by {req.requester?.fullName || "Operator"} · {items.length + machItems.length} item(s)
+            </span>
+          </div>
+          <button className="biz_icon_btn" onClick={onClose} disabled={submitting}>
+            <MdClose size={16} />
+          </button>
+        </div>
+
+        <div style={{ maxHeight: 180, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+          {items.map((it) => (
+            <div key={it.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "6px 10px", background: "var(--bg-hover)", borderRadius: 8 }}>
+              <span>{it.ingredient?.name || "Ingredient"}</span>
+              <strong>{it.quantity} {it.ingredient?.unit || ""}</strong>
+            </div>
+          ))}
+          {machItems.map((it) => (
+            <div key={it.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", padding: "6px 10px", background: "var(--bg-hover)", borderRadius: 8 }}>
+              <span>{it.machinery?.name || "Machinery"}</span>
+              <strong>× {it.quantity}</strong>
+            </div>
+          ))}
+        </div>
+
+        <div className="form-field" style={{ marginBottom: 0 }}>
+          <label className="modal-label">Choose Supplier *</label>
+          <SupplierPicker
+            suppliers={suppliers}
+            suppliersLoading={suppliersLoading}
+            value={selectedSupplierId}
+            onChange={setSelectedSupplierId}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+          <button className="app_btn app_btn_cancel" style={{ flex: 1, height: 40 }} onClick={onClose} disabled={submitting}>
+            Cancel
+          </button>
+          <button
+            className={`app_btn app_btn_confirm${submitting ? " btn_loading" : ""}`}
+            style={{ flex: 2, height: 40, position: "relative" }}
+            onClick={handleConfirm}
+            disabled={submitting || !selectedSupplierId}
+          >
+            <span className="btn_text">Confirm & Forward to Supplier</span>
+            {submitting && <span className="btn_loader" style={{ width: 13, height: 13 }} />}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
