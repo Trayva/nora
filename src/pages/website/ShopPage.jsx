@@ -31,8 +31,20 @@ import nora_logo_dark from "../../assets/nora_dark.png";
 const fmt = (n) =>
   Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
 
+// Sums line prices; returns null if any price is unknown (never guess prices).
+const sumPrices = (entries) => {
+  let total = 0;
+  for (const e of entries) {
+    if (!(e.unitPrice > 0)) return null;
+    total += e.unitPrice * e.qty;
+  }
+  return total;
+};
+
+// Shows "..." whenever a price is missing/invalid.
 const formatKioskPrice = (amount, currency = "NGN") => {
-  const n = Number(amount || 0);
+  if (amount == null || !(Number(amount) > 0)) return "...";
+  const n = Number(amount);
   const curr = (currency || "NGN").toUpperCase();
   try {
     return new Intl.NumberFormat("en-US", {
@@ -50,6 +62,7 @@ const formatKioskPrice = (amount, currency = "NGN") => {
    ───────────────────────────────────────────────────────────── */
 function ItemModal({ item, concept, onClose, onConfirm }) {
   const kioskCurrency = concept?.location?.state?.currency || concept?.currency || "NGN";
+  const kioskId = concept?.id || concept?.kioskId || item?.kioskId;
   const hasVariants = item.variants?.length > 0;
   const hasExtras = item.extras?.length > 0;
 
@@ -58,37 +71,40 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
   );
   const [selectedExtras, setSelectedExtras] = useState([]);
   const [qty, setQty] = useState(1);
-  const [price, setPrice] = useState(item.sellingPrice || 0);
+  const [price, setPrice] = useState(null);
   const [fetchingPrice, setFetchingPrice] = useState(false);
 
   useEffect(() => {
     const fetchPrice = async () => {
       setFetchingPrice(true);
+      setPrice(null);
       try {
-        const params = { kioskId: concept.id };
+        const params = { kioskId };
         if (selectedVariant) params.variantId = selectedVariant;
-        if (selectedExtras.length) params["extras"] = selectedExtras;
+        if (selectedExtras.length) {
+          params["extras[]"] = selectedExtras;
+          params.extras = selectedExtras;
+        }
+        // Always pass kioskId to get price from that kiosk.
+        // Explicitly DO NOT send useAverage or stateId in the shop.
         const r = await api.get(`/library/price/menu/${item.id}`, { params });
         const d = r.data.data;
-        setPrice(
-          Number(
-            d?.sellingPrice ?? d?.price ?? d?.total ?? item.sellingPrice ?? 0,
-          ),
-        );
+        const sp = Number(d?.sellingPrice ?? d?.price ?? d?.total);
+        setPrice(sp > 0 ? sp : null);
       } catch {
-        setPrice(item.sellingPrice || 0);
+        setPrice(null);
       } finally {
         setFetchingPrice(false);
       }
     };
     fetchPrice();
-  }, [selectedVariant, selectedExtras.join(",")]);
+  }, [item.id, kioskId, selectedVariant, selectedExtras.join(",")]);
 
   const toggleExtra = (id) =>
     setSelectedExtras((p) =>
       p.includes(id) ? p.filter((e) => e !== id) : [...p, id],
     );
-  const totalPrice = price * qty;
+  const totalPrice = price > 0 ? price * qty : null;
 
   const handleConfirm = () => {
     const variantObj =
@@ -104,7 +120,7 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
       extraIds: selectedExtras,
       variantLabel: variantObj?.name || null,
       extrasLabels: extrasObjs.map((e) => e.name),
-      unitPrice: price,
+      unitPrice: price > 0 ? price : null,
     });
     onClose();
   };
@@ -233,17 +249,7 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
                   color: "var(--accent)",
                 }}
               >
-                {fetchingPrice ? (
-                  <span
-                    style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}
-                  >
-                    Fetching price…
-                  </span>
-                ) : price > 0 ? (
-                  formatKioskPrice(price, kioskCurrency)
-                ) : (
-                  "Price TBD"
-                )}
+                {fetchingPrice ? "..." : formatKioskPrice(price, kioskCurrency)}
               </div>
             </div>
           </div>
@@ -536,9 +542,9 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
             >
               <LuShoppingCart size={17} />
               Add to Cart
-              {!fetchingPrice && totalPrice > 0 && (
-                <span style={{ opacity: 0.85 }}>· {formatKioskPrice(totalPrice, kioskCurrency)}</span>
-              )}
+              <span style={{ opacity: 0.85 }}>
+                · {fetchingPrice ? "..." : formatKioskPrice(totalPrice, kioskCurrency)}
+              </span>
               {fetchingPrice && (
                 <span
                   style={{
@@ -563,10 +569,41 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
 /* ── Menu item card ── */
 function MenuItemCard({ item, concept, cartItems, onOpenModal }) {
   const kioskCurrency = concept?.location?.state?.currency || concept?.currency || "NGN";
+  const kioskId = concept?.id || concept?.kioskId || item?.kioskId;
+  const [displayPrice, setDisplayPrice] = useState(null);
+  const [loadingPrice, setLoadingPrice] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingPrice(true);
+    setDisplayPrice(null);
+    // Always pass kioskId (and first variant if any) to get the kiosk specific price.
+    const params = { kioskId };
+    if (item.variants?.[0]?.id) params.variantId = item.variants[0].id;
+    api
+      .get(`/library/price/menu/${item.id}`, { params })
+      .then((r) => {
+        if (cancelled) return;
+        const d = r.data.data;
+        const sp = Number(d?.sellingPrice ?? d?.price ?? d?.total);
+        setDisplayPrice(sp > 0 ? sp : null);
+      })
+      .catch(() => {
+        if (!cancelled) setDisplayPrice(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPrice(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [item.id, item.variants?.[0]?.id, kioskId]);
+
   const totalQty = Object.values(cartItems)
     .filter((e) => e.item.id === item.id)
     .reduce((s, e) => s + e.qty, 0);
   const isAvailable = item.available !== false;
+  const currentPrice = displayPrice;
 
   return (
     <div
@@ -719,15 +756,13 @@ function MenuItemCard({ item, concept, cartItems, onOpenModal }) {
         >
           <span
             style={{
-              fontSize: item.sellingPrice > 0 ? "0.88rem" : "0.72rem",
-              fontWeight: item.sellingPrice > 0 ? 900 : 400,
+              fontSize: "0.88rem",
+              fontWeight: currentPrice > 0 ? 900 : 400,
               color:
-                item.sellingPrice > 0 ? "var(--accent)" : "var(--text-muted)",
+                currentPrice > 0 ? "var(--accent)" : "var(--text-muted)",
             }}
           >
-            {item.sellingPrice > 0
-              ? formatKioskPrice(item.sellingPrice, kioskCurrency)
-              : "Tap to price"}
+            {loadingPrice ? "..." : formatKioskPrice(currentPrice, kioskCurrency)}
           </span>
           <button
             onClick={() => isAvailable && onOpenModal(item)}
@@ -761,10 +796,12 @@ function MenuItemCard({ item, concept, cartItems, onOpenModal }) {
           </button>
         </div>
       </div>
-      {totalQty > 0 && (
-        <div style={{ height: 2, background: "var(--accent)", opacity: 0.6 }} />
-      )}
-    </div>
+      {
+        totalQty > 0 && (
+          <div style={{ height: 2, background: "var(--accent)", opacity: 0.6 }} />
+        )
+      }
+    </div >
   );
 }
 
@@ -990,10 +1027,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
   const [paying, setPaying] = useState(false);
   const [dynamicDeliveryFee, setDynamicDeliveryFee] = useState(0);
 
-  const total = items.reduce(
-    (s, e) => s + (e.unitPrice || e.item.sellingPrice || 0) * e.qty,
-    0,
-  );
+  const total = sumPrices(items);
 
   useEffect(() => {
     if (orderType !== "DELIVERY" || !form.deliveryLat || !form.deliveryLng || !kioskId) {
@@ -1018,8 +1052,8 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
   }, [orderType, form.deliveryLat, form.deliveryLng, kioskId, concepts]);
 
   const deliveryFee = orderType === "DELIVERY" ? dynamicDeliveryFee : 0;
-  const vatAmount = total * (vatRate / 100);
-  const grandTotal = total + vatAmount + deliveryFee;
+  const vatAmount = total != null ? total * (vatRate / 100) : null;
+  const grandTotal = total != null ? total + vatAmount + deliveryFee : null;
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const place = async () => {
@@ -1338,7 +1372,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
             >
               {entry.unitPrice > 0
                 ? formatKioskPrice(entry.unitPrice * entry.qty, kioskCurrency)
-                : "—"}
+                : "..."}
             </span>
           </div>
         ))}
@@ -1747,11 +1781,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
               {groups.map((group, gi) => {
                 const groupKiosk = concepts?.find((c) => c.id === group.kioskId);
                 const kioskCurrency = groupKiosk?.location?.state?.currency || groupKiosk?.currency || "NGN";
-                const groupTotal = group.items.reduce(
-                  (s, e) =>
-                    s + (e.unitPrice || e.item.sellingPrice || 0) * e.qty,
-                  0,
-                );
+                const groupTotal = sumPrices(group.items);
                 const isOrdered = orderedCarts.has(group.kioskId);
 
                 return (
@@ -1907,8 +1937,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
                                 {entry.extrasLabels?.length > 0 &&
                                   `+${entry.extrasLabels.join(", ")} · `}
                                 × {entry.qty}
-                                {entry.unitPrice > 0 &&
-                                  ` · ${formatKioskPrice(entry.unitPrice * entry.qty, kioskCurrency)}`}
+                                {` · ${formatKioskPrice(entry.unitPrice > 0 ? entry.unitPrice * entry.qty : null, kioskCurrency)}`}
                               </div>
                             </div>
                             <button
@@ -1957,7 +1986,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
                                 : "var(--text-muted)",
                           }}
                         >
-                          {groupTotal > 0 ? formatKioskPrice(groupTotal, kioskCurrency) : "Price TBD"}
+                          {formatKioskPrice(groupTotal, kioskCurrency)}
                         </div>
                       </div>
                       {!isOrdered && (
@@ -2126,11 +2155,11 @@ export default function ShopPage() {
   const selectedState = states.find((s) => s.id === selectedStateId) || null;
   const filteredStates = stateSearch.trim()
     ? states.filter(
-        (s) =>
-          (s.name || "").toLowerCase().includes(stateSearch.toLowerCase()) ||
-          (s.code || "").toLowerCase().includes(stateSearch.toLowerCase()) ||
-          (s.country || "").toLowerCase().includes(stateSearch.toLowerCase())
-      )
+      (s) =>
+        (s.name || "").toLowerCase().includes(stateSearch.toLowerCase()) ||
+        (s.code || "").toLowerCase().includes(stateSearch.toLowerCase()) ||
+        (s.country || "").toLowerCase().includes(stateSearch.toLowerCase())
+    )
     : states;
 
   const handleAddToCart = (entry) => {
@@ -2160,10 +2189,7 @@ export default function ShopPage() {
     : concepts;
 
   const totalItems = Object.values(cartItems).reduce((s, e) => s + e.qty, 0);
-  const totalPrice = Object.values(cartItems).reduce(
-    (s, e) => s + (e.unitPrice || e.item.sellingPrice || 0) * e.qty,
-    0,
-  );
+  const totalPrice = sumPrices(Object.values(cartItems));
   const firstCartKioskId = Object.values(cartItems)[0]?.kioskId;
   const activeCartKiosk = concepts.find((c) => c.id === firstCartKioskId) || concepts[0];
   const activeCartCurrency = activeCartKiosk?.location?.state?.currency || activeCartKiosk?.currency || "NGN";
@@ -2781,19 +2807,19 @@ export default function ShopPage() {
               {search
                 ? "No results found"
                 : deviceKioskId
-                ? "Outlet menu currently unavailable"
-                : selectedState
-                ? `No active kiosks in ${selectedState.name}`
-                : "No carts nearby"}
+                  ? "Outlet menu currently unavailable"
+                  : selectedState
+                    ? `No active kiosks in ${selectedState.name}`
+                    : "No carts nearby"}
             </p>
             <p className="kiosk_empty_sub">
               {search
                 ? "Try a different search term."
                 : deviceKioskId
-                ? "Items for this outlet will appear once updated by the vendor."
-                : selectedState
-                ? "Try selecting another state or switch back to All Locations."
-                : "Try adjusting your location or check back later."}
+                  ? "Items for this outlet will appear once updated by the vendor."
+                  : selectedState
+                    ? "Try selecting another state or switch back to All Locations."
+                    : "Try adjusting your location or check back later."}
             </p>
           </div>
         ) : (
@@ -2839,9 +2865,7 @@ export default function ShopPage() {
           >
             <LuShoppingCart size={18} />
             View Cart · {totalItems} item{totalItems !== 1 ? "s" : ""}
-            {totalPrice > 0 && (
-              <span style={{ opacity: 0.85 }}>· {formatKioskPrice(totalPrice, activeCartCurrency)}</span>
-            )}
+            <span style={{ opacity: 0.85 }}>· {formatKioskPrice(totalPrice, activeCartCurrency)}</span>
           </button>
         </div>
       )}
