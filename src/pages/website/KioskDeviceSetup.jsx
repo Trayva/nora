@@ -18,7 +18,7 @@ import {
   MdOutlineDarkMode,
   MdInfoOutline,
 } from "react-icons/md";
-UUID
+
 const STORAGE_KEY = "nora_device_kiosk_id";
 
 export default function KioskDeviceSetup() {
