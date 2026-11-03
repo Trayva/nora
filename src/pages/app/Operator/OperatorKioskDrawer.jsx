@@ -31,9 +31,9 @@ import KioskInventory from "../../kiosk/KioskInventory";
 const TABS = [
   { key: "tasks", label: "Tasks", icon: <MdTask size={13} /> },
   { key: "inventory", label: "Inventory", icon: <MdInventory2 size={13} /> },
-  { key: "menu", label: "Menu", icon: <MdMenuBook size={13} /> },
+  // { key: "menu", label: "Menu", icon: <MdMenuBook size={13} /> },
   { key: "elearning", label: "E-Learning", icon: <MdSchool size={13} /> },
-  { key: "sales", label: "Sales", icon: <MdPointOfSale size={13} /> },
+  // { key: "sales", label: "Sales", icon: <MdPointOfSale size={13} /> },
   { key: "orders", label: "Orders", icon: <MdOutlineShoppingBag size={13} /> },
 ];
 
