@@ -19,6 +19,7 @@ import {
   MdOutlineLightMode,
   MdOutlineDarkMode,
   MdOutlineReceiptLong,
+  MdStorefront,
 } from "react-icons/md";
 import { LuShoppingCart } from "react-icons/lu";
 import api from "../../api/axios";
@@ -30,10 +31,25 @@ import nora_logo_dark from "../../assets/nora_dark.png";
 const fmt = (n) =>
   Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
 
+const formatKioskPrice = (amount, currency = "NGN") => {
+  const n = Number(amount || 0);
+  const curr = (currency || "NGN").toUpperCase();
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: curr,
+      maximumFractionDigits: curr === "NGN" ? 0 : 2,
+    }).format(n);
+  } catch {
+    return `${curr} ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  }
+};
+
 /* ─────────────────────────────────────────────────────────────
    ITEM CUSTOMISER MODAL
    ───────────────────────────────────────────────────────────── */
 function ItemModal({ item, concept, onClose, onConfirm }) {
+  const kioskCurrency = concept?.location?.state?.currency || concept?.currency || "NGN";
   const hasVariants = item.variants?.length > 0;
   const hasExtras = item.extras?.length > 0;
 
@@ -224,7 +240,7 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
                     Fetching price…
                   </span>
                 ) : price > 0 ? (
-                  `₦${fmt(price)}`
+                  formatKioskPrice(price, kioskCurrency)
                 ) : (
                   "Price TBD"
                 )}
@@ -319,7 +335,7 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
                             color: "var(--text-muted)",
                           }}
                         >
-                          +₦{fmt(v.priceAddition)}
+                          +{formatKioskPrice(v.priceAddition, kioskCurrency)}
                         </span>
                       )}
                     </button>
@@ -425,7 +441,7 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
                             color: "var(--text-muted)",
                           }}
                         >
-                          +₦{fmt(ex.priceAddition)}
+                          +{formatKioskPrice(ex.priceAddition, kioskCurrency)}
                         </span>
                       )}
                     </button>
@@ -521,7 +537,7 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
               <LuShoppingCart size={17} />
               Add to Cart
               {!fetchingPrice && totalPrice > 0 && (
-                <span style={{ opacity: 0.85 }}>· ₦{fmt(totalPrice)}</span>
+                <span style={{ opacity: 0.85 }}>· {formatKioskPrice(totalPrice, kioskCurrency)}</span>
               )}
               {fetchingPrice && (
                 <span
@@ -546,6 +562,7 @@ function ItemModal({ item, concept, onClose, onConfirm }) {
 
 /* ── Menu item card ── */
 function MenuItemCard({ item, concept, cartItems, onOpenModal }) {
+  const kioskCurrency = concept?.location?.state?.currency || concept?.currency || "NGN";
   const totalQty = Object.values(cartItems)
     .filter((e) => e.item.id === item.id)
     .reduce((s, e) => s + e.qty, 0);
@@ -709,7 +726,7 @@ function MenuItemCard({ item, concept, cartItems, onOpenModal }) {
             }}
           >
             {item.sellingPrice > 0
-              ? `₦${fmt(item.sellingPrice)}`
+              ? formatKioskPrice(item.sellingPrice, kioskCurrency)
               : "Tap to price"}
           </span>
           <button
@@ -947,6 +964,8 @@ function AddressAutocompleteInput({ value, onChange, onPlaceSelected, style }) {
 
 /* ── Checkout form (inside cart drawer) ── */
 function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSuccess, onBack }) {
+  const kiosk = concepts?.find((c) => c.id === kioskId);
+  const kioskCurrency = kiosk?.location?.state?.currency || kiosk?.currency || "NGN";
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const urlLat = parseFloat(searchParams.get("lat"));
@@ -1318,7 +1337,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
               }}
             >
               {entry.unitPrice > 0
-                ? `₦${fmt(entry.unitPrice * entry.qty)}`
+                ? formatKioskPrice(entry.unitPrice * entry.qty, kioskCurrency)
                 : "—"}
             </span>
           </div>
@@ -1335,7 +1354,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
           >
             <span>VAT ({vatRate}%)</span>
             <span style={{ fontWeight: 700, color: "var(--text-heading)" }}>
-              ₦{fmt(vatAmount)}
+              {formatKioskPrice(vatAmount, kioskCurrency)}
             </span>
           </div>
         )}
@@ -1351,7 +1370,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
           >
             <span>Delivery Fee</span>
             <span style={{ fontWeight: 700, color: "var(--text-heading)" }}>
-              ₦{fmt(deliveryFee)}
+              {formatKioskPrice(deliveryFee, kioskCurrency)}
             </span>
           </div>
         )}
@@ -1374,7 +1393,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
               color: "var(--accent)",
             }}
           >
-            ₦{fmt(grandTotal)}
+            {formatKioskPrice(grandTotal, kioskCurrency)}
           </span>
         </div>
       </div>
@@ -1726,6 +1745,8 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
               )}
 
               {groups.map((group, gi) => {
+                const groupKiosk = concepts?.find((c) => c.id === group.kioskId);
+                const kioskCurrency = groupKiosk?.location?.state?.currency || groupKiosk?.currency || "NGN";
                 const groupTotal = group.items.reduce(
                   (s, e) =>
                     s + (e.unitPrice || e.item.sellingPrice || 0) * e.qty,
@@ -1887,7 +1908,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
                                   `+${entry.extrasLabels.join(", ")} · `}
                                 × {entry.qty}
                                 {entry.unitPrice > 0 &&
-                                  ` · ₦${fmt(entry.unitPrice * entry.qty)}`}
+                                  ` · ${formatKioskPrice(entry.unitPrice * entry.qty, kioskCurrency)}`}
                               </div>
                             </div>
                             <button
@@ -1936,7 +1957,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
                                 : "var(--text-muted)",
                           }}
                         >
-                          {groupTotal > 0 ? `₦${fmt(groupTotal)}` : "Price TBD"}
+                          {groupTotal > 0 ? formatKioskPrice(groupTotal, kioskCurrency) : "Price TBD"}
                         </div>
                       </div>
                       {!isOrdered && (
@@ -1980,7 +2001,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
    MAIN SHOP PAGE
    ───────────────────────────────────────────────────────────── */
 export default function ShopPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { theme, toggle } = useTheme();
   const [concepts, setConcepts] = useState([]);
@@ -1990,21 +2011,127 @@ export default function ShopPage() {
   const [cartOpen, setCartOpen] = useState(false);
   const [modalItem, setModalItem] = useState(null);
 
+  // Dedicated Kiosk Device Mode (locked outlet)
+  const deviceKioskId =
+    localStorage.getItem("nora_device_kiosk_id") ||
+    searchParams.get("kioskId") ||
+    searchParams.get("deviceKioskId") ||
+    "";
+
+  // Location / State Picker states
+  const [states, setStates] = useState([]);
+  const [statesLoading, setStatesLoading] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [stateSearch, setStateSearch] = useState("");
+  const locationRef = useRef(null);
+
+  const [selectedStateId, setSelectedStateId] = useState(
+    () => searchParams.get("stateId") || localStorage.getItem("nora-shop-state") || ""
+  );
+
   const lat = parseFloat(searchParams.get("lat") || "9.0579");
   const lng = parseFloat(searchParams.get("lng") || "7.4951");
 
   useEffect(() => {
-    setLoading(true);
+    setStatesLoading(true);
     api
-      .get("/kiosk/shop/nearby", { params: { lat, lng } })
-      .then((r) => {
-        const d = r.data.data.kiosks;
-        console.log(r)
-        setConcepts(Array.isArray(d) ? d : d?.carts || []);
+      .get("/config/state")
+      .then((res) => {
+        const list = res.data?.data || [];
+        setStates(list);
       })
-      .catch(() => toast.error("Failed to load nearby carts"))
-      .finally(() => setLoading(false));
-  }, [lat, lng]);
+      .catch((err) => console.error("Failed to load states", err))
+      .finally(() => setStatesLoading(false));
+  }, []);
+
+  // Close location dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (locationRef.current && !locationRef.current.contains(e.target)) {
+        setLocationOpen(false);
+      }
+    }
+    if (locationOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [locationOpen]);
+
+  useEffect(() => {
+    setLoading(true);
+    if (deviceKioskId) {
+      // Dedicated outlet mode: fetch only from /kiosk/:id
+      api
+        .get(`/kiosk/shop/kiosk/${deviceKioskId}`)
+        .then((r) => {
+          const kiosk = r.data?.data;
+          if (kiosk) {
+            setConcepts([kiosk]);
+          } else {
+            toast.error("Assigned outlet kiosk not found");
+            setConcepts([]);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load kiosk device menu", err);
+          toast.error("Failed to load outlet menu. Check kiosk ID.");
+          setConcepts([]);
+        })
+        .finally(() => setLoading(false));
+    } else {
+      // Standard customer discovery mode: nearby carts with optional state filter
+      const params = { lat, lng };
+      if (selectedStateId) {
+        params.stateId = selectedStateId;
+      }
+      api
+        .get("/kiosk/shop/nearby", { params })
+        .then((r) => {
+          const d = r.data.data.kiosks;
+          setConcepts(Array.isArray(d) ? d : d?.carts || []);
+        })
+        .catch(() => toast.error("Failed to load nearby carts"))
+        .finally(() => setLoading(false));
+    }
+  }, [lat, lng, selectedStateId, deviceKioskId]);
+
+  const handleSelectState = (stateId) => {
+    setSelectedStateId(stateId);
+    setLocationOpen(false);
+    setStateSearch("");
+    if (stateId) {
+      localStorage.setItem("nora-shop-state", stateId);
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("stateId", stateId);
+        return next;
+      });
+      const st = states.find((s) => s.id === stateId);
+      if (st) toast.info(`Filtered to ${st.name}`);
+    } else {
+      localStorage.removeItem("nora-shop-state");
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("stateId");
+        return next;
+      });
+      toast.info("Showing all nearby locations");
+    }
+  };
+
+  const selectedState = states.find((s) => s.id === selectedStateId) || null;
+  const filteredStates = stateSearch.trim()
+    ? states.filter(
+        (s) =>
+          (s.name || "").toLowerCase().includes(stateSearch.toLowerCase()) ||
+          (s.code || "").toLowerCase().includes(stateSearch.toLowerCase()) ||
+          (s.country || "").toLowerCase().includes(stateSearch.toLowerCase())
+      )
+    : states;
 
   const handleAddToCart = (entry) => {
     const key = [
@@ -2037,14 +2164,35 @@ export default function ShopPage() {
     (s, e) => s + (e.unitPrice || e.item.sellingPrice || 0) * e.qty,
     0,
   );
+  const firstCartKioskId = Object.values(cartItems)[0]?.kioskId;
+  const activeCartKiosk = concepts.find((c) => c.id === firstCartKioskId) || concepts[0];
+  const activeCartCurrency = activeCartKiosk?.location?.state?.currency || activeCartKiosk?.currency || "NGN";
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-main)" }}>
       <style>{`
         @media (max-width: 600px) {
-          .shop-header-inner { padding: 0 16px !important; }
-          .shop-content { padding: 20px 16px 100px !important; }
-          .shop-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; }
+          .shop-header-inner { padding: 0 12px !important; gap: 8px !important; }
+          .shop-header-actions { gap: 6px !important; }
+          .shop-header-btn { width: 32px !important; height: 32px !important; }
+          .shop-header-cart-btn {
+            height: 32px !important;
+            padding: 0 10px !important;
+            font-size: 0.72rem !important;
+            gap: 5px !important;
+          }
+          .shop-content { padding: 18px 12px 100px !important; }
+          .shop-grid { grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)) !important; }
+        }
+        @media (max-width: 400px) {
+          .shop-header-inner { padding: 0 8px !important; gap: 6px !important; }
+          .shop-header-actions { gap: 4px !important; }
+          .shop-header-label { display: none !important; }
+          .shop-cart-label { display: none !important; }
+        }
+        @keyframes shopFadeIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
       <header
@@ -2088,6 +2236,7 @@ export default function ShopPage() {
           </Link>
           {/* Label */}
           <div
+            className="shop-header-label"
             style={{
               display: "flex",
               alignItems: "center",
@@ -2106,81 +2255,357 @@ export default function ShopPage() {
                 whiteSpace: "nowrap",
               }}
             >
-              Shop
+              {deviceKioskId ? "POS Terminal" : "Shop"}
             </span>
           </div>
+
+          {/* Active Dedicated Kiosk Badge in Header (if locked) */}
+          {deviceKioskId && concepts[0] && (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "3px 10px",
+                borderRadius: 999,
+                background: "rgba(203,108,220,0.12)",
+                border: "1px solid rgba(203,108,220,0.3)",
+                fontSize: "0.72rem",
+                fontWeight: 800,
+                color: "var(--accent)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: 220,
+              }}
+              title={`Dedicated outlet: ${concepts[0]?.vendor?.businessName || "Kiosk"} (#${concepts[0]?.serialNumber || deviceKioskId.slice(0, 8)})`}
+            >
+              <MdStorefront size={13} style={{ flexShrink: 0 }} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                {concepts[0]?.vendor?.businessName || `Kiosk #${concepts[0]?.serialNumber || deviceKioskId.slice(0, 8)}`}
+              </span>
+            </div>
+          )}
+
           <div style={{ flex: 1 }} />
-          {/* Theme toggle */}
-          <button
-            onClick={toggle}
-            className="kiosk_icon_action_btn"
-            style={{ width: 34, height: 34 }}
-            title={theme === "dark" ? "Light mode" : "Dark mode"}
-          >
-            {theme === "dark" ? (
-              <MdOutlineLightMode size={17} />
-            ) : (
-              <MdOutlineDarkMode size={17} />
-            )}
-          </button>
-          {/* Track order icon */}
-          <button
-            onClick={() => navigate("/shop/order")}
-            className="kiosk_icon_action_btn"
-            style={{ width: 34, height: 34 }}
-            title="Track an order"
-          >
-            <MdOutlineReceiptLong size={17} />
-          </button>
-          {/* Cart button */}
-          <button
-            onClick={() => setCartOpen(true)}
+
+          {/* Header Action Icons (Responsive) */}
+          <div
+            className="shop-header-actions"
             style={{
-              position: "relative",
-              height: 36,
-              padding: "0 14px",
-              borderRadius: 10,
-              background:
-                totalItems > 0 ? "var(--bg-active)" : "var(--bg-hover)",
-              border: `1px solid ${totalItems > 0 ? "rgba(203,108,220,0.35)" : "var(--border)"}`,
-              cursor: "pointer",
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
-              gap: 7,
-              fontFamily: "inherit",
-              fontWeight: 700,
-              fontSize: "0.78rem",
-              color: totalItems > 0 ? "var(--accent)" : "var(--text-muted)",
-              transition: "all 0.15s",
+              gap: 8,
+              flexShrink: 0,
             }}
           >
-            <LuShoppingCart size={15} />
-            <span>
-              {totalItems > 0 ? `${totalItems} · ₦${fmt(totalPrice)}` : "Cart"}
-            </span>
-            {totalItems > 0 && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: -5,
-                  right: -5,
-                  width: 16,
-                  height: 16,
-                  borderRadius: "50%",
-                  background: "var(--accent)",
-                  border: "2px solid var(--bg-main, var(--bg-card))",
-                  fontSize: "0.55rem",
-                  fontWeight: 900,
-                  color: "#fff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {totalItems > 9 ? "9+" : totalItems}
-              </span>
+            {/* Location picker (hidden on locked outlet devices) */}
+            {!deviceKioskId && (
+              <div style={{ position: "relative" }} ref={locationRef}>
+                <button
+                  onClick={() => setLocationOpen((v) => !v)}
+                  className="kiosk_icon_action_btn shop-header-btn"
+                  style={{
+                    width: 34,
+                    height: 34,
+                    position: "relative",
+                    background: selectedState ? "rgba(203,108,220,0.12)" : undefined,
+                    color: selectedState ? "var(--accent)" : undefined,
+                    borderColor: selectedState ? "rgba(203,108,220,0.4)" : undefined,
+                  }}
+                  title={selectedState ? `Location: ${selectedState.name}` : "Filter by state / location"}
+                  aria-label="Location picker"
+                >
+                  <MdLocationOn size={17} />
+                  {selectedState && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 4,
+                        right: 4,
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: "var(--accent)",
+                        border: "1px solid var(--bg-card)",
+                      }}
+                    />
+                  )}
+                </button>
+
+                {/* Location Popover Dropdown */}
+                {locationOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 8px)",
+                      right: 0,
+                      width: 280,
+                      maxWidth: "min(320px, calc(100vw - 24px))",
+                      background: "var(--bg-card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 14,
+                      boxShadow: "0 14px 34px rgba(0,0,0,0.22)",
+                      padding: 12,
+                      zIndex: 1000,
+                      boxSizing: "border-box",
+                      animation: "shopFadeIn 0.15s ease-out",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: 8,
+                        paddingBottom: 8,
+                        borderBottom: "1px solid var(--border)",
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontSize: "0.82rem",
+                            fontWeight: 800,
+                            color: "var(--text-heading)",
+                          }}
+                        >
+                          Select Location
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.66rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          Filter menus available in your state
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setLocationOpen(false)}
+                        className="kiosk_icon_action_btn"
+                        style={{ width: 24, height: 24 }}
+                      >
+                        <MdClose size={12} />
+                      </button>
+                    </div>
+
+                    {states.length > 5 && (
+                      <div style={{ position: "relative", marginBottom: 8 }}>
+                        <MdSearch
+                          size={13}
+                          style={{
+                            position: "absolute",
+                            left: 9,
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            color: "var(--text-muted)",
+                            pointerEvents: "none",
+                          }}
+                        />
+                        <input
+                          type="text"
+                          className="modal-input"
+                          style={{
+                            height: 32,
+                            paddingLeft: 28,
+                            paddingRight: 10,
+                            fontSize: "0.75rem",
+                            marginBottom: 0,
+                          }}
+                          placeholder="Search state…"
+                          value={stateSearch}
+                          onChange={(e) => setStateSearch(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                    )}
+
+                    <div
+                      style={{
+                        maxHeight: 220,
+                        overflowY: "auto",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 3,
+                      }}
+                    >
+                      {/* All Locations Option */}
+                      <button
+                        onClick={() => handleSelectState("")}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          border: "none",
+                          background: !selectedStateId
+                            ? "var(--bg-active)"
+                            : "transparent",
+                          color: !selectedStateId
+                            ? "var(--accent)"
+                            : "var(--text-body)",
+                          cursor: "pointer",
+                          fontSize: "0.78rem",
+                          fontWeight: !selectedStateId ? 800 : 500,
+                          textAlign: "left",
+                          transition: "all 0.12s",
+                        }}
+                      >
+                        <span>All Locations (Nearby)</span>
+                        {!selectedStateId && <MdCheckCircle size={14} />}
+                      </button>
+
+                      {statesLoading ? (
+                        <div
+                          style={{
+                            padding: "16px 0",
+                            textAlign: "center",
+                            fontSize: "0.72rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          Loading locations…
+                        </div>
+                      ) : filteredStates.length === 0 ? (
+                        <div
+                          style={{
+                            padding: "14px 0",
+                            textAlign: "center",
+                            fontSize: "0.72rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          No state matching "{stateSearch}"
+                        </div>
+                      ) : (
+                        filteredStates.map((s) => {
+                          const isSelected = s.id === selectedStateId;
+                          return (
+                            <button
+                              key={s.id}
+                              onClick={() => handleSelectState(s.id)}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                padding: "8px 10px",
+                                borderRadius: 8,
+                                border: "none",
+                                background: isSelected
+                                  ? "var(--bg-active)"
+                                  : "transparent",
+                                color: isSelected
+                                  ? "var(--accent)"
+                                  : "var(--text-body)",
+                                cursor: "pointer",
+                                fontSize: "0.78rem",
+                                fontWeight: isSelected ? 800 : 500,
+                                textAlign: "left",
+                                transition: "all 0.12s",
+                              }}
+                            >
+                              <div style={{ display: "flex", flexDirection: "column" }}>
+                                <span>{s.name}</span>
+                                <span
+                                  style={{
+                                    fontSize: "0.62rem",
+                                    color: "var(--text-muted)",
+                                  }}
+                                >
+                                  {s.code || s.country || ""} · {s.currency || "NGN"}
+                                </span>
+                              </div>
+                              {isSelected && <MdCheckCircle size={14} />}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-          </button>
+
+            {/* Theme toggle */}
+            <button
+              onClick={toggle}
+              className="kiosk_icon_action_btn shop-header-btn"
+              style={{ width: 34, height: 34 }}
+              title={theme === "dark" ? "Light mode" : "Dark mode"}
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? (
+                <MdOutlineLightMode size={17} />
+              ) : (
+                <MdOutlineDarkMode size={17} />
+              )}
+            </button>
+
+            {/* Track order icon */}
+            <button
+              onClick={() => navigate("/shop/order")}
+              className="kiosk_icon_action_btn shop-header-btn"
+              style={{ width: 34, height: 34 }}
+              title="Track an order"
+              aria-label="Track an order"
+            >
+              <MdOutlineReceiptLong size={17} />
+            </button>
+
+            {/* Cart button */}
+            <button
+              onClick={() => setCartOpen(true)}
+              className="shop-header-cart-btn"
+              style={{
+                position: "relative",
+                height: 36,
+                padding: "0 14px",
+                borderRadius: 10,
+                background:
+                  totalItems > 0 ? "var(--bg-active)" : "var(--bg-hover)",
+                border: `1px solid ${totalItems > 0 ? "rgba(203,108,220,0.35)" : "var(--border)"}`,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 7,
+                fontFamily: "inherit",
+                fontWeight: 700,
+                fontSize: "0.78rem",
+                color: totalItems > 0 ? "var(--accent)" : "var(--text-muted)",
+                transition: "all 0.15s",
+                flexShrink: 0,
+              }}
+            >
+              <LuShoppingCart size={15} />
+              <span className="shop-cart-label">
+                {totalItems > 0 ? `${totalItems} · ${formatKioskPrice(totalPrice, activeCartCurrency)}` : "Cart"}
+              </span>
+              {totalItems > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: -5,
+                    right: -5,
+                    width: 16,
+                    height: 16,
+                    borderRadius: "50%",
+                    background: "var(--accent)",
+                    border: "2px solid var(--bg-main, var(--bg-card))",
+                    fontSize: "0.55rem",
+                    fontWeight: 900,
+                    color: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {totalItems > 9 ? "9+" : totalItems}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -2194,6 +2619,88 @@ export default function ShopPage() {
           boxSizing: "border-box",
         }}
       >
+        {/* Dedicated device outlet banner */}
+        {deviceKioskId && concepts[0] && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 10,
+              marginBottom: 16,
+              padding: "10px 14px",
+              borderRadius: 12,
+              background: "rgba(203,108,220,0.08)",
+              border: "1px solid rgba(203,108,220,0.22)",
+              fontSize: "0.76rem",
+              color: "var(--text-body)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <MdStorefront size={16} style={{ color: "var(--accent)" }} />
+              <span>
+                Ordering Terminal for <strong>{concepts[0]?.vendor?.businessName || "Outlet"}</strong> (Kiosk #{concepts[0]?.serialNumber || deviceKioskId.slice(0, 8)})
+              </span>
+            </div>
+            {concepts[0]?.location?.address && (
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  color: "var(--text-muted)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 3,
+                }}
+              >
+                <MdLocationOn size={12} />
+                {concepts[0].location.address}
+                {concepts[0].location.city ? `, ${concepts[0].location.city}` : ""}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Active state filter indicator badge (only in general shop mode) */}
+        {!deviceKioskId && selectedState && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: 14,
+              padding: "4px 10px",
+              borderRadius: 999,
+              background: "rgba(203,108,220,0.1)",
+              border: "1px solid rgba(203,108,220,0.25)",
+              fontSize: "0.74rem",
+              color: "var(--accent)",
+              fontWeight: 700,
+            }}
+          >
+            <MdLocationOn size={13} />
+            <span>
+              Showing options in <strong>{selectedState.name}</strong>
+            </span>
+            <button
+              onClick={() => handleSelectState("")}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--accent)",
+                display: "flex",
+                alignItems: "center",
+                padding: "2px",
+                marginLeft: 2,
+              }}
+              title="Clear location filter"
+            >
+              <MdClose size={12} />
+            </button>
+          </div>
+        )}
+
         {/* Search */}
         <div style={{ position: "relative", marginBottom: 24 }}>
           <MdSearch
@@ -2271,11 +2778,21 @@ export default function ShopPage() {
           <div className="kiosk_empty_state" style={{ padding: "60px 0" }}>
             <MdOutlineShoppingBag size={28} style={{ opacity: 0.25 }} />
             <p className="kiosk_empty_title">
-              {search ? "No results found" : "No carts nearby"}
+              {search
+                ? "No results found"
+                : deviceKioskId
+                ? "Outlet menu currently unavailable"
+                : selectedState
+                ? `No active kiosks in ${selectedState.name}`
+                : "No carts nearby"}
             </p>
             <p className="kiosk_empty_sub">
               {search
-                ? "Try a different term."
+                ? "Try a different search term."
+                : deviceKioskId
+                ? "Items for this outlet will appear once updated by the vendor."
+                : selectedState
+                ? "Try selecting another state or switch back to All Locations."
                 : "Try adjusting your location or check back later."}
             </p>
           </div>
@@ -2323,7 +2840,7 @@ export default function ShopPage() {
             <LuShoppingCart size={18} />
             View Cart · {totalItems} item{totalItems !== 1 ? "s" : ""}
             {totalPrice > 0 && (
-              <span style={{ opacity: 0.85 }}>· ₦{fmt(totalPrice)}</span>
+              <span style={{ opacity: 0.85 }}>· {formatKioskPrice(totalPrice, activeCartCurrency)}</span>
             )}
           </button>
         </div>

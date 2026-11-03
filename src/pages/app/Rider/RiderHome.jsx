@@ -3,6 +3,7 @@ import "./Rider.css";
 import { toast } from "react-toastify";
 import api from "../../../api/axios";
 import { useAuth } from "../../../contexts/AuthContext";
+import useCurrencyDisplay from "../../../hooks/useCurrencyDisplay";
 import {
   MdCircle,
   MdDeliveryDining,
@@ -145,8 +146,9 @@ function FileInput({ label, accept = "image/*", onChange, currentUrl, hint }) {
   );
 }
 
-function OrderCard({ order, activeTab, onActionRefresh }) {
+function OrderCard({ order, activeTab, onActionRefresh, fallbackCurrency = "NGN" }) {
   const [loading, setLoading] = useState(false);
+  const { format: fmtCurrency } = useCurrencyDisplay();
 
   const handleAccept = async () => {
     setLoading(true);
@@ -174,8 +176,9 @@ function OrderCard({ order, activeTab, onActionRefresh }) {
     }
   };
 
-  const formattedFee = Number(order.deliveryFee || 0).toLocaleString("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 });
-  const formattedTotal = Number(order.totalAmount || 0).toLocaleString("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 });
+  const orderCurrency = order.kiosk?.location?.state?.currency || order.currency || fallbackCurrency;
+  const formattedFee = fmtCurrency(order.deliveryFee || 0, orderCurrency);
+  const formattedTotal = fmtCurrency(order.totalAmount || 0, orderCurrency);
 
   return (
     <div className="rider-order-card">
@@ -774,10 +777,12 @@ export default function RiderHome() {
   }
 
   // State 3: Approved & Operational Dashboard
+  const { format: fmtCurrency } = useCurrencyDisplay();
+  const riderCurrency = profile?.state?.currency || "NGN";
   const activeCount = analytics?.stats?.activeCount || 0;
   const totalCompleted = analytics?.stats?.totalCompleted || 0;
   const totalEarnings = analytics?.stats?.totalEarnings || 0;
-  const formattedEarnings = totalEarnings.toLocaleString("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 });
+  const formattedEarnings = fmtCurrency(totalEarnings, riderCurrency);
 
   return (
     <div className="rider-wrapper">
@@ -871,6 +876,7 @@ export default function RiderHome() {
                 order={order}
                 activeTab={activeTab}
                 onActionRefresh={handleRefresh}
+                fallbackCurrency={riderCurrency}
               />
             ))}
           </div>

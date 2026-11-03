@@ -181,6 +181,7 @@ import RiderHome from "../pages/app/Rider/RiderHome";
 import ShopPage from "../pages/website/ShopPage";
 import ShopCheckoutPage from "../pages/website/ShopCheckoutPage";
 import ShopOrderPage from "../pages/website/ShopOrderPage";
+import KioskDeviceSetup from "../pages/website/KioskDeviceSetup";
 import PrivacyPolicy from "../pages/website/PrivacyPolicy";
 import TermsOfService from "../pages/website/TermsOfService";
 import { getDefaultRoute } from "../utils/AuthHelpers";
@@ -253,6 +254,8 @@ export default function Routes() {
     { path: "/shop", element: <ShopPage /> },
     { path: "/shop/checkout", element: <ShopCheckoutPage /> },
     { path: "/shop/order", element: <ShopOrderPage /> },
+    { path: "/shop/setup", element: <KioskDeviceSetup /> },
+    { path: "/setup/device", element: <KioskDeviceSetup /> },
 
     // Guest only routes
     {
