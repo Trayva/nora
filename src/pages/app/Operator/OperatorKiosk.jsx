@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useAuth } from "../../../contexts/AuthContext";
 import api from "../../../api/axios";
 import KioskOrders from "../../kiosk/KioskOrders";
 import {
@@ -1700,39 +1701,121 @@ export function MenuTab({ menuItems }) {
   );
 }
 
-/* E-LEARNING - all patches applied */
+/* E-LEARNING - Protected Video Player */
 function getEmbedUrl(src) {
   if (!src) return null;
   const vimeoMatch = src.match(/vimeo\.com\/(\d+)/);
-  if (vimeoMatch)
-    return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=0&title=0&byline=0&portrait=0`;
+  if (vimeoMatch) {
+    const params = [
+      "autoplay=0",
+      "title=0",
+      "byline=0",
+      "portrait=0",
+      "badge=0",
+      "vimeo_logo=0",
+      "controls=1",
+      "pip=0",
+      "dnt=1",
+      "playsinline=1",
+      "transparent=0",
+      "keyboard=1",
+    ].join("&");
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}?${params}`;
+  }
   const ytMatch = src.match(
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
   );
-  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  if (ytMatch) {
+    const params = [
+      "controls=1",
+      "modestbranding=1",
+      "rel=0",
+      "showinfo=0",
+      "iv_load_policy=3",
+      "fs=0",
+      "disablekb=0",
+    ].join("&");
+    return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?${params}`;
+  }
   return null;
 }
 
 function VideoBlock({ src, label, onWatched }) {
+  const { user } = useAuth();
+  const [isScreenProtected, setIsScreenProtected] = useState(false);
+  const operatorIdentifier =
+    user?.fullName || user?.email || user?.id?.slice(0, 8) || "Operator";
+
+  // Anti-screenshot & recording protection
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // PrintScreen key intercept
+      if (e.key === "PrintScreen" || e.keyCode === 44) {
+        setIsScreenProtected(true);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText("").catch(() => {});
+        }
+        setTimeout(() => setIsScreenProtected(false), 2000);
+      }
+      // Common save/print/view-source shortcuts
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        ["s", "p", "u"].includes(e.key.toLowerCase())
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    // When window loses focus (e.g., screen recording / snipping tool active)
+    const handleBlur = () => {
+      setIsScreenProtected(true);
+    };
+    const handleFocus = () => {
+      setIsScreenProtected(false);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setIsScreenProtected(true);
+      } else {
+        setIsScreenProtected(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   if (src) {
     const embedUrl = getEmbedUrl(src);
-    if (embedUrl) {
-      return (
-        <div>
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              aspectRatio: "16/9",
-              borderRadius: 12,
-              overflow: "hidden",
-              background: "#000",
-            }}
-          >
+    return (
+      <div>
+        <div
+          onContextMenu={(e) => e.preventDefault()}
+          style={{
+            position: "relative",
+            width: "100%",
+            aspectRatio: "16/9",
+            borderRadius: 12,
+            overflow: "hidden",
+            background: "#000",
+            userSelect: "none",
+            WebkitUserSelect: "none",
+          }}
+        >
+          {embedUrl ? (
             <iframe
               src={embedUrl}
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowFullScreen
+              allow="autoplay; fullscreen"
               style={{
                 position: "absolute",
                 inset: 0,
@@ -1742,50 +1825,179 @@ function VideoBlock({ src, label, onWatched }) {
               }}
               title="Tutorial video"
             />
-          </div>
-          {onWatched && (
-            <button
-              onClick={onWatched}
+          ) : (
+            <video
+              src={src}
+              controls
+              playsInline
+              controlsList="nodownload nofullscreen noremoteplayback"
+              disablePictureInPicture
+              disableRemotePlayback
+              onContextMenu={(e) => e.preventDefault()}
+              onEnded={onWatched}
               style={{
-                marginTop: 8,
+                position: "absolute",
+                inset: 0,
                 width: "100%",
-                height: 36,
-                borderRadius: 9,
-                border: "1px solid rgba(34,197,94,0.3)",
-                background: "rgba(34,197,94,0.07)",
-                color: "#16a34a",
-                fontFamily: "inherit",
-                fontWeight: 700,
-                fontSize: "0.8rem",
-                cursor: "pointer",
+                height: "100%",
+                objectFit: "contain",
+                background: "#000",
+                display: "block",
+              }}
+            />
+          )}
+
+          {/* Top Protective Click Shield: Blocks title, channel, share, copy link, and Vimeo navigation */}
+          <div
+            onContextMenu={(e) => e.preventDefault()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 56,
+              zIndex: 6,
+              background: "transparent",
+              pointerEvents: "auto",
+              cursor: "default",
+            }}
+          />
+
+          {/* Bottom-Right Protective Click Shield: Blocks Vimeo / YouTube logo redirect link */}
+          <div
+            onContextMenu={(e) => e.preventDefault()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              right: 0,
+              width: 75,
+              height: 44,
+              zIndex: 6,
+              background: "transparent",
+              pointerEvents: "auto",
+              cursor: "default",
+            }}
+          />
+
+          {/* Subtle Dynamic Operator Watermark */}
+          <div
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 12,
+              zIndex: 7,
+              pointerEvents: "none",
+              background: "rgba(0, 0, 0, 0.45)",
+              backdropFilter: "blur(2px)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              padding: "3px 8px",
+              borderRadius: 6,
+              fontSize: "0.62rem",
+              fontWeight: 700,
+              color: "rgba(255, 255, 255, 0.7)",
+              letterSpacing: "0.04em",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              userSelect: "none",
+            }}
+          >
+            <span>🔒 Confidential · {operatorIdentifier}</span>
+          </div>
+
+          {/* Screen Capture / Recording Blackout Shield */}
+          {isScreenProtected && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: 20,
+                background: "#0b0b0f",
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 6,
+                gap: 10,
+                padding: 20,
+                textAlign: "center",
+                color: "#fff",
+                userSelect: "none",
               }}
             >
-              <MdCheck size={15} /> Mark as Watched
-            </button>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  background: "rgba(239, 68, 68, 0.15)",
+                  border: "1.5px solid rgba(239, 68, 68, 0.4)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.2rem",
+                }}
+              >
+                🔒
+              </div>
+              <div
+                style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 800,
+                  color: "#f87171",
+                }}
+              >
+                Protected Training Material
+              </div>
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  color: "rgba(255, 255, 255, 0.6)",
+                  maxWidth: 300,
+                }}
+              >
+                Screen recording, screenshots, and window capture are restricted.
+                Refocus this window to continue watching.
+              </div>
+            </div>
           )}
         </div>
-      );
-    }
-    return (
-      <video
-        src={src}
-        controls
-        playsInline
-        onEnded={onWatched}
-        style={{
-          width: "100%",
-          borderRadius: 12,
-          background: "#000",
-          maxHeight: 240,
-          display: "block",
-        }}
-      />
+
+        {onWatched && (
+          <button
+            onClick={onWatched}
+            style={{
+              marginTop: 8,
+              width: "100%",
+              height: 36,
+              borderRadius: 9,
+              border: "1px solid rgba(34,197,94,0.3)",
+              background: "rgba(34,197,94,0.07)",
+              color: "#16a34a",
+              fontFamily: "inherit",
+              fontWeight: 700,
+              fontSize: "0.8rem",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+            }}
+          >
+            <MdCheck size={15} /> Mark as Watched
+          </button>
+        )}
+      </div>
     );
   }
+
   return (
     <div
       style={{
