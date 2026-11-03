@@ -18,7 +18,7 @@ import {
   MdOutlineDarkMode,
   MdInfoOutline,
 } from "react-icons/md";
-
+UUID
 const STORAGE_KEY = "nora_device_kiosk_id";
 
 export default function KioskDeviceSetup() {
@@ -55,7 +55,7 @@ export default function KioskDeviceSetup() {
     e?.preventDefault?.();
     const id = kioskIdInput.trim();
     if (!id) {
-      toast.error("Please enter a valid Kiosk ID or Serial Number");
+      toast.error("Please enter a valid Outlet ID or Serial Number");
       return;
     }
 
@@ -80,7 +80,7 @@ export default function KioskDeviceSetup() {
       console.error(err);
       toast.error(
         err.response?.data?.message ||
-          "Could not verify Kiosk. Check the UUID or Serial Number and ensure the kiosk is active."
+        "Could not verify Outlet. Check the UUID or Serial Number and ensure the outlet is active."
       );
     } finally {
       setVerifying(false);
@@ -213,7 +213,7 @@ export default function KioskDeviceSetup() {
                 }}
               >
                 Configure this tablet, terminal, or browser to operate exclusively
-                for a single Nora kiosk outlet. Once saved, visiting <code>/shop</code> on
+                for a single Nora outlet outlet. Once saved, visiting <code>/shop</code> on
                 this device will immediately display only that outlet's menu for customer ordering.
               </p>
             </div>
@@ -290,7 +290,7 @@ export default function KioskDeviceSetup() {
                   color: "var(--text-muted)",
                 }}
               >
-                Verifying kiosk details…
+                Verifying outlet details…
               </div>
             ) : kioskDetails ? (
               <div>
@@ -347,7 +347,7 @@ export default function KioskDeviceSetup() {
                         fontFamily: "monospace",
                       }}
                     >
-                      Kiosk #{kioskDetails.serialNumber || savedId.slice(0, 8)}
+                      Outlet #{kioskDetails.serialNumber || savedId.slice(0, 8)}
                     </div>
                   </div>
                 </div>
@@ -434,7 +434,7 @@ export default function KioskDeviceSetup() {
             ) : (
               <div>
                 <p style={{ fontSize: "0.82rem", color: "var(--danger, #ef4444)", margin: "0 0 10px 0" }}>
-                  Unable to load details for Kiosk ID <code>{savedId}</code>. The kiosk may be offline or deleted.
+                  Unable to load details for Outlet ID <code>{savedId}</code>. The outlet may be offline or deleted.
                 </p>
                 <button
                   onClick={handleClearKiosk}
@@ -466,7 +466,7 @@ export default function KioskDeviceSetup() {
               margin: "0 0 6px 0",
             }}
           >
-            {savedId ? "Reassign or Change Kiosk" : "Assign Kiosk (UUID or Serial Number)"}
+            {savedId ? "Reassign or Change Outlet" : "Assign Outlet (UUID or Serial Number)"}
           </h2>
           <p
             style={{
@@ -475,7 +475,7 @@ export default function KioskDeviceSetup() {
               margin: "0 0 16px 0",
             }}
           >
-            Enter either the Kiosk's 36-character UUID or its assigned Serial Number (e.g. KSK-001).
+            Enter either the Outlet's 36-character UUID or its assigned Serial Number (e.g. KSK-001).
           </p>
 
           <form onSubmit={handleSaveKiosk}>
@@ -530,7 +530,7 @@ export default function KioskDeviceSetup() {
                 ) : (
                   <>
                     <MdCheckCircle size={16} />
-                    <span>Verify & Save Kiosk</span>
+                    <span>Verify & Save Outlet</span>
                   </>
                 )}
               </button>

@@ -1837,7 +1837,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
                             fontFamily: "monospace",
                           }}
                         >
-                          Kiosk #{group?.kioskId?.slice?.(0, 8)?.toUpperCase() || "UNKNOWN"}
+                          Outlet #{group?.kioskId?.slice?.(0, 8)?.toUpperCase() || "UNKNOWN"}
                         </div>
                       </div>
                       {isOrdered && (
@@ -2308,7 +2308,7 @@ export default function ShopPage() {
             >
               <MdStorefront size={13} style={{ flexShrink: 0 }} />
               <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                {concepts[0]?.vendor?.businessName || `Kiosk #${concepts[0]?.serialNumber || deviceKioskId.slice(0, 8)}`}
+                {concepts[0]?.vendor?.businessName || `Outlet #${concepts[0]?.serialNumber || deviceKioskId.slice(0, 8)}`}
               </span>
             </div>
           )}
@@ -2666,7 +2666,7 @@ export default function ShopPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <MdStorefront size={16} style={{ color: "var(--accent)" }} />
               <span>
-                Ordering Terminal for <strong>{concepts[0]?.vendor?.businessName || "Outlet"}</strong> (Kiosk #{concepts[0]?.serialNumber || deviceKioskId.slice(0, 8)})
+                Ordering Terminal for <strong>{concepts[0]?.vendor?.businessName || "Outlet"}</strong> (Outlet #{concepts[0]?.serialNumber || deviceKioskId.slice(0, 8)})
               </span>
             </div>
             {concepts[0]?.location?.address && (
