@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../../../api/axios";
@@ -463,7 +463,10 @@ function TaskSubmitForm({ task, onSubmitted }) {
 function TaskCard({ task, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
   const [showSubmit, setShowSubmit] = useState(false);
-  const isPending = task.status === "PENDING" || task.status === "IN_PROGRESS";
+  const isPending =
+    task.status === "PENDING" ||
+    task.status === "IN_PROGRESS" ||
+    task.status === "MISSED";
   return (
     <div
       style={{
@@ -627,43 +630,177 @@ function TaskCard({ task, onRefresh }) {
 export function TasksTab({ kioskId }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const fetchTasks = async () => {
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [taskFilter, setTaskFilter] = useState("PENDING"); // PENDING | MISSED | ALL
+  const [totalTasks, setTotalTasks] = useState(null);
+  const sentinelRef = useRef(null);
+
+  const fetchTasks = async (filterToUse = taskFilter) => {
+    if (!kioskId) return;
     setLoading(true);
+    setPage(1);
     try {
-      const res = await api.get(`/kiosk/tasks?kioskId=${kioskId}`);
-      setTasks(res.data.data?.items || res.data.data || []);
+      const filterQuery = filterToUse !== "ALL" ? `&status=${filterToUse}` : "";
+      const res = await api.get(`/kiosk/tasks?kioskId=${kioskId}&page=1&limit=15${filterQuery}`);
+      const items = res.data.data?.items || res.data.data || [];
+      const totalPages = res.data.data?.pages ?? 1;
+      const totalCount = res.data.data?.total ?? items.length;
+
+      setTasks(items);
+      setTotalTasks(totalCount);
+      setHasMore(1 < totalPages && items.length > 0);
     } catch {
       toast.error("Failed to load tasks");
     } finally {
       setLoading(false);
     }
   };
+
+  const loadMoreTasks = async () => {
+    if (loading || loadingMore || !hasMore || !kioskId) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    try {
+      const filterQuery = taskFilter !== "ALL" ? `&status=${taskFilter}` : "";
+      const res = await api.get(`/kiosk/tasks?kioskId=${kioskId}&page=${nextPage}&limit=15${filterQuery}`);
+      const newItems = res.data.data?.items || res.data.data || [];
+      const totalPages = res.data.data?.pages ?? 1;
+
+      setTasks((prev) => {
+        const existingIds = new Set(prev.map((t) => t.id));
+        const filtered = newItems.filter((t) => !existingIds.has(t.id));
+        return [...prev, ...filtered];
+      });
+      setPage(nextPage);
+      setHasMore(nextPage < totalPages && newItems.length > 0);
+    } catch (err) {
+      console.error("Failed to load more tasks:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const handleFilterChange = (newFilter) => {
+    if (newFilter === taskFilter) return;
+    setTaskFilter(newFilter);
+    fetchTasks(newFilter);
+  };
+
   useEffect(() => {
-    fetchTasks();
+    fetchTasks(taskFilter);
   }, [kioskId]);
-  if (loading)
-    return (
-      <div style={{ padding: "16px" }}>
-        <div className="skeleton_shimmer skeleton_text" style={{ width: "120px", height: "14px", marginBottom: "20px" }} />
-        {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="skeleton_shimmer skeleton_rect"
-            style={{ height: "70px", borderRadius: "12px", marginBottom: "12px" }}
-          />
-        ))}
-      </div>
+
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMore || loading || loadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMoreTasks();
+        }
+      },
+      { threshold: 0.1, rootMargin: "150px" }
     );
-  return tasks.length === 0 ? (
-    <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
-      <MdTask size={28} style={{ opacity: 0.3 }} />
-      <span>No pending tasks</span>
-    </div>
-  ) : (
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, page, taskFilter, kioskId]);
+
+  return (
     <div>
-      {tasks.map((t) => (
-        <TaskCard key={t.id} task={t} onRefresh={fetchTasks} />
-      ))}
+      {/* Filter Tabs */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 8,
+          marginBottom: 14,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className={`kiosk_sub_nav_btn ${taskFilter === "PENDING" ? "kiosk_sub_nav_active" : ""}`}
+            style={{
+              borderRadius: 20,
+              padding: "4px 14px",
+              fontSize: "0.75rem",
+              height: 28,
+            }}
+            onClick={() => handleFilterChange("PENDING")}
+          >
+            Pending
+          </button>
+          <button
+            type="button"
+            className={`kiosk_sub_nav_btn ${taskFilter === "MISSED" ? "kiosk_sub_nav_active" : ""}`}
+            style={{
+              borderRadius: 20,
+              padding: "4px 14px",
+              fontSize: "0.75rem",
+              height: 28,
+              color: taskFilter === "MISSED" ? "#ef4444" : undefined,
+            }}
+            onClick={() => handleFilterChange("MISSED")}
+          >
+            Missed
+          </button>
+          <button
+            type="button"
+            className={`kiosk_sub_nav_btn ${taskFilter === "ALL" ? "kiosk_sub_nav_active" : ""}`}
+            style={{
+              borderRadius: 20,
+              padding: "4px 14px",
+              fontSize: "0.75rem",
+              height: 28,
+            }}
+            onClick={() => handleFilterChange("ALL")}
+          >
+            All
+          </button>
+        </div>
+        {totalTasks !== null && (
+          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+            {totalTasks} {taskFilter === "MISSED" ? "missed" : taskFilter === "PENDING" ? "pending" : "total"} task{totalTasks === 1 ? "" : "s"}
+          </span>
+        )}
+      </div>
+
+      {loading ? (
+        <div style={{ padding: "8px 0" }}>
+          <div className="skeleton_shimmer skeleton_text" style={{ width: "120px", height: "14px", marginBottom: "16px" }} />
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="skeleton_shimmer skeleton_rect"
+              style={{ height: "70px", borderRadius: "12px", marginBottom: "12px" }}
+            />
+          ))}
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="kiosk_empty_inline" style={{ padding: "40px 0" }}>
+          <MdTask size={28} style={{ opacity: 0.3 }} />
+          <span>{taskFilter === "MISSED" ? "No missed tasks" : taskFilter === "ALL" ? "No tasks found" : "No pending tasks"}</span>
+        </div>
+      ) : (
+        <div>
+          {tasks.map((t) => (
+            <TaskCard key={t.id} task={t} onRefresh={() => fetchTasks(taskFilter)} />
+          ))}
+          <div ref={sentinelRef} style={{ minHeight: 20, margin: "8px 0" }}>
+            {loadingMore && (
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "12px", gap: 8 }}>
+                <span className="btn_loader" style={{ width: 14, height: 14 }} />
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Loading more tasks...</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -699,8 +836,6 @@ export function InventoryTab({ kioskId }) {
   const [usageNotes, setUsageNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [showSupplyForm, setShowSupplyForm] = useState(false);
-  const [suppliers, setSuppliers] = useState([]);
-  const [supplierId, setSupplierId] = useState("");
   const [supplyItems, setSupplyItems] = useState([
     { query: "", ingredient: null, quantity: "", unit: "g" },
   ]);
@@ -748,15 +883,6 @@ export function InventoryTab({ kioskId }) {
     else if (view === "supply") fetchSupply();
     else if (view === "history") fetchHistory();
   }, [view]);
-  useEffect(() => {
-    api
-      .get("/supplier")
-      .then((r) => {
-        const d = r.data.data;
-        setSuppliers(Array.isArray(d) ? d : d?.suppliers || d?.items || []);
-      })
-      .catch(() => { });
-  }, []);
 
   const handleRecordUsage = async () => {
     if (!usageItem || !usageQty || Number(usageQty) <= 0)
@@ -826,7 +952,6 @@ export function InventoryTab({ kioskId }) {
       setSupplyItems([
         { query: "", ingredient: null, quantity: "", unit: "g" },
       ]);
-      setSupplierId("");
       setView("supply");
       setTimeout(() => fetchSupply(), 100);
     } catch (err) {
@@ -1391,7 +1516,7 @@ export function InventoryTab({ kioskId }) {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="kiosk_task_name">
-                      {req.supplier?.businessName || "Supply Request"}
+                      {req.supplier?.businessName || (req.status === "PENDING" ? "Supply Request (Awaiting Supplier Selection)" : "Supply Request")}
                     </div>
                     <div className="kiosk_task_meta">
                       <span>{req.items?.length || 0} items</span>

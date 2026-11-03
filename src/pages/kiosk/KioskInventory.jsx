@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   MdAdd,
   MdEdit,
@@ -25,6 +26,8 @@ import {
   useMachinerySupplierPrices,
   PriceTag,
 } from "../../components/SupplierPicker";
+
+
 
 const SEARCH_INGREDIENT_URL = (q, kioskId) => {
   let url = `/library/ingredient?returnPrep=true&search=${encodeURIComponent(q)}&limit=8`;
@@ -728,7 +731,7 @@ function MachineryPriceInline({
   );
 }
 
-function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderData }) {
+function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderData, isOperator }) {
   const [supplyTab, setSupplyTab] = useState(() => {
     if (isUtilities) return "machinery";
     if (reorderData) {
@@ -738,7 +741,7 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
     return "ingredients";
   });
   const [suppliers, setSuppliers] = useState([]);
-  const [suppliersLoading, setSuppliersLoading] = useState(true);
+  const [suppliersLoading, setSuppliersLoading] = useState(!isOperator);
   const [supplierId, setSupplierId] = useState(reorderData?.supplierId || "");
   const [ingRows, setIngRows] = useState(() => {
     if (reorderData && (reorderData.items || []).length > 0) {
@@ -779,6 +782,10 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
   const { isConverted, displayCurrency } = useCurrencyDisplay();
 
   useEffect(() => {
+    if (isOperator) {
+      setSuppliersLoading(false);
+      return;
+    }
     const stateId = cart?.location?.stateId || cart?.stateId || "";
     const url = stateId ? `/supplier?stateId=${stateId}` : "/supplier";
     api
@@ -791,7 +798,7 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
       })
       .catch(() => toast.error("Failed to load suppliers"))
       .finally(() => setSuppliersLoading(false));
-  }, [cart]);
+  }, [cart, isOperator]);
 
   const updateIngRow = (i, key, val) =>
     setIngRows((prev) => {
@@ -814,7 +821,7 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
     setMachRows((prev) => prev.filter((_, idx) => idx !== i));
 
   const handleSubmit = async () => {
-    if (!supplierId) return toast.error("Select a supplier");
+    if (!isOperator && !supplierId) return toast.error("Select a supplier");
     if (isRepeating && (!repeatInterval || Number(repeatInterval) <= 0)) {
       return toast.error("Please enter a valid repeat interval in days");
     }
@@ -827,17 +834,20 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
         return toast.error("Add at least one ingredient with a quantity");
       setSaving(true);
       try {
-        await api.post("/kiosk/supply", {
+        const payload = {
           kioskId,
-          supplierId,
           items: valid.map((row) => ({
             ingredientId: row.item.id,
             quantity: toBaseQuantity(row.quantity, row.unit),
           })),
           isRepeating,
           repeatInterval: isRepeating ? Number(repeatInterval) : null,
-        });
-        toast.success("Supply request created");
+        };
+        if (!isOperator && supplierId) {
+          payload.supplierId = supplierId;
+        }
+        await api.post("/kiosk/supply", payload);
+        toast.success(isOperator ? "Supply request submitted to kiosk owner" : "Supply request created");
         onSubmitted();
       } catch (err) {
         toast.error(err.response?.data?.message || "Failed");
@@ -852,17 +862,20 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
         return toast.error("Add at least one machinery with a quantity");
       setSaving(true);
       try {
-        await api.post("/kiosk/supply", {
+        const payload = {
           kioskId,
-          supplierId,
           machineryItems: valid.map((row) => ({
             machineryId: row.item.id,
             quantity: Number(row.quantity),
           })),
           isRepeating,
           repeatInterval: isRepeating ? Number(repeatInterval) : null,
-        });
-        toast.success("Machinery request created");
+        };
+        if (!isOperator && supplierId) {
+          payload.supplierId = supplierId;
+        }
+        await api.post("/kiosk/supply", payload);
+        toast.success(isOperator ? "Supply request submitted to kiosk owner" : "Supply request created");
         onSubmitted();
       } catch (err) {
         toast.error(err.response?.data?.message || "Failed");
@@ -949,16 +962,38 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
           ))}
         </div>
       )}
-      <div className="form-field">
-        <label className="modal-label">Supplier *</label>
-        <SupplierPicker
-          suppliers={suppliers}
-          suppliersLoading={suppliersLoading}
-          value={supplierId}
-          onChange={setSupplierId}
-        />
-      </div>
-      {supplierId && isConverted(supplierStateCurrency) && (
+      {isOperator ? (null
+        // <div
+        //   style={{
+        //     display: "flex",
+        //     alignItems: "center",
+        //     gap: 8,
+        //     padding: "10px 12px",
+        //     borderRadius: 8,
+        //     background: "rgba(59,130,246,0.08)",
+        //     border: "1px solid rgba(59,130,246,0.2)",
+        //     fontSize: "0.75rem",
+        //     color: "var(--text-body)",
+        //     marginBottom: 12,
+        //   }}
+        // >
+        //   <span style={{ fontSize: "1.1rem" }}>ℹ️</span>
+        //   <div>
+        //     <strong>Operator Request</strong>: Add items and quantities below. Your request will be forwarded to the kiosk owner to choose a supplier and complete the order.
+        //   </div>
+        // </div>
+      ) : (
+        <div className="form-field">
+          <label className="modal-label">Supplier *</label>
+          <SupplierPicker
+            suppliers={suppliers}
+            suppliersLoading={suppliersLoading}
+            value={supplierId}
+            onChange={setSupplierId}
+          />
+        </div>
+      )}
+      {!isOperator && supplierId && isConverted(supplierStateCurrency) && (
         <div
           style={{
             display: "flex",
@@ -1169,7 +1204,7 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
                         ({row.item.unit})
                       </span>
                     )}
-                    {supplierId && (
+                    {!isOperator && supplierId && (
                       <IngredientPriceInline
                         ingredientId={row.item.id}
                         supplierId={supplierId}
@@ -1380,7 +1415,7 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
                     >
                       Machinery
                     </span>
-                    {supplierId && (
+                    {!isOperator && supplierId && (
                       <MachineryPriceInline
                         machineryId={row.item.id}
                         supplierId={supplierId}
@@ -1513,11 +1548,12 @@ function SupplyRequestForm({ kioskId, cart, onSubmitted, isUtilities, reorderDat
         className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
         style={{ width: "100%", height: 42, position: "relative" }}
         onClick={handleSubmit}
-        disabled={saving || !supplierId}
+        disabled={saving || (!isOperator && !supplierId)}
       >
         <span className="btn_text">
-          Submit {supplyTab === "ingredients" ? "Ingredient" : "Machinery"}{" "}
-          Request{activeCount > 1 ? "s" : ""}
+          {isOperator
+            ? "Submit Request to Owner"
+            : `Submit ${supplyTab === "ingredients" ? "Ingredient" : "Machinery"} Request${activeCount > 1 ? "s" : ""}`}
         </span>
         {saving && (
           <span className="btn_loader" style={{ width: 14, height: 14 }} />
@@ -2490,7 +2526,7 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
 }
 
 /* ── Supply Request Row ─────────────────────────────────────── */
-function SupplyRequestRow({ cart, req, onRefresh, onReorder, onSelectSupplier }) {
+function SupplyRequestRow({ cart, req, onRefresh, onReorder, onSelectSupplier, isOperator }) {
   const { format: fmtCurrency } = useCurrencyDisplay();
   const kioskCurrency = cart?.location?.state?.currency || cart?.currency || "NGN";
   const [expanded, setExpanded] = useState(false);
@@ -2519,7 +2555,11 @@ function SupplyRequestRow({ cart, req, onRefresh, onReorder, onSelectSupplier })
   const allItems = [...ingItems, ...machItems];
 
   const supplierName =
-    req.supplier?.businessName || req.supplier?.user?.name || (req.status === "PENDING_OWNER_SELECTION" ? "No Supplier Assigned" : "Supplier");
+    req.supplier?.businessName ||
+    req.supplier?.user?.name ||
+    (req.status === "PENDING_OWNER_SELECTION"
+      ? (isOperator ? "Awaiting Supplier Assignment" : "No Supplier Assigned")
+      : "Supplier");
   const firstNames = allItems
     .slice(0, 2)
     .map((it) => it.entity?.name)
@@ -2632,7 +2672,7 @@ function SupplyRequestRow({ cart, req, onRefresh, onReorder, onSelectSupplier })
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <StatusPill status={req.status} />
-          {req.status === "PENDING_OWNER_SELECTION" && (
+          {req.status === "PENDING_OWNER_SELECTION" && !isOperator && (
             <button
               className="app_btn app_btn_confirm"
               style={{
@@ -2860,7 +2900,13 @@ function SupplyRequestRow({ cart, req, onRefresh, onReorder, onSelectSupplier })
 }
 
 /* ── Main KioskInventory ───────────────────────────────────── */
-export default function KioskInventory({ cart, isUtilities = false }) {
+export default function KioskInventory({ cart, isUtilities = false, isOperator: forcedIsOperator }) {
+  const { user } = useAuth();
+  const isOperator =
+    forcedIsOperator !== undefined
+      ? forcedIsOperator
+      : user?.role === "OPERATOR" || user?.roles?.includes("OPERATOR") || (cart?.currentOwnerId && user?.id !== cart.currentOwnerId);
+
   const { format: fmtCurrency } = useCurrencyDisplay();
   const kioskCurrency = cart?.location?.state?.currency || cart?.currency || "NGN";
   const [view, setView] = useState("stock");
@@ -3051,6 +3097,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
           cart={cart}
           isUtilities={isUtilities}
           reorderData={reorderData}
+          isOperator={isOperator}
           onSubmitted={() => {
             setReorderData(null);
             setView("supply");
@@ -3093,6 +3140,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
                 cart={cart}
                 key={req.id}
                 req={req}
+                isOperator={isOperator}
                 onRefresh={fetchSupply}
                 onSelectSupplier={(r) => setSelectingSupplierReq(r)}
                 onReorder={(r) => {
@@ -3265,7 +3313,7 @@ export default function KioskInventory({ cart, isUtilities = false }) {
         />
       )}
 
-      {selectingSupplierReq && (
+      {selectingSupplierReq && !isOperator && (
         <SelectSupplierModal
           isOpen={!!selectingSupplierReq}
           req={selectingSupplierReq}

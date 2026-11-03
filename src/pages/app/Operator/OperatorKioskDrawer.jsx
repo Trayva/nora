@@ -100,7 +100,7 @@ export default function OperatorKioskDrawer({ kioskId, onClose }) {
       ) : !kiosk ? null : (
         <>
           {activeTab === "tasks" && <TasksTab kioskId={kioskId} />}
-          {activeTab === "inventory" && <KioskInventory cart={kiosk} />}
+          {activeTab === "inventory" && <KioskInventory cart={kiosk} isOperator={true} />}
           {activeTab === "menu" && <MenuTab menuItems={kiosk.menuItems || []} />}
           {activeTab === "elearning" && (
             <ELearningTab menuItems={kiosk.menuItems || []} />

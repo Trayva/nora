@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import {
   MdAdd,
@@ -1060,7 +1060,10 @@ function TaskCard({ task, onRefresh }) {
   const [showSubmit, setShowSubmit] = useState(false);
   const [showReview, setShowReview] = useState(false);
 
-  const isPending = task.status === "PENDING" || task.status === "IN_PROGRESS";
+  const isPending =
+    task.status === "PENDING" ||
+    task.status === "IN_PROGRESS" ||
+    task.status === "MISSED";
   const isSubmitted =
     task.status === "SUBMITTED" || task.status === "COMPLETED";
 
@@ -1232,6 +1235,25 @@ export default function KioskTasks({ cart, showAudit = false }) {
   const [loading, setLoading] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null); // template being edited
 
+  // Filtering & Endless Scroll state for pending/missed tasks
+  const [taskFilter, setTaskFilter] = useState("PENDING"); // PENDING | MISSED | ALL
+  const [taskPage, setTaskPage] = useState(1);
+  const [hasMoreTasks, setHasMoreTasks] = useState(false);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+  const [loadingMoreTasks, setLoadingMoreTasks] = useState(false);
+  const [totalTasks, setTotalTasks] = useState(null);
+  const taskSentinelRef = useRef(null);
+
+  // Filtering & Endless Scroll state for ledger tasks
+  const [ledgerStartDate, setLedgerStartDate] = useState("");
+  const [ledgerEndDate, setLedgerEndDate] = useState("");
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const [hasMoreLedger, setHasMoreLedger] = useState(false);
+  const [loadingLedger, setLoadingLedger] = useState(false);
+  const [loadingMoreLedger, setLoadingMoreLedger] = useState(false);
+  const [totalLedger, setTotalLedger] = useState(null);
+  const ledgerSentinelRef = useRef(null);
+
   const handleDispatchTemplate = async (tpl) => {
     try {
       await api.post("/kiosk/tasks/todo", {
@@ -1240,35 +1262,147 @@ export default function KioskTasks({ cart, showAudit = false }) {
       });
       toast.success(`Task "${tpl.name}" dispatched to operators`);
       setView("pending");
-      fetchPending();
+      fetchPending(taskFilter);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to dispatch task");
     }
   };
 
-  const fetchPending = async () => {
-    setLoading(true);
+  const fetchPending = async (filterToUse = taskFilter) => {
+    if (!cart?.id) return;
+    setLoadingTasks(true);
+    setTaskPage(1);
     try {
-      const res = await api.get(`/kiosk/tasks?kioskId=${cart.id}`);
-      setTasks(res.data.data?.items || res.data.data || []);
+      const filterQuery = filterToUse !== "ALL" ? `&status=${filterToUse}` : "";
+      const res = await api.get(`/kiosk/tasks?kioskId=${cart.id}&page=1&limit=15${filterQuery}`);
+      const items = res.data.data?.items || res.data.data || [];
+      const totalPages = res.data.data?.pages ?? 1;
+      const totalCount = res.data.data?.total ?? items.length;
+
+      setTasks(items);
+      setTotalTasks(totalCount);
+      setHasMoreTasks(1 < totalPages && items.length > 0);
     } catch {
       toast.error("Failed to load tasks");
     } finally {
-      setLoading(false);
+      setLoadingTasks(false);
     }
   };
 
-  const fetchLedger = async () => {
-    setLoading(true);
+  const loadMorePending = async () => {
+    if (loadingTasks || loadingMoreTasks || !hasMoreTasks || !cart?.id) return;
+    setLoadingMoreTasks(true);
+    const nextPage = taskPage + 1;
     try {
-      const res = await api.get(`/kiosk/tasks/ledger?kioskId=${cart.id}`);
-      setLedger(res.data.data?.items || res.data.data || []);
+      const filterQuery = taskFilter !== "ALL" ? `&status=${taskFilter}` : "";
+      const res = await api.get(`/kiosk/tasks?kioskId=${cart.id}&page=${nextPage}&limit=15${filterQuery}`);
+      const newItems = res.data.data?.items || res.data.data || [];
+      const totalPages = res.data.data?.pages ?? 1;
+
+      setTasks((prev) => {
+        const existingIds = new Set(prev.map((t) => t.id));
+        const filtered = newItems.filter((t) => !existingIds.has(t.id));
+        return [...prev, ...filtered];
+      });
+      setTaskPage(nextPage);
+      setHasMoreTasks(nextPage < totalPages && newItems.length > 0);
+    } catch (err) {
+      console.error("Failed to load more tasks:", err);
+    } finally {
+      setLoadingMoreTasks(false);
+    }
+  };
+
+  const handleFilterChange = (newFilter) => {
+    if (newFilter === taskFilter) return;
+    setTaskFilter(newFilter);
+    fetchPending(newFilter);
+  };
+
+  useEffect(() => {
+    if (view !== "pending") return;
+    if (!taskSentinelRef.current) return;
+    if (!hasMoreTasks || loadingTasks || loadingMoreTasks) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMorePending();
+        }
+      },
+      { threshold: 0.1, rootMargin: "150px" }
+    );
+
+    observer.observe(taskSentinelRef.current);
+    return () => observer.disconnect();
+  }, [view, hasMoreTasks, loadingTasks, loadingMoreTasks, taskPage, taskFilter, cart?.id]);
+
+  const fetchLedger = async (start = ledgerStartDate, end = ledgerEndDate) => {
+    if (!cart?.id) return;
+    setLoadingLedger(true);
+    setLedgerPage(1);
+    try {
+      let query = `/kiosk/tasks/ledger?kioskId=${cart.id}&page=1&limit=15`;
+      if (start) query += `&startDate=${encodeURIComponent(start.includes("T") ? start : start + "T00:00:00.000Z")}`;
+      if (end) query += `&endDate=${encodeURIComponent(end.includes("T") ? end : end + "T23:59:59.999Z")}`;
+      const res = await api.get(query);
+      const items = res.data.data?.items || res.data.data || [];
+      const totalPages = res.data.data?.pages ?? 1;
+      const totalCount = res.data.data?.total ?? items.length;
+
+      setLedger(items);
+      setTotalLedger(totalCount);
+      setHasMoreLedger(1 < totalPages && items.length > 0);
     } catch {
       toast.error("Failed to load ledger");
     } finally {
-      setLoading(false);
+      setLoadingLedger(false);
     }
   };
+
+  const loadMoreLedger = async () => {
+    if (loadingLedger || loadingMoreLedger || !hasMoreLedger || !cart?.id) return;
+    setLoadingMoreLedger(true);
+    const nextPage = ledgerPage + 1;
+    try {
+      let query = `/kiosk/tasks/ledger?kioskId=${cart.id}&page=${nextPage}&limit=15`;
+      if (ledgerStartDate) query += `&startDate=${encodeURIComponent(ledgerStartDate.includes("T") ? ledgerStartDate : ledgerStartDate + "T00:00:00.000Z")}`;
+      if (ledgerEndDate) query += `&endDate=${encodeURIComponent(ledgerEndDate.includes("T") ? ledgerEndDate : ledgerEndDate + "T23:59:59.999Z")}`;
+      const res = await api.get(query);
+      const newItems = res.data.data?.items || res.data.data || [];
+      const totalPages = res.data.data?.pages ?? 1;
+
+      setLedger((prev) => {
+        const existingIds = new Set(prev.map((t) => t.id));
+        const filtered = newItems.filter((t) => !existingIds.has(t.id));
+        return [...prev, ...filtered];
+      });
+      setLedgerPage(nextPage);
+      setHasMoreLedger(nextPage < totalPages && newItems.length > 0);
+    } catch (err) {
+      console.error("Failed to load more ledger tasks:", err);
+    } finally {
+      setLoadingMoreLedger(false);
+    }
+  };
+
+  useEffect(() => {
+    if (view !== "ledger") return;
+    if (!ledgerSentinelRef.current) return;
+    if (!hasMoreLedger || loadingLedger || loadingMoreLedger) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMoreLedger();
+        }
+      },
+      { threshold: 0.1, rootMargin: "150px" }
+    );
+
+    observer.observe(ledgerSentinelRef.current);
+    return () => observer.disconnect();
+  }, [view, hasMoreLedger, loadingLedger, loadingMoreLedger, ledgerPage, ledgerStartDate, ledgerEndDate, cart?.id]);
 
   const fetchTemplates = async () => {
     setLoading(true);
@@ -1283,14 +1417,14 @@ export default function KioskTasks({ cart, showAudit = false }) {
   };
 
   useEffect(() => {
-    if (view === "pending") fetchPending();
-    else if (view === "ledger") fetchLedger();
+    if (view === "pending") fetchPending(taskFilter);
+    else if (view === "ledger") fetchLedger(ledgerStartDate, ledgerEndDate);
     else if (view === "templates") fetchTemplates();
     else if (view === "newTodo") {
       fetchTemplates();
-      if (tasks.length === 0) fetchPending();
+      if (tasks.length === 0) fetchPending(taskFilter);
     }
-  }, [view]);
+  }, [view, cart?.id]);
 
   const subViews = [
     { key: "pending", label: "Pending", icon: <MdTask size={13} /> },
@@ -1353,7 +1487,105 @@ export default function KioskTasks({ cart, showAudit = false }) {
         </div>
       </div>
 
-      {loading ? (
+      {view === "pending" ? (
+        <div>
+          {/* Status Filter Pills */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 8,
+              margin: "12px 0 14px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className={`kiosk_sub_nav_btn ${taskFilter === "PENDING" ? "kiosk_sub_nav_active" : ""}`}
+                style={{
+                  borderRadius: 20,
+                  padding: "4px 14px",
+                  fontSize: "0.75rem",
+                  height: 28,
+                }}
+                onClick={() => handleFilterChange("PENDING")}
+              >
+                Pending
+              </button>
+              <button
+                type="button"
+                className={`kiosk_sub_nav_btn ${taskFilter === "MISSED" ? "kiosk_sub_nav_active" : ""}`}
+                style={{
+                  borderRadius: 20,
+                  padding: "4px 14px",
+                  fontSize: "0.75rem",
+                  height: 28,
+                  color: taskFilter === "MISSED" ? "#ef4444" : undefined,
+                }}
+                onClick={() => handleFilterChange("MISSED")}
+              >
+                Missed
+              </button>
+              <button
+                type="button"
+                className={`kiosk_sub_nav_btn ${taskFilter === "ALL" ? "kiosk_sub_nav_active" : ""}`}
+                style={{
+                  borderRadius: 20,
+                  padding: "4px 14px",
+                  fontSize: "0.75rem",
+                  height: 28,
+                }}
+                onClick={() => handleFilterChange("ALL")}
+              >
+                All
+              </button>
+            </div>
+            {totalTasks !== null && (
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                {totalTasks} {taskFilter === "MISSED" ? "missed" : taskFilter === "PENDING" ? "pending" : "total"} task{totalTasks === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+
+          {loadingTasks ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 60, borderRadius: 12 }} />
+              ))}
+            </div>
+          ) : tasks.length === 0 ? (
+            <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
+              <MdTask size={24} style={{ opacity: 0.3 }} />
+              <span>{taskFilter === "MISSED" ? "No missed tasks" : taskFilter === "ALL" ? "No tasks found" : "No pending tasks"}</span>
+              {taskFilter === "PENDING" && (
+                <button
+                  className="app_btn app_btn_confirm"
+                  style={{ marginTop: 12, height: 32, fontSize: "0.78rem", padding: "0 14px" }}
+                  onClick={() => setView("newTodo")}
+                >
+                  <MdAdd size={14} /> Create Task
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="kiosk_tasks_list">
+              {tasks.map((task) => (
+                <TaskCard key={task.id} task={task} onRefresh={() => fetchPending(taskFilter)} />
+              ))}
+              <div ref={taskSentinelRef} style={{ minHeight: 20, margin: "8px 0" }}>
+                {loadingMoreTasks && (
+                  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "12px", gap: 8 }}>
+                    <span className="btn_loader" style={{ width: 14, height: 14 }} />
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Loading more tasks...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {[1, 2, 3].map((i) => (
             <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 60, borderRadius: 12 }} />
@@ -1367,7 +1599,7 @@ export default function KioskTasks({ cart, showAudit = false }) {
           operators={cart.operators || []}
           onCreated={() => {
             setView("pending");
-            fetchPending();
+            fetchPending(taskFilter);
           }}
           onCancel={() => setView("pending")}
           onGoToTemplates={() => setView("newTemplate")}
@@ -1382,39 +1614,150 @@ export default function KioskTasks({ cart, showAudit = false }) {
           }}
           onCancelEdit={() => setView("templates")}
         />
-      ) : view === "pending" ? (
-        tasks.length === 0 ? (
-          <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
-            <MdTask size={24} style={{ opacity: 0.3 }} />
-            <span>No pending tasks</span>
-            <button
-              className="app_btn app_btn_confirm"
-              style={{ marginTop: 12, height: 32, fontSize: "0.78rem", padding: "0 14px" }}
-              onClick={() => setView("newTodo")}
-            >
-              <MdAdd size={14} /> Create Task
-            </button>
-          </div>
-        ) : (
-          <div className="kiosk_tasks_list">
-            {tasks.map((task) => (
-              <TaskCard key={task.id} task={task} onRefresh={fetchPending} />
-            ))}
-          </div>
-        )
       ) : view === "ledger" ? (
-        ledger.length === 0 ? (
-          <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
-            <MdHistory size={24} style={{ opacity: 0.3 }} />
-            <span>No task history yet</span>
+        <div>
+          {/* Date Picker & Range Bar */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 10,
+              margin: "12px 0 14px",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: "10px 14px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  From
+                </span>
+                <input
+                  type="date"
+                  className="modal-input"
+                  style={{ height: 32, padding: "0 8px", fontSize: "0.78rem", marginBottom: 0, width: 130 }}
+                  value={ledgerStartDate}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLedgerStartDate(val);
+                    fetchLedger(val, ledgerEndDate);
+                  }}
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  To
+                </span>
+                <input
+                  type="date"
+                  className="modal-input"
+                  style={{ height: 32, padding: "0 8px", fontSize: "0.78rem", marginBottom: 0, width: 130 }}
+                  value={ledgerEndDate}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLedgerEndDate(val);
+                    fetchLedger(ledgerStartDate, val);
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                className="kiosk_sub_nav_btn"
+                style={{
+                  borderRadius: 16,
+                  padding: "3px 10px",
+                  fontSize: "0.72rem",
+                  height: 28,
+                }}
+                onClick={() => {
+                  const todayStr = new Date().toISOString().split("T")[0];
+                  setLedgerStartDate(todayStr);
+                  setLedgerEndDate(todayStr);
+                  fetchLedger(todayStr, todayStr);
+                }}
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                className="kiosk_sub_nav_btn"
+                style={{
+                  borderRadius: 16,
+                  padding: "3px 10px",
+                  fontSize: "0.72rem",
+                  height: 28,
+                }}
+                onClick={() => {
+                  const d = new Date();
+                  d.setDate(d.getDate() - 7);
+                  const startStr = d.toISOString().split("T")[0];
+                  const endStr = new Date().toISOString().split("T")[0];
+                  setLedgerStartDate(startStr);
+                  setLedgerEndDate(endStr);
+                  fetchLedger(startStr, endStr);
+                }}
+              >
+                Past 7 Days
+              </button>
+              {(ledgerStartDate || ledgerEndDate) && (
+                <button
+                  type="button"
+                  className="kiosk_sub_nav_btn"
+                  style={{
+                    borderRadius: 16,
+                    padding: "3px 10px",
+                    fontSize: "0.72rem",
+                    height: 28,
+                    color: "#ef4444",
+                  }}
+                  onClick={() => {
+                    setLedgerStartDate("");
+                    setLedgerEndDate("");
+                    fetchLedger("", "");
+                  }}
+                >
+                  Clear Filter
+                </button>
+              )}
+            </div>
+            {totalLedger !== null && (
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                {totalLedger} record{totalLedger === 1 ? "" : "s"}
+              </span>
+            )}
           </div>
-        ) : (
-          <div className="kiosk_tasks_list">
-            {ledger.map((task) => (
-              <TaskCard key={task.id} task={task} onRefresh={fetchLedger} />
-            ))}
-          </div>
-        )
+
+          {loadingLedger ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="skeleton_shimmer skeleton_rect" style={{ height: 60, borderRadius: 12 }} />
+              ))}
+            </div>
+          ) : ledger.length === 0 ? (
+            <div className="kiosk_empty_inline" style={{ padding: "32px 0" }}>
+              <MdHistory size={24} style={{ opacity: 0.3 }} />
+              <span>{(ledgerStartDate || ledgerEndDate) ? "No task history for the selected date range" : "No task history yet"}</span>
+            </div>
+          ) : (
+            <div className="kiosk_tasks_list">
+              {ledger.map((task) => (
+                <TaskCard key={task.id} task={task} onRefresh={() => fetchLedger(ledgerStartDate, ledgerEndDate)} />
+              ))}
+              <div ref={ledgerSentinelRef} style={{ minHeight: 20, margin: "8px 0" }}>
+                {loadingMoreLedger && (
+                  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "12px", gap: 8 }}>
+                    <span className="btn_loader" style={{ width: 14, height: 14 }} />
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Loading more history...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       ) : view === "templates" ? (
         <>
           {/* Inline edit form */}
