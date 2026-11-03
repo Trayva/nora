@@ -33,12 +33,8 @@ import { PiTruck } from "react-icons/pi";
 import api from "../../../api/axios";
 import Drawer from "../../../components/Drawer";
 import Input from "../../../components/Input";
+import useCurrencyDisplay from "../../../hooks/useCurrencyDisplay";
 
-const fmt = (n) =>
-  Number(n || 0).toLocaleString("en-NG", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 const fmtDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-GB", {
@@ -496,6 +492,7 @@ function ProfileCard({ profile, onEdit }) {
           {[
             { label: "Email", value: profile.user?.email },
             { label: "State", value: profile.state?.name },
+            { label: "Currency", value: profile.state?.currency },
             { label: "Since", value: fmtDate(profile.createdAt) },
           ]
             .filter((m) => m.value)
@@ -596,7 +593,8 @@ function ProfileCard({ profile, onEdit }) {
 }
 
 /* ── Inline Price (ingredients) ── */
-function InlinePrice({ ingredientId, stateId }) {
+function InlinePrice({ ingredientId, stateId, supplierCurrency = "NGN" }) {
+  const { format: fmtCurrency } = useCurrencyDisplay();
   const [price, setPrice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -673,9 +671,10 @@ function InlinePrice({ ingredientId, stateId }) {
               fontSize: "0.7rem",
               color: "var(--text-muted)",
               pointerEvents: "none",
+              fontWeight: 600,
             }}
           >
-            ₦
+            {supplierCurrency}
           </span>
           <input
             className="modal-input"
@@ -683,9 +682,9 @@ function InlinePrice({ ingredientId, stateId }) {
             min="0"
             autoFocus
             style={{
-              paddingLeft: 20,
+              paddingLeft: supplierCurrency.length > 1 ? 40 : 20,
               height: 28,
-              width: 90,
+              width: supplierCurrency.length > 1 ? 115 : 90,
               fontSize: "0.76rem",
               marginBottom: 0,
             }}
@@ -744,7 +743,7 @@ function InlinePrice({ ingredientId, stateId }) {
           color: "#16a34a",
         }}
       >
-        <MdAttachMoney size={12} />₦{fmt(price)}
+        <MdAttachMoney size={12} />{fmtCurrency(price, supplierCurrency)}
         <MdEdit size={10} style={{ opacity: 0.6 }} />
       </button>
     );
@@ -776,7 +775,8 @@ function InlinePrice({ ingredientId, stateId }) {
 }
 
 /* ── Inline Machinery Price ── */
-function InlineMachineryPrice({ machineryId, stateId, supplierId }) {
+function InlineMachineryPrice({ machineryId, stateId, supplierId, supplierCurrency = "NGN" }) {
+  const { format: fmtCurrency } = useCurrencyDisplay();
   const [price, setPrice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -867,9 +867,10 @@ function InlineMachineryPrice({ machineryId, stateId, supplierId }) {
               fontSize: "0.7rem",
               color: "var(--text-muted)",
               pointerEvents: "none",
+              fontWeight: 600,
             }}
           >
-            ₦
+            {supplierCurrency}
           </span>
           <input
             className="modal-input"
@@ -877,9 +878,9 @@ function InlineMachineryPrice({ machineryId, stateId, supplierId }) {
             min="0"
             autoFocus
             style={{
-              paddingLeft: 20,
+              paddingLeft: supplierCurrency.length > 1 ? 40 : 20,
               height: 28,
-              width: 90,
+              width: supplierCurrency.length > 1 ? 115 : 90,
               fontSize: "0.76rem",
               marginBottom: 0,
             }}
@@ -938,7 +939,7 @@ function InlineMachineryPrice({ machineryId, stateId, supplierId }) {
           color: "#16a34a",
         }}
       >
-        <MdAttachMoney size={12} />₦{fmt(price)}
+        <MdAttachMoney size={12} />{fmtCurrency(price, supplierCurrency)}
         <MdEdit size={10} style={{ opacity: 0.6 }} />
       </button>
     );
@@ -970,7 +971,7 @@ function InlineMachineryPrice({ machineryId, stateId, supplierId }) {
 }
 
 /* ── Review Panel ── */
-function ReviewPanel({ req, onDone, onCancel }) {
+function ReviewPanel({ req, supplierCurrency = "NGN", onDone, onCancel }) {
   const ingredientItems = req.items || [];
   const [logisticsCost, setLogisticsCost] = useState("");
   const machineryItems = req.supplyRequestMachineryItems || [];
@@ -1256,13 +1257,35 @@ function ReviewPanel({ req, onDone, onCancel }) {
         </>
       )}
       <div className="form-field">
-        <label className="modal-label">Delivery/Logistics Cost *</label>
-        <input
-          className="modal-input"
-          placeholder="e.g. 2000"
-          value={logisticsCost}
-          onChange={(e) => setLogisticsCost(e.target.value)}
-        />
+        <label className="modal-label">Delivery/Logistics Cost ({supplierCurrency}) *</label>
+        <div style={{ position: "relative" }}>
+          <span
+            style={{
+              position: "absolute",
+              left: 9,
+              top: "50%",
+              transform: "translateY(-50%)",
+              fontSize: "0.78rem",
+              color: "var(--text-muted)",
+              fontWeight: 600,
+              pointerEvents: "none",
+            }}
+          >
+            {supplierCurrency}
+          </span>
+          <input
+            className="modal-input"
+            type="number"
+            min="0"
+            style={{
+              paddingLeft: supplierCurrency.length > 1 ? 44 : 22,
+              marginBottom: 0,
+            }}
+            placeholder="e.g. 2000"
+            value={logisticsCost}
+            onChange={(e) => setLogisticsCost(e.target.value)}
+          />
+        </div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <button
@@ -1290,7 +1313,10 @@ function ReviewPanel({ req, onDone, onCancel }) {
   );
 }
 
-function RequestCard({ req, onClick }) {
+function RequestCard({ req, supplierCurrency = "NGN", onClick }) {
+  const { format: fmtCurrency, isConverted, isRateLoading } = useCurrencyDisplay();
+  const reqCurrency = req.supplier?.state?.currency || supplierCurrency;
+  const isDiff = isConverted(reqCurrency);
   const loc = req.kiosk?.location;
   const ingredientCount = req.items?.length || 0;
   const machineryCount = req.supplyRequestMachineryItems?.length || 0;
@@ -1397,15 +1423,19 @@ function RequestCard({ req, onClick }) {
         {req.totalAmount > 0 && (
           <div className="kiosk_meta_row">
             <span className="kiosk_meta_key">Total</span>
-            <span
-              className="kiosk_meta_val"
-              style={{ fontWeight: 800, color: "var(--accent)" }}
-            >
-              ₦
-              {Number(req.totalAmount).toLocaleString("en-NG", {
-                maximumFractionDigits: 0,
-              })}
-            </span>
+            <div style={{ textAlign: "right" }}>
+              <span
+                className="kiosk_meta_val"
+                style={{ fontWeight: 800, color: "var(--accent)", display: "block" }}
+              >
+                {fmtCurrency(req.totalAmount, reqCurrency)}
+              </span>
+              {isDiff && !isRateLoading(reqCurrency) && (
+                <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", display: "block" }}>
+                  Orig: {reqCurrency} {Number(req.totalAmount).toLocaleString()}
+                </span>
+              )}
+            </div>
           </div>
         )}
         {(req.status === "SUPPLIER_REVIEWED" || req.status === "ACCEPTED") && (
@@ -1431,10 +1461,14 @@ function RequestCard({ req, onClick }) {
 
 /* ── Request Drawer ── */
 function RequestDrawer({ req, profile, onClose, onRefresh }) {
+  const { format: fmtCurrency, isConverted, isRateLoading } = useCurrencyDisplay();
   const [reviewing, setReviewing] = useState(false);
   const [shipping, setShipping] = useState(false);
   const [itemsOpen, setItemsOpen] = useState(true);
   const [itemsTab, setItemsTab] = useState("ingredients");
+
+  const supplierCurrency = req?.supplier?.state?.currency || profile?.state?.currency || "NGN";
+  const isDiff = isConverted(supplierCurrency);
 
   const ingredientItems = req?.items || [];
   const machineryItems = req?.supplyRequestMachineryItems || [];
@@ -1508,16 +1542,23 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
           {fmtDate(req.createdAt)}
         </span>
         {req.totalAmount > 0 && (
-          <span
-            style={{
-              marginLeft: "auto",
-              fontSize: "0.82rem",
-              fontWeight: 800,
-              color: "var(--accent)",
-            }}
-          >
-            ₦{Number(req.totalAmount).toLocaleString()}
-          </span>
+          <div style={{ marginLeft: "auto", textAlign: "right" }}>
+            <span
+              style={{
+                fontSize: "0.82rem",
+                fontWeight: 800,
+                color: "var(--accent)",
+                display: "block",
+              }}
+            >
+              {fmtCurrency(req.totalAmount, supplierCurrency)}
+            </span>
+            {isDiff && !isRateLoading(supplierCurrency) && (
+              <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", display: "block" }}>
+                Orig: {supplierCurrency} {Number(req.totalAmount).toLocaleString()}
+              </span>
+            )}
+          </div>
         )}
       </div>
 
@@ -1820,6 +1861,7 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
                     <InlinePrice
                       ingredientId={ing?.id || it.ingredientId}
                       stateId={profile?.state?.id}
+                      supplierCurrency={supplierCurrency}
                     />
                   </div>
                 );
@@ -1894,6 +1936,7 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
                       machineryId={mach?.id || it.machineryId}
                       stateId={profile?.state?.id}
                       supplierId={profile?.id}
+                      supplierCurrency={supplierCurrency}
                     />
                   </div>
                 );
@@ -1985,6 +2028,7 @@ function RequestDrawer({ req, profile, onClose, onRefresh }) {
         {reviewing && (
           <ReviewPanel
             req={req}
+            supplierCurrency={supplierCurrency}
             onDone={() => {
               setReviewing(false);
               onRefresh();
@@ -2272,6 +2316,7 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
             <RequestCard
               key={req.id}
               req={req}
+              supplierCurrency={profile?.state?.currency || "NGN"}
               onClick={() => setSelected(req)}
             />
           ))}
@@ -2292,8 +2337,10 @@ function RequestsTab({ requests, reqLoading, profile, onRefresh }) {
 }
 
 /* ── Price Card (ingredients) ── */
-function PriceCard({ p, stateId, onSaved }) {
+function PriceCard({ p, stateId, supplierCurrency = "NGN", onSaved }) {
+  const { format: fmtCurrency, isConverted, isRateLoading } = useCurrencyDisplay();
   const ing = p.ingredient;
+  const isDiff = isConverted(supplierCurrency);
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(String(p.price ?? ""));
   const [saving, setSaving] = useState(false);
@@ -2391,7 +2438,7 @@ function PriceCard({ p, stateId, onSaved }) {
                 fontWeight: 600,
               }}
             >
-              ₦
+              {supplierCurrency}
             </span>
             <input
               className="modal-input"
@@ -2399,7 +2446,7 @@ function PriceCard({ p, stateId, onSaved }) {
               min="0"
               autoFocus
               style={{
-                paddingLeft: 18,
+                paddingLeft: supplierCurrency.length > 1 ? 40 : 18,
                 height: 30,
                 fontSize: "0.76rem",
                 marginBottom: 0,
@@ -2454,8 +2501,15 @@ function PriceCard({ p, stateId, onSaved }) {
             gap: 6,
           }}
         >
-          <div style={{ fontSize: "1rem", fontWeight: 900, color: "#16a34a" }}>
-            ₦{fmt(p.price)}
+          <div>
+            <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "#16a34a" }}>
+              {fmtCurrency(p.price, supplierCurrency)}
+            </div>
+            {isDiff && !isRateLoading(supplierCurrency) && (
+              <div style={{ fontSize: "0.62rem", color: "var(--text-muted)" }}>
+                Orig: {supplierCurrency} {Number(p.price || 0).toLocaleString()}
+              </div>
+            )}
           </div>
           <button
             onClick={() => setEditing(true)}
@@ -2484,8 +2538,10 @@ function PriceCard({ p, stateId, onSaved }) {
 }
 
 /* ── Machinery Price Card ── */
-function MachineryPriceCard({ p, stateId, onSaved }) {
+function MachineryPriceCard({ p, stateId, supplierCurrency = "NGN", onSaved }) {
+  const { format: fmtCurrency, isConverted, isRateLoading } = useCurrencyDisplay();
   const mach = p.machinery;
+  const isDiff = isConverted(supplierCurrency);
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(String(p.price ?? ""));
   const [saving, setSaving] = useState(false);
@@ -2588,7 +2644,7 @@ function MachineryPriceCard({ p, stateId, onSaved }) {
                 fontWeight: 600,
               }}
             >
-              ₦
+              {supplierCurrency}
             </span>
             <input
               className="modal-input"
@@ -2596,7 +2652,7 @@ function MachineryPriceCard({ p, stateId, onSaved }) {
               min="0"
               autoFocus
               style={{
-                paddingLeft: 18,
+                paddingLeft: supplierCurrency.length > 1 ? 40 : 18,
                 height: 30,
                 fontSize: "0.76rem",
                 marginBottom: 0,
@@ -2651,8 +2707,15 @@ function MachineryPriceCard({ p, stateId, onSaved }) {
             gap: 6,
           }}
         >
-          <div style={{ fontSize: "1rem", fontWeight: 900, color: "#16a34a" }}>
-            ₦{fmt(p.price)}
+          <div>
+            <div style={{ fontSize: "0.95rem", fontWeight: 900, color: "#16a34a" }}>
+              {fmtCurrency(p.price, supplierCurrency)}
+            </div>
+            {isDiff && !isRateLoading(supplierCurrency) && (
+              <div style={{ fontSize: "0.62rem", color: "var(--text-muted)" }}>
+                Orig: {supplierCurrency} {Number(p.price || 0).toLocaleString()}
+              </div>
+            )}
           </div>
           <button
             onClick={() => setEditing(true)}
@@ -2681,7 +2744,8 @@ function MachineryPriceCard({ p, stateId, onSaved }) {
 }
 
 /* ── Ingredient Prices Tab ── */
-function IngredientPricesTab({ profile }) {
+function IngredientPricesTab({ profile, supplierCurrency }) {
+  const effectiveCurrency = supplierCurrency || profile?.state?.currency || "NGN";
   const [prices, setPrices] = useState([]);
   const [allPrices, setAllPrices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -3215,7 +3279,7 @@ function IngredientPricesTab({ profile }) {
             )}
           </div>
           <div>
-            <label className="modal-label">Price (₦)</label>
+            <label className="modal-label">Price ({effectiveCurrency})</label>
             <div style={{ position: "relative" }}>
               <span
                 style={{
@@ -3229,16 +3293,16 @@ function IngredientPricesTab({ profile }) {
                   pointerEvents: "none",
                 }}
               >
-                ₦
+                {effectiveCurrency}
               </span>
               <input
                 className="modal-input"
                 type="number"
                 min="0"
                 style={{
-                  paddingLeft: 22,
+                  paddingLeft: effectiveCurrency.length > 1 ? 44 : 22,
                   height: 40,
-                  width: 120,
+                  width: effectiveCurrency.length > 1 ? 140 : 120,
                   marginBottom: 0,
                 }}
                 placeholder="0.00"
@@ -3283,7 +3347,7 @@ function IngredientPricesTab({ profile }) {
             }}
           >
             <MdOutlineLocationOn size={12} />
-            Prices for {profile.state.name}
+            Prices for {profile.state.name} ({effectiveCurrency})
           </div>
         )}
       </div>
@@ -3383,6 +3447,7 @@ function IngredientPricesTab({ profile }) {
                 key={p.id}
                 p={p}
                 stateId={profile?.state?.id}
+                supplierCurrency={effectiveCurrency}
                 onSaved={() => fetchPrices(page, "")}
               />
             ))}
@@ -3430,7 +3495,8 @@ function IngredientPricesTab({ profile }) {
 }
 
 /* ── Machinery Prices Tab ── */
-function MachineryPricesTab({ profile }) {
+function MachineryPricesTab({ profile, supplierCurrency }) {
+  const effectiveCurrency = supplierCurrency || profile?.state?.currency || "NGN";
   const [prices, setPrices] = useState([]);
   const [allPrices, setAllPrices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -4012,7 +4078,7 @@ function MachineryPricesTab({ profile }) {
             )}
           </div>
           <div>
-            <label className="modal-label">Price (₦)</label>
+            <label className="modal-label">Price ({effectiveCurrency})</label>
             <div style={{ position: "relative" }}>
               <span
                 style={{
@@ -4026,16 +4092,16 @@ function MachineryPricesTab({ profile }) {
                   pointerEvents: "none",
                 }}
               >
-                ₦
+                {effectiveCurrency}
               </span>
               <input
                 className="modal-input"
                 type="number"
                 min="0"
                 style={{
-                  paddingLeft: 22,
+                  paddingLeft: effectiveCurrency.length > 1 ? 44 : 22,
                   height: 40,
-                  width: 120,
+                  width: effectiveCurrency.length > 1 ? 140 : 120,
                   marginBottom: 0,
                 }}
                 placeholder="0.00"
@@ -4080,7 +4146,7 @@ function MachineryPricesTab({ profile }) {
             }}
           >
             <MdOutlineLocationOn size={12} />
-            Prices for {profile.state.name}
+            Prices for {profile.state.name} ({effectiveCurrency})
           </div>
         )}
       </div>
@@ -4178,6 +4244,7 @@ function MachineryPricesTab({ profile }) {
                 key={p.id}
                 p={p}
                 stateId={profile?.state?.id}
+                supplierCurrency={effectiveCurrency}
                 onSaved={() => fetchPrices(page)}
               />
             ))}
@@ -4227,6 +4294,7 @@ function MachineryPricesTab({ profile }) {
 /* ── Prices Tab (Ingredients / Machinery toggle) ── */
 function PricesTab({ profile }) {
   const [priceType, setPriceType] = useState("ingredients");
+  const supplierCurrency = profile?.state?.currency || "NGN";
   return (
     <div>
       <div
@@ -4270,9 +4338,9 @@ function PricesTab({ profile }) {
         ))}
       </div>
       {priceType === "ingredients" ? (
-        <IngredientPricesTab profile={profile} />
+        <IngredientPricesTab profile={profile} supplierCurrency={supplierCurrency} />
       ) : (
-        <MachineryPricesTab profile={profile} />
+        <MachineryPricesTab profile={profile} supplierCurrency={supplierCurrency} />
       )}
     </div>
   );

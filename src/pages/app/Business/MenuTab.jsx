@@ -143,7 +143,7 @@ export default function MenuTab({ vendorId }) {
                   {item.description && (
                     <span className="concept_item_desc">{item.description}</span>
                   )}
-                  <div className="drawer_item_prices">
+                  {/* <div className="drawer_item_prices">
                     {item.sellingPrice > 0 && (
                       <span className="drawer_price_chip">
                         ₦{Number(item.sellingPrice).toLocaleString()}
@@ -154,7 +154,7 @@ export default function MenuTab({ vendorId }) {
                         Cost ₦{Number(item.recipeCost).toLocaleString()}
                       </span>
                     )}
-                  </div>
+                  </div> */}
                 </div>
                 <div className="drawer_item_actions">
                   <button
