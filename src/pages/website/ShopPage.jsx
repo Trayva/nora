@@ -1000,7 +1000,7 @@ function AddressAutocompleteInput({ value, onChange, onPlaceSelected, style }) {
 }
 
 /* ── Checkout form (inside cart drawer) ── */
-function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSuccess, onBack }) {
+function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, isPos = false, onSuccess, onBack }) {
   const kiosk = concepts?.find((c) => c.id === kioskId);
   const kioskCurrency = kiosk?.location?.state?.currency || kiosk?.currency || "NGN";
   const navigate = useNavigate();
@@ -1008,7 +1008,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
   const urlLat = parseFloat(searchParams.get("lat"));
   const urlLng = parseFloat(searchParams.get("lng"));
 
-  const [orderType, setOrderType] = useState("DELIVERY");
+  const [orderType, setOrderType] = useState(isPos ? "DINE_IN" : "DELIVERY");
   const [form, setForm] = useState({
     customerName: "",
     customerEmail: "",
@@ -1057,22 +1057,30 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const place = async () => {
-    if (form.customerName.trim().length < 2)
-      return toast.error("Enter your name");
-    if (orderType === "DELIVERY" && form.deliveryAddress.trim().length < 5)
-      return toast.error("Enter your delivery address");
+    if (!isPos) {
+      if (form.customerName.trim().length < 2)
+        return toast.error("Enter your name");
+      if (orderType === "DELIVERY" && form.deliveryAddress.trim().length < 5)
+        return toast.error("Enter your delivery address");
+    }
     setPlacing(true);
     try {
+      // POS devices: only kiosk, items and order type are sent (no customer, delivery or payment info).
+      const payload = isPos
+        ? { kioskId, orderType }
+        : {
+          kioskId,
+          customerName: form.customerName.trim(),
+          customerEmail: form.customerEmail.trim() || undefined,
+          customerPhone: form.customerPhone.trim() || undefined,
+          deliveryAddress: orderType === "PICKUP" ? undefined : form.deliveryAddress.trim(),
+          deliveryLat: orderType === "PICKUP" ? null : form.deliveryLat,
+          deliveryLng: orderType === "PICKUP" ? null : form.deliveryLng,
+          orderType,
+          gateway,
+        };
       const res = await api.post("/kiosk/shop/order", {
-        kioskId,
-        customerName: form.customerName.trim(),
-        customerEmail: form.customerEmail.trim() || undefined,
-        customerPhone: form.customerPhone.trim() || undefined,
-        deliveryAddress: orderType === "PICKUP" ? undefined : form.deliveryAddress.trim(),
-        deliveryLat: orderType === "PICKUP" ? null : form.deliveryLat,
-        deliveryLng: orderType === "PICKUP" ? null : form.deliveryLng,
-        orderType,
-        gateway,
+        ...payload,
         items: items.map((e) => ({
           menuItemId: e.item.id,
           quantity: e.qty,
@@ -1125,7 +1133,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
   if (orderResult) {
     const orderNumber =
       orderResult.orderNumber || orderResult.data?.orderNumber || orderResult.id || "";
-    const paymentLink =
+    const paymentLink = isPos ? null :
       orderResult.paymentLink ||
       orderResult.paymentUrl ||
       orderResult.data?.paymentLink ||
@@ -1197,7 +1205,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
               {paying ? "Preparing payment..." : "Pay Now"} <MdOpenInNew size={14} />
             </button>
           )}
-          <button
+          {!isPos && <button
             onClick={() => {
               onBack(); // Closes the drawer
               navigate(`/shop/order?id=${orderNumber}`);
@@ -1214,7 +1222,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
             }}
           >
             Track Order
-          </button>
+          </button>}
           <button
             onClick={() => {
               onBack(); // Closes the drawer
@@ -1273,48 +1281,48 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
           marginBottom: 16,
         }}
       >
-        Enter your details to place the order
+        {isPos ? "Select order type and place the order" : "Enter your details to place the order"}
       </div>
 
       {/* Order Type Selector */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <button
           type="button"
-          onClick={() => setOrderType("DELIVERY")}
+          onClick={() => setOrderType(isPos ? "DINE_IN" : "DELIVERY")}
           style={{
             flex: 1,
             height: 34,
             borderRadius: 8,
             border: "1px solid",
-            borderColor: orderType === "DELIVERY" ? "var(--accent)" : "var(--border)",
-            background: orderType === "DELIVERY" ? "var(--bg-active)" : "transparent",
-            color: orderType === "DELIVERY" ? "var(--accent)" : "var(--text-muted)",
+            borderColor: orderType === (isPos ? "DINE_IN" : "DELIVERY") ? "var(--accent)" : "var(--border)",
+            background: orderType === (isPos ? "DINE_IN" : "DELIVERY") ? "var(--bg-active)" : "transparent",
+            color: orderType === (isPos ? "DINE_IN" : "DELIVERY") ? "var(--accent)" : "var(--text-muted)",
             fontSize: "0.74rem",
             fontWeight: 800,
             cursor: "pointer",
             fontFamily: "inherit",
           }}
         >
-          Delivery
+          {isPos ? "Dine In" : "Delivery"}
         </button>
         <button
           type="button"
-          onClick={() => setOrderType("PICKUP")}
+          onClick={() => setOrderType(isPos ? "TAKE_OUT" : "PICKUP")}
           style={{
             flex: 1,
             height: 34,
             borderRadius: 8,
             border: "1px solid",
-            borderColor: orderType === "PICKUP" ? "var(--accent)" : "var(--border)",
-            background: orderType === "PICKUP" ? "var(--bg-active)" : "transparent",
-            color: orderType === "PICKUP" ? "var(--accent)" : "var(--text-muted)",
+            borderColor: orderType === (isPos ? "TAKE_OUT" : "PICKUP") ? "var(--accent)" : "var(--border)",
+            background: orderType === (isPos ? "TAKE_OUT" : "PICKUP") ? "var(--bg-active)" : "transparent",
+            color: orderType === (isPos ? "TAKE_OUT" : "PICKUP") ? "var(--accent)" : "var(--text-muted)",
             fontSize: "0.74rem",
             fontWeight: 800,
             cursor: "pointer",
             fontFamily: "inherit",
           }}
         >
-          Pickup
+          {isPos ? "Take Out" : "Pickup"}
         </button>
       </div>
 
@@ -1432,7 +1440,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
         </div>
       </div>
 
-      {[
+      {!isPos && [
         {
           k: "customerName",
           l: "Your Name *",
@@ -1464,7 +1472,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
         </div>
       ))}
 
-      {orderType === "DELIVERY" && (
+      {!isPos && orderType === "DELIVERY" && (
         <APIProvider apiKey={import.meta.env.VITE_APP_MAP_API_KEY} libraries={["places"]}>
           <div className="form-field" style={{ marginBottom: 10 }}>
             <label className="modal-label">Delivery Address *</label>
@@ -1515,7 +1523,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
         </APIProvider>
       )}
 
-      <div className="form-field" style={{ marginTop: 14, marginBottom: 16 }}>
+      {!isPos && <div className="form-field" style={{ marginTop: 14, marginBottom: 16 }}>
         <label className="modal-label">Payment Gateway</label>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
           <button
@@ -1559,7 +1567,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
             Stripe
           </button>
         </div>
-      </div>
+      </div>}
 
       <button
         onClick={place}
@@ -1587,7 +1595,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, onSu
    CART DRAWER — strictly grouped by kioskId
    Each kioskId = one Kiosk = one separate checkout
    ───────────────────────────────────────────────────────────── */
-function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
+function CartDrawer({ cartItems, setCartItems, open, onClose, concepts, isPos = false }) {
   const [checkoutCartId, setCheckoutCartId] = useState(null);
   const [orderedCarts, setOrderedCarts] = useState(new Set());
 
@@ -1743,6 +1751,7 @@ function CartDrawer({ cartItems, setCartItems, open, onClose, concepts }) {
               conceptName={activeCheckoutGroup.conceptName}
               items={activeCheckoutGroup.items}
               concepts={concepts}
+              isPos={isPos}
               vatRate={concepts?.find((c) => c.id === activeCheckoutGroup.kioskId)?.vatRate || 0}
               onSuccess={(orderData) => {
                 setOrderedCarts(
@@ -2887,6 +2896,7 @@ export default function ShopPage() {
         open={cartOpen}
         onClose={() => setCartOpen(false)}
         concepts={concepts}
+        isPos={!!deviceKioskId}
       />
     </div>
   );
