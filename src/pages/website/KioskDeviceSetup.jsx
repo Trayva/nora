@@ -489,7 +489,7 @@ export default function KioskDeviceSetup() {
                   marginBottom: 6,
                 }}
               >
-                Kiosk UUID or Serial Number
+                Outlet UUID or Serial Number
               </label>
               <input
                 type="text"
