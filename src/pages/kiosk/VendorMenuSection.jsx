@@ -7,7 +7,8 @@ import BrandSelectionDrawer from "./BrandSelectionDrawer";
 import ManageMenuDrawer from "./ManageMenuDrawer";
 import { MenuDetailDrawer } from "./MenuDetailDrawer";
 
-export default function VendorMenuSection({ cart, onUpdate, onRefresh }) {
+export default function VendorMenuSection({ cart, stateId, onUpdate, onRefresh }) {
+  const kioskStateId = stateId || cart?.location?.stateId || cart?.location?.state?.id || cart?.stateId;
   const [showBrandDrawer, setShowBrandDrawer] = useState(false);
   const [showManageDrawer, setShowManageDrawer] = useState(false);
   const [confirmRemoveBrand, setConfirmRemoveBrand] = useState(false);
@@ -40,7 +41,7 @@ export default function VendorMenuSection({ cart, onUpdate, onRefresh }) {
     <>
       {/* Section title with plus icon */}
       <div className="drawer_section_title" style={{ marginTop: 20 }}>
-        <span>Brands</span>
+        <span>Brand</span>
         {/* <button
           className="kiosk_icon_action_btn"
           style={{ marginLeft: "auto" }}
@@ -53,6 +54,7 @@ export default function VendorMenuSection({ cart, onUpdate, onRefresh }) {
 
       <BrandIdleCard
         cart={cart}
+        stateId={kioskStateId}
         onChangeBrand={() => setShowBrandDrawer(true)}
         onManageMenu={() => setShowManageDrawer(true)}
         onMenuClick={handleIdleMenuClick}
@@ -62,6 +64,7 @@ export default function VendorMenuSection({ cart, onUpdate, onRefresh }) {
       {showBrandDrawer && (
         <BrandSelectionDrawer
           cart={cart}
+          stateId={kioskStateId}
           onClose={() => setShowBrandDrawer(false)}
           onDone={() => {
             setShowBrandDrawer(false);
@@ -73,6 +76,7 @@ export default function VendorMenuSection({ cart, onUpdate, onRefresh }) {
       {showManageDrawer && (
         <ManageMenuDrawer
           cart={cart}
+          stateId={kioskStateId}
           onClose={() => setShowManageDrawer(false)}
           onRefresh={() => {
             onRefresh();
@@ -85,6 +89,7 @@ export default function VendorMenuSection({ cart, onUpdate, onRefresh }) {
           menuId={idleDetailId}
           menuName={idleDetailName}
           cart={cart}
+          activeStateId={kioskStateId}
           isSelected={false}
           onToggleSelect={() => { }}
           selectedCount={0}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "react-toastify";
 import {
   MdClose,
@@ -10,13 +10,27 @@ import {
 import api from "../../api/axios";
 import Modal from "../../components/Modal";
 import { MenuDetailDrawer } from "./MenuDetailDrawer";
+import { useAppState } from "../../contexts/StateContext";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
+import useMenuStatePrices from "../../hooks/useMenuStatePrices";
 
 const MAX_MENU_ITEMS = 5;
 
-export default function ManageMenuDrawer({ cart, onClose, onRefresh }) {
+export default function ManageMenuDrawer({ cart, stateId, onClose, onRefresh }) {
+  const { states } = useAppState();
+  const kioskStateId = stateId || cart?.location?.stateId || cart?.location?.state?.id || cart?.stateId;
+  const kioskState = states?.find((s) => s.id === kioskStateId) || cart?.location?.state;
+  const outletCurrency = kioskState?.currency || cart?.location?.state?.currency || cart?.currency || "NGN";
+  const { format: fmtCurrency } = useCurrencyDisplay();
+
   const assignedVendor = cart.vendor;
   const [cartMenuItems, setCartMenuItems] = useState(cart.menuItems || []);
   const [vendorMenuItems, setVendorMenuItems] = useState([]);
+
+  const allManagedItems = useMemo(() => {
+    return [...cartMenuItems, ...vendorMenuItems];
+  }, [cartMenuItems, vendorMenuItems]);
+  const { prices: menuPrices } = useMenuStatePrices(allManagedItems, kioskStateId);
   const [menuLoading, setMenuLoading] = useState(false);
   const [menuSearch, setMenuSearch] = useState("");
   const [menuPage, setMenuPage] = useState(1);
@@ -29,8 +43,6 @@ export default function ManageMenuDrawer({ cart, onClose, onRefresh }) {
   const [removing, setRemoving] = useState(false);
   const [manageDetailId, setManageDetailId] = useState(null);
   const [manageDetailName, setManageDetailName] = useState("");
-  const fmt = (n) =>
-    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
   const MENU_PAGE_SIZE = 8;
 
   // Fix drawer scroll
@@ -335,12 +347,16 @@ export default function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                   const itemId = item.id || item.menuItemId;
                   const name = item.name || item.menuItem?.name || "Item";
                   const img = item.image || item.menuItem?.image;
-                  const basePrice =
-                    item.sellingPrice || item.menuItem?.sellingPrice || 0;
+                  const rawBasePrice =
+                    menuPrices[itemId] ??
+                    item.sellingPrice ??
+                    item.menuItem?.sellingPrice ??
+                    0;
                   const ticketTime =
                     item.ticketTime || item.menuItem?.ticketTime || 0;
                   const currentMarkup = parseFloat(markupValues[itemId] ?? item.markup ?? 0);
-                  const calculatedSelling = basePrice + Math.round((basePrice * currentMarkup) / 100);
+                  const rawCalculatedSelling =
+                    rawBasePrice + Math.round((rawBasePrice * currentMarkup) / 100);
 
                   return (
                     <div
@@ -429,7 +445,7 @@ export default function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                                 fontWeight: 600,
                               }}
                             >
-                              Base: ₦{fmt(basePrice)}
+                              Base: {fmtCurrency(rawBasePrice, outletCurrency)}
                             </span>
                             {ticketTime > 0 && (
                               <div
@@ -569,7 +585,7 @@ export default function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                               color: "#16a34a",
                             }}
                           >
-                            ₦{fmt(calculatedSelling)}
+                            {fmtCurrency(rawCalculatedSelling, outletCurrency)}
                           </span>
                         </div>
                       </div>
@@ -709,16 +725,21 @@ export default function ManageMenuDrawer({ cart, onClose, onRefresh }) {
                               marginTop: 2,
                             }}
                           >
-                            {item.sellingPrice > 0 && (
-                              <div
-                                style={{
-                                  fontSize: "0.68rem",
-                                  color: "var(--text-muted)",
-                                }}
-                              >
-                                ₦{fmt(item.sellingPrice)}
-                              </div>
-                            )}
+                            {(() => {
+                              const rawItemPrice =
+                                menuPrices[item.id] ?? item.sellingPrice ?? 0;
+                              return rawItemPrice > 0 ? (
+                                <div
+                                  style={{
+                                    fontSize: "0.68rem",
+                                    color: "var(--text-muted)",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {fmtCurrency(rawItemPrice, outletCurrency)}
+                                </div>
+                              ) : null;
+                            })()}
                             {/* Ticket time badge */}
                             {item.ticketTime > 0 && (
                               <div
@@ -914,6 +935,7 @@ export default function ManageMenuDrawer({ cart, onClose, onRefresh }) {
           menuId={manageDetailId}
           menuName={manageDetailName}
           cart={cart}
+          activeStateId={kioskStateId}
           isSelected={false}
           onToggleSelect={() => { }}
           selectedCount={0}

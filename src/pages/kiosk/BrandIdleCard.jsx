@@ -7,20 +7,29 @@ import {
   MdOpenInNew,
   MdAccessTime,
 } from "react-icons/md";
+import { useAppState } from "../../contexts/StateContext";
+import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
+import useMenuStatePrices from "../../hooks/useMenuStatePrices";
 
 const MAX_MENU_ITEMS = 5;
 
 export default function BrandIdleCard({
   cart,
+  stateId,
   onChangeBrand,
   onManageMenu,
   onMenuClick,
   onRemoveBrand,
 }) {
+  const { states } = useAppState();
+  const kioskStateId = stateId || cart?.location?.stateId || cart?.location?.state?.id || cart?.stateId;
+  const kioskState = states?.find((s) => s.id === kioskStateId) || cart?.location?.state;
+  const outletCurrency = kioskState?.currency || cart?.location?.state?.currency || cart?.currency || "NGN";
+  const { format: fmtCurrency } = useCurrencyDisplay();
+
   const assignedVendor = cart.vendor;
   const menuItems = cart.menuItems || [];
-  const fmt = (n) =>
-    Number(n || 0).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+  const { prices: statePrices } = useMenuStatePrices(menuItems, kioskStateId);
 
   if (!assignedVendor && menuItems.length === 0) {
     return (
@@ -279,10 +288,14 @@ export default function BrandIdleCard({
             }}
           >
             {menuItems.map((item, idx) => {
+              const itemId = item.menuItemId || item.id;
               const name = item.name || item.menuItem?.name || "Item";
               const img = item.image || item.menuItem?.image;
-              const price =
-                item.sellingPrice || item.menuItem?.sellingPrice || 0;
+              const rawPrice =
+                statePrices[itemId] ??
+                item.sellingPrice ??
+                item.menuItem?.sellingPrice ??
+                0;
               const ticketTime =
                 item.ticketTime || item.menuItem?.ticketTime || 0;
               return (
@@ -375,7 +388,7 @@ export default function BrandIdleCard({
                         marginTop: 2,
                       }}
                     >
-                      {price > 0 && (
+                      {rawPrice > 0 && (
                         <div
                           style={{
                             fontSize: "0.68rem",
@@ -383,7 +396,7 @@ export default function BrandIdleCard({
                             fontWeight: 700,
                           }}
                         >
-                          ₦{fmt(price)}
+                          {fmtCurrency(rawPrice, outletCurrency)}
                         </div>
                       )}
                       {item.markup > 0 && (

@@ -642,6 +642,7 @@ function LiveStreamModal({ cart, onClose }) {
 export default function KioskOverview({ cart, onUpdate, onRefresh }) {
   const { format: fmt, isConverted, displayCurrency } = useCurrencyDisplay();
   const kioskCurrency = cart.location?.state?.currency || cart.currency || "NGN";
+  const kioskStateId = cart.location?.stateId || cart.location?.state?.id || cart.stateId;
 
   const [togglingOnline, setTogglingOnline] = useState(false);
   const [togglingLock, setTogglingLock] = useState(false);
@@ -1371,6 +1372,7 @@ export default function KioskOverview({ cart, onUpdate, onRefresh }) {
       {/* ── Brand & Menu ── */}
       <VendorMenuSection
         cart={cart}
+        stateId={kioskStateId}
         onUpdate={onUpdate}
         onRefresh={onRefresh}
       />

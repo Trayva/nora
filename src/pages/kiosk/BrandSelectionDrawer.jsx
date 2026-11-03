@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "react-toastify";
 import { MdClose, MdSignalCellularAlt, MdArrowForward } from "react-icons/md";
 import api from "../../api/axios";
@@ -6,6 +6,8 @@ import ESignDrawer from "../../components/ESignDrawer";
 import InvoicePayModal from "./InvoicePayModal";
 import { MenuDetailDrawer } from "./MenuDetailDrawer";
 import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
+import { useAppState } from "../../contexts/StateContext";
+import useMenuStatePrices from "../../hooks/useMenuStatePrices";
 
 const MAX_MENU_ITEMS = 5;
 
@@ -27,7 +29,11 @@ const DEFAULT_VENDOR_AGREEMENT = `
 <p>Either party may terminate this license with 30 days written notice. Upon termination, the Licensee's rights to operate the food concepts on the Kiosk shall cease.</p>
 `;
 
-export default function BrandSelectionDrawer({ cart, onClose, onDone }) {
+export default function BrandSelectionDrawer({ cart, stateId, onClose, onDone }) {
+  const { states } = useAppState();
+  const kioskStateId = stateId || cart?.location?.stateId || cart?.location?.state?.id || cart?.stateId;
+  const kioskState = states?.find((s) => s.id === kioskStateId) || cart?.location?.state;
+  const outletCurrency = kioskState?.currency || cart?.location?.state?.currency || cart?.currency || "NGN";
   const { format: fmtCurrency } = useCurrencyDisplay();
   const [view, setView] = useState("brands");
 
@@ -37,6 +43,11 @@ export default function BrandSelectionDrawer({ cart, onClose, onDone }) {
 
   const [expandedBrandId, setExpandedBrandId] = useState(null);
   const [brandMenus, setBrandMenus] = useState({});
+
+  const allBrandMenuItems = useMemo(() => {
+    return Object.values(brandMenus).flatMap((bm) => bm.items || []);
+  }, [brandMenus]);
+  const { prices: menuPrices } = useMenuStatePrices(allBrandMenuItems, kioskStateId);
 
   const [selectedBrandId, setSelectedBrandId] = useState(null);
   const [selectedMenuIds, setSelectedMenuIds] = useState([]);
@@ -677,6 +688,7 @@ export default function BrandSelectionDrawer({ cart, onClose, onDone }) {
                                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                   {(brandMenus[brand.id]?.items || []).map((m) => {
                                     const isSel = selectedMenuIds.includes(m.id) && isAssigned;
+                                    const rawPrice = menuPrices[m.id] ?? m.sellingPrice ?? null;
                                     return (
                                       <div
                                         key={m.id}
@@ -742,17 +754,29 @@ export default function BrandSelectionDrawer({ cart, onClose, onDone }) {
                                           >
                                             {m.name}
                                           </div>
-                                          {m.ticketTime > 0 && (
-                                            <div
-                                              style={{
-                                                fontSize: "0.66rem",
-                                                color: "var(--text-muted)",
-                                                marginTop: 1,
-                                              }}
-                                            >
-                                              ⏱ {m.ticketTime} min
-                                            </div>
-                                          )}
+                                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                                            {rawPrice != null && rawPrice > 0 && (
+                                              <span
+                                                style={{
+                                                  fontSize: "0.72rem",
+                                                  fontWeight: 800,
+                                                  color: "var(--accent)",
+                                                }}
+                                              >
+                                                {fmtCurrency(rawPrice, outletCurrency)}
+                                              </span>
+                                            )}
+                                            {m.ticketTime > 0 && (
+                                              <div
+                                                style={{
+                                                  fontSize: "0.66rem",
+                                                  color: "var(--text-muted)",
+                                                }}
+                                              >
+                                                ⏱ {m.ticketTime} min
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
 
                                         <button
@@ -951,6 +975,7 @@ export default function BrandSelectionDrawer({ cart, onClose, onDone }) {
           menuId={detailMenuId}
           menuName={detailMenuName}
           cart={cart}
+          activeStateId={kioskStateId}
           isSelected={
             selectedMenuIds.includes(detailMenuId) &&
             selectedBrandId === expandedBrandId
