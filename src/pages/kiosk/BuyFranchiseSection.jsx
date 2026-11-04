@@ -482,7 +482,7 @@ export default function BuyFranchiseSection() {
         res = await api.get("/kiosk/sales-formula", { params: { country: formulaCountry } });
         list = (Array.isArray(res.data.data) ? res.data.data : []).filter((f) => !f.vendorId);
       }
-      setRoyaltyPercent(list.length > 0 ? list[0].vendorPercent : null);
+      setRoyaltyPercent(list.length > 0 ? (list[0].vendorPercent + list[0].noraPercent + list[0].operatorPercent) : null);
     } catch {
       setRoyaltyPercent(null);
     } finally {
@@ -1905,7 +1905,7 @@ export default function BuyFranchiseSection() {
                     <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-heading)", margin: 0 }}>
                       {selectedBrand.businessName}
                     </h4>
-                    {(selectedBrand.origin || selectedBrand.branding?.origin) && (
+                    {/* {(selectedBrand.origin || selectedBrand.branding?.origin) && (
                       <span
                         style={{
                           fontSize: "0.64rem",
@@ -1922,7 +1922,7 @@ export default function BuyFranchiseSection() {
                       >
                         📍 {selectedBrand.origin || selectedBrand.branding?.origin}
                       </span>
-                    )}
+                    )} */}
                   </div>
                   <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
                     {selectedMenuIds.length} of {brandMenuItems.length} recipes and menu items selected

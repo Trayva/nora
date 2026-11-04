@@ -448,7 +448,8 @@ export function MenuDetailDrawer({
   const TABS = [
     { key: "overview", label: "Overview", icon: MdInfoOutline },
     ...(cart ? [{ key: "settings", label: "Kiosk Settings", icon: MdSettings }] : []),
-    ...(isOwner ? [{ key: "costing", label: "Live Costing", icon: MdAttachMoney }] : []),
+    { key: "costing", label: "Live Costing", icon: MdAttachMoney },
+    // ...(isOwner ? [{ key: "costing", label: "Live Costing", icon: MdAttachMoney }] : []),
     { key: "machinery", label: "Tools", icon: MdBuild },
     { key: "consumables", label: "Consumables", icon: MdOutlineInventory2 },
     { key: "ingredients", label: "Ingredients", icon: MdRestaurantMenu },

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "react-toastify";
 import {
   MdStorefront,
@@ -30,6 +30,7 @@ import {
   MdInfoOutline,
   MdAccessTime,
   MdOpenInNew,
+  MdCalendarToday,
 } from "react-icons/md";
 import {
   AreaChart,
@@ -57,6 +58,47 @@ const BRAND_DRAWER_TABS = [
   { key: "actions", label: "Franchise Actions", icon: MdGavel },
 ];
 
+const toDateInputValue = (date) => {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const DAY_PRESETS = [
+  { id: "today", label: "Today", days: 0 },
+  { id: "3d", label: "Last 3 Days", days: 3 },
+  { id: "7d", label: "Last 7 Days", days: 7 },
+  { id: "30d", label: "Last 30 Days", days: 30 },
+  { id: "custom", label: "Custom", days: null },
+];
+
+const computePresetDates = (presetId) => {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  if (presetId === "today") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    return {
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      fromStr: toDateInputValue(start),
+      toStr: toDateInputValue(end),
+    };
+  }
+
+  const option = DAY_PRESETS.find((o) => o.id === presetId);
+  const days = option?.days ?? 30;
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days, 0, 0, 0, 0);
+  return {
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    fromStr: toDateInputValue(start),
+    toStr: toDateInputValue(end),
+  };
+};
+
 export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
   const { format: fmtCurrency } = useCurrencyDisplay();
   const kioskCurrency = cart?.location?.state?.currency || cart?.currency || "NGN";
@@ -69,6 +111,12 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
   const [salesAnalytics, setSalesAnalytics] = useState(null);
   const [royaltyPercent, setRoyaltyPercent] = useState(15); // default fallback
   const [salesPreset, setSalesPreset] = useState("30d");
+  const [customFrom, setCustomFrom] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return toDateInputValue(d);
+  });
+  const [customTo, setCustomTo] = useState(() => toDateInputValue(new Date()));
 
   // Live Inspection state
   const defaultCameras = [
@@ -100,46 +148,83 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
   const [terminateNotes, setTerminateNotes] = useState("");
   const [terminating, setTerminating] = useState(false);
 
+  // Handle preset selection
+  const handlePresetSelect = (presetId) => {
+    setSalesPreset(presetId);
+    if (presetId !== "custom") {
+      const dates = computePresetDates(presetId);
+      setCustomFrom(dates.fromStr);
+      setCustomTo(dates.toStr);
+    }
+  };
+
   // Fetch sales & royalty data
-  useEffect(() => {
+  const fetchSalesAndRoyalty = useCallback(async () => {
     if (!cart?.id) return;
-    const fetchSalesAndRoyalty = async () => {
-      setSalesLoading(true);
-      try {
-        const [salesRes, analyticsRes, formulaRes] = await Promise.allSettled([
-          api.get(`/kiosk/sale?kioskId=${cart.id}&limit=50`),
-          api.get(`/kiosk/sale/analytics?kioskId=${cart.id}`),
-          api.get("/kiosk/sales-formula"),
-        ]);
+    setSalesLoading(true);
+    try {
+      let startIso = null;
+      let endIso = null;
 
-        if (salesRes.status === "fulfilled") {
-          const items = Array.isArray(salesRes.value.data?.data)
-            ? salesRes.value.data.data
-            : salesRes.value.data?.data?.items || [];
-          setSalesList(items);
+      if (salesPreset === "custom") {
+        if (customFrom) {
+          const s = new Date(customFrom + "T00:00:00");
+          if (!isNaN(s.getTime())) startIso = s.toISOString();
         }
-
-        if (analyticsRes.status === "fulfilled") {
-          setSalesAnalytics(analyticsRes.value.data?.data || null);
+        if (customTo) {
+          const e = new Date(customTo + "T23:59:59.999");
+          if (!isNaN(e.getTime())) endIso = e.toISOString();
         }
-
-        if (formulaRes.status === "fulfilled") {
-          const formulas = formulaRes.value.data?.data || [];
-          const matched = formulas.find((f) => f.vendorId === (cart.vendorId || cart.currentVendorId)) ||
-            formulas.find((f) => !f.vendorId);
-          if (matched && matched.vendorPercent) {
-            setRoyaltyPercent(matched.vendorPercent);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load franchisee sales:", err);
-      } finally {
-        setSalesLoading(false);
+      } else {
+        const computed = computePresetDates(salesPreset);
+        startIso = computed.startDate;
+        endIso = computed.endDate;
       }
-    };
 
+      const queryParams = new URLSearchParams({ kioskId: cart.id });
+      if (startIso) queryParams.set("startDate", startIso);
+      if (endIso) queryParams.set("endDate", endIso);
+
+      const salesQueryParams = new URLSearchParams({ kioskId: cart.id, limit: "50" });
+      if (startIso) salesQueryParams.set("startDate", startIso);
+      if (endIso) salesQueryParams.set("endDate", endIso);
+
+      const [salesRes, analyticsRes, formulaRes] = await Promise.allSettled([
+        api.get(`/kiosk/sale?${salesQueryParams.toString()}`),
+        api.get(`/kiosk/sale/analytics?${queryParams.toString()}`),
+        api.get("/kiosk/sales-formula"),
+      ]);
+
+      if (salesRes.status === "fulfilled") {
+        const items = Array.isArray(salesRes.value.data?.data)
+          ? salesRes.value.data.data
+          : salesRes.value.data?.data?.items || [];
+        setSalesList(items);
+      }
+
+      if (analyticsRes.status === "fulfilled") {
+        setSalesAnalytics(analyticsRes.value.data?.data || null);
+      }
+
+      if (formulaRes.status === "fulfilled") {
+        const formulas = formulaRes.value.data?.data || [];
+        const matched =
+          formulas.find((f) => f.vendorId === (cart.vendorId || cart.currentVendorId)) ||
+          formulas.find((f) => !f.vendorId);
+        if (matched && matched.vendorPercent) {
+          setRoyaltyPercent(matched.vendorPercent);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load franchisee sales:", err);
+    } finally {
+      setSalesLoading(false);
+    }
+  }, [cart?.id, cart?.vendorId, cart?.currentVendorId, salesPreset, customFrom, customTo]);
+
+  useEffect(() => {
     fetchSalesAndRoyalty();
-  }, [cart?.id]);
+  }, [fetchSalesAndRoyalty]);
 
   // Live timer for camera inspection
   useEffect(() => {
@@ -155,8 +240,8 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
     cart.kitchenType === "CLOUD" || cart.outletType === "CLOUD_KITCHEN" || cart.outletType === "CLOUD"
       ? "Cloud Kitchen"
       : cart.kitchenType === "STORE_FRONT" || cart.outletType === "STORE_FRONT"
-      ? "Store Front"
-      : "Physical Kiosk";
+        ? "Store Front"
+        : "Physical Kiosk";
 
   const outletFormatIcon =
     cart.kitchenType === "CLOUD" || cart.outletType === "CLOUD_KITCHEN" || cart.outletType === "CLOUD" ? (
@@ -238,19 +323,35 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
   };
 
   // Calculations for Sales & Royalty
-  const totalRevenue = salesAnalytics?.totalRevenue || salesList.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
-  const totalOrders = salesAnalytics?.totalSales || salesList.length;
-  const brandRoyaltyEarned = totalRevenue * (Number(royaltyPercent) / 100);
+  const totalRevenue =
+    salesAnalytics?.totals?.totalSales ??
+    salesAnalytics?.totalRevenue ??
+    salesList.reduce((acc, s) => acc + (Number(s.total || s.totalAmount) || 0), 0);
+  const totalOrders =
+    salesAnalytics?.totals?.orderCount ??
+    salesAnalytics?.totals?.totalOrders ??
+    salesAnalytics?.totalSales ??
+    salesList.length;
+  const brandRoyaltyEarned =
+    salesAnalytics?.totals?.vendorProfit ??
+    totalRevenue * (Number(royaltyPercent) / 100);
 
-  // Prepare chart data from salesList
-  const chartData = [...salesList]
-    .slice(0, 14)
-    .reverse()
-    .map((s) => ({
-      date: new Date(s.createdAt || s.saleDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
-      revenue: Number(s.total) || 0,
-      royalty: (Number(s.total) || 0) * (Number(royaltyPercent) / 100),
-    }));
+  // Prepare chart data from salesAnalytics daily aggregation if available, otherwise fallback to salesList
+  const chartData =
+    salesAnalytics?.chartData && salesAnalytics.chartData.length > 0
+      ? salesAnalytics.chartData.map((d) => ({
+          date: new Date(d.date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
+          revenue: Number(d.sales) || 0,
+          royalty: (Number(d.sales) || 0) * (Number(royaltyPercent) / 100),
+        }))
+      : [...salesList]
+          .slice(0, 14)
+          .reverse()
+          .map((s) => ({
+            date: new Date(s.createdAt || s.saleDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
+            revenue: Number(s.total || s.totalAmount) || 0,
+            royalty: (Number(s.total || s.totalAmount) || 0) * (Number(royaltyPercent) / 100),
+          }));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -281,14 +382,14 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
                 cart.status === "ACTIVE"
                   ? "rgba(34,197,94,0.06)"
                   : cart.status === "SUSPENDED"
-                  ? "rgba(239,68,68,0.06)"
-                  : "rgba(107,114,128,0.06)",
+                    ? "rgba(239,68,68,0.06)"
+                    : "rgba(107,114,128,0.06)",
               border:
                 cart.status === "ACTIVE"
                   ? "1px solid rgba(34,197,94,0.2)"
                   : cart.status === "SUSPENDED"
-                  ? "1px solid rgba(239,68,68,0.2)"
-                  : "1px solid var(--border)",
+                    ? "1px solid rgba(239,68,68,0.2)"
+                    : "1px solid var(--border)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -655,6 +756,144 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
       {/* ── TAB 2: SALES AND THEIR ROYALTY ── */}
       {activeTab === "sales" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Day / Date Range Picker */}
+          <div
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border)",
+              borderRadius: "14px",
+              padding: "12px 14px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 8,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <MdCalendarToday size={15} style={{ color: "var(--accent)" }} />
+                <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--text-heading)" }}>
+                  Analytics Period
+                </span>
+                {salesLoading && (
+                  <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                    (Loading...)
+                  </span>
+                )}
+              </div>
+
+              {/* Day presets */}
+              <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                {DAY_PRESETS.map((p) => {
+                  const active = salesPreset === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handlePresetSelect(p.id)}
+                      style={{
+                        height: 28,
+                        padding: "0 10px",
+                        borderRadius: 8,
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        transition: "all 0.15s ease",
+                        background: active ? "var(--bg-active)" : "var(--bg-hover)",
+                        color: active ? "var(--accent)" : "var(--text-muted)",
+                        border: `1px solid ${active ? "rgba(203,108,220,0.4)" : "var(--border)"}`,
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={() => fetchSalesAndRoyalty()}
+                  title="Refresh analytics"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg-hover)",
+                    color: "var(--text-muted)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <MdRefresh size={15} style={{ animation: salesLoading ? "spin 1s linear infinite" : "none" }} />
+                </button>
+              </div>
+            </div>
+
+            {/* Custom from / to inputs */}
+            {salesPreset === "custom" && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                  paddingTop: 8,
+                  borderTop: "1px dashed var(--border)",
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.68rem",
+                      fontWeight: 700,
+                      color: "var(--text-muted)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    From
+                  </label>
+                  <input
+                    type="date"
+                    className="modal-input"
+                    value={customFrom}
+                    onChange={(e) => setCustomFrom(e.target.value)}
+                    style={{ height: 32, fontSize: "0.75rem", marginBottom: 0, width: "100%" }}
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.68rem",
+                      fontWeight: 700,
+                      color: "var(--text-muted)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    To
+                  </label>
+                  <input
+                    type="date"
+                    className="modal-input"
+                    value={customTo}
+                    onChange={(e) => setCustomTo(e.target.value)}
+                    style={{ height: 32, fontSize: "0.75rem", marginBottom: 0, width: "100%" }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Royalty & Revenue Summary Hero */}
           <div
             style={{
@@ -691,7 +930,16 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
             </div>
 
             <p style={{ margin: "0 0 14px", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-              Earned from {totalOrders} orders completed at this franchisee outlet
+              Earned from {totalOrders} orders completed during{" "}
+              {salesPreset === "today"
+                ? "today"
+                : salesPreset === "3d"
+                ? "the last 3 days"
+                : salesPreset === "7d"
+                ? "the last 7 days"
+                : salesPreset === "30d"
+                ? "the last 30 days"
+                : `${customFrom || "start"} to ${customTo || "now"}`}
             </p>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, borderTop: "1px solid rgba(203,108,220,0.15)", paddingTop: 12 }}>
