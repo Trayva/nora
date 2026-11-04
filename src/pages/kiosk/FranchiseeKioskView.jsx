@@ -325,8 +325,8 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
   // Calculations for Sales & Royalty
   const totalRevenue =
     salesAnalytics?.totals?.totalSales ??
-    salesAnalytics?.totalRevenue ??
-    salesList.reduce((acc, s) => acc + (Number(s.total || s.totalAmount) || 0), 0);
+    // salesAnalytics?.totalRevenue ??
+    salesList.reduce((acc, s) => acc + (Number(s.subtotal) || 0), 0);
   const totalOrders =
     salesAnalytics?.totals?.orderCount ??
     salesAnalytics?.totals?.totalOrders ??
@@ -340,18 +340,18 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
   const chartData =
     salesAnalytics?.chartData && salesAnalytics.chartData.length > 0
       ? salesAnalytics.chartData.map((d) => ({
-          date: new Date(d.date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
-          revenue: Number(d.sales) || 0,
-          royalty: (Number(d.sales) || 0) * (Number(royaltyPercent) / 100),
-        }))
+        date: new Date(d.date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
+        revenue: Number(d.sales) || 0,
+        royalty: (Number(d.sales) || 0) * (Number(royaltyPercent) / 100),
+      }))
       : [...salesList]
-          .slice(0, 14)
-          .reverse()
-          .map((s) => ({
-            date: new Date(s.createdAt || s.saleDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
-            revenue: Number(s.total || s.totalAmount) || 0,
-            royalty: (Number(s.total || s.totalAmount) || 0) * (Number(royaltyPercent) / 100),
-          }));
+        .slice(0, 14)
+        .reverse()
+        .map((s) => ({
+          date: new Date(s.createdAt || s.saleDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
+          revenue: Number(s.total || s.totalAmount) || 0,
+          royalty: (Number(s.total || s.totalAmount) || 0) * (Number(royaltyPercent) / 100),
+        }));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -934,12 +934,12 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
               {salesPreset === "today"
                 ? "today"
                 : salesPreset === "3d"
-                ? "the last 3 days"
-                : salesPreset === "7d"
-                ? "the last 7 days"
-                : salesPreset === "30d"
-                ? "the last 30 days"
-                : `${customFrom || "start"} to ${customTo || "now"}`}
+                  ? "the last 3 days"
+                  : salesPreset === "7d"
+                    ? "the last 7 days"
+                    : salesPreset === "30d"
+                      ? "the last 30 days"
+                      : `${customFrom || "start"} to ${customTo || "now"}`}
             </p>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, borderTop: "1px solid rgba(203,108,220,0.15)", paddingTop: 12 }}>
@@ -1089,10 +1089,10 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
 
                       <div style={{ textAlign: "right" }}>
                         <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--text-heading)", display: "block" }}>
-                          {fmtCurrency(saleAmt, kioskCurrency)}
+                          {fmtCurrency(sale.subtotal, kioskCurrency)}
                         </span>
                         <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--accent)" }}>
-                          Royalty: +{fmtCurrency(cut, kioskCurrency)}
+                          Royalty: +{fmtCurrency(sale.vendorProfit, kioskCurrency)}
                         </span>
                       </div>
                     </div>
@@ -1702,3 +1702,5 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
     </div>
   );
 }
+
+
