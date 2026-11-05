@@ -325,7 +325,7 @@ export default function FranchiseeKioskView({ cart, onUpdate, onRefresh }) {
   // Calculations for Sales & Royalty
   const totalRevenue =
     salesAnalytics?.totals?.totalSales ??
-    // salesAnalytics?.totalRevenue ??
+    salesAnalytics?.totalRevenue ??
     salesList.reduce((acc, s) => acc + (Number(s.subtotal) || 0), 0);
   const totalOrders =
     salesAnalytics?.totals?.orderCount ??
