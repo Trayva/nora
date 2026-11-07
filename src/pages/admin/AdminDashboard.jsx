@@ -263,6 +263,9 @@ export default function AdminDashboard() {
 
       if (drawer === "ingredients") {
         fd.append("unit", entityForm.unit);
+        if (entityForm.lifespan !== undefined && entityForm.lifespan !== null) {
+          fd.append("lifespan", entityForm.lifespan);
+        }
       } else {
         if (entityForm.description) fd.append("description", entityForm.description);
         if (entityForm.powerConsumption !== undefined && entityForm.powerConsumption !== null) {
@@ -2150,23 +2153,31 @@ export default function AdminDashboard() {
               </div>
 
               {drawer === "ingredients" ? (
-                <div className="form-field">
-                  <label className="modal-label">Unit of Measure *</label>
-                  <UnitSelect
-                    value={entityForm.unit}
-                    onChange={(e) =>
-                      setEntityForm((p) => ({ ...p, unit: e.target.value }))
-                    }
-                    style={{ marginBottom: 8 }}
-                  />
-                  {/* <input
-                    className="modal-input"
-                    placeholder="e.g. kg, litres, pcs"
-                    value={entityForm.unit}
-                    onChange={(e) => setEntityForm((prev) => ({ ...prev, unit: e.target.value }))}
-                    required
-                  /> */}
-                </div>
+                <>
+                  <div className="form-field">
+                    <label className="modal-label">Unit of Measure *</label>
+                    <UnitSelect
+                      value={entityForm.unit}
+                      onChange={(e) =>
+                        setEntityForm((p) => ({ ...p, unit: e.target.value }))
+                      }
+                      style={{ marginBottom: 8 }}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label className="modal-label">Shelf Lifespan (Days)</label>
+                    <input
+                      className="modal-input"
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 30"
+                      value={entityForm.lifespan || ""}
+                      onChange={(e) =>
+                        setEntityForm((p) => ({ ...p, lifespan: e.target.value }))
+                      }
+                    />
+                  </div>
+                </>
               ) : (
                 <>
                   <div className="form-field">

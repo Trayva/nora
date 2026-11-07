@@ -2762,7 +2762,7 @@ function IngredientPricesTab({ profile, supplierCurrency }) {
   const [ingOpen, setIngOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [newForm, setNewForm] = useState({ name: "", unit: "", image: null });
+  const [newForm, setNewForm] = useState({ name: "", unit: "", lifespan: "", image: null });
   const [price, setPrice] = useState("");
   const [saving, setSaving] = useState(false);
   const debRef = useRef(null);
@@ -2836,6 +2836,7 @@ function IngredientPricesTab({ profile, supplierCurrency }) {
       const fd = new FormData();
       fd.append("name", newForm.name.trim());
       fd.append("unit", newForm.unit.trim());
+      if (newForm.lifespan) fd.append("lifespan", newForm.lifespan.trim());
       if (newForm.image) fd.append("image", newForm.image);
       const res = await api.post("/library/ingredient", fd, {
         headers: { "Content-Type": undefined },
@@ -2845,7 +2846,7 @@ function IngredientPricesTab({ profile, supplierCurrency }) {
       setIngSearch(created.name);
       setIngOpen(false);
       setShowCreate(false);
-      setNewForm({ name: "", unit: "", image: null });
+      setNewForm({ name: "", unit: "", lifespan: "", image: null });
       toast.success(`${created.name} created`);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to create");
@@ -3198,6 +3199,17 @@ function IngredientPricesTab({ profile, supplierCurrency }) {
                           </option>
                         ))}
                       </select>
+                      <input
+                        className="modal-input"
+                        type="number"
+                        min="1"
+                        placeholder="Shelf Lifespan (Days e.g. 30)"
+                        value={newForm.lifespan}
+                        onChange={(e) =>
+                          setNewForm((p) => ({ ...p, lifespan: e.target.value }))
+                        }
+                        style={{ marginBottom: 0 }}
+                      />
                       <label
                         style={{
                           display: "flex",

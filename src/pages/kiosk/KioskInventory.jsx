@@ -409,6 +409,8 @@ function AddInventoryForm({ kioskId, onAdded, cart, isUtilities }) {
   const [unit, setUnit] = useState("g");
   const [totalCost, setTotalCost] = useState("");
   const [lowStockLevel, setLowStockLevel] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [condition, setCondition] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSelect = (item) => {
@@ -417,6 +419,17 @@ function AddInventoryForm({ kioskId, onAdded, cart, isUtilities }) {
     setTotalCost("");
     setLowStockLevel("");
     setUnit(getDefaultUnit(item?.unit));
+    if (item?.lifespan) {
+      const exp = new Date(Date.now() + Number(item.lifespan) * 86400000);
+      setExpiryDate(exp.toISOString().split("T")[0]);
+    } else {
+      setExpiryDate("");
+    }
+    if (item?.condition) {
+      setCondition(item.condition);
+    } else {
+      setCondition("");
+    }
   };
   const type = selectedItem?._type || (isUtilities ? "MACHINERY" : "INGREDIENT");
   const itemIdKey =
@@ -447,6 +460,8 @@ function AddInventoryForm({ kioskId, onAdded, cart, isUtilities }) {
         lowStockLevel: lowStockLevel
           ? (type === "MACHINERY" ? Number(lowStockLevel) : toBaseQuantity(lowStockLevel, unit))
           : undefined,
+        expiryDate: expiryDate ? new Date(expiryDate + "T23:59:59.999Z").toISOString() : undefined,
+        condition: condition || undefined,
       });
       toast.success(isUtilities ? "Utility added to kiosk" : "Item added to inventory");
       onAdded();
@@ -664,6 +679,36 @@ function AddInventoryForm({ kioskId, onAdded, cart, isUtilities }) {
           </div>
         </div>
       </div>
+      {!isUtilities && type !== "MACHINERY" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+          <div className="form-field" style={{ marginBottom: 0 }}>
+            <label className="modal-label">
+              Expiry Date {selectedItem?.lifespan ? `(${selectedItem.lifespan}d lifespan)` : ""}
+            </label>
+            <input
+              className="modal-input"
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+            />
+          </div>
+          <div className="form-field" style={{ marginBottom: 0 }}>
+            <label className="modal-label">Condition</label>
+            <select
+              className="modal-input"
+              value={condition}
+              onChange={(e) => setCondition(e.target.value)}
+            >
+              <option value="">Default / None</option>
+              <option value="AMBIENT">Ambient</option>
+              <option value="CHILLED">Chilled</option>
+              <option value="FROZEN">Frozen</option>
+              <option value="WARMED">Warmed</option>
+              <option value="DRY">Dry</option>
+            </select>
+          </div>
+        </div>
+      )}
       <button
         className={`app_btn app_btn_confirm${saving ? " btn_loading" : ""}`}
         style={{ width: "100%", height: 40, position: "relative" }}
@@ -1856,6 +1901,12 @@ function ItemHistoryModal({ item, kioskId, onClose }) {
                           {entry.user?.fullName && (
                             <>{entry.notes ? " · " : ""}By {entry.user.fullName}</>
                           )}
+                          {entry.condition && (
+                            <span style={{ color: "#3b82f6", fontWeight: 600 }}> · {entry.condition}</span>
+                          )}
+                          {entry.expiryDate && (
+                            <span style={{ color: "var(--text-muted)" }}> · Exp: {new Date(entry.expiryDate).toLocaleDateString()}</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1921,6 +1972,85 @@ const REASON_OPTIONS = [
   "Other",
 ];
 
+function getExpiryBadge(expiryDate) {
+  if (!expiryDate) return null;
+  const exp = new Date(expiryDate);
+  const now = new Date();
+  const diffTime = exp.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return (
+      <span
+        style={{
+          background: "rgba(239, 68, 68, 0.12)",
+          color: "#ef4444",
+          border: "1px solid rgba(239, 68, 68, 0.3)",
+          fontSize: "0.62rem",
+          padding: "2px 6px",
+          borderRadius: "4px",
+          fontWeight: "700",
+        }}
+        title={`Expired on ${exp.toLocaleDateString()}`}
+      >
+        Expired {Math.abs(diffDays)}d ago
+      </span>
+    );
+  }
+  if (diffDays === 0) {
+    return (
+      <span
+        style={{
+          background: "rgba(245, 158, 11, 0.15)",
+          color: "#d97706",
+          border: "1px solid rgba(245, 158, 11, 0.3)",
+          fontSize: "0.62rem",
+          padding: "2px 6px",
+          borderRadius: "4px",
+          fontWeight: "700",
+        }}
+        title={`Expires today: ${exp.toLocaleDateString()}`}
+      >
+        Expires Today
+      </span>
+    );
+  }
+  if (diffDays <= 3) {
+    return (
+      <span
+        style={{
+          background: "rgba(245, 158, 11, 0.12)",
+          color: "#d97706",
+          border: "1px solid rgba(245, 158, 11, 0.25)",
+          fontSize: "0.62rem",
+          padding: "2px 6px",
+          borderRadius: "4px",
+          fontWeight: "700",
+        }}
+        title={`Expires on ${exp.toLocaleDateString()}`}
+      >
+        Expires in {diffDays}d
+      </span>
+    );
+  }
+  return (
+    <span
+      style={{
+        background: "rgba(16, 185, 129, 0.08)",
+        color: "#10b981",
+        border: "1px solid rgba(16, 185, 129, 0.2)",
+        fontSize: "0.62rem",
+        padding: "2px 6px",
+        borderRadius: "4px",
+        fontWeight: "600",
+      }}
+      title={`Expires on ${exp.toLocaleDateString()}`}
+    >
+      Exp: {exp.toLocaleDateString()}
+    </span>
+  );
+}
+
 function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
   const { format: fmtCurrency } = useCurrencyDisplay();
   const kioskCurrency = cart?.location?.state?.currency || cart?.currency || "NGN";
@@ -1936,6 +2066,8 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [lowStockLevel, setLowStockLevel] = useState("");
+  const [expiryDate, setEditExpiryDate] = useState("");
+  const [condition, setEditCondition] = useState("");
 
   const itemType = item.type || "INGREDIENT";
   const isMachinery = itemType === "MACHINERY";
@@ -1979,7 +2111,10 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
     const currentLowStockLevel = item.lowStockLevel || 0;
     const hasLowStockChange = targetLowStockLevel !== currentLowStockLevel;
 
-    if (!hasQtyInput && !hasLowStockChange) {
+    const hasExpiryChange = (expiryDate || "") !== (item.expiryDate ? item.expiryDate.split("T")[0] : "");
+    const hasConditionChange = (condition || "") !== (item.condition || "");
+
+    if (!hasQtyInput && !hasLowStockChange && !hasExpiryChange && !hasConditionChange) {
       return toast.error("No changes to save");
     }
 
@@ -1993,6 +2128,7 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
 
     setSaving(true);
     try {
+      const patchData = {};
       if (hasQtyInput) {
         await api.patch(`/kiosk/inventory/${item.id}`, {
           quantity: isMachinery
@@ -2000,6 +2136,22 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
             : (baseQty ?? Number(quantity)),
           cost: unitCost ?? (totalCost ? Number(totalCost) : undefined),
         });
+        patchData.quantity = isMachinery
+          ? Number(quantity)
+          : (baseQty ?? Number(quantity));
+        if (unitCost ?? totalCost) {
+          patchData.cost = unitCost ?? Number(totalCost);
+        }
+      }
+      if (hasExpiryChange) {
+        patchData.expiryDate = expiryDate ? new Date(expiryDate + "T23:59:59.999Z").toISOString() : null;
+      }
+      if (hasConditionChange) {
+        patchData.condition = condition || null;
+      }
+
+      if (Object.keys(patchData).length > 0) {
+        await api.patch(`/kiosk/inventory/${item.id}`, patchData);
       }
 
       if (hasLowStockChange) {
@@ -2140,6 +2292,23 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
               >
                 {itemType.replace("_", " ")}
               </span>
+              {item.condition && (
+                <span
+                  style={{
+                    background: "rgba(59,130,246,0.1)",
+                    color: "#3b82f6",
+                    border: "1px solid rgba(59,130,246,0.2)",
+                    fontSize: "0.62rem",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                    textTransform: "uppercase",
+                    fontWeight: "700",
+                  }}
+                >
+                  {item.condition}
+                </span>
+              )}
+              {getExpiryBadge(item.expiryDate)}
               {item.lowStockLevel > 0 && (
                 <span className="kiosk_min_stock_badge">
                   Min: {item.lowStockLevel.toLocaleString()} {isMachinery ? "unit" : item.ingredient?.unit || item.prepItem?.unit || "units"}
@@ -2210,6 +2379,8 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
                     setUnit("unit");
                   }
                   setLowStockLevel(item.lowStockLevel ? String(item.lowStockLevel) : "");
+                  setEditExpiryDate(item.expiryDate ? item.expiryDate.split("T")[0] : "");
+                  setEditCondition(item.condition || "");
                 }
               }}
             >
@@ -2369,6 +2540,34 @@ function InventoryItemRow({ item, onRefresh, cart, onViewHistory }) {
               </div>
             </div>
           </div>
+          {!isMachinery && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <label className="modal-label">Expiry Date</label>
+                <input
+                  className="modal-input"
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setEditExpiryDate(e.target.value)}
+                />
+              </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <label className="modal-label">Condition</label>
+                <select
+                  className="modal-input"
+                  value={condition}
+                  onChange={(e) => setEditCondition(e.target.value)}
+                >
+                  <option value="">Default / None</option>
+                  <option value="AMBIENT">Ambient</option>
+                  <option value="CHILLED">Chilled</option>
+                  <option value="FROZEN">Frozen</option>
+                  <option value="WARMED">Warmed</option>
+                  <option value="DRY">Dry</option>
+                </select>
+              </div>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
             <button
               className="app_btn app_btn_cancel"

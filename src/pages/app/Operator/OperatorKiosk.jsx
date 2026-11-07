@@ -152,6 +152,11 @@ function TaskSubmitForm({ task, onSubmitted }) {
       schema.map((f) => [f.label, f.type === "checkbox" ? false : ""]),
     ),
   );
+  const initialPrepItems =
+    task.prepItems || task.template?.prepItems || task.template?.schema?.prepItems || [];
+  const [preppingItems, setPreppingItems] = useState(
+    initialPrepItems.map((p) => ({ ...p, quantity: p.quantity || 1 })),
+  );
   const [remark, setRemark] = useState("");
   const [videoFile, setVideoFile] = useState(null);
   const [showRecorder, setShowRecorder] = useState(false);
@@ -181,6 +186,9 @@ function TaskSubmitForm({ task, onSubmitted }) {
         payload.append("remark", remark.trim());
       }
       payload.append("data", JSON.stringify(dataToSubmit));
+      if (preppingItems.length > 0) {
+        payload.append("prepItems", JSON.stringify(preppingItems));
+      }
       if (videoFile) {
         payload.append("video", videoFile);
       }
@@ -234,6 +242,81 @@ function TaskSubmitForm({ task, onSubmitted }) {
           )}
         </div>
       ))}
+
+      {/* Prep Items Confirmation */}
+      {preppingItems.length > 0 && (
+        <div
+          style={{
+            background: "rgba(59, 130, 246, 0.05)",
+            border: "1px solid rgba(59, 130, 246, 0.2)",
+            borderRadius: 10,
+            padding: "12px 14px",
+            marginTop: 6,
+            marginBottom: 6,
+          }}
+        >
+          <div
+            style={{
+              fontSize: "0.8rem",
+              fontWeight: 800,
+              color: "var(--text-heading)",
+              marginBottom: 8,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <span>🥗 Items to Prep & Add to Inventory</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {preppingItems.map((pi, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  background: "var(--bg-card)",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                    {pi.name || "Prep Item"}
+                  </div>
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                    Recipe ingredients will be automatically deducted from stock
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input
+                    className="modal-input"
+                    type="number"
+                    min="0.001"
+                    step="any"
+                    style={{ width: 80, height: 32, padding: "4px 8px", textAlign: "right" }}
+                    value={pi.quantity}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPreppingItems((p) => {
+                        const copy = [...p];
+                        copy[idx] = { ...copy[idx], quantity: val };
+                        return copy;
+                      });
+                    }}
+                  />
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", minWidth: 28 }}>
+                    {pi.unit || "unit"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Video Proof Upload */}
       <div className="form-field" style={{ marginTop: 4 }}>
@@ -516,6 +599,21 @@ function TaskCard({ task, onRefresh }) {
         </div>
         <div className="kiosk_task_badges">
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            {((task.prepItems && task.prepItems.length > 0) || (task.template?.prepItems && task.template.prepItems.length > 0) || (task.template?.schema?.prepItems && task.template.schema.prepItems.length > 0)) && (
+              <span
+                style={{
+                  background: "rgba(16, 185, 129, 0.1)",
+                  color: "#10b981",
+                  border: "1px solid rgba(16, 185, 129, 0.25)",
+                  fontSize: "0.62rem",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  fontWeight: "700",
+                }}
+              >
+                🥗 {(task.prepItems || task.template?.prepItems || task.template?.schema?.prepItems).length} Prep Items
+              </span>
+            )}
             <TaskTimingScoreBadge task={task} />
             <StatusChip status={task.status} />
           </div>
@@ -537,6 +635,39 @@ function TaskCard({ task, onRefresh }) {
           <div style={{ marginTop: 12 }}>
             <TaskTimingScheduleSection task={task} />
           </div>
+
+          {/* Prep Items list if configured */}
+          {((task.prepItems && task.prepItems.length > 0) || (task.template?.prepItems && task.template.prepItems.length > 0) || (task.template?.schema?.prepItems && task.template.schema.prepItems.length > 0)) && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "8px 12px",
+                borderRadius: 8,
+                background: "rgba(16, 185, 129, 0.05)",
+                border: "1px solid rgba(16, 185, 129, 0.2)",
+              }}
+            >
+              <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#10b981", marginBottom: 4 }}>
+                Prep Items to produce:
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {(task.prepItems || task.template?.prepItems || task.template?.schema?.prepItems).map((pi, idx) => (
+                  <span
+                    key={idx}
+                    style={{
+                      fontSize: "0.75rem",
+                      background: "var(--bg-card)",
+                      padding: "3px 8px",
+                      borderRadius: 6,
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <b>{pi.name || "Prep Item"}</b>: {pi.quantity} {pi.unit || "unit"}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Show Video Proof if attached */}
           {task.videoUrl && <TaskVideoProofCard videoUrl={task.videoUrl} />}
@@ -824,7 +955,7 @@ function getUnitOptions(baseUnit) {
   return ["unit"];
 }
 
-export function InventoryTab({ kioskId }) {
+export function InventoryTab({ kioskId, kiosk }) {
   const [view, setView] = useState("stock");
   const [inventory, setInventory] = useState([]);
   const [supply, setSupply] = useState([]);
@@ -964,6 +1095,7 @@ export function InventoryTab({ kioskId }) {
 
   return (
     <div>
+      <h2>Hello World</h2>
       <div className="kiosk_sub_nav" style={{ marginBottom: 16 }}>
         {[
           { key: "stock", label: "Stock", icon: <MdInventory2 size={13} /> },
@@ -1072,6 +1204,16 @@ export function InventoryTab({ kioskId }) {
                     <div className="kiosk_task_name">{name}</div>
                     <div className="kiosk_task_meta">
                       <span>{item.type?.replace("_", " ")}</span>
+                      {item.condition && (
+                        <span style={{ color: "#3b82f6", fontWeight: 700 }}>
+                          · {item.condition}
+                        </span>
+                      )}
+                      {item.expiryDate && (
+                        <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>
+                          · Exp: {new Date(item.expiryDate).toLocaleDateString()}
+                        </span>
+                      )}
                       {item.lowStockLevel > 0 && (
                         <span>
                           · Min: {item.lowStockLevel.toLocaleString()} {item.ingredient?.unit || item.prepItem?.unit || "units"}
@@ -1753,7 +1895,7 @@ function VideoBlock({ src, label, onWatched }) {
       if (e.key === "PrintScreen" || e.keyCode === 44) {
         setIsScreenProtected(true);
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText("").catch(() => {});
+          navigator.clipboard.writeText("").catch(() => { });
         }
         setTimeout(() => setIsScreenProtected(false), 2000);
       }
@@ -5248,7 +5390,7 @@ export default function OperatorKioskPage() {
         })}
       </div>
       {activeTab === "tasks" && <TasksTab kioskId={kioskId} />}
-      {activeTab === "inventory" && <InventoryTab kioskId={kioskId} />}
+      {activeTab === "inventory" && <InventoryTab kiosk={kiosk} kioskId={kioskId} />}
       {activeTab === "menu" && <MenuTab menuItems={menuItems} />}
       {activeTab === "elearning" && <ELearningTab menuItems={menuItems} />}
       {activeTab === "orders" && <KioskOrders kioskId={kioskId} />}

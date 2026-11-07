@@ -15,6 +15,8 @@ export default function ExtraEditForm({ extra, onSaved, onCancel }) {
   const [name, setName] = useState(extra?.name || "");
   const [unit, setUnit] = useState(extra?.unit || "");
   const [description, setDescription] = useState(extra?.description || "");
+  const [lifespan, setLifespan] = useState(extra?.lifespan != null ? String(extra.lifespan) : "");
+  const [condition, setCondition] = useState(extra?.condition || "CHILLED");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(extra?.image || null);
   const [videoFile, setVideoFile] = useState(null);
@@ -39,6 +41,8 @@ export default function ExtraEditForm({ extra, onSaved, onCancel }) {
     if (name) fd.append("name", name.trim());
     if (unit) fd.append("unit", unit.trim());
     if (description) fd.append("description", description);
+    if (lifespan) fd.append("lifespan", lifespan.trim());
+    if (condition) fd.append("condition", condition.trim());
     if (imageFile) fd.append("image", imageFile);
 
     setSaving(true);
@@ -208,6 +212,34 @@ export default function ExtraEditForm({ extra, onSaved, onCancel }) {
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
           />
+        </div>
+      </div>
+
+      <div className="register_row">
+        <div className="form-field">
+          <label className="modal-label">Shelf Lifespan (Days)</label>
+          <input
+            className="modal-input"
+            type="number"
+            min="1"
+            placeholder="e.g. 7"
+            value={lifespan}
+            onChange={(e) => setLifespan(e.target.value)}
+          />
+        </div>
+        <div className="form-field">
+          <label className="modal-label">Storage Condition</label>
+          <select
+            className="modal-input"
+            value={condition}
+            onChange={(e) => setCondition(e.target.value)}
+          >
+            <option value="AMBIENT">Ambient / Room Temp</option>
+            <option value="CHILLED">Chilled (0 - 4°C)</option>
+            <option value="FROZEN">Frozen (-18°C)</option>
+            <option value="WARMED">Warmed / Heated</option>
+            <option value="DRY">Dry Storage</option>
+          </select>
         </div>
       </div>
 

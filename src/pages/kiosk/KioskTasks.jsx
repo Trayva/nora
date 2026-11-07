@@ -74,6 +74,141 @@ function StatusPill({ status }) {
   );
 }
 
+/* ── Reusable Prep Items Picker ────────────────────────────── */
+function PrepItemsPicker({ prepItems = [], onChange, availablePreps = [] }) {
+  const addPrep = () => {
+    const first = availablePreps[0];
+    onChange([
+      ...prepItems,
+      {
+        prepItemId: first?.id || "",
+        quantity: 1,
+        name: first?.name || "",
+        unit: first?.unit || "unit",
+      },
+    ]);
+  };
+
+  const removePrep = (idx) => {
+    onChange(prepItems.filter((_, i) => i !== idx));
+  };
+
+  const updatePrep = (idx, key, val) => {
+    const copy = [...prepItems];
+    copy[idx] = { ...copy[idx], [key]: val };
+    if (key === "prepItemId") {
+      const found = availablePreps.find((p) => p.id === val);
+      if (found) {
+        copy[idx].name = found.name;
+        copy[idx].unit = found.unit || "unit";
+      }
+    }
+    onChange(copy);
+  };
+
+  return (
+    <div style={{ marginTop: 14, marginBottom: 14 }}>
+      <div
+        className="drawer_section_title"
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span>Prep Items to Produce</span>
+          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 400 }}>
+            (Adds to inventory & deducts recipe on completion)
+          </span>
+        </div>
+        <button
+          type="button"
+          className="kiosk_icon_action_btn"
+          style={{ width: "auto", padding: "0 8px", height: 26, fontSize: "0.72rem", gap: 4 }}
+          onClick={addPrep}
+          title="Add prep item"
+        >
+          <MdAdd size={14} /> Add Prep Item
+        </button>
+      </div>
+
+      {prepItems.length === 0 ? (
+        <div
+          style={{
+            fontSize: "0.75rem",
+            color: "var(--text-muted)",
+            padding: "10px 12px",
+            background: "var(--bg-hover)",
+            borderRadius: 8,
+            border: "1px dashed var(--border)",
+          }}
+        >
+          No prep items attached. (Optional: attach prep items to auto-update stock upon task submission)
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {prepItems.map((pi, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "var(--bg-card)",
+                padding: "8px 10px",
+                borderRadius: 8,
+                border: "1px solid var(--border)",
+              }}
+            >
+              <select
+                className="modal-input"
+                style={{ flex: 1, minWidth: 140 }}
+                value={pi.prepItemId}
+                onChange={(e) => updatePrepItem(idx, "prepItemId", e.target.value)}
+              >
+                <option value="">-- Select Prep Item --</option>
+                {availablePreps.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.unit ? `(${p.unit})` : ""}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                className="modal-input"
+                type="number"
+                min="0.001"
+                step="any"
+                placeholder="Qty"
+                style={{ width: 80 }}
+                value={pi.quantity}
+                onChange={(e) => updatePrepItem(idx, "quantity", e.target.value)}
+              />
+
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  minWidth: 35,
+                  flexShrink: 0,
+                  textAlign: "center",
+                }}
+              >
+                {pi.unit || "unit"}
+              </span>
+
+              <button
+                type="button"
+                className="kiosk_icon_action_btn kiosk_icon_danger"
+                onClick={() => removePrep(idx)}
+              >
+                <MdClose size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Instant Todo Task Creator ─────────────────────────────── */
 function TodoTaskBuilder({
   kioskId,
@@ -92,7 +227,24 @@ function TodoTaskBuilder({
   const [dueTime, setDueTime] = useState("");
   const [dueMinutes, setDueMinutes] = useState("");
   const [fields, setFields] = useState([{ type: "checkbox", label: "" }]);
+  const [prepItems, setPrepItems] = useState([]);
+  const [availablePreps, setAvailablePreps] = useState([]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let unmounted = false;
+    api
+      .get(`/library/ingredient?returnPrep=true${kioskId ? `&kioskId=${kioskId}` : ""}&limit=100`)
+      .then((res) => {
+        if (unmounted) return;
+        const preps = res.data.data?.preps || [];
+        setAvailablePreps(preps);
+      })
+      .catch(() => {});
+    return () => {
+      unmounted = true;
+    };
+  }, [kioskId]);
 
   // Pre-fill form when an existing template is chosen
   const handleSelectTemplate = (id) => {
@@ -102,6 +254,7 @@ function TodoTaskBuilder({
       setDescription("");
       setType("CHECKLIST");
       setFields([{ type: "checkbox", label: "" }]);
+      setPrepItems([]);
       setOperatorId("");
       setTime("");
       setDueTime("");
@@ -122,6 +275,7 @@ function TodoTaskBuilder({
       } else {
         setFields([{ type: "checkbox", label: "" }]);
       }
+      setPrepItems(tpl.prepItems || tpl.schema?.prepItems || []);
       setDueMinutes(tpl.dueMinutes ?? "");
       setDueTime(tpl.dueTime || "");
       setOperatorId(tpl.operatorId || "");
@@ -143,6 +297,18 @@ function TodoTaskBuilder({
     const validFields = fields.filter((f) => f.label.trim());
     if (!validFields.length) return toast.error("Add at least one instruction / field");
 
+    const validPrepItems = prepItems
+      .filter((p) => p.prepItemId && Number(p.quantity) > 0)
+      .map((p) => {
+        const found = availablePreps.find((ap) => ap.id === p.prepItemId);
+        return {
+          prepItemId: p.prepItemId,
+          quantity: Number(p.quantity),
+          name: p.name || found?.name,
+          unit: p.unit || found?.unit,
+        };
+      });
+
     setSaving(true);
     try {
       const payload = {
@@ -152,6 +318,7 @@ function TodoTaskBuilder({
         description: description.trim() || undefined,
         type,
         schema: { fields: validFields },
+        prepItems: validPrepItems.length > 0 ? validPrepItems : undefined,
         operatorId: operatorId || undefined,
         time: time || undefined,
         dueTime: dueTime || undefined,
@@ -320,6 +487,13 @@ function TodoTaskBuilder({
         </div>
       </div>
 
+      {/* Prep Items */}
+      <PrepItemsPicker
+        prepItems={prepItems}
+        onChange={setPrepItems}
+        availablePreps={availablePreps}
+      />
+
       {/* Instructions / Fields */}
       <div
         className="drawer_section_title"
@@ -421,7 +595,26 @@ function TemplateBuilder({
   const [fields, setFields] = useState(
     editTemplate?.schema?.fields || [{ type: "checkbox", label: "" }],
   );
+  const [prepItems, setPrepItems] = useState(
+    editTemplate?.prepItems || editTemplate?.schema?.prepItems || [],
+  );
+  const [availablePreps, setAvailablePreps] = useState([]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let unmounted = false;
+    api
+      .get(`/library/ingredient?returnPrep=true${kioskId ? `&kioskId=${kioskId}` : ""}&limit=100`)
+      .then((res) => {
+        if (unmounted) return;
+        const preps = res.data.data?.preps || [];
+        setAvailablePreps(preps);
+      })
+      .catch(() => {});
+    return () => {
+      unmounted = true;
+    };
+  }, [kioskId]);
 
   const addField = () =>
     setFields([...fields, { type: "checkbox", label: "" }]);
@@ -437,12 +630,25 @@ function TemplateBuilder({
     const validFields = fields.filter((f) => f.label.trim());
     if (!validFields.length) return toast.error("Add at least one field");
 
+    const validPrepItems = prepItems
+      .filter((p) => p.prepItemId && Number(p.quantity) > 0)
+      .map((p) => {
+        const found = availablePreps.find((ap) => ap.id === p.prepItemId);
+        return {
+          prepItemId: p.prepItemId,
+          quantity: Number(p.quantity),
+          name: p.name || found?.name,
+          unit: p.unit || found?.unit,
+        };
+      });
+
     const payload = {
       name: name.trim(),
       description: description.trim() || undefined,
       type,
       recurrence,
       schema: { fields: validFields },
+      prepItems: validPrepItems.length > 0 ? validPrepItems : undefined,
       isGlobal,
       kioskId: isGlobal ? undefined : kioskId,
       operatorId: operatorId || undefined,
@@ -602,16 +808,12 @@ function TemplateBuilder({
         </div>
       </div>
 
-      {/* Global toggle for ADMIN ONLY */}
-      {/* <div className="kiosk_toggle_row" style={{ marginBottom: 14 }}>
-        <span className="kiosk_toggle_label">Apply Globally (all carts)</span>
-        <button
-          className={`kiosk_toggle_switch ${isGlobal ? "kiosk_toggle_on" : ""}`}
-          onClick={() => setIsGlobal((v) => !v)}
-        >
-          <span className="kiosk_toggle_knob" />
-        </button>
-      </div> */}
+      {/* Prep Items */}
+      <PrepItemsPicker
+        prepItems={prepItems}
+        onChange={setPrepItems}
+        availablePreps={availablePreps}
+      />
 
       {/* Fields */}
       <div
@@ -696,6 +898,11 @@ function TaskSubmitForm({ task, onSubmitted }) {
       schema.map((f) => [f.label, f.type === "checkbox" ? false : ""]),
     ),
   );
+  const initialPrepItems =
+    task.prepItems || task.template?.prepItems || task.template?.schema?.prepItems || [];
+  const [preppingItems, setPreppingItems] = useState(
+    initialPrepItems.map((p) => ({ ...p, quantity: p.quantity || 1 })),
+  );
   const [remark, setRemark] = useState("");
   const [videoFile, setVideoFile] = useState(null);
   const [showRecorder, setShowRecorder] = useState(false);
@@ -725,6 +932,9 @@ function TaskSubmitForm({ task, onSubmitted }) {
         payload.append("remark", remark.trim());
       }
       payload.append("data", JSON.stringify(dataToSubmit));
+      if (preppingItems.length > 0) {
+        payload.append("prepItems", JSON.stringify(preppingItems));
+      }
       if (videoFile) {
         payload.append("video", videoFile);
       }
@@ -779,6 +989,81 @@ function TaskSubmitForm({ task, onSubmitted }) {
           )}
         </div>
       ))}
+
+      {/* Prep Items Confirmation */}
+      {preppingItems.length > 0 && (
+        <div
+          style={{
+            background: "rgba(59, 130, 246, 0.05)",
+            border: "1px solid rgba(59, 130, 246, 0.2)",
+            borderRadius: 10,
+            padding: "12px 14px",
+            marginTop: 10,
+            marginBottom: 10,
+          }}
+        >
+          <div
+            style={{
+              fontSize: "0.8rem",
+              fontWeight: 800,
+              color: "var(--text-heading)",
+              marginBottom: 8,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <span>🥗 Prep Items to Produce & Add to Inventory</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {preppingItems.map((pi, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  background: "var(--bg-card)",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-heading)" }}>
+                    {pi.name || "Prep Item"}
+                  </div>
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                    Recipe ingredients will be automatically deducted from stock
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input
+                    className="modal-input"
+                    type="number"
+                    min="0.001"
+                    step="any"
+                    style={{ width: 80, height: 32, padding: "4px 8px", textAlign: "right" }}
+                    value={pi.quantity}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPreppingItems((p) => {
+                        const copy = [...p];
+                        copy[idx] = { ...copy[idx], quantity: val };
+                        return copy;
+                      });
+                    }}
+                  />
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", minWidth: 28 }}>
+                    {pi.unit || "unit"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Video Proof Section */}
       <div className="form-field" style={{ marginTop: 10 }}>
@@ -1103,6 +1388,21 @@ function TaskCard({ task, onRefresh }) {
         </div>
         <div className="kiosk_task_badges">
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            {((task.prepItems && task.prepItems.length > 0) || (task.template?.prepItems && task.template.prepItems.length > 0) || (task.template?.schema?.prepItems && task.template.schema.prepItems.length > 0)) && (
+              <span
+                style={{
+                  background: "rgba(16, 185, 129, 0.1)",
+                  color: "#10b981",
+                  border: "1px solid rgba(16, 185, 129, 0.25)",
+                  fontSize: "0.62rem",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  fontWeight: "700",
+                }}
+              >
+                🥗 {(task.prepItems || task.template?.prepItems || task.template?.schema?.prepItems).length} Prep Items
+              </span>
+            )}
             <TaskTimingScoreBadge task={task} />
             <StatusPill status={task.status} />
           </div>
@@ -1118,6 +1418,39 @@ function TaskCard({ task, onRefresh }) {
         <div className="kiosk_task_expanded">
           {/* Detailed Schedule, Due Date, Completed At and Timing Score */}
           <TaskTimingScheduleSection task={task} />
+
+          {/* Prep Items list if configured */}
+          {((task.prepItems && task.prepItems.length > 0) || (task.template?.prepItems && task.template.prepItems.length > 0) || (task.template?.schema?.prepItems && task.template.schema.prepItems.length > 0)) && (
+            <div
+              style={{
+                marginTop: 8,
+                padding: "8px 12px",
+                borderRadius: 8,
+                background: "rgba(16, 185, 129, 0.05)",
+                border: "1px solid rgba(16, 185, 129, 0.2)",
+              }}
+            >
+              <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#10b981", marginBottom: 4 }}>
+                Prep Items to produce:
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {(task.prepItems || task.template?.prepItems || task.template?.schema?.prepItems).map((pi, idx) => (
+                  <span
+                    key={idx}
+                    style={{
+                      fontSize: "0.75rem",
+                      background: "var(--bg-card)",
+                      padding: "3px 8px",
+                      borderRadius: 6,
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <b>{pi.name || "Prep Item"}</b>: {pi.quantity} {pi.unit || "unit"}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Show Video Proof if attached */}
           {task.videoUrl && <TaskVideoProofCard videoUrl={task.videoUrl} />}
@@ -1830,6 +2163,14 @@ export default function KioskTasks({ cart, showAudit = false }) {
                         <>
                           <span className="contract_row_dot">·</span>
                           <span style={{ color: "var(--accent)" }}>Global</span>
+                        </>
+                      )}
+                      {(tpl.prepItems?.length > 0 || tpl.schema?.prepItems?.length > 0) && (
+                        <>
+                          <span className="contract_row_dot">·</span>
+                          <span style={{ color: "#10b981", fontWeight: 700 }}>
+                            🥗 {(tpl.prepItems || tpl.schema?.prepItems).length} Prep Items
+                          </span>
                         </>
                       )}
                     </div>

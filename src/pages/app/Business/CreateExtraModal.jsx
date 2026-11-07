@@ -10,6 +10,8 @@ export default function CreateExtraModal({ isOpen, onClose, onSuccess }) {
     unit: "",
     recipeOutput: "",
     description: "",
+    lifespan: "",
+    condition: "CHILLED",
   });
   const [loading, setLoading] = useState(false);
 
@@ -35,6 +37,8 @@ export default function CreateExtraModal({ isOpen, onClose, onSuccess }) {
         ...(form.description.trim() && {
           description: form.description.trim(),
         }),
+        ...(form.lifespan && { lifespan: parseInt(form.lifespan, 10) }),
+        ...(form.condition && { condition: form.condition }),
       });
       toast.success("Extra created!");
       onSuccess();
@@ -89,6 +93,33 @@ export default function CreateExtraModal({ isOpen, onClose, onSuccess }) {
                 onChange={f("recipeOutput")}
                 required
               />
+            </div>
+          </div>
+          <div className="register_row">
+            <div className="form-field">
+              <label className="modal-label">Shelf Lifespan (Days)</label>
+              <input
+                className="modal-input"
+                type="number"
+                min="1"
+                placeholder="e.g. 7"
+                value={form.lifespan}
+                onChange={f("lifespan")}
+              />
+            </div>
+            <div className="form-field">
+              <label className="modal-label">Storage Condition</label>
+              <select
+                className="modal-input"
+                value={form.condition}
+                onChange={f("condition")}
+              >
+                <option value="AMBIENT">Ambient / Room Temp</option>
+                <option value="CHILLED">Chilled (0 - 4°C)</option>
+                <option value="FROZEN">Frozen (-18°C)</option>
+                <option value="WARMED">Warmed / Heated</option>
+                <option value="DRY">Dry Storage</option>
+              </select>
             </div>
           </div>
           <div className="modal-footer">

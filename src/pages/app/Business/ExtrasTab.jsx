@@ -115,6 +115,24 @@ export default function ExtrasTab() {
                   </span>
                 </div>
 
+                {extra.lifespan != null && (
+                  <div className="concept_info_row">
+                    <span className="concept_info_label">Lifespan</span>
+                    <span className="concept_info_value">
+                      {extra.lifespan} day{extra.lifespan !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                )}
+
+                {extra.condition && (
+                  <div className="concept_info_row">
+                    <span className="concept_info_label">Condition</span>
+                    <span className="concept_info_value" style={{ textTransform: "capitalize" }}>
+                      {extra.condition.toLowerCase()}
+                    </span>
+                  </div>
+                )}
+
                 <div className="concept_total_row">
                   <span className="concept_total_label">Recipe Steps</span>
                   <span className="concept_total_value">
