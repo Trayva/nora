@@ -184,6 +184,7 @@ import ShopOrderPage from "../pages/website/ShopOrderPage";
 import KioskDeviceSetup from "../pages/website/KioskDeviceSetup";
 import PrivacyPolicy from "../pages/website/PrivacyPolicy";
 import TermsOfService from "../pages/website/TermsOfService";
+import DeleteAccount from "../pages/website/DeleteAccount";
 import { getDefaultRoute } from "../utils/AuthHelpers";
 import AggregatorPage from "../pages/app/Aggregator/AggregatorPage";
 import NotificationBell from "../components/Notifications/NotificationBell";
@@ -247,6 +248,7 @@ export default function Routes() {
         { path: "/", element: <Landing /> },
         { path: "/legal/privacy-policy", element: <PrivacyPolicy /> },
         { path: "/legal/terms", element: <TermsOfService /> },
+        { path: "/legal/delete-account", element: <DeleteAccount /> },
       ],
     },
 

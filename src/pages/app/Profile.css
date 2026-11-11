@@ -701,3 +701,215 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ── Device Tokens & Push Notification Section ── */
+.profile-section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.profile-section-badge {
+  font-size: 0.725rem;
+  padding: 2px 8px;
+  background: rgba(203, 108, 220, 0.15);
+  color: var(--brand-primary, #cb6cdc);
+  border-radius: 999px;
+  font-weight: 600;
+  margin-left: 8px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.profile-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-heading);
+  transition: all 0.15s ease;
+}
+
+.profile-btn-sm:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: rgba(203, 108, 220, 0.4);
+}
+
+.profile-btn-primary-sm {
+  background: var(--brand-primary, #cb6cdc);
+  color: #fff;
+  border: 1px solid transparent;
+}
+
+.profile-btn-primary-sm:hover:not(:disabled) {
+  opacity: 0.92;
+  background: var(--brand-primary, #cb6cdc);
+}
+
+.profile-add-token-box {
+  background: var(--bg-hover);
+  border: 1px dashed rgba(203, 108, 220, 0.4);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-token-input-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-device-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-device-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 0.15s;
+}
+
+.profile-device-card:hover {
+  border-color: rgba(203, 108, 220, 0.3);
+}
+
+.profile-device-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-device-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(203, 108, 220, 0.12);
+  color: var(--brand-primary, #cb6cdc);
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.profile-device-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-device-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.profile-platform-tag {
+  font-size: 0.675rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-heading);
+}
+
+.profile-device-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.profile-device-token-code {
+  font-family: monospace;
+  font-size: 0.775rem;
+  color: var(--text-body);
+  background: var(--bg-card);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.profile-device-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.profile-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-heading);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.profile-icon-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: rgba(203, 108, 220, 0.4);
+}
+
+.profile-icon-btn-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.profile-empty-devices {
+  padding: 28px 16px;
+  text-align: center;
+  background: var(--bg-hover);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.profile-test-push-box {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 12px;
+}

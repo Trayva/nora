@@ -171,6 +171,7 @@ function Footer() {
           <div className="footer-legal">
             <a href="/legal/privacy-policy">Privacy Policy</a>
             <a href="/legal/terms">Terms of Service</a>
+            <a href="/legal/delete-account">Delete Account</a>
           </div>
         </div>
       </footer>

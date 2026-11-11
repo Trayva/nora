@@ -24,3 +24,23 @@ export const updateNotificationSettings = async (data) => {
   const response = await api.patch("/notification/settings", data);
   return response.data;
 };
+
+export const getMyDeviceTokens = async () => {
+  const response = await api.get("/notification/device-tokens");
+  return response.data;
+};
+
+export const registerDeviceToken = async (data) => {
+  const response = await api.post("/notification/device-token", data);
+  return response.data;
+};
+
+export const removeDeviceToken = async (data) => {
+  const response = await api.delete("/notification/device-token", { data });
+  return response.data;
+};
+
+export const sendTestPush = async (data = {}) => {
+  const response = await api.post("/notification/test-push", data);
+  return response.data;
+};

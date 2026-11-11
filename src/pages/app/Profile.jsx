@@ -21,7 +21,21 @@ import {
   MdPending,
   MdErrorOutline,
   MdVerifiedUser,
+  MdSend,
+  MdDeleteOutline,
+  MdPhoneIphone,
+  MdAndroid,
+  MdLaptop,
+  MdAdd,
+  MdContentCopy,
+  MdNotificationsActive,
 } from "react-icons/md";
+import {
+  getMyDeviceTokens,
+  registerDeviceToken,
+  removeDeviceToken,
+  sendTestPush,
+} from "../../api/notifications";
 import { BsPersonCheck, BsShieldLock } from "react-icons/bs";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 import ButtonLoader from "../../components/ButtonLoader";
@@ -50,6 +64,14 @@ function nameHue(str = "") {
   let h = 0;
   for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360;
   return h;
+}
+
+function getPlatformIcon(platform) {
+  const p = (platform || "").toLowerCase();
+  if (p === "ios") return <MdPhoneIphone />;
+  if (p === "android") return <MdAndroid />;
+  if (p === "web") return <MdLaptop />;
+  return <MdOutlineDevices />;
 }
 
 const TABS = [
@@ -144,6 +166,103 @@ export default function Profile() {
     useNotifications();
   const [updatingNotif, setUpdatingNotif] = useState(false);
 
+  // Device tokens & Push notifications state
+  const [deviceTokens, setDeviceTokens] = useState([]);
+  const [loadingTokens, setLoadingTokens] = useState(false);
+  const [registeringToken, setRegisteringToken] = useState(false);
+  const [deletingTokenId, setDeletingTokenId] = useState(null);
+  const [sendingTestPush, setSendingTestPush] = useState(false);
+  const [showAddToken, setShowAddToken] = useState(false);
+  const [newToken, setNewToken] = useState({ token: "", platform: "ios" });
+
+  const fetchDeviceTokens = async () => {
+    setLoadingTokens(true);
+    try {
+      const res = await getMyDeviceTokens();
+      if (res.success) {
+        setDeviceTokens(res.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to load device tokens", err);
+    } finally {
+      setLoadingTokens(false);
+    }
+  };
+
+  const handleRegisterToken = async (e) => {
+    e?.preventDefault?.();
+    if (!newToken.token.trim()) {
+      toast.error("Please enter a device push token");
+      return;
+    }
+    setRegisteringToken(true);
+    try {
+      const res = await registerDeviceToken({
+        token: newToken.token.trim(),
+        platform: newToken.platform,
+      });
+      if (res.success) {
+        toast.success("Device token registered successfully!");
+        setNewToken({ token: "", platform: "ios" });
+        setShowAddToken(false);
+        fetchDeviceTokens();
+      } else {
+        toast.error(res.message || "Failed to register token");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Failed to register token");
+    } finally {
+      setRegisteringToken(false);
+    }
+  };
+
+  const handleRemoveToken = async (tokenItem) => {
+    if (!window.confirm("Are you sure you want to remove this device token?")) return;
+    setDeletingTokenId(tokenItem.id);
+    try {
+      const res = await removeDeviceToken({ id: tokenItem.id, token: tokenItem.token });
+      if (res.success) {
+        toast.success("Device token removed successfully");
+        fetchDeviceTokens();
+      } else {
+        toast.error(res.message || "Failed to remove token");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Failed to remove token");
+    } finally {
+      setDeletingTokenId(null);
+    }
+  };
+
+  const handleSendTestPush = async (specificToken = null) => {
+    setSendingTestPush(true);
+    try {
+      const payload = {};
+      if (typeof specificToken === "string" && specificToken) {
+        payload.token = specificToken;
+      }
+      const res = await sendTestPush(payload);
+      if (res.success) {
+        if (res.data?.ticketsCount > 0) {
+          toast.success(res.message || `Test push sent to ${res.data.ticketsCount} device(s)!`);
+        } else {
+          toast.info(res.message || "No registered devices found. Register an Expo push token first.");
+        }
+      } else {
+        toast.error(res.message || "Failed to send test push notification");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Failed to send test push");
+    } finally {
+      setSendingTestPush(false);
+    }
+  };
+
+  const handleCopyToken = (token) => {
+    navigator.clipboard?.writeText?.(token);
+    toast.success("Device token copied to clipboard");
+  };
+
   // Sumsub KYC modal state
   const [sumsubModal, setSumsubModal] = useState({ isOpen: false, level: "level-2" });
   const [syncingKyc, setSyncingKyc] = useState(false);
@@ -193,7 +312,10 @@ export default function Profile() {
     fetchProfile();
   }, []);
   useEffect(() => {
-    if (activeTab === "notifications") fetchSettings();
+    if (activeTab === "notifications") {
+      fetchSettings();
+      fetchDeviceTokens();
+    }
   }, [activeTab]);
 
   // ── Tab switch with animation key ───────────────────────────
@@ -837,11 +959,10 @@ export default function Profile() {
                           </strong>
                         </div>
                         <span
-                          className={`profile-kyc-contact-badge ${
-                            profile?.emailVerified
+                          className={`profile-kyc-contact-badge ${profile?.emailVerified
                               ? "profile-kyc-contact-badge--ok"
                               : "profile-kyc-contact-badge--no"
-                          }`}
+                            }`}
                         >
                           {profile?.emailVerified ? "✓ Verified" : "Unverified"}
                         </span>
@@ -856,11 +977,10 @@ export default function Profile() {
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
                           <span
-                            className={`profile-kyc-contact-badge ${
-                              profile?.phoneVerified
+                            className={`profile-kyc-contact-badge ${profile?.phoneVerified
                                 ? "profile-kyc-contact-badge--ok"
                                 : "profile-kyc-contact-badge--no"
-                            }`}
+                              }`}
                           >
                             {profile?.phoneVerified ? "✓ Verified" : "Unverified"}
                           </span>
@@ -1424,54 +1544,250 @@ export default function Profile() {
             )}
 
             {/* ── Notifications ── */}
+            {/* ── Notifications ── */}
             {activeTab === "notifications" && (
-              <div className="profile-panel-section">
-                <h3 className="profile-section-heading">
-                  Notification Preferences
-                </h3>
-                <p className="profile-section-sub">
-                  Choose how we notify you about account activity.
-                </p>
+              <>
+                <div className="profile-panel-section">
+                  <h3 className="profile-section-heading">
+                    Notification Preferences
+                  </h3>
+                  <p className="profile-section-sub">
+                    Choose how we notify you about account activity.
+                  </p>
 
-                {settingsLoading && !settings ? (
-                  <div
-                    style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}
-                  >
-                    Loading preferences…
+                  {settingsLoading && !settings ? (
+                    <div
+                      style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}
+                    >
+                      Loading preferences…
+                    </div>
+                  ) : (
+                    <div className="profile-notif-list">
+                      <NotifCard
+                        title="Push Notifications"
+                        desc="Receive alerts on your device for immediate updates."
+                        checked={settings?.pushEnabled ?? true}
+                        onChange={(e) =>
+                          handleNotifToggle("pushEnabled", e.target.checked)
+                        }
+                        disabled={updatingNotif}
+                      />
+                      <NotifCard
+                        title="Email Notifications"
+                        desc="Receive a summary of important alerts via email."
+                        checked={settings?.emailEnabled ?? true}
+                        onChange={(e) =>
+                          handleNotifToggle("emailEnabled", e.target.checked)
+                        }
+                        disabled={updatingNotif}
+                      />
+                      <NotifCard
+                        title="SMS Notifications"
+                        desc="Receive text messages for urgent activity."
+                        badge="Premium"
+                        checked={settings?.smsEnabled ?? false}
+                        onChange={(e) =>
+                          handleNotifToggle("smsEnabled", e.target.checked)
+                        }
+                        disabled={updatingNotif}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Registered Device Tokens ── */}
+                <div className="profile-panel-section" style={{ marginTop: 24 }}>
+                  <div className="profile-section-header-row">
+                    <div>
+                      <h3 className="profile-section-heading">
+                        Device Push Tokens
+                        <span className="profile-section-badge">
+                          {deviceTokens.length} registered
+                        </span>
+                      </h3>
+                      <p className="profile-section-sub">
+                        Manage mobile devices and Expo push tokens linked to your account.
+                      </p>
+                    </div>
+
+                    <div className="profile-action-btns">
+                      <button
+                        type="button"
+                        onClick={fetchDeviceTokens}
+                        disabled={loadingTokens}
+                        className="profile-btn-sm"
+                        title="Refresh device tokens"
+                      >
+                        <MdRefresh className={loadingTokens ? "spin-icon" : ""} size={16} />
+                        <span>Refresh</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSendTestPush()}
+                        disabled={sendingTestPush || deviceTokens.length === 0}
+                        className="profile-btn-sm"
+                        title="Send test push to all devices"
+                      >
+                        <MdSend size={15} />
+                        <span>{sendingTestPush ? "Sending…" : "Test Push"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddToken(!showAddToken)}
+                        className="profile-btn-sm profile-btn-primary-sm"
+                      >
+                        <MdAdd size={16} />
+                        <span>{showAddToken ? "Cancel" : "Add Token"}</span>
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  <div className="profile-notif-list">
-                    <NotifCard
-                      title="Push Notifications"
-                      desc="Receive alerts on your device for immediate updates."
-                      checked={settings?.pushEnabled ?? true}
-                      onChange={(e) =>
-                        handleNotifToggle("pushEnabled", e.target.checked)
-                      }
-                      disabled={updatingNotif}
-                    />
-                    <NotifCard
-                      title="Email Notifications"
-                      desc="Receive a summary of important alerts via email."
-                      checked={settings?.emailEnabled ?? true}
-                      onChange={(e) =>
-                        handleNotifToggle("emailEnabled", e.target.checked)
-                      }
-                      disabled={updatingNotif}
-                    />
-                    <NotifCard
-                      title="SMS Notifications"
-                      desc="Receive text messages for urgent activity."
-                      badge="Premium"
-                      checked={settings?.smsEnabled ?? false}
-                      onChange={(e) =>
-                        handleNotifToggle("smsEnabled", e.target.checked)
-                      }
-                      disabled={updatingNotif}
-                    />
+
+                  {showAddToken && (
+                    <form onSubmit={handleRegisterToken} className="profile-add-token-box">
+                      <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-heading)" }}>
+                        Register New Device Token
+                      </div>
+                      <div className="profile-token-input-row">
+                        <div style={{ flex: 1, minWidth: 220 }}>
+                          <input
+                            type="text"
+                            placeholder="ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
+                            value={newToken.token}
+                            onChange={(e) => setNewToken({ ...newToken, token: e.target.value })}
+                            className="profile-form-input"
+                            style={{ width: "100%", padding: "9px 12px", fontSize: "0.825rem" }}
+                          />
+                        </div>
+                        <div style={{ width: 140 }}>
+                          <select
+                            value={newToken.platform}
+                            onChange={(e) => setNewToken({ ...newToken, platform: e.target.value })}
+                            className="profile-form-input"
+                            style={{ width: "100%", padding: "9px 12px", fontSize: "0.825rem" }}
+                          >
+                            <option value="ios">iOS (Apple)</option>
+                            <option value="android">Android</option>
+                            <option value="web">Web / Browser</option>
+                            <option value="macos">macOS</option>
+                            <option value="windows">Windows</option>
+                          </select>
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={registeringToken || !newToken.token.trim()}
+                          className="profile-btn-sm profile-btn-primary-sm"
+                          style={{ padding: "9px 16px" }}
+                        >
+                          {registeringToken ? "Registering…" : "Save Token"}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {loadingTokens && deviceTokens.length === 0 ? (
+                    <div style={{ color: "var(--text-muted)", fontSize: "0.875rem", padding: "16px 0" }}>
+                      Loading registered devices…
+                    </div>
+                  ) : deviceTokens.length === 0 ? (
+                    <div className="profile-empty-devices">
+                      <MdOutlineDevices size={32} style={{ opacity: 0.5, marginBottom: 8 }} />
+                      <p style={{ margin: "0 0 6px 0", fontWeight: 600, color: "var(--text-heading)" }}>
+                        No device tokens registered yet
+                      </p>
+                      <p style={{ margin: 0, fontSize: "0.775rem" }}>
+                        Tokens are registered automatically when you log into the NORA mobile app, or you can register an Expo push token manually for testing.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="profile-device-cards-list">
+                      {deviceTokens.map((item) => (
+                        <div key={item.id} className="profile-device-card">
+                          <div className="profile-device-meta">
+                            <div className="profile-device-icon-wrap" title={item.platform || "Device"}>
+                              {getPlatformIcon(item.platform)}
+                            </div>
+                            <div className="profile-device-info">
+                              <div className="profile-device-top">
+                                <span className="profile-platform-tag">
+                                  {item.platform || "DEVICE"}
+                                </span>
+                                <span className="profile-device-date">
+                                  {item.updatedAt ? `Active ${moment(item.updatedAt).fromNow()}` : ""}
+                                </span>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                <span className="profile-device-token-code" title={item.token}>
+                                  {item.token}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyToken(item.token)}
+                                  className="profile-icon-btn"
+                                  title="Copy token to clipboard"
+                                  style={{ width: 26, height: 26 }}
+                                >
+                                  <MdContentCopy size={13} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="profile-device-actions">
+                            <button
+                              type="button"
+                              onClick={() => handleSendTestPush(item.token)}
+                              disabled={sendingTestPush}
+                              className="profile-btn-sm"
+                              title="Send test push to this device"
+                            >
+                              <MdSend size={14} />
+                              <span>Test Push</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveToken(item)}
+                              disabled={deletingTokenId === item.id}
+                              className="profile-icon-btn profile-icon-btn-danger"
+                              title="Delete token"
+                            >
+                              <MdDeleteOutline size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Test Push Notification ── */}
+                <div className="profile-panel-section" style={{ marginTop: 24 }}>
+                  <div className="profile-section-header-row" style={{ marginBottom: 0 }}>
+                    <div>
+                      <h3 className="profile-section-heading" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <MdNotificationsActive size={20} color="var(--brand-primary, #cb6cdc)" />
+                        Test Push Notification
+                      </h3>
+                      <p className="profile-section-sub">
+                        Send an instant test alert to verify Expo push notification delivery to your devices.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSendTestPush()}
+                      disabled={sendingTestPush || deviceTokens.length === 0}
+                      className={`app_btn app_btn_confirm ${sendingTestPush ? "btn_loading" : ""}`}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px" }}
+                    >
+                      <MdSend size={16} />
+                      <span className="btn_text">
+                        {sendingTestPush ? "Sending Test Push…" : "Send Test Push"}
+                      </span>
+                      {sendingTestPush && <span className="btn_loader" style={{ width: 16, height: 16 }} />}
+                    </button>
                   </div>
-                )}
-              </div>
+                </div>
+              </>
             )}
 
             {/* ── Sessions ── */}
@@ -1535,11 +1851,9 @@ export default function Profile() {
                       color: "#dc2626",
                       border: "1px solid rgba(239,68,68,0.25)",
                     }}
-                    onClick={() =>
-                      toast.error(
-                        "Please contact support to delete your account.",
-                      )
-                    }
+                    onClick={() => {
+                      window.location.href = "/legal/delete-account";
+                    }}
                   >
                     🗑 Delete my account
                   </button>
