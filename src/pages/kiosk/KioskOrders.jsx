@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import {
   MdExpandMore, MdExpandLess, MdImage, MdOutlineShoppingBag,
-  MdPhone, MdLocationOn, MdRefresh,
+  MdPhone, MdLocationOn, MdRefresh, MdPrint,
 } from "react-icons/md";
 import api from "../../api/axios";
 import useCurrencyDisplay from "../../hooks/useCurrencyDisplay";
@@ -36,6 +36,173 @@ function StatusChip({ status, colors = STATUS_STYLE }) {
       {status}
     </span>
   );
+}
+
+/* ── Receipt printing ─────────────────────────────────────── */
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function generateOrderReceiptHTML(order, fmtCurrency) {
+  const cur = order.currency || "NGN";
+  const created = order.createdAt ? new Date(order.createdAt) : new Date();
+  const dateStr = created.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  const timeStr = created.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const orderTypeLabel = (order.orderType || "ORDER").replace(/_/g, " ");
+
+  const itemRows = (order.items || [])
+    .map((item) => {
+      const name = escapeHtml(item.menuItem?.name || "Item");
+      const qty = Number(item.quantity || 1);
+      const unit = Number(item.priceAtTime || 0);
+      const lineTotal = unit * qty;
+      return `
+        <tr>
+          <td class="item-name">${qty}x ${name}</td>
+          <td class="item-price">${escapeHtml(fmtCurrency(lineTotal, cur))}</td>
+        </tr>`;
+    })
+    .join("");
+
+  const subtotalRow = order.subtotal > 0
+    ? `<div class="tot-row"><span>Subtotal</span><span>${escapeHtml(fmtCurrency(order.subtotal, cur))}</span></div>`
+    : "";
+  const vatRow = order.vatAmount > 0
+    ? `<div class="tot-row"><span>VAT</span><span>${escapeHtml(fmtCurrency(order.vatAmount, cur))}</span></div>`
+    : "";
+  const deliveryRow = order.deliveryFee > 0
+    ? `<div class="tot-row"><span>Delivery Fee</span><span>${escapeHtml(fmtCurrency(order.deliveryFee, cur))}</span></div>`
+    : "";
+
+  const customerBlock = (order.customerName || order.customerPhone || order.deliveryAddress)
+    ? `
+      <div class="divider"></div>
+      <div class="meta-block">
+        ${order.customerName ? `<div><strong>Customer:</strong> ${escapeHtml(order.customerName)}</div>` : ""}
+        ${order.customerPhone ? `<div><strong>Phone:</strong> ${escapeHtml(order.customerPhone)}</div>` : ""}
+        ${order.deliveryAddress ? `<div><strong>Address:</strong> ${escapeHtml(order.deliveryAddress)}</div>` : ""}
+      </div>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Receipt - ${escapeHtml(order.orderNumber)}</title>
+  <style>
+    @page { size: 80mm auto; margin: 4mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      color: #111;
+      margin: 0;
+      padding: 12px;
+      background: #fff;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .receipt {
+      width: 100%;
+      max-width: 300px;
+      margin: 0 auto;
+    }
+    .center { text-align: center; }
+    .brand { font-size: 18px; font-weight: 900; letter-spacing: 0.08em; margin-bottom: 2px; }
+    .sub { font-size: 11px; color: #555; }
+    .queue-box {
+      display: inline-block;
+      margin: 8px auto 4px;
+      padding: 4px 12px;
+      border: 2px solid #111;
+      font-size: 16px;
+      font-weight: 900;
+    }
+    .divider { border-top: 1px dashed #333; margin: 8px 0; }
+    .meta-block { font-size: 11px; }
+    .meta-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+    table { width: 100%; border-collapse: collapse; margin: 4px 0; }
+    th { text-align: left; font-size: 11px; border-bottom: 1px solid #333; padding-bottom: 3px; }
+    th.r { text-align: right; }
+    td { padding: 4px 0; vertical-align: top; font-size: 12px; }
+    .item-name { padding-right: 8px; }
+    .item-price { text-align: right; white-space: nowrap; font-weight: 700; }
+    .tot-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+    .grand-row { display: flex; justify-content: space-between; font-size: 15px; font-weight: 900; margin-top: 6px; padding-top: 6px; border-top: 1px solid #111; }
+    .footer { text-align: center; margin-top: 12px; font-size: 11px; color: #444; }
+    @media print {
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt">
+    <div class="center">
+      <div class="brand">NORA</div>
+      <div class="sub">ORDER RECEIPT</div>
+      ${order.queueNumber != null ? `<div class="queue-box">QUEUE #${escapeHtml(order.queueNumber)}</div>` : ""}
+    </div>
+
+    <div class="divider"></div>
+    <div class="meta-block">
+      <div class="meta-row"><span>Order #:</span><strong>${escapeHtml(order.orderNumber)}</strong></div>
+      <div class="meta-row"><span>Date:</span><span>${escapeHtml(dateStr)} ${escapeHtml(timeStr)}</span></div>
+      <div class="meta-row"><span>Type:</span><strong>${escapeHtml(orderTypeLabel)}</strong></div>
+      <div class="meta-row"><span>Payment:</span><strong>${escapeHtml(order.paymentMethod || "CARD")} (${escapeHtml(order.paymentStatus || "PENDING")})</strong></div>
+    </div>
+    ${customerBlock}
+    <div class="divider"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th class="r">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemRows}
+      </tbody>
+    </table>
+
+    <div class="divider"></div>
+    ${subtotalRow}
+    ${vatRow}
+    ${deliveryRow}
+    <div class="grand-row">
+      <span>TOTAL</span>
+      <span>${escapeHtml(fmtCurrency(order.totalAmount, cur))}</span>
+    </div>
+
+    <div class="footer">
+      <div>Thank you for your order!</div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function printOrderReceipt(order, fmtCurrency) {
+  const html = generateOrderReceiptHTML(order, fmtCurrency);
+  const win = window.open("", "_blank", "width=400,height=650");
+  if (!win) {
+    toast.error("Please allow pop-ups to print the receipt");
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+  let printed = false;
+  const doPrint = () => {
+    if (printed) return;
+    printed = true;
+    win.focus();
+    win.print();
+  };
+  win.onload = doPrint;
+  setTimeout(doPrint, 500);
 }
 
 /* ── Next statuses a user can transition to ── */
@@ -86,6 +253,11 @@ function OrderCard({ order, onUpdated }) {
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
             <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-heading)", fontFamily: "monospace" }}>{order.orderNumber}</span>
             <StatusChip status={order.status} />
+            {order.paymentMethod && (
+              <span style={{ fontSize: "0.62rem", fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: order.paymentMethod === "CASH" ? "rgba(34,197,94,0.1)" : "rgba(59,130,246,0.1)", color: order.paymentMethod === "CASH" ? "#16a34a" : "#3b82f6", border: `1px solid ${order.paymentMethod === "CASH" ? "rgba(34,197,94,0.25)" : "rgba(59,130,246,0.25)"}`, textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>
+                {order.paymentMethod}
+              </span>
+            )}
             {order.paymentStatus === "PAID" && (
               <span style={{ fontSize: "0.62rem", fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: "rgba(34,197,94,0.1)", color: "#16a34a", border: "1px solid rgba(34,197,94,0.25)", textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>
                 PAID
@@ -103,6 +275,30 @@ function OrderCard({ order, onUpdated }) {
             <span style={{ fontWeight: 700, color: "var(--text-heading)" }}>{fmtCurrency(order.totalAmount, orderCur)}</span>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            printOrderReceipt(order, fmtCurrency);
+          }}
+          title="Print Receipt"
+          style={{
+            background: "var(--bg-hover)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            width: 30,
+            height: 30,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "var(--text-heading)",
+            flexShrink: 0,
+          }}
+        >
+          <MdPrint size={15} />
+        </button>
 
         {expanded ? <MdExpandLess size={16} style={{ color: "var(--text-muted)", flexShrink: 0, marginTop: 2 }} />
           : <MdExpandMore size={16} style={{ color: "var(--text-muted)", flexShrink: 0, marginTop: 2 }} />}
@@ -159,36 +355,46 @@ function OrderCard({ order, onUpdated }) {
             <span style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--accent)" }}>{fmtCurrency(order.totalAmount, orderCur)}</span>
           </div>
 
-          {/* Status actions */}
-          {nextStatuses.length > 0 && (
-            <div style={{ padding: "10px 14px", borderTop: "1px solid var(--border)", display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {nextStatuses.map((ns) => {
-                const ns_s = STATUS_STYLE[ns];
-                const isLoading = updating === ns;
-                const isDanger = ns === "CANCELLED";
-                return (
-                  <button
-                    key={ns}
-                    onClick={() => updateStatus(ns)}
-                    disabled={!!updating}
-                    style={{
-                      height: 32, padding: "0 14px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
-                      fontWeight: 800, fontSize: "0.72rem", border: `1px solid ${isDanger ? "rgba(239,68,68,0.3)" : ns_s.border}`,
-                      background: isDanger ? "rgba(239,68,68,0.07)" : ns_s.bg,
-                      color: isDanger ? "#ef4444" : ns_s.color,
-                      opacity: updating && !isLoading ? 0.5 : 1,
-                      display: "inline-flex", alignItems: "center", gap: 5, position: "relative",
-                    }}
-                  >
-                    {isLoading
-                      ? <><span className="btn_loader" style={{ width: 11, height: 11, borderColor: isDanger ? "#ef4444" : ns_s.color, borderTopColor: "transparent" }} /> {ns}</>
-                      : ns
-                    }
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          {/* Status actions & Print Receipt */}
+          <div style={{ padding: "10px 14px", borderTop: "1px solid var(--border)", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            {nextStatuses.map((ns) => {
+              const ns_s = STATUS_STYLE[ns];
+              const isLoading = updating === ns;
+              const isDanger = ns === "CANCELLED";
+              return (
+                <button
+                  key={ns}
+                  onClick={() => updateStatus(ns)}
+                  disabled={!!updating}
+                  style={{
+                    height: 32, padding: "0 14px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
+                    fontWeight: 800, fontSize: "0.72rem", border: `1px solid ${isDanger ? "rgba(239,68,68,0.3)" : ns_s.border}`,
+                    background: isDanger ? "rgba(239,68,68,0.07)" : ns_s.bg,
+                    color: isDanger ? "#ef4444" : ns_s.color,
+                    opacity: updating && !isLoading ? 0.5 : 1,
+                    display: "inline-flex", alignItems: "center", gap: 5, position: "relative",
+                  }}
+                >
+                  {isLoading
+                    ? <><span className="btn_loader" style={{ width: 11, height: 11, borderColor: isDanger ? "#ef4444" : ns_s.color, borderTopColor: "transparent" }} /> {ns}</>
+                    : ns
+                  }
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => printOrderReceipt(order, fmtCurrency)}
+              style={{
+                height: 32, padding: "0 12px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
+                fontWeight: 700, fontSize: "0.72rem", border: "1px solid var(--border)",
+                background: "var(--bg-card)", color: "var(--text-heading)",
+                display: "inline-flex", alignItems: "center", gap: 5, marginLeft: "auto",
+              }}
+            >
+              <MdPrint size={14} /> Print Receipt
+            </button>
+          </div>
         </div>
       )}
     </div>

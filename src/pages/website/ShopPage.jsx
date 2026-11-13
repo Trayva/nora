@@ -1022,6 +1022,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, isPo
     deliveryLng: isNaN(urlLng) ? null : urlLng,
   });
   const [placing, setPlacing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("CARD");
   const [gateway, setGateway] = useState("paystack");
   const [orderResult, setOrderResult] = useState(null);
   const [paying, setPaying] = useState(false);
@@ -1067,7 +1068,7 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, isPo
     try {
       // POS devices: only kiosk, items and order type are sent (no customer, delivery or payment info).
       const payload = isPos
-        ? { kioskId, orderType }
+        ? { kioskId, orderType, paymentMethod }
         : {
           kioskId,
           customerName: form.customerName.trim(),
@@ -1077,7 +1078,8 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, isPo
           deliveryLat: orderType === "PICKUP" ? null : form.deliveryLat,
           deliveryLng: orderType === "PICKUP" ? null : form.deliveryLng,
           orderType,
-          gateway,
+          paymentMethod,
+          ...(paymentMethod === "CARD" ? { gateway } : {}),
         };
       const res = await api.post("/kiosk/shop/order", {
         ...payload,
@@ -1523,7 +1525,39 @@ function CheckoutForm({ kioskId, conceptName, items, concepts, vatRate = 0, isPo
         </APIProvider>
       )}
 
-      {!isPos && <div className="form-field" style={{ marginTop: 14, marginBottom: 16 }}>
+      <div className="form-field" style={{ marginTop: 14, marginBottom: 14 }}>
+        <label className="modal-label">Payment Method</label>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
+          {[
+            { value: "CARD", label: "Card" },
+            { value: "CASH", label: "Cash" },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setPaymentMethod(opt.value)}
+              style={{
+                padding: "10px 14px",
+                borderRadius: 10,
+                border: paymentMethod === opt.value ? "2px solid var(--accent)" : "1px solid var(--border)",
+                background: paymentMethod === opt.value ? "var(--bg-active)" : "var(--bg-card)",
+                color: "var(--text-heading)",
+                fontWeight: 700,
+                fontSize: "0.82rem",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s"
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {!isPos && paymentMethod === "CARD" && <div className="form-field" style={{ marginTop: 14, marginBottom: 16 }}>
         <label className="modal-label">Payment Gateway</label>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
           <button
